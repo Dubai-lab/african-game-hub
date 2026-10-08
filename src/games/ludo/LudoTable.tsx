@@ -2,7 +2,6 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { useSettingsStore } from '@/core/settings/settingsStore'
-import { Button } from '@/core/ui/Button'
 import { HOME, type Seat, SEATS } from './board'
 import { BOARDS, type DieView, LudoBoard, useWalkingPieces } from './LudoBoard'
 import { fullCountPieces, type LudoEvent, type LudoState, plays } from './rules'
@@ -362,13 +361,7 @@ export function LudoTable({ title, state, players, mySeat, deadline, busy, notic
                 )}
                 {dieButton(1, 'bg-[#2f9e44]')}
               </div>
-            ) : (
-              canRoll && (
-                <Button onClick={onRoll} disabled={busy}>
-                  {t('ludo.roll')}
-                </Button>
-              )
-            )}
+            ) : null}
           </div>
           <p className="text-center font-display text-base font-extrabold text-primary lg:text-lg" role="status">
             {note}

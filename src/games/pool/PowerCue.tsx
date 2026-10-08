@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { type CueId, cueGradient } from './cues'
 
 // The cue beside the table: put a finger on it, pull it back as far as the shot should be hard,
 // and let go to shoot. Sliding back to the top and letting go cancels.
@@ -19,9 +20,10 @@ type Props = {
   /** Let go: shoot with this power, 0 to 1. */
   onShoot: (power: number) => void
   className?: string
+  cue: CueId
 }
 
-export function PowerCue({ ready, blocked, label, onPull, onShoot, className = '' }: Props) {
+export function PowerCue({ ready, blocked, label, onPull, onShoot, className = '', cue }: Props) {
   const track = useRef<HTMLDivElement>(null)
   const startY = useRef<number | null>(null)
   const [pull, setPull] = useState(0)
@@ -90,7 +92,7 @@ export function PowerCue({ ready, blocked, label, onPull, onShoot, className = '
         className="absolute left-1/2 top-2 h-[62%] w-2.5 rounded-full shadow-[2px_2px_3px_rgba(0,0,0,0.5)]"
         style={{
           transform: `translate(-50%, ${pull * (FULL_PULL / 0.62) * 100}%)`,
-          background: 'linear-gradient(to bottom, #3d7fd6 0 1.5%, #f4efe2 1.5% 5%, #e9cf9c 5% 52%, #b0372b 52% 54%, #2b2118 54% 74%, #b0372b 74% 76%, #15110e 76% 100%)',
+          background: cueGradient(cue),
         }}
       />
       <span className="absolute inset-x-0 bottom-1 text-center text-xs font-bold tabular-nums text-white" aria-hidden="true">

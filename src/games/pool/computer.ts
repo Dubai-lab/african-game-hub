@@ -14,7 +14,7 @@ const SKILL: Record<Level, { tries: number; wobble: number }> = {
   hard: { tries: 8, wobble: 0.08 },
 }
 /** The point to send a ball to for each pocket: just inside its mouth. */
-const MOUTHS = POCKETS.map((p) => ({ x: Math.min(Math.max(p.x, 24), TABLE.w - 24), y: Math.min(Math.max(p.y, 24), TABLE.h - 24) }))
+const MOUTHS = POCKETS.map((p) => ({ x: Math.min(Math.max(p.x, 30), TABLE.w - 30), y: Math.min(Math.max(p.y, 30), TABLE.h - 30) }))
 
 type Point = { x: number; y: number }
 type Plan = { dx: number; dy: number; power: number; cue?: Point; pocket: number; score: number }

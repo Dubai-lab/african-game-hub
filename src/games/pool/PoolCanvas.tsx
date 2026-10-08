@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { type Ball, canPlaceCue, POCKETS, TABLE } from '../../../supabase/functions/_shared/pool'
+import { type CueId, CUES } from './cues'
 
 // The pool table, drawn on a canvas. Nothing here is an image file: the cloth, the wooden
 // rails and the pockets are painted once in code, and every ball is a true sphere, lit from
@@ -8,7 +9,7 @@ import { type Ball, canPlaceCue, POCKETS, TABLE } from '../../../supabase/functi
 
 const R = TABLE.r
 /** Wood and cushion around the playing surface, in millimetres. */
-const RAIL = 150
+export const RAIL = 112
 const BALL_COLOR: Record<number, [number, number, number]> = {
   0: [247, 245, 236],
   1: [246, 196, 0],
@@ -219,8 +220,8 @@ function paintTable(width: number, height: number, vertical: boolean, scale: num
     ctx.fillStyle = shade
     ctx.fill()
   }
-  const corner = 62
-  const mid = 60
+  const corner = 72
+  const mid = 74
   nose(corner, 0, W / 2 - mid, 0, [0, 1])
   nose(W / 2 + mid, 0, W - corner, 0, [0, 1])
   nose(corner, H, W / 2 - mid, H, [0, -1])
@@ -317,6 +318,7 @@ type Props = {
   onPlace: (x: number, y: number) => void
   label: string
   cloth: ClothId
+  cue: CueId
   /** The whole aiming line (where the struck ball and the cue ball go), or only as far as the first ball. */
   guide: 'full' | 'short'
   /** The pocket called for the 8, ringed on the table; null when none is. */
@@ -327,10 +329,10 @@ type Props = {
 }
 
 /** The table and everything on it. Draws what it is given; the server decides what happens. */
-export function PoolCanvas({ balls, vertical, aim, power, ballInHand, behindHeadString, targets, onAim, onPlace, label, cloth, guide, called, canCall, onCall }: Props) {
+export function PoolCanvas({ balls, vertical, aim, power, ballInHand, behindHeadString, targets, onAim, onPlace, label, cloth, cue: cueId, guide, called, canCall, onCall }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const live = useRef({ balls, aim, power, ballInHand, behindHeadString, targets, onAim, onPlace, guide, called, canCall, onCall })
-  live.current = { balls, aim, power, ballInHand, behindHeadString, targets, onAim, onPlace, guide, called, canCall, onCall }
+  const live = useRef({ balls, aim, power, ballInHand, behindHeadString, targets, onAim, onPlace, guide, called, canCall, onCall, cueId })
+  live.current = { balls, aim, power, ballInHand, behindHeadString, targets, onAim, onPlace, guide, called, canCall, onCall, cueId }
 
   useEffect(() => {
     const canvas = canvasRef.current!
@@ -520,10 +522,11 @@ export function PoolCanvas({ balls, vertical, aim, power, ballInHand, behindHead
         ctx.rotate(angle)
         const back = rp * (1.6 + state.power * 5)
         const stick = Math.max(canvas.width, canvas.height) * 0.42
+        const style = CUES[state.cueId]
         const grain = ctx.createLinearGradient(0, -rp * 0.3, 0, rp * 0.3)
-        grain.addColorStop(0, '#f1d9a6')
-        grain.addColorStop(0.5, '#c9995a')
-        grain.addColorStop(1, '#8d6230')
+        grain.addColorStop(0, style.shaft[0])
+        grain.addColorStop(0.5, style.shaft[1])
+        grain.addColorStop(1, style.shaft[2])
         ctx.fillStyle = grain
         ctx.beginPath()
         ctx.moveTo(-back, -rp * 0.13)
@@ -532,8 +535,12 @@ export function PoolCanvas({ balls, vertical, aim, power, ballInHand, behindHead
         ctx.lineTo(-back, rp * 0.13)
         ctx.closePath()
         ctx.fill()
-        ctx.fillStyle = '#2b2118'
+        ctx.fillStyle = style.butt
         ctx.fillRect(-back - stick, -rp * 0.3, stick * 0.32, rp * 0.6)
+        ctx.fillStyle = style.band
+        ctx.fillRect(-back - stick * 0.68, -rp * 0.26, stick * 0.02, rp * 0.52)
+        ctx.fillStyle = '#f4efe2'
+        ctx.fillRect(-back - rp * 0.7, -rp * 0.14, rp * 0.48, rp * 0.28)
         ctx.fillStyle = '#3d7fd6'
         ctx.fillRect(-back - rp * 0.22, -rp * 0.13, rp * 0.22, rp * 0.26)
         ctx.restore()
@@ -562,8 +569,11 @@ export function PoolCanvas({ balls, vertical, aim, power, ballInHand, behindHead
     const observer = new ResizeObserver(resize)
     observer.observe(canvas)
 
-    // A finger on the cue ball (with ball in hand) carries it; anywhere else points the cue there.
+    // A finger on the cue ball (with ball in hand) carries it. Anywhere else, dragging turns
+    // the cue about the cue ball by as much as the finger goes round it: the cue never jumps to
+    // where the table was touched, and dragging far from the ball turns it very finely.
     let carrying = false
+    let turning: { finger: number; aim: number } | null = null
     const point = (event: PointerEvent): [number, number] => {
       const box = canvas.getBoundingClientRect()
       return toTable(((event.clientX - box.left) / box.width) * canvas.width, ((event.clientY - box.top) / box.height) * canvas.height)
@@ -577,9 +587,9 @@ export function PoolCanvas({ balls, vertical, aim, power, ballInHand, behindHead
         if (canPlaceCue(state.balls, x, y, state.behindHeadString)) state.onPlace(x, y)
         return
       }
-      const dx = x - cue.x
-      const dy = y - cue.y
-      if (Math.hypot(dx, dy) > R * 0.6) state.onAim({ dx, dy })
+      if (!turning || Math.hypot(x - cue.x, y - cue.y) < R * 0.8) return
+      const angle = turning.aim + Math.atan2(y - cue.y, x - cue.x) - turning.finger
+      state.onAim({ dx: Math.cos(angle), dy: Math.sin(angle) })
     }
     const down = (event: PointerEvent) => {
       const state = live.current
@@ -593,15 +603,17 @@ export function PoolCanvas({ balls, vertical, aim, power, ballInHand, behindHead
           if (Math.hypot(x - at.x, y - at.y) < 170) return state.onCall(i)
         }
       }
-      carrying = state.ballInHand && Math.hypot(x - cue.x, y - cue.y) < R * 3
+      carrying = state.ballInHand && Math.hypot(x - cue.x, y - cue.y) < R * 2.5
+      turning = carrying ? null : { finger: Math.atan2(y - cue.y, x - cue.x), aim: Math.atan2(state.aim.dy, state.aim.dx) }
       canvas.setPointerCapture(event.pointerId)
-      act(event)
+      if (carrying) act(event)
     }
     const move = (event: PointerEvent) => {
-      if (event.buttons !== 0 || event.pointerType !== 'mouse') act(event)
+      if (carrying || turning) act(event)
     }
     const up = () => {
       carrying = false
+      turning = null
     }
     canvas.addEventListener('pointerdown', down)
     canvas.addEventListener('pointermove', move)

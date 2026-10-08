@@ -6,6 +6,7 @@ import { flagEmoji } from '@/core/countries/useCountries'
 import { useSettingsStore } from '@/core/settings/settingsStore'
 import { Button } from '@/core/ui/Button'
 import { type Ball, canPlaceCue, groupFor, groupOf, HEAD_SPOT, type PoolState, type Seat, type Shot, type ShotResult, type SimEvent, simulate, targets as targetsOf } from '../../../supabase/functions/_shared/pool'
+import { CUE_IDS, cueGradient } from './cues'
 import { type Aim, PoolCanvas } from './PoolCanvas'
 import { PowerCue } from './PowerCue'
 import { clack, cushion, drop, strike } from './sound'
@@ -48,7 +49,7 @@ export function Sheet({ title, children, onClose }: { title: string; children: R
   )
 }
 
-function ShotClock({ until }: { until: number }) {
+function ShotClock({ until, compact = false }: { until: number; compact?: boolean }) {
   const { t } = useTranslation()
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
@@ -57,7 +58,7 @@ function ShotClock({ until }: { until: number }) {
   }, [])
   const left = Math.max(0, Math.ceil((until - now) / 1000))
   return (
-    <span role="timer" aria-label={t('pool.clockLabel')} className={`min-w-10 px-2 py-1 text-center text-lg font-bold tabular-nums ${left <= 5 ? 'bg-hibiscus text-white' : 'bg-brand text-brand-ink'}`}>
+    <span role="timer" aria-label={t('pool.clockLabel')} className={`text-center font-bold tabular-nums ${compact ? 'min-w-7 px-1 text-sm' : 'min-w-10 px-2 py-1 text-lg'} ${left <= 5 ? 'bg-hibiscus text-white' : 'bg-brand text-brand-ink'}`}>
       {left}
     </span>
   )
@@ -76,8 +77,23 @@ function Chip({ n }: { n: number }) {
   )
 }
 
-function PlayerCard({ player, seat, toShoot, clock, label, left }: { player: TablePlayer | undefined; seat: Seat; toShoot: boolean; clock: number | null; label: string; left: number[] }) {
+function PlayerCard({ player, seat, toShoot, clock, label, left, compact = false }: { player: TablePlayer | undefined; seat: Seat; toShoot: boolean; clock: number | null; label: string; left: number[]; compact?: boolean }) {
   const { t } = useTranslation()
+  if (compact) {
+    // One line: who, what they have left to pocket, and the clock when it is their shot.
+    return (
+      <div className={`flex min-w-0 flex-1 items-center gap-1.5 px-2 ${toShoot ? 'bg-panel text-ink outline-2 -outline-offset-2 outline-brand' : 'bg-white/10 text-white'}`} data-testid={`pool-player-${seat}`} data-to-shoot={toShoot}>
+        <span className="truncate text-sm font-bold">{player?.name ?? ''}</span>
+        <span className="flex min-w-0 flex-1 items-center gap-0.5 overflow-hidden text-xs">
+          {left.length === 0 && <span className="truncate opacity-80">{label}</span>}
+          {left.map((n) => (
+            <Chip key={n} n={n} />
+          ))}
+        </span>
+        {toShoot && clock !== null && <ShotClock until={clock} compact />}
+      </div>
+    )
+  }
   return (
     <div className={`flex items-center gap-2 p-1.5 ${toShoot ? 'bg-panel outline-2 outline-ink' : ''}`} data-testid={`pool-player-${seat}`} data-to-shoot={toShoot}>
       <div className="min-w-0 flex-1">
@@ -101,8 +117,9 @@ function PlayerCard({ player, seat, toShoot, clock, label, left }: { player: Tab
 /**
  * How the screen is being held:
  *  - portrait: a phone upright. The table stands on end and fills the width.
- *  - landscape: a phone on its side. The table lies flat and fills the height, as a pool
- *    table should, with the cue to its left and a narrow strip of controls to its right.
+ *  - landscape: a phone on its side. The table lies flat and takes nearly the whole screen,
+ *    with the cue to pull on its left, the players in a slim bar above it, and a column of
+ *    round buttons (spin, cue, chat) on its right. Everything else opens over the table.
  *  - desktop: a computer or tablet. The table lies flat beside a full panel.
  */
 type Layout = 'portrait' | 'landscape' | 'desktop'
@@ -120,36 +137,23 @@ function useLayout(): Layout {
   return layout
 }
 
-/** The classes of each part of the screen, for each way of holding it. */
-const LAYOUT: Record<Layout, { root: string; header: string; main: string; cards: string; table: string; cue: string; aside: string }> = {
-  portrait: {
-    root: 'mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-2 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2',
-    header: '',
-    main: 'gap-1.5',
-    cards: '',
-    table: 'max-w-[calc((100dvh-20rem)*0.553)]',
-    cue: 'order-last',
-    aside: 'gap-3',
-  },
-  landscape: {
-    // The whole screen, nothing to scroll: the table is as tall as the screen allows.
-    root: 'grid h-dvh w-full grid-cols-[minmax(0,1fr)_10.5rem] grid-rows-[auto_minmax(0,1fr)] gap-x-2 gap-y-1 overflow-hidden py-1 ps-[max(0.5rem,env(safe-area-inset-left))] pe-[max(0.5rem,env(safe-area-inset-right))]',
-    header: 'col-start-2 row-start-1',
-    main: 'col-start-1 row-span-2 row-start-1 justify-center gap-1',
-    cards: 'mx-auto w-full max-w-[calc((100dvh-4.5rem)*1.809+3.25rem)]',
-    table: 'max-w-[calc((100dvh-4.5rem)*1.809)]',
-    cue: 'order-first',
-    aside: 'col-start-2 row-start-2 min-h-0 gap-2 overflow-y-auto',
-  },
-  desktop: {
-    root: 'grid h-dvh w-full grid-cols-[minmax(0,1fr)_23rem] grid-rows-[auto_minmax(0,1fr)] gap-x-6 gap-y-3 px-6 py-4',
-    header: 'col-start-2 row-start-1',
-    main: 'col-start-1 row-span-2 row-start-1 justify-center gap-1.5',
-    cards: 'mx-auto w-full max-w-[calc((100dvh-9rem)*1.78)]',
-    table: 'max-w-[calc((100dvh-9rem)*1.78)]',
-    cue: 'order-first',
-    aside: 'col-start-2 row-start-2 min-h-0 gap-3 overflow-y-auto border-2 border-line bg-panel p-4',
-  },
+/** Something opened over the table on a small screen: the spin ball, the cues, the chat, the menu. */
+function Panel({ title, open, onClose, children }: { title: string; open: boolean; onClose: () => void; children: ReactNode }) {
+  const { t } = useTranslation()
+  return (
+    // Kept in the page while closed (hidden), so that what is inside, the chat above all, stays alive.
+    <div className={`fixed inset-0 z-30 items-center justify-center bg-ink/60 p-2 ${open ? 'flex' : 'hidden'}`} onClick={onClose} role="presentation">
+      <div role="dialog" aria-label={title} onClick={(event) => event.stopPropagation()} className="flex max-h-full w-full max-w-sm flex-col gap-2 overflow-y-auto border-2 border-ink bg-panel p-3 text-ink">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-display text-lg font-extrabold text-primary">{title}</h2>
+          <button type="button" onClick={onClose} className="min-h-9 border-2 border-line px-3 text-sm font-semibold">
+            {t('pool.tools.close')}
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
 }
 
 type Props = {
@@ -182,8 +186,8 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
   const { t } = useTranslation()
   const settings = useSettingsStore()
   const layout = useLayout()
-  const look = LAYOUT[layout]
   const tight = layout === 'landscape'
+  const [panel, setPanel] = useState<'spin' | 'cue' | 'chat' | 'menu' | null>(null)
 
   // What is drawn. While a shot is being played back it runs ahead of (or behind) the game; when
   // the balls stop it is the game again. `seen` is the game as the cards and the status line
@@ -326,6 +330,31 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
   // The 8 is a called shot.
   const needCall = myShot && game.variant === '8ball' && must.length === 1 && must[0] === 8
 
+  // Coming to the table, the cue is already pointed at the nearest ball the player may hit.
+  // From there the player turns it; it is never moved for them again during the shot.
+  const aimedFor = useRef(-1)
+  useEffect(() => {
+    if (!myShot || aimedFor.current === shotNo) return
+    aimedFor.current = shotNo
+    // Worked out from the game itself, not from what happens to be drawn at this instant.
+    const lying = game.balls.find((b) => b.n === 0)
+    const cue = game.ballInHand && game.breakShot ? HEAD_SPOT : lying
+    if (!cue) return
+    const legal = targetsOf(game)
+    let nearest: Ball | null = null
+    let distance = Infinity
+    for (const ball of game.balls) {
+      if (ball.in || !legal.includes(ball.n)) continue
+      const d = Math.hypot(ball.x - cue.x, ball.y - cue.y)
+      if (d < distance) {
+        distance = d
+        nearest = ball
+      }
+    }
+    if (nearest) setAngle(Math.atan2(nearest.y - cue.y, nearest.x - cue.x))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myShot, shotNo])
+
   const cardFor = (seat: Seat) => {
     const onTable = seen.balls.filter((b) => !b.in && b.n !== 0).map((b) => b.n).sort((a, b) => a - b)
     let label = ''
@@ -340,7 +369,7 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
       const mine = group ? onTable.filter((n) => groupOf(n) === group) : []
       left = group ? (mine.length > 0 ? mine : onTable.includes(8) ? [8] : []) : []
     }
-    return <PlayerCard player={player(seat)} seat={seat} toShoot={!(decided && !playing) && seen.turn === seat} clock={playing ? null : deadline} label={label} left={left} />
+    return <PlayerCard player={player(seat)} seat={seat} toShoot={!(decided && !playing) && seen.turn === seat} clock={playing ? null : deadline} label={label} left={left} compact={tight} />
   }
 
   /** Shoots, with the power the cue was pulled back to (1 to 1000). */
@@ -374,6 +403,7 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
 
   const foul = seen.lastShot?.result.foul
   const lastBy = seen.lastShot ? player(seen.lastShot.seat)?.name : ''
+  const foulText = !playing && foul ? t(`pool.foul.${foul}`, { name: lastBy }) : ''
   const status = decided
     ? playing
       ? ' '
@@ -391,117 +421,224 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
           : t('pool.status.turnOf', { name: player(seen.turn)?.name ?? '' })
   const nudge = (degrees: number) => setAngle((a) => a + (degrees * Math.PI) / 180)
 
+  // ---- The pieces of the screen, put together differently for each way of holding it.
+
+  /** The white ball to touch where the cue should strike: up for follow, down for draw, sideways for side. */
+  const spinPad = (size: string) => (
+    <button
+      type="button"
+      aria-label={t('pool.spin')}
+      className={`relative shrink-0 rounded-full border-2 border-ink bg-[#f7f5ec] shadow-[inset_-6px_-8px_14px_rgba(0,0,0,0.18)] ${size}`}
+      onPointerDown={(event) => {
+        const box = event.currentTarget.getBoundingClientRect()
+        const x = ((event.clientX - box.left) / box.width) * 2 - 1
+        const y = ((event.clientY - box.top) / box.height) * 2 - 1
+        const reach = Math.hypot(x, y)
+        const k = reach > 0.8 ? 0.8 / reach : 1
+        setSpin({ x: x * k, y: -y * k })
+      }}
+    >
+      <span className="absolute size-[18%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-hibiscus" style={{ left: `${50 + spin.x * 50}%`, top: `${50 - spin.y * 50}%` }} />
+    </button>
+  )
+  const nudges = (
+    <>
+      <Button variant="ghost" onClick={() => nudge(-2)} aria-label={t('pool.aimLeftMore')}>
+        «
+      </Button>
+      <Button variant="ghost" onClick={() => nudge(-0.25)} aria-label={t('pool.aimLeft')}>
+        ‹
+      </Button>
+      <Button variant="ghost" onClick={() => nudge(0.25)} aria-label={t('pool.aimRight')}>
+        ›
+      </Button>
+      <Button variant="ghost" onClick={() => nudge(2)} aria-label={t('pool.aimRightMore')}>
+        »
+      </Button>
+    </>
+  )
+  const cuePicker = (
+    <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('pool.settings.cueStyle')}>
+      {CUE_IDS.map((id) => (
+        <button key={id} type="button" role="radio" aria-checked={settings.poolCue === id} onClick={() => settings.set({ poolCue: id })} className={`flex flex-col gap-1.5 border-2 p-2 text-start text-sm font-bold ${settings.poolCue === id ? 'border-ink bg-brand text-brand-ink' : 'border-line bg-surface'}`}>
+          <span className="block h-2 w-full rounded-full" style={{ background: cueGradient(id, 'to right') }} aria-hidden="true" />
+          {t(`pool.cue.${id}`)}
+        </button>
+      ))}
+    </div>
+  )
+  const soundButton = (className: string) => (
+    <button type="button" className={`flex items-center border-2 border-line bg-panel font-semibold text-ink ${className}`} aria-pressed={settings.soundOn} onClick={() => settings.set({ soundOn: !settings.soundOn })}>
+      {t(settings.soundOn ? 'pool.soundOn' : 'pool.soundOff')}
+    </button>
+  )
+  const powerCue = (className: string) => (
+    <PowerCue
+      ready={myShot}
+      blocked={needCall && called === null}
+      label={t('pool.power')}
+      onPull={(pulled) => setPower(pulled * 1000)}
+      onShoot={(pulled) => shoot(Math.max(1, Math.round(pulled * 1000)))}
+      className={className}
+      cue={settings.poolCue}
+    />
+  )
+  const tableView = (className: string) => (
+    <div className={`min-w-0 flex-1 ${className}`} data-testid="pool-state" data-turn={game.turn} data-shot-no={game.shotNo} data-playing={playing} data-ball-in-hand={game.ballInHand} data-need-call={needCall} data-called={called ?? ''}>
+      <PoolCanvas
+        balls={table}
+        vertical={layout === 'portrait'}
+        aim={aim}
+        power={power / 1000}
+        ballInHand={myShot && game.ballInHand}
+        behindHeadString={game.breakShot}
+        // On an open table every ball is on; ringing all of them says nothing.
+        targets={game.variant === '9ball' || game.solidsSeat !== null ? must : []}
+        onAim={(next) => setAngle(Math.atan2(next.dy, next.dx))}
+        onPlace={(x, y) => setPlaced({ x, y })}
+        label={t('pool.tableLabel')}
+        cloth={settings.poolCloth}
+        cue={settings.poolCue}
+        guide={settings.poolGuide}
+        called={myShot ? (needCall ? called : null) : playingPocket}
+        canCall={needCall}
+        onCall={setCalled}
+      />
+    </div>
+  )
+  const offline = !decided && !connected && (
+    <div role="status" className="bg-ink px-3 py-1.5 text-center text-sm font-semibold text-surface">
+      {t('app.reconnecting')}
+    </div>
+  )
+
+  if (tight) {
+    // A phone on its side: the table is the screen.
+    const tool = 'flex size-11 items-center justify-center rounded-full border-2 border-[#0b0f24] bg-[#f3f1e7] text-ink shadow-[0_2px_4px_rgba(0,0,0,0.5)] disabled:opacity-40'
+    return (
+      <div
+        className="grid h-dvh w-full grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] grid-rows-[2.25rem_minmax(0,1fr)] gap-x-1.5 gap-y-1 overflow-hidden bg-[#141a33] py-1 ps-[max(0.375rem,env(safe-area-inset-left))] pe-[max(0.375rem,env(safe-area-inset-right))]"
+        data-testid="pool-screen"
+        data-layout={layout}
+      >
+        <header className="col-span-3 flex min-w-0 items-stretch gap-1.5">
+          <button type="button" aria-label={t('pool.tools.menu')} onClick={() => setPanel('menu')} className="flex w-11 shrink-0 items-center justify-center border-2 border-[#0b0f24] bg-brand text-xl font-extrabold leading-none text-brand-ink">
+            ≡
+          </button>
+          {cardFor(bottomSeat)}
+          <p className="flex w-[26%] shrink-0 items-center justify-center text-center text-[0.7rem] font-bold leading-tight text-white" role="status">
+            {offline ? t('app.reconnecting') : foulText || status}
+          </p>
+          {cardFor(topSeat)}
+        </header>
+
+        {powerCue('col-start-1 row-start-2 h-full w-full')}
+
+        <div className="col-start-2 row-start-2 flex min-h-0 items-center justify-center">{tableView('max-w-[calc((100dvh-3.25rem)*1.85)]')}</div>
+
+        {/* The round buttons beside the table: spin, the cue, the chat, and a finer turn of the cue. */}
+        <div className="col-start-3 row-start-2 flex min-h-0 flex-col items-center justify-center gap-1.5" data-testid={myShot ? 'pool-controls' : undefined}>
+          <button type="button" aria-label={t('pool.tools.spin')} onClick={() => setPanel('spin')} disabled={!myShot} className={`${tool} relative`}>
+            <span className="absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-hibiscus" style={{ left: `${50 + spin.x * 42}%`, top: `${50 - spin.y * 42}%` }} />
+          </button>
+          <button type="button" aria-label={t('pool.tools.cue')} onClick={() => setPanel('cue')} className={tool}>
+            <span className="block h-1.5 w-8 -rotate-45 rounded-full" style={{ background: cueGradient(settings.poolCue, 'to right') }} aria-hidden="true" />
+          </button>
+          {children && (
+            <button type="button" aria-label={t('pool.tools.chat')} onClick={() => setPanel('chat')} className={tool}>
+              <svg viewBox="0 0 24 24" className="size-6" fill="currentColor" aria-hidden="true">
+                <path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H10l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
+              </svg>
+            </button>
+          )}
+          <button type="button" aria-label={t('pool.aimLeft')} onClick={() => nudge(-0.25)} disabled={!myShot} className={`${tool} text-xl font-extrabold`}>
+            ‹
+          </button>
+          <button type="button" aria-label={t('pool.aimRight')} onClick={() => nudge(0.25)} disabled={!myShot} className={`${tool} text-xl font-extrabold`}>
+            ›
+          </button>
+        </div>
+
+        <Panel title={t('pool.tools.spin')} open={panel === 'spin'} onClose={() => setPanel(null)}>
+          <div className="flex items-center gap-4">
+            {spinPad('size-36')}
+            <div className="flex flex-col gap-2">
+              <p className="text-sm text-muted">{t('pool.tools.spinHint')}</p>
+              <Button variant="ghost" onClick={() => setSpin({ x: 0, y: 0 })}>
+                {t('pool.tools.spinReset')}
+              </Button>
+            </div>
+          </div>
+        </Panel>
+        <Panel title={t('pool.settings.cueStyle')} open={panel === 'cue'} onClose={() => setPanel(null)}>
+          {cuePicker}
+          <p className="text-xs text-muted">{t('pool.settings.cueHint')}</p>
+        </Panel>
+        {children && (
+          <Panel title={t('pool.tools.chat')} open={panel === 'chat'} onClose={() => setPanel(null)}>
+            {children}
+          </Panel>
+        )}
+        <Panel title={title} open={panel === 'menu'} onClose={() => setPanel(null)}>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link to="/lobby" className="flex min-h-11 items-center font-semibold text-primary underline underline-offset-4">
+              {t('pool.backToLobby')}
+            </Link>
+            {soundButton('ms-auto min-h-11 px-3 text-sm')}
+          </div>
+          <p className="text-xs text-muted">{t('pool.howTo')}</p>
+          {footer}
+        </Panel>
+      </div>
+    )
+  }
+
+  const desktop = layout === 'desktop'
   return (
-    // See useLayout: upright phone, phone on its side, or computer.
-    <div className={look.root} data-testid="pool-screen" data-layout={layout}>
-      <header className={`flex items-center justify-between gap-2 ${look.header}`}>
-        <Link to="/lobby" className={`flex items-center font-semibold text-primary underline underline-offset-4 ${tight ? 'min-h-9 text-sm' : 'min-h-11'}`}>
+    <div
+      className={desktop ? 'grid h-dvh w-full grid-cols-[minmax(0,1fr)_23rem] grid-rows-[auto_minmax(0,1fr)] gap-x-6 gap-y-3 px-6 py-4' : 'mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-2 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2'}
+      data-testid="pool-screen"
+      data-layout={layout}
+    >
+      <header className={`flex items-center justify-between gap-2 ${desktop ? 'col-start-2 row-start-1' : ''}`}>
+        <Link to="/lobby" className="flex min-h-11 items-center font-semibold text-primary underline underline-offset-4">
           {t('pool.back')}
         </Link>
-        {/* On a phone held sideways there is no room for the title; the cards say who is playing. */}
-        {!tight && <p className="truncate font-display text-lg font-extrabold text-primary">{title}</p>}
-        <button type="button" className={`flex items-center border-2 border-line bg-panel font-semibold ${tight ? 'min-h-9 px-2 text-xs' : 'min-h-11 px-3 text-sm'}`} aria-pressed={settings.soundOn} onClick={() => settings.set({ soundOn: !settings.soundOn })}>
-          {t(settings.soundOn ? 'pool.soundOn' : 'pool.soundOff')}
-        </button>
+        <p className="truncate font-display text-lg font-extrabold text-primary">{title}</p>
+        {soundButton('min-h-11 px-3 text-sm')}
       </header>
 
-      <div className={`flex min-h-0 flex-col ${look.main}`}>
-        {!decided && !connected && (
-          <div role="status" className="bg-ink px-3 py-1.5 text-center text-sm font-semibold text-surface">
-            {t('app.reconnecting')}
-          </div>
-        )}
-        <div className={`grid grid-cols-2 gap-2 ${look.cards}`}>
+      <div className={`flex min-h-0 flex-col gap-1.5 ${desktop ? 'col-start-1 row-span-2 row-start-1 justify-center' : ''}`}>
+        {offline}
+        <div className={`grid grid-cols-2 gap-2 ${desktop ? 'mx-auto w-full max-w-[calc((100dvh-9rem)*1.85)]' : ''}`}>
           {cardFor(bottomSeat)}
           {cardFor(topSeat)}
         </div>
         {/* The cue to pull stands beside the table: under the right thumb on a phone, on the left on a computer. */}
         <div className="flex items-stretch justify-center gap-2">
-        <PowerCue
-          ready={myShot}
-          blocked={needCall && called === null}
-          label={t('pool.power')}
-          onPull={(pulled) => setPower(pulled * 1000)}
-          onShoot={(pulled) => shoot(Math.max(1, Math.round(pulled * 1000)))}
-          className={look.cue}
-        />
-        <div
-          className={`min-w-0 flex-1 ${look.table}`}
-          data-testid="pool-state"
-          data-turn={game.turn}
-          data-shot-no={game.shotNo}
-          data-playing={playing}
-          data-ball-in-hand={game.ballInHand}
-          data-need-call={needCall}
-          data-called={called ?? ''}
-        >
-          <PoolCanvas
-            balls={table}
-            vertical={layout === 'portrait'}
-            aim={aim}
-            power={power / 1000}
-            ballInHand={myShot && game.ballInHand}
-            behindHeadString={game.breakShot}
-            // On an open table every ball is on; ringing all of them says nothing.
-            targets={game.variant === '9ball' || game.solidsSeat !== null ? must : []}
-            onAim={(next) => setAngle(Math.atan2(next.dy, next.dx))}
-            onPlace={(x, y) => setPlaced({ x, y })}
-            label={t('pool.tableLabel')}
-            cloth={settings.poolCloth}
-            guide={settings.poolGuide}
-            called={myShot ? (needCall ? called : null) : playingPocket}
-            canCall={needCall}
-            onCall={setCalled}
-          />
-        </div>
+          {powerCue(desktop ? 'order-first' : 'order-last')}
+          {tableView(desktop ? 'max-w-[calc((100dvh-9rem)*1.85)]' : 'max-w-[calc((100dvh-20rem)*0.54)]')}
         </div>
       </div>
 
-      <aside className={`flex flex-col ${look.aside}`}>
+      <aside className={`flex flex-col gap-3 ${desktop ? 'col-start-2 row-start-2 min-h-0 overflow-y-auto border-2 border-line bg-panel p-4' : ''}`}>
         <div>
-          <p className={`font-display font-extrabold text-primary ${tight ? 'min-h-5 text-sm leading-tight' : layout === 'desktop' ? 'min-h-7 text-lg' : 'min-h-7 text-base'}`} role="status">
+          <p className={`min-h-7 font-display font-extrabold text-primary ${desktop ? 'text-lg' : 'text-base'}`} role="status">
             {status}
           </p>
-          <p className={`text-muted ${tight ? 'text-xs' : 'min-h-5 text-sm'}`} data-testid="pool-last">
-            {!playing && foul ? t(`pool.foul.${foul}`, { name: lastBy }) : ' '}
+          <p className="min-h-5 text-sm text-muted" data-testid="pool-last">
+            {foulText || ' '}
           </p>
+          {!desktop && <p className="text-xs text-muted">{t('pool.rotate')}</p>}
         </div>
 
         {myShot && (
           <div className="flex flex-col gap-2" data-testid="pool-controls">
-            <div className={tight ? 'flex flex-col items-center gap-2' : 'flex items-center gap-3'}>
-              {/* Where the cue strikes the ball: up for follow, down for draw, sideways for side. */}
-              <button
-                type="button"
-                aria-label={t('pool.spin')}
-                className={`relative shrink-0 rounded-full border-2 border-ink bg-[#f7f5ec] ${tight ? 'size-14' : 'size-16'}`}
-                onPointerDown={(event) => {
-                  const box = event.currentTarget.getBoundingClientRect()
-                  const x = ((event.clientX - box.left) / box.width) * 2 - 1
-                  const y = ((event.clientY - box.top) / box.height) * 2 - 1
-                  const reach = Math.hypot(x, y)
-                  const k = reach > 0.8 ? 0.8 / reach : 1
-                  setSpin({ x: x * k, y: -y * k })
-                }}
-              >
-                <span className="absolute size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-hibiscus" style={{ left: `${50 + spin.x * 50}%`, top: `${50 - spin.y * 50}%` }} />
-              </button>
-              <div className={`grid gap-1.5 *:px-0 *:text-sm ${tight ? 'w-full grid-cols-4 *:min-h-10' : 'flex-1 grid-cols-4 *:min-h-11'}`}>
-                <Button variant="ghost" onClick={() => nudge(-2)} aria-label={t('pool.aimLeftMore')}>
-                  «
-                </Button>
-                <Button variant="ghost" onClick={() => nudge(-0.25)} aria-label={t('pool.aimLeft')}>
-                  ‹
-                </Button>
-                <Button variant="ghost" onClick={() => nudge(0.25)} aria-label={t('pool.aimRight')}>
-                  ›
-                </Button>
-                <Button variant="ghost" onClick={() => nudge(2)} aria-label={t('pool.aimRightMore')}>
-                  »
-                </Button>
-              </div>
+            <div className="flex items-center gap-3">
+              {spinPad('size-16')}
+              <div className="grid flex-1 grid-cols-4 gap-1.5 *:min-h-11 *:px-0 *:text-sm">{nudges}</div>
             </div>
-            {!tight && <p className="text-xs text-muted">{t('pool.howTo')}</p>}
+            <p className="text-xs text-muted">{t('pool.howTo')}</p>
           </div>
         )}
 

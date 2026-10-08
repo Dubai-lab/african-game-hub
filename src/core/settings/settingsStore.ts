@@ -30,6 +30,8 @@ const preferencesSchema = z.object({
   poolCloth: z.enum(['green', 'blue', 'red']),
   /** Pool: the whole aiming line, or only as far as the first ball. */
   poolGuide: z.enum(['full', 'short']),
+  /** Pool: which cue the player plays with (looks only). */
+  poolCue: z.enum(['maple', 'ebony', 'ocean', 'kente']),
 })
 
 export type Preferences = z.infer<typeof preferencesSchema>
@@ -50,6 +52,7 @@ const DEFAULTS: Preferences = {
   ludoLay: true,
   poolCloth: 'green',
   poolGuide: 'full',
+  poolCue: 'maple',
 }
 
 type SettingsState = Preferences & {
@@ -70,9 +73,9 @@ export const useSettingsStore = create<SettingsState>()(
 )
 
 function currentPreferences(): Preferences {
-  const { soundOn, hapticsOn, dataSaver, chessBoardTheme, chessPieceSet, chessPremoves, ludoDice, ludoBoard3d, ludoBoard, ludoSides, ludoLay, poolCloth, poolGuide } =
+  const { soundOn, hapticsOn, dataSaver, chessBoardTheme, chessPieceSet, chessPremoves, ludoDice, ludoBoard3d, ludoBoard, ludoSides, ludoLay, poolCloth, poolGuide, poolCue } =
     useSettingsStore.getState()
-  return { soundOn, hapticsOn, dataSaver, chessBoardTheme, chessPieceSet, chessPremoves, ludoDice, ludoBoard3d, ludoBoard, ludoSides, ludoLay, poolCloth, poolGuide }
+  return { soundOn, hapticsOn, dataSaver, chessBoardTheme, chessPieceSet, chessPremoves, ludoDice, ludoBoard3d, ludoBoard, ludoSides, ludoLay, poolCloth, poolGuide, poolCue }
 }
 
 const SAVE_DELAY_MS = 800

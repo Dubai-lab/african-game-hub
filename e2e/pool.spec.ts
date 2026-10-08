@@ -92,9 +92,7 @@ test('two players are paired at 9-ball, the break is played on the server, and p
   await expect(first.getByText('Your shot')).toBeVisible({ timeout: 20_000 })
   await expect.poll(() => shotNo(second), { timeout: 20_000 }).toBe(2)
 
-  // Aim 45° towards the corner with the fine-aim buttons, medium power.
-  for (let i = 0; i < 22; i++) await first.getByRole('button', { name: 'Aim further right' }).click()
-  for (let i = 0; i < 4; i++) await first.getByRole('button', { name: 'Aim a little right' }).click()
+  // The cue is already pointed at the 9, which sits straight in front of the corner. Medium power.
   await pullCue(first, 0.45)
 
   await expect(first.getByRole('dialog', { name: 'You won' })).toBeVisible({ timeout: 30_000 })
@@ -151,8 +149,6 @@ test('8-ball: the 8 is a called shot, and going down in the called pocket wins',
   await expect(state(first)).toHaveAttribute('data-called', '5')
   await expect(first.getByText('Your shot')).toBeVisible()
 
-  for (let i = 0; i < 22; i++) await first.getByRole('button', { name: 'Aim further right' }).click()
-  for (let i = 0; i < 4; i++) await first.getByRole('button', { name: 'Aim a little right' }).click()
   // The opponent's screen is watched while the balls roll: the cards must go on showing the
   // shooter at the table until they stop. (The roll is short, so it is recorded in the page.)
   await second.evaluate(() => {

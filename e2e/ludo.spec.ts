@@ -65,7 +65,7 @@ test('two players are paired, take turns with the server’s dice, and a win pay
   await expect(turn(one.page)).toHaveAttribute('data-turn', 'red')
   const oneIsRed = (await one.page.getByRole('button', { name: 'Roll' }).count()) > 0
   const [red, yellow] = oneIsRed ? [one.page, two.page] : [two.page, one.page]
-  await expect(red.getByText('Your turn: roll')).toBeVisible()
+  await expect(red.getByText('Your turn: touch the dice')).toBeVisible()
   await expect(yellow.getByRole('button', { name: 'Roll' })).toHaveCount(0)
   await expect(yellow.getByText(/^Waiting for /)).toBeVisible()
   // Every piece starts in its yard, and the stake has left both wallets.
@@ -167,7 +167,7 @@ test('three players, free: the first home wins, and the other two play on for se
   )
   const pageOf = (seat: string) => seatsIn[TEST_ACCOUNTS.findIndex((a) => a.username === seated.find((s) => s.seat === seat)!.username)]!.page
   const [red, green, yellow] = [pageOf('red'), pageOf('green'), pageOf('yellow')]
-  await expect(red.getByText('Your turn: roll')).toBeVisible()
+  await expect(red.getByText('Your turn: touch the dice')).toBeVisible()
 
   // Red is one move from home.
   await runSql(`
@@ -195,7 +195,7 @@ test('three players, free: the first home wins, and the other two play on for se
   await expect(green.getByTestId('ludo-home-red')).toHaveText('1st: winner')
 
   // The table is still open and it is green's turn; green plays.
-  await expect(green.getByText('Your turn: roll')).toBeVisible({ timeout: 20_000 })
+  await expect(green.getByText('Your turn: touch the dice')).toBeVisible({ timeout: 20_000 })
   const before = await turnNo(green)
   await green.getByRole('button', { name: 'Roll' }).first().click()
   await expect.poll(() => turnNo(green), { timeout: 20_000 }).toBeGreaterThan(before)
@@ -247,7 +247,7 @@ test('against the computer: three computer players take their turns and the game
 
   await expect(page.locator('[data-testid^="ludo-player-"]')).toHaveCount(4)
   await expect(page.locator('[data-testid^="piece-"]')).toHaveCount(8)
-  await expect(page.getByText('Your turn: roll')).toBeVisible()
+  await expect(page.getByText('Your turn: touch the dice')).toBeVisible()
   await page.getByRole('button', { name: 'Roll' }).first().click()
   await expect.poll(() => turnNo(page)).toBeGreaterThan(0)
 

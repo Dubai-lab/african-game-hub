@@ -824,7 +824,7 @@
     "newGame": "New game",
     "status": {
       "rolling": "Rolling…",
-      "yourRoll": "Your turn: roll",
+      "yourRoll": "Your turn: touch the dice",
       "yourMove": "You rolled {{die}}: tap a piece",
       "waiting": "Waiting for {{name}}",
       "turnOf": "{{name}} to play",
@@ -984,7 +984,7 @@
     "aimRight": "Aim a little right",
     "aimLeftMore": "Aim further left",
     "aimRightMore": "Aim further right",
-    "howTo": "Touch the table to aim, then pull the cue beside the table back and let go: the further you pull, the harder the shot. The arrows fine-tune the aim; the white ball adds spin.",
+    "howTo": "Drag on the table to turn the cue, then pull the cue beside the table back and let go: the further you pull, the harder the shot. The arrows fine-tune the aim; the white ball adds spin.",
     "status": {
       "yourShot": "Your shot",
       "ballInHand": "Ball in hand: place the cue ball, then pull the cue",
@@ -1037,7 +1037,9 @@
     "settings": {
       "cloth": "Cloth",
       "guide": "Aiming line",
-      "guideHint": "The full line shows where the ball you hit will go. The short line stops at the first ball, for players who like it harder. It changes nothing for your opponent."
+      "guideHint": "The full line shows where the ball you hit will go. The short line stops at the first ball, for players who like it harder. It changes nothing for your opponent.",
+      "cueStyle": "Cue",
+      "cueHint": "Looks only: every cue plays the same."
     },
     "cloth": {
       "green": "Green",
@@ -1068,6 +1070,22 @@
       "youLost": "The computer won"
     },
     "wins_one": "{{count}} win",
-    "wins_other": "{{count}} wins"
+    "wins_other": "{{count}} wins",
+    "cue": {
+      "maple": "Maple",
+      "ebony": "Ebony",
+      "ocean": "Ocean",
+      "kente": "Kente"
+    },
+    "tools": {
+      "menu": "Menu",
+      "spin": "Spin",
+      "cue": "Cue",
+      "chat": "Chat",
+      "close": "Close",
+      "spinHint": "Touch where the cue should strike the white ball: high to follow, low to draw back, the sides for side spin.",
+      "spinReset": "Centre"
+    },
+    "rotate": "Turn your phone sideways for a bigger table."
   }
 }

@@ -9,9 +9,11 @@
 // identically. (No sine or cosine in here: those can differ in the last digit between engines,
 // and on a pool table the last digit matters.)
 //
-// Units: millimetres and seconds. The table is a 9-foot table's playing surface.
+// Units: millimetres and seconds. The table is a 9-foot table's playing surface. The balls are
+// about a quarter larger than real ones (as in most pool games for phones), so that they can
+// be seen and aimed at on a small screen; the pockets are larger to match.
 
-export const TABLE = { w: 2540, h: 1270, r: 28.575 } as const
+export const TABLE = { w: 2540, h: 1270, r: 36 } as const
 export type Variant = '8ball' | '9ball'
 /** n is the number on the ball; 0 is the cue ball. */
 export type Ball = { n: number; x: number; y: number; in: boolean }
@@ -66,12 +68,12 @@ const D = R * 2
  * little wider than the middle pockets.
  */
 export const POCKETS: readonly { x: number; y: number; r: number }[] = [
-  { x: -14, y: -14, r: 73 },
-  { x: TABLE.w / 2, y: -20, r: 66 },
-  { x: TABLE.w + 14, y: -14, r: 73 },
-  { x: -14, y: TABLE.h + 14, r: 73 },
-  { x: TABLE.w / 2, y: TABLE.h + 20, r: 66 },
-  { x: TABLE.w + 14, y: TABLE.h + 14, r: 73 },
+  { x: -16, y: -16, r: 90 },
+  { x: TABLE.w / 2, y: -26, r: 84 },
+  { x: TABLE.w + 16, y: -16, r: 90 },
+  { x: -16, y: TABLE.h + 16, r: 90 },
+  { x: TABLE.w / 2, y: TABLE.h + 26, r: 84 },
+  { x: TABLE.w + 16, y: TABLE.h + 16, r: 90 },
 ]
 export const HEAD_STRING = TABLE.w / 4
 export const FOOT_SPOT = { x: (TABLE.w * 3) / 4, y: TABLE.h / 2 }

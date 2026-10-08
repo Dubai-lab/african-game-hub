@@ -824,7 +824,7 @@
     "newGame": "Nouvelle partie",
     "status": {
       "rolling": "Lancer en cours…",
-      "yourRoll": "À vous : lancez le dé",
+      "yourRoll": "À vous : touchez les dés",
       "yourMove": "Vous avez fait {{die}} : touchez un pion",
       "waiting": "En attente de {{name}}",
       "turnOf": "Au tour de {{name}}",
@@ -984,7 +984,7 @@
     "aimRight": "Viser un peu à droite",
     "aimLeftMore": "Viser plus à gauche",
     "aimRightMore": "Viser plus à droite",
-    "howTo": "Touchez la table pour viser, puis tirez en arrière la queue à côté de la table et relâchez : plus vous tirez, plus le coup est fort. Les flèches affinent la visée ; la bille blanche ajoute de l’effet.",
+    "howTo": "Faites glisser sur la table pour tourner la queue, puis tirez en arrière la queue à côté de la table et relâchez : plus vous tirez, plus le coup est fort. Les flèches affinent la visée ; la bille blanche ajoute de l’effet.",
     "status": {
       "yourShot": "À vous de jouer",
       "ballInHand": "Bille en main : placez la blanche, puis tirez la queue",
@@ -1037,7 +1037,9 @@
     "settings": {
       "cloth": "Tapis",
       "guide": "Ligne de visée",
-      "guideHint": "La ligne complète montre où ira la bille touchée. La ligne courte s’arrête à la première bille, pour ceux qui aiment la difficulté. Cela ne change rien pour votre adversaire."
+      "guideHint": "La ligne complète montre où ira la bille touchée. La ligne courte s’arrête à la première bille, pour ceux qui aiment la difficulté. Cela ne change rien pour votre adversaire.",
+      "cueStyle": "Queue",
+      "cueHint": "Apparence seulement : toutes les queues jouent de la même façon."
     },
     "cloth": {
       "green": "Vert",
@@ -1068,6 +1070,22 @@
       "youLost": "L’ordinateur a gagné"
     },
     "wins_one": "{{count}} victoire",
-    "wins_other": "{{count}} victoires"
+    "wins_other": "{{count}} victoires",
+    "cue": {
+      "maple": "Érable",
+      "ebony": "Ébène",
+      "ocean": "Océan",
+      "kente": "Kente"
+    },
+    "tools": {
+      "menu": "Menu",
+      "spin": "Effet",
+      "cue": "Queue",
+      "chat": "Chat",
+      "close": "Fermer",
+      "spinHint": "Touchez l’endroit où la queue doit frapper la bille blanche : en haut pour le coulé, en bas pour le rétro, sur les côtés pour l’effet latéral.",
+      "spinReset": "Centre"
+    },
+    "rotate": "Tournez votre téléphone pour une table plus grande."
   }
 }

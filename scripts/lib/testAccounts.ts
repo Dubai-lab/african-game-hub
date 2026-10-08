@@ -82,7 +82,7 @@ export async function resetTestAccounts() {
     delete from public.direct_messages where sender_id in ${theirIds} and recipient_id in ${theirIds};
     delete from public.friendships where requester_id in ${theirIds} and addressee_id in ${theirIds};
     update public.profile_private set match_chat_enabled = true where user_id in ${theirIds} and not match_chat_enabled;
-    update public.profile_private set preferences = preferences - array['ludoDice', 'ludoBoard3d', 'ludoBoard', 'ludoSides', 'ludoLay', 'poolCloth', 'poolGuide'] where user_id in ${theirIds} and preferences ?| array['ludoDice', 'ludoBoard3d', 'ludoBoard', 'ludoSides', 'ludoLay', 'poolCloth', 'poolGuide'];
+    update public.profile_private set preferences = preferences - array['ludoDice', 'ludoBoard3d', 'ludoBoard', 'ludoSides', 'ludoLay', 'poolCloth', 'poolGuide', 'poolCue'] where user_id in ${theirIds} and preferences ?| array['ludoDice', 'ludoBoard3d', 'ludoBoard', 'ludoSides', 'ludoLay', 'poolCloth', 'poolGuide', 'poolCue'];
     delete from public.reports where reporter_id in ${theirIds} and reported_id in ${theirIds};
     delete from public.blocks where blocker_id in ${theirIds} and blocked_id in ${theirIds};
     update public.profile_private set is_banned = false, ban_reason = null where user_id in ${theirIds} and is_banned;

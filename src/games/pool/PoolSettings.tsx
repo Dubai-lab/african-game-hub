@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useSettingsStore } from '@/core/settings/settingsStore'
+import { CUE_IDS, cueGradient } from './cues'
 import { CLOTH_IDS, CLOTHS } from './PoolCanvas'
 
 /** Pool's part of the Settings page: the cloth, and how much of the aiming line is shown. */
@@ -23,6 +24,19 @@ export default function PoolSettings() {
             </button>
           ))}
         </div>
+      </fieldset>
+
+      <fieldset>
+        <legend className="font-semibold">{t('pool.settings.cueStyle')}</legend>
+        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4" role="radiogroup">
+          {CUE_IDS.map((id) => (
+            <button key={id} type="button" role="radio" aria-checked={settings.poolCue === id} onClick={() => settings.set({ poolCue: id })} className={`flex flex-col gap-1.5 border-2 p-2 text-start text-sm font-bold ${settings.poolCue === id ? 'border-ink bg-brand text-brand-ink' : 'border-line bg-surface'}`}>
+              <span className="block h-2 w-full rounded-full" style={{ background: cueGradient(id, 'to right') }} aria-hidden="true" />
+              {t(`pool.cue.${id}`)}
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-sm text-muted">{t('pool.settings.cueHint')}</p>
       </fieldset>
 
       <fieldset>
