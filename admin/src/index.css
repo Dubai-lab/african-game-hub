@@ -1,0 +1,33 @@
+@import 'tailwindcss';
+
+/* A working tool, not a showpiece: system fonts (nothing to download), dense tables, and the
+   hub's own colours so it is recognisably the same product. */
+@theme {
+  --color-ink: #0d1130;
+  --color-indigo: #1f2a7a;
+  --color-indigo-soft: #2c3996;
+  --color-ground: #f3f4fa;
+  --color-panel: #ffffff;
+  --color-line: #d9dceb;
+  --color-muted: #5b6185;
+  --color-danger: #c2183f;
+  --color-ok: #0b7a55;
+  --color-maize: #f5b700;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', Consolas, 'Liberation Mono', monospace;
+}
+
+html {
+  background: var(--color-ground);
+  color: var(--color-ink);
+  font-size: 15px;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-maize);
+  outline-offset: 2px;
+}
+
+table {
+  font-variant-numeric: tabular-nums;
+}

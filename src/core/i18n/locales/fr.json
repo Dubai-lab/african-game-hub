@@ -1,0 +1,979 @@
+{
+  "app": {
+    "name": "African Game Hub",
+    "loading": "Chargement…",
+    "reconnecting": "Reconnexion…",
+    "offline": "Vous êtes hors ligne. Le jeu en ligne nécessite une connexion.",
+    "configMissing": "L'application n'est pas encore configurée.",
+    "configMissingHint": "Copiez .env.example vers .env.local, ajoutez l'URL Supabase et la clé anon, puis redémarrez le serveur de développement."
+  },
+  "common": {
+    "retry": "Réessayer",
+    "reload": "Recharger",
+    "backHome": "Retour à l'accueil",
+    "logout": "Se déconnecter",
+    "language": "Langue",
+    "dismiss": "Fermer"
+  },
+  "errors": {
+    "generic": "Une erreur s'est produite. Veuillez réessayer.",
+    "network": "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.",
+    "loadFailed": "Chargement impossible. Vérifiez votre connexion et réessayez.",
+    "sectionCrashed": "Cette partie de l'application a rencontré un problème.",
+    "invalidCredentials": "E-mail ou mot de passe incorrect.",
+    "emailNotConfirmed": "Confirmez d'abord votre e-mail. Le lien se trouve dans votre boîte de réception.",
+    "emailRateLimit": "Trop d'e-mails demandés. Patientez quelques minutes et réessayez.",
+    "tooManyRequests": "Trop de tentatives. Patientez un instant et réessayez.",
+    "userExists": "Un compte existe déjà avec cet e-mail. Connectez-vous.",
+    "weakPassword": "Choisissez un mot de passe plus solide.",
+    "signupDisabled": "Les inscriptions sont fermées pour le moment.",
+    "linkExpired": "Ce lien a expiré ou a déjà été utilisé. Connectez-vous ou demandez un nouvel e-mail.",
+    "logoutFailed": "Serveur injoignable : vous avez été déconnecté sur cet appareil uniquement.",
+    "codes": {
+      "BANNED": "Ce compte ne peut pas jouer en ligne. Contactez le support si vous pensez qu’il s’agit d’une erreur.",
+      "GAME_NOT_AVAILABLE": "Ce jeu n’est pas disponible pour le moment.",
+      "OPTIONS_NOT_ALLOWED": "Cette cadence n’est plus proposée. Choisissez-en une autre.",
+      "STAKE_NOT_ALLOWED": "Cette mise n’est plus proposée. Choisissez-en une autre.",
+      "NOT_AUTHENTICATED": "Votre session a expiré. Reconnectez-vous.",
+      "NOT_A_PLAYER": "Vous ne participez pas à cette partie.",
+      "NOT_YOUR_TURN": "Ce n’est pas à vous de jouer.",
+      "OUT_OF_SYNC": "La partie a avancé. Votre échiquier a été mis à jour.",
+      "GAME_OVER": "Cette partie est déjà terminée.",
+      "TIME_OUT": "Votre temps est écoulé.",
+      "ABORTED": "La partie a été annulée car le premier coup a trop tardé.",
+      "NO_OFFER": "Aucune proposition de nulle en attente.",
+      "OFFER_PENDING": "Une nulle a déjà été proposée.",
+      "TOO_EARLY": "La nulle peut être proposée une fois que les deux joueurs ont joué.",
+      "SERVER_ERROR": "Un problème est survenu de notre côté. Veuillez réessayer.",
+      "INSUFFICIENT_BALANCE": "Vous n’avez pas assez de jetons pour cette mise.",
+      "AGE_NOT_CONFIRMED": "Les parties avec mise sont réservées aux joueurs ayant confirmé avoir 18 ans ou plus.",
+      "PLAYER_NOT_FOUND": "Aucun joueur ne porte ce nom d’utilisateur.",
+      "CANNOT_FRIEND_SELF": "C’est votre propre nom d’utilisateur.",
+      "ALREADY_FRIENDS": "Vous êtes déjà amis.",
+      "REQUEST_ALREADY_SENT": "Vous avez déjà envoyé une demande à ce joueur.",
+      "TOO_MANY_REQUESTS": "Trop de demandes en attente. Attendez que certaines reçoivent une réponse.",
+      "NO_SUCH_REQUEST": "Cette demande n’existe plus.",
+      "NOT_FRIENDS": "Vous ne pouvez écrire qu’aux joueurs ayant accepté votre demande d’amitié.",
+      "BAD_MESSAGE": "Ce message ne peut pas être envoyé.",
+      "SLOW_DOWN": "Vous envoyez trop vite. Patientez quelques secondes.",
+      "CHAT_CLOSED": "La discussion de cette partie est fermée.",
+      "CHAT_OFF_YOU": "Votre discussion en direct est désactivée.",
+      "CHAT_OFF_OPPONENT": "Votre adversaire a désactivé la discussion en direct.",
+      "BAD_REQUEST": "Cette demande n’a pas pu être acceptée.",
+      "CANNOT_CONTACT": "Vous ne pouvez pas contacter ce joueur.",
+      "ALREADY_REPORTED": "Vous avez déjà signalé cela. Notre équipe va l’examiner.",
+      "TOO_MANY_REPORTS": "Vous avez envoyé beaucoup de signalements aujourd’hui. Réessayez demain.",
+      "REMATCH_NOT_AVAILABLE": "La revanche n’est pas disponible pour cette partie.",
+      "REMATCH_CLOSED": "Il est trop tard pour une revanche. Cherchez plutôt une nouvelle partie.",
+      "REMATCH_DECLINED": "Votre adversaire a refusé la revanche.",
+      "NO_REMATCH_OFFER": "Cette proposition de revanche n’est plus ouverte.",
+      "OPPONENT_UNAVAILABLE": "Votre adversaire est passé à autre chose. Cherchez plutôt une nouvelle partie.",
+      "ALREADY_PLAYING": "Vous êtes déjà en partie.",
+      "GAME_NOT_FOUND": "Cette partie est introuvable.",
+      "ILLEGAL_MOVE": "Ce coup n’est pas autorisé.",
+      "ILLEGAL_SHOT": "Ce coup n’est pas autorisé. Si vous avez la bille en main, posez-la d’abord à un endroit libre."
+    }
+  },
+  "validation": {
+    "emailInvalid": "Saisissez une adresse e-mail valide.",
+    "passwordRequired": "Saisissez votre mot de passe.",
+    "passwordTooShort": "Utilisez au moins 8 caractères.",
+    "usernameLength": "Utilisez entre 3 et 20 caractères.",
+    "usernameChars": "Utilisez uniquement des lettres, des chiffres et des tirets bas.",
+    "ageRequired": "Vous devez avoir 18 ans ou plus pour jouer.",
+    "countryRequired": "Sélectionnez votre pays.",
+    "usernameTaken": "Ce nom d'utilisateur est déjà pris. Essayez-en un autre."
+  },
+  "landing": {
+    "login": "Se connecter",
+    "goToLobby": "Aller au salon",
+    "hero": {
+      "headline": "À vous de jouer.",
+      "sub": "Des parties d’échecs contre de vrais joueurs partout en Afrique. Commencez avec {{tokens}} jetons gratuits.",
+      "cta": "Jouer aux échecs gratuitement",
+      "haveAccount": "J’ai déjà un compte",
+      "posterAlt": "Un échiquier en pleine partie. Le cavalier adverse vient de jouer et c’est à vous.",
+      "you": "Vous",
+      "opponent": "Adversaire"
+    },
+    "games": {
+      "title": "Les jeux",
+      "sub": "Un seul compte et un seul portefeuille pour tous les jeux.",
+      "live": "Disponible",
+      "soon": "Bientôt",
+      "play": "Jouer",
+      "chessBlurb": "Des parties blitz et rapides contre de vrais adversaires, selon votre classement.",
+      "times": "Parties de {{min}} à {{max}} minutes",
+      "stakes": "Jouez gratuitement, ou misez de {{min}} à {{max}} jetons",
+      "ludoBlurb": "La course classique vers la maison, à un contre un. Les dés sont lancés par le serveur : impossible de les truquer.",
+      "poolBlurb": "Jeu de la 8 et jeu de la 9 sur une vraie table. Chaque coup est calculé par le serveur : la table que vous voyez est celle qui compte."
+    },
+    "how": {
+      "title": "Comment ça marche",
+      "steps": [
+        {
+          "title": "Créez un compte",
+          "body": "Un nom d’utilisateur, un e-mail et votre pays. Une minute suffit. Vous devez avoir 18 ans ou plus."
+        },
+        {
+          "title": "Recevez {{tokens}} jetons gratuits",
+          "body": "Ils arrivent dans votre portefeuille dès que vous confirmez votre e-mail."
+        },
+        {
+          "title": "Affrontez de vrais adversaires",
+          "body": "Choisissez une mise et une cadence. Nous vous associons à un joueur de votre niveau, partout en Afrique."
+        },
+        {
+          "title": "Gagnez des jetons",
+          "body": "Le vainqueur remporte le pot, moins {{rake}} % de frais. Les jetons servent à jouer : le retrait en argent réel n’est pas encore disponible et ne sera proposé que dans les pays où il est autorisé."
+        }
+      ]
+    },
+    "numbers": {
+      "title": "Aujourd’hui sur le hub",
+      "online": "joueurs en ligne",
+      "matches": "parties jouées aujourd’hui",
+      "countries": "pays représentés"
+    },
+    "fair": {
+      "title": "Jeu équitable",
+      "items": [
+        {
+          "title": "Chaque coup est vérifié par le serveur.",
+          "body": "Votre téléphone ne fait qu’afficher la partie. Il ne peut ni jouer un coup illégal ni modifier la position."
+        },
+        {
+          "title": "Les pendules tournent sur le serveur.",
+          "body": "Le temps est mesuré de notre côté : personne ne gagne des secondes en trafiquant son appareil."
+        },
+        {
+          "title": "Votre portefeuille enregistre chaque jeton.",
+          "body": "Chaque mise, gain et remboursement est inscrit dans un registre qui ne peut plus être modifié."
+        }
+      ]
+    },
+    "countries": {
+      "title": "Sur tout le continent",
+      "sub": "Les joueurs de {{count}} pays peuvent s’inscrire dès aujourd’hui.",
+      "languages": "Le hub parle anglais et français. Le portugais, le swahili, l’arabe et le kinyarwanda arrivent."
+    },
+    "footer": {
+      "age": "18+",
+      "responsible": "Réservé aux adultes. Jouez pour le jeu, fixez-vous des limites et arrêtez quand ce n’est plus un plaisir.",
+      "terms": "Conditions",
+      "privacy": "Confidentialité",
+      "responsibleLink": "Jeu responsable",
+      "contact": "Contact",
+      "rights": "© {{year}} African Game Hub"
+    }
+  },
+  "auth": {
+    "loginTitle": "Connexion",
+    "signupTitle": "Créez votre compte",
+    "email": "E-mail",
+    "password": "Mot de passe",
+    "username": "Nom d'utilisateur",
+    "usernameHint": "C'est le nom que voient les autres joueurs.",
+    "ageConfirm": "Je confirme avoir 18 ans ou plus.",
+    "loginButton": "Se connecter",
+    "signupButton": "Créer le compte",
+    "working": "Veuillez patienter…",
+    "noAccount": "Nouveau ici ?",
+    "haveAccount": "Vous avez déjà un compte ?",
+    "createAccount": "Créer un compte",
+    "checkEmailTitle": "Vérifiez votre e-mail",
+    "checkEmailBody": "Nous avons envoyé un lien de confirmation à {{email}}. Ouvrez-le pour terminer la création de votre compte.",
+    "checkEmailBodyNoAddress": "Nous vous avons envoyé un lien de confirmation. Ouvrez-le pour terminer la création de votre compte.",
+    "checkEmailSpam": "Rien après quelques minutes ? Regardez dans vos courriers indésirables.",
+    "resend": "Renvoyer l'e-mail",
+    "resent": "E-mail envoyé. Vérifiez votre boîte de réception.",
+    "confirming": "Confirmation de votre compte…",
+    "backToLogin": "Retour à la connexion",
+    "country": "Pays",
+    "countryPlaceholder": "Sélectionnez votre pays",
+    "countryHint": "Affiché sous forme de drapeau à côté de votre nom. Il ne pourra pas être modifié ensuite.",
+    "countryLoading": "Chargement des pays…",
+    "countryLoadFailed": "Impossible de charger la liste des pays."
+  },
+  "lobby": {
+    "title": "Salon",
+    "rating": "Classement {{game}} : {{rating}}",
+    "walletTitle": "Vos jetons",
+    "bonus": "Bonus",
+    "cash": "Solde",
+    "playOnly": "Dans votre pays ({{country}}), les jetons servent uniquement à jouer pour le moment. L’achat de jetons et le retrait ne sont pas encore disponibles.",
+    "localValue": "À titre indicatif, {{tokens}} jetons valent environ {{amount}}.",
+    "chooseGame": "Jeu",
+    "stake": "Mise",
+    "free": "Gratuit",
+    "notEnough": "Jetons insuffisants",
+    "stakeFreeNote": "Partie gratuite. Aucun jeton en jeu.",
+    "stakeNote": "Vous misez {{stake}} jetons. Le vainqueur reçoit {{payout}} ({{rake}} % de frais). Une nulle vous rend votre mise.",
+    "findMatch": "Trouver une partie",
+    "noGames": "Aucun jeu n’est disponible pour le moment.",
+    "gamesLoadFailed": "Impossible de charger les jeux.",
+    "profileLoadFailed": "Impossible de charger votre profil.",
+    "countryPrompt": {
+      "title": "Depuis quel pays jouez-vous ?",
+      "save": "Enregistrer le pays"
+    },
+    "practice": "Entraînement",
+    "practiceHint": "Sans jetons ni classement. Idéal pour une partie avec un ami à côté de vous.",
+    "playLocal": "Jouer sur cet appareil",
+    "playComputer": "Jouer contre l’ordinateur",
+    "gameInProgress": "Vous avez une partie en cours.",
+    "returnToGame": "Reprendre la partie",
+    "searching": {
+      "title": "Recherche d’un adversaire…",
+      "stake": "{{stake}} jetons",
+      "hint": "Vous serez associé au premier joueur qui souhaite la même partie. Gardez cet écran ouvert.",
+      "cancel": "Annuler"
+    },
+    "wins_one": "{{game}} : {{count}} victoire",
+    "wins_other": "{{game}} : {{count}} victoires"
+  },
+  "notFound": {
+    "title": "Page introuvable",
+    "body": "Cette page n'existe pas."
+  },
+  "games": {
+    "chess": "Échecs",
+    "ludo": "Ludo",
+    "draughts": "Dames",
+    "pool": "Billard",
+    "penalty": "Tirs au but"
+  },
+  "legal": {
+    "draft": "Brouillon. Ce texte n’a pas encore été relu par un juriste.",
+    "terms": {
+      "title": "Conditions d’utilisation",
+      "sections": [
+        {
+          "h": "Qui peut jouer",
+          "p": "Vous devez avoir 18 ans ou plus et ne posséder qu’un seul compte. Vous êtes responsable de la confidentialité de vos identifiants."
+        },
+        {
+          "h": "Jetons",
+          "p": "Les jetons sont l’unité utilisée dans tous les jeux du hub. Les jetons gratuits offerts à l’inscription n’ont aucune valeur monétaire. Les dépôts et retraits en argent réel sont désactivés et ne seront proposés que dans les pays où African Game Hub y est autorisé."
+        },
+        {
+          "h": "Parties et mises",
+          "p": "Lorsque vous rejoignez une partie avec mise, votre mise est bloquée jusqu’à la fin. Le vainqueur reçoit le pot, moins les frais de plateforme affichés avant la partie. Une partie nulle ou annulée rend à chaque joueur l’intégralité de sa mise."
+        },
+        {
+          "h": "Jeu équitable",
+          "p": "Il est interdit d’utiliser un moteur d’échecs ou une aide extérieure, de jouer contre ses propres comptes ou d’arranger des résultats. Nous pouvons fermer les comptes concernés et retenir les jetons obtenus en trichant."
+        },
+        {
+          "h": "Modifications",
+          "p": "Nous pouvons mettre à jour ces conditions à mesure que le hub évolue. Vous serez prévenu dans l’application avant toute entrée en vigueur."
+        }
+      ]
+    },
+    "privacy": {
+      "title": "Confidentialité",
+      "sections": [
+        {
+          "h": "Ce que nous conservons",
+          "p": "Votre adresse e-mail, nom d’utilisateur, pays, langue, l’historique de vos parties et de vos mouvements de jetons, votre liste d’amis et les messages que vous envoyez (messages privés à vos amis et discussion pendant une partie). Un numéro de téléphone n’est conservé que si vous en ajoutez un."
+        },
+        {
+          "h": "Pourquoi",
+          "p": "Pour gérer votre compte, vous trouver des adversaires, tenir un portefeuille exact et détecter la triche."
+        },
+        {
+          "h": "Ce que voient les autres joueurs",
+          "p": "Votre nom d’utilisateur, le drapeau de votre pays, votre classement et vos parties terminées. Jamais votre e-mail, votre numéro de téléphone ni votre portefeuille."
+        },
+        {
+          "h": "Partage",
+          "p": "Nous ne vendons pas vos données. Elles sont hébergées par notre prestataire et servent uniquement au fonctionnement du hub."
+        },
+        {
+          "h": "Vos choix",
+          "p": "Vous pouvez demander une copie de vos données ou la fermeture de votre compte en écrivant à l’adresse de contact de la page d’accueil."
+        }
+      ]
+    },
+    "responsible": {
+      "title": "Jeu responsable",
+      "sections": [
+        {
+          "h": "Jouez pour le jeu",
+          "p": "African Game Hub repose sur l’habileté et la compétition. Ce n’est pas un moyen de gagner sa vie, et personne ne devrait miser ce qu’il ne peut pas se permettre de perdre."
+        },
+        {
+          "h": "Réservé aux adultes",
+          "p": "Vous devez avoir 18 ans ou plus. Les comptes appartenant à des mineurs sont fermés."
+        },
+        {
+          "h": "Garder le contrôle",
+          "p": "Décidez à l’avance du temps et du nombre de jetons que vous acceptez de dépenser, et arrêtez-vous une fois cette limite atteinte. Des limites, des pauses et l’auto-exclusion seront disponibles dans vos réglages avant toute activation de l’argent réel."
+        },
+        {
+          "h": "Si ce n’est plus un plaisir",
+          "p": "Faites une pause et parlez-en à une personne de confiance. Pour suspendre ou fermer votre compte, écrivez à l’adresse de contact de la page d’accueil."
+        }
+      ]
+    }
+  },
+  "wallet": {
+    "loadFailed": "Impossible de charger votre portefeuille.",
+    "title": "Portefeuille",
+    "explain": "Les jetons bonus sont gratuits : vous pouvez jouer avec, mais jamais les retirer. Le solde provient des dépôts et des gains financés par de l’argent réel.",
+    "deposit": "Déposer",
+    "withdraw": "Retirer",
+    "comingSoon": "Bientôt",
+    "moneyOff": "L’achat de jetons et le retrait ne sont pas encore disponibles. Ils ouvriront pays par pays, là où ils sont autorisés.",
+    "history": "Transactions",
+    "empty": "Aucune transaction pour l’instant.",
+    "historyFailed": "Impossible de charger vos transactions.",
+    "older": "Voir les plus anciennes",
+    "balanceAfter": "Solde {{balance}}",
+    "bonus": "Bonus",
+    "cash": "Solde",
+    "entry": {
+      "signup_bonus": "Bonus de bienvenue",
+      "stake": "Mise",
+      "stake_refund": "Mise rendue",
+      "win_payout": "Gains",
+      "deposit": "Dépôt",
+      "withdrawal": "Retrait",
+      "adjustment": "Ajustement"
+    }
+  },
+  "chess": {
+    "lobby": {
+      "timeControl": "Cadence",
+      "timeControlHint": "Minutes par joueur. « 3 | 2 » ajoute 2 secondes après chaque coup.",
+      "timePlain": "{{minutes}} minutes chacun",
+      "timeWithIncrement": "{{minutes}} minutes chacun, plus {{increment}} secondes par coup",
+      "pace": {
+        "bullet": "Bullet",
+        "blitz": "Blitz",
+        "rapid": "Rapide"
+      }
+    },
+    "white": "Blancs",
+    "black": "Noirs",
+    "clockWhite": "Pendule des Blancs",
+    "clockBlack": "Pendule des Noirs",
+    "muteOn": "Le son est activé. Couper le son",
+    "muteOff": "Le son est coupé. Activer le son",
+    "moveRejected": "Ce coup n’a pas été accepté et a été annulé.",
+    "moveNotSent": "Ce coup n’a pas pu être envoyé et a été annulé. Vérifiez votre connexion.",
+    "piece": {
+      "q": "Dame",
+      "r": "Tour",
+      "b": "Fou",
+      "n": "Cavalier"
+    },
+    "promotion": {
+      "title": "Promouvoir le pion en"
+    },
+    "local": {
+      "title": "Deux joueurs, un téléphone",
+      "intro": "Passez le téléphone après chaque coup. Choisissez le temps de chaque joueur.",
+      "start": "Commencer la partie",
+      "back": "Salon"
+    },
+    "moves": {
+      "title": "Coups",
+      "none": "Aucun coup pour l’instant",
+      "previous": "Coup précédent",
+      "next": "Coup suivant",
+      "backToGame": "Revenir à la position actuelle",
+      "previousShort": "Précédent",
+      "nextShort": "Suivant"
+    },
+    "actions": {
+      "draw": "Proposer nulle",
+      "resign": "Abandonner",
+      "flip": "Retourner",
+      "undo": "Reprendre",
+      "abort": "Annuler",
+      "drawOffered": "Nulle proposée"
+    },
+    "resign": {
+      "title": "Les {{side}} abandonnent ?",
+      "body": "Les {{side}} gagnent la partie.",
+      "cancel": "Continuer",
+      "confirm": "Abandonner",
+      "titleYou": "Abandonner cette partie ?",
+      "bodyYou": "{{opponent}} gagne."
+    },
+    "drawOffer": {
+      "title": "Les {{side}} proposent la nulle",
+      "body": "{{side}}, acceptez-vous ?",
+      "accept": "Accepter la nulle",
+      "decline": "Refuser",
+      "bodyOnline": "Si vous acceptez, la partie se termine par une nulle."
+    },
+    "over": {
+      "draw": "Partie nulle",
+      "whiteWins": "Victoire des Blancs",
+      "blackWins": "Victoire des Noirs",
+      "youWon": "Vous avez gagné",
+      "youLost": "Vous avez perdu",
+      "tokens": "Jetons",
+      "rating": "Classement",
+      "rematch": "Revanche",
+      "newGame": "Nouvelle partie",
+      "reason": {
+        "checkmate": "Par échec et mat.",
+        "stalemate": "Pat : le joueur au trait n’a aucun coup légal et n’est pas en échec.",
+        "insufficient": "Aucun camp n’a assez de pièces pour mater.",
+        "repetition": "La même position s’est répétée trois fois.",
+        "fifty_moves": "Cinquante coups sans prise ni coup de pion.",
+        "resignation": "Par abandon.",
+        "agreement": "Les deux joueurs ont accepté la nulle.",
+        "timeout": "Au temps.",
+        "aborted": "La partie a été annulée avant que les deux joueurs aient joué. Aucun résultat.",
+        "called_off": "La partie a été annulée par notre équipe. Aucun résultat ; les mises ont été intégralement rendues."
+      },
+      "aborted": "Partie annulée",
+      "close": "Voir l’échiquier"
+    },
+    "settings": {
+      "title": "Réglages de l’échiquier",
+      "board": "Couleurs de l’échiquier",
+      "pieces": "Pièces",
+      "sound": "Sons",
+      "haptics": "Vibration",
+      "autoFlip": "Retourner l’échiquier après chaque coup",
+      "done": "Terminé",
+      "theme": {
+        "indigo": "Bleu",
+        "green": "Vert",
+        "wood": "Bois brun",
+        "grey": "Gris"
+      },
+      "pieceSet": {
+        "chessnut": "Pièces classiques",
+        "rhosgfx": "Pièces arrondies",
+        "hub": "Pièces pleines"
+      },
+      "credits": "Pièces pleines : dessinées pour African Game Hub. Pièces classiques : Chessnut par Alexis Luengas (Apache 2.0). Pièces arrondies : RhosGFX (CC0).",
+      "premoves": "Coups anticipés",
+      "premovesHint": "Choisissez votre prochain coup pendant que l’adversaire réfléchit. Il est joué dès que c’est à vous, s’il est encore légal."
+    },
+    "computer": {
+      "title": "Jouer contre l’ordinateur",
+      "intro": "Entraînez-vous sans jetons ni classement. Reprenez un coup quand vous voulez.",
+      "level": "Niveau",
+      "color": "Jouer avec les",
+      "random": "Au hasard",
+      "start": "Commencer la partie",
+      "name": "Ordinateur",
+      "you": "Vous",
+      "tableTitle": "Ordinateur · {{level}}",
+      "thinking": "L’ordinateur réfléchit…",
+      "loading": "Préparation de l’ordinateur…",
+      "failed": "Impossible de charger l’ordinateur. Vérifiez votre connexion.",
+      "engineCredit": "L’adversaire est Stockfish 10, logiciel libre sous licence GPL-3.0.",
+      "levels": {
+        "beginner": {
+          "name": "Débutant",
+          "hint": "Apprend encore. Fait beaucoup d’erreurs."
+        },
+        "easy": {
+          "name": "Facile",
+          "hint": "Joue des coups simples et se trompe de temps en temps."
+        },
+        "medium": {
+          "name": "Moyen",
+          "hint": "Un adversaire régulier qui prend ce que vous laissez en prise."
+        },
+        "hard": {
+          "name": "Difficile",
+          "hint": "Prévoit quelques coups à l’avance et gaffe rarement."
+        },
+        "expert": {
+          "name": "Expert",
+          "hint": "Fort et patient."
+        },
+        "master": {
+          "name": "Maître",
+          "hint": "Pleine puissance."
+        }
+      },
+      "clock": "Jouer avec la pendule",
+      "clockHint": "Vous et l’ordinateur jouez à la pendule. Désactivez pour un entraînement détendu."
+    },
+    "abort": {
+      "title": "Annuler cette partie ?",
+      "body": "La partie n’a pas vraiment commencé : elle sera annulée sans résultat.",
+      "confirm": "Annuler la partie"
+    },
+    "online": {
+      "yourFirstMove": "Jouez votre premier coup. Secondes restantes :",
+      "theirFirstMove": "En attente du premier coup de {{name}}. Secondes restantes :",
+      "drawSent": "Nulle proposée. En attente de la réponse.",
+      "newMatch": "Chercher une nouvelle partie",
+      "backToLobby": "Retour au salon",
+      "notFound": "Cette partie est introuvable.",
+      "loadFailed": "Impossible de charger cette partie.",
+      "stake": "{{stake}} jetons"
+    },
+    "review": {
+      "title": "Analyse de la partie",
+      "open": "Analyse de la partie",
+      "start": "Analyser cette partie",
+      "analysing": "Analyse de la partie… {{percent}} %",
+      "failed": "L’analyse n’a pas pu être lancée. Vérifiez votre connexion et réessayez.",
+      "yourAccuracy": "Votre précision",
+      "accuracy": "Précision",
+      "mistakes": "Erreurs",
+      "balance": "Qui est mieux : {{score}}",
+      "hint": "Parcourez les coups pour voir comment chacun a été jugé.",
+      "waiting": "Ce coup n’a pas encore été analysé.",
+      "better": "Le meilleur était {{move}}.",
+      "grade": {
+        "brilliant": "Brillant",
+        "best": "Meilleur",
+        "excellent": "Excellent",
+        "good": "Bon",
+        "inaccuracy": "Imprécision",
+        "mistake": "Erreur",
+        "miss": "Occasion manquée",
+        "blunder": "Gaffe"
+      },
+      "note": {
+        "brilliant": "est brillant : le meilleur coup, et un sacrifice.",
+        "best": "est le meilleur coup.",
+        "excellent": "est un excellent coup.",
+        "good": "est un bon coup.",
+        "inaccuracy": "est une imprécision.",
+        "mistake": "est une erreur.",
+        "miss": "manque une occasion offerte par votre adversaire.",
+        "blunder": "est une gaffe."
+      },
+      "summary": "Toute la partie",
+      "showChat": "Discuter avec votre adversaire"
+    }
+  },
+  "ratingPools": {
+    "bullet": "Bullet",
+    "blitz": "Blitz",
+    "rapid": "Rapide",
+    "eight_ball": "Jeu de la 8",
+    "nine_ball": "Jeu de la 9"
+  },
+  "nav": {
+    "label": "Navigation principale",
+    "lobby": "Jouer",
+    "wallet": "Portefeuille",
+    "leaderboards": "Rangs",
+    "profile": "Profil",
+    "settings": "Réglages",
+    "friends": "Amis"
+  },
+  "settings": {
+    "title": "Réglages",
+    "general": "Général",
+    "account": "Compte",
+    "about": "À propos",
+    "dataSaver": "Économie de données",
+    "dataSaverHint": "Consomme moins de données mobiles : pas de 3D sur la page d’accueil ni d’animation des pièces.",
+    "matchChat": "Discussion en direct pendant les parties",
+    "matchChatHint": "Si cette option est désactivée, vous ne pouvez ni envoyer ni recevoir de texte ou d’emoji pendant une partie."
+  },
+  "leaderboards": {
+    "title": "Classements",
+    "pool": "Classement",
+    "region": "Région",
+    "africa": "Toute l’Afrique",
+    "myCountry": "Mon pays",
+    "empty": "Personne n’est encore classé ici. Jouez une partie pour être le premier.",
+    "loadFailed": "Impossible de charger le classement.",
+    "yourPlace": "Votre place",
+    "count_one": "{{count}} joueur classé",
+    "count_other": "{{count}} joueurs classés"
+  },
+  "profile": {
+    "loadFailed": "Impossible de charger ce profil.",
+    "notFound": "Aucun joueur ne porte ce nom.",
+    "joined": "Inscrit le {{date}}",
+    "editName": "Modifier le nom affiché",
+    "displayName": "Nom affiché",
+    "displayNameHint": "Affiché à la place de @{{username}}. Laissez vide pour afficher votre nom d’utilisateur.",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "ratingsFor": "Classements {{game}}",
+    "rating": "Classement",
+    "record": "{{wins}} V · {{losses}} D · {{draws}} N",
+    "noGames": "Aucune partie",
+    "history": "Parties",
+    "historyEmpty": "Aucune partie terminée pour l’instant.",
+    "historyFailed": "Impossible de charger les parties.",
+    "unknownOpponent": "Adversaire",
+    "tokens": "{{amount}} jetons",
+    "outcome": {
+      "win": "Gagné",
+      "loss": "Perdu",
+      "draw": "Nulle"
+    },
+    "wins": "Parties gagnées",
+    "winsFor": "Parties gagnées : {{game}}"
+  },
+  "friends": {
+    "title": "Amis",
+    "add": "Ajouter un ami",
+    "usernamePlaceholder": "Son nom d’utilisateur",
+    "send": "Envoyer",
+    "privacy": "Vous ne pouvez écrire à un joueur qu’après qu’il a accepté votre demande.",
+    "incoming": "Demandes d’amitié",
+    "outgoing": "Demandes envoyées",
+    "list": "Vos amis",
+    "empty": "Pas encore d’amis. Ajoutez quelqu’un par son nom d’utilisateur, ou depuis son profil après une partie.",
+    "loadFailed": "Impossible de charger vos amis.",
+    "accept": "Accepter",
+    "decline": "Refuser",
+    "cancel": "Annuler la demande",
+    "remove": "Retirer des amis",
+    "message": "Message",
+    "addFriend": "Ajouter en ami",
+    "requestSent": "Demande d’amitié envoyée",
+    "nowFriends": "Vous êtes maintenant amis.",
+    "unread_one": "{{count}} message non lu",
+    "unread_other": "{{count}} messages non lus"
+  },
+  "chat": {
+    "write": "Écrire un message",
+    "send": "Envoyer",
+    "empty": "Aucun message pour l’instant. Dites bonjour à {{name}}.",
+    "conversation": "Conversation avec {{name}}",
+    "friendsOnly": "Vous pourrez écrire à ce joueur lorsqu’il aura accepté votre demande d’amitié.",
+    "loadFailed": "Impossible de charger les messages.",
+    "newMessage": "Nouveau message de {{name}}",
+    "matchTitle": "Discuter avec votre adversaire",
+    "matchWrite": "Dites quelque chose",
+    "emoji": "Réactions rapides",
+    "turnOff": "Désactiver la discussion",
+    "turnOn": "Activer la discussion",
+    "offYou": "La discussion en direct est désactivée. Vous n’envoyez et ne recevez rien.",
+    "offOpponent": "Votre adversaire a désactivé la discussion en direct."
+  },
+  "safety": {
+    "report": "Signaler",
+    "reportNamed": "Signaler {{name}}",
+    "reportTitle": "Signaler {{name}}",
+    "explain": "Votre signalement est envoyé à notre équipe, avec une copie de votre conversation privée avec ce joueur. Il ne saura pas qui l’a signalé.",
+    "explainMatch": "Votre signalement est envoyé à notre équipe, avec une copie de la discussion de cette partie. Votre adversaire ne saura pas qui l’a signalé.",
+    "reasonLabel": "Que s’est-il passé ?",
+    "reasons": {
+      "abuse": "Messages injurieux ou insultants",
+      "cheating": "Triche (par exemple, usage d’un moteur d’échecs)",
+      "multiple_accounts": "Utilisation de plusieurs comptes",
+      "other": "Autre chose"
+    },
+    "noteLabel": "Ce que nous devrions savoir (facultatif)",
+    "alsoBlock": "Bloquer aussi ce joueur",
+    "send": "Envoyer le signalement",
+    "cancel": "Annuler",
+    "sent": "Signalement envoyé. Notre équipe va l’examiner.",
+    "block": "Bloquer",
+    "unblock": "Débloquer",
+    "blocked": "Vous avez bloqué {{name}}.",
+    "unblocked": "Vous avez débloqué {{name}}.",
+    "blockedNote": "Vous avez bloqué ce joueur. Il ne peut plus vous envoyer de demandes d’amitié ni de messages, et la discussion reste fermée si vous vous rencontrez en partie."
+  },
+  "afterMatch": {
+    "newGame": "Nouvelle {{pace}}",
+    "rematch": "Revanche",
+    "searching": "Recherche d’un adversaire…",
+    "cancelSearch": "Annuler",
+    "sent": "Revanche proposée. En attente de {{name}}…",
+    "cancelOffer": "Annuler la proposition",
+    "incoming": "{{name}} veut une revanche.",
+    "accept": "Accepter",
+    "decline": "Refuser",
+    "declined": "{{name}} a refusé la revanche."
+  },
+  "ludo": {
+    "lobby": {
+      "length": "Durée de la partie",
+      "pieces_one": "{{count}} pion chacun",
+      "pieces_other": "{{count}} pions chacun",
+      "hint": "Le premier à ramener tous ses pions gagne. Seuls les six partout donnent un nouveau lancer. Chaque tour est limité en temps. Vous jouez contre des joueurs qui ont fait les mêmes choix.",
+      "players": "Joueurs à la table",
+      "playersHint": "Avec une mise, le premier joueur rentré remporte tout le pot. En partie gratuite, les autres peuvent continuer pour la deuxième et la troisième place.",
+      "dice": "Dés",
+      "sides": "Maisons",
+      "rules": "Règles"
+    },
+    "mode": {
+      "quick": "Rapide",
+      "classic": "Classique"
+    },
+    "color": {
+      "red": "Rouge",
+      "green": "Vert",
+      "yellow": "Jaune",
+      "blue": "Bleu"
+    },
+    "boardLabel": "Plateau de ludo",
+    "pieceLabel": {
+      "yard": "Pion {{number}} {{color}}, dans l’écurie",
+      "board": "Pion {{number}} {{color}}, sur le plateau",
+      "home": "Pion {{number}} {{color}}, à la maison"
+    },
+    "piecesHome": "{{home}} sur {{total}} à la maison",
+    "clockLabel": "Secondes restantes pour ce tour",
+    "stake": "{{stake}} jetons",
+    "backToLobby": "Retour au salon",
+    "notFound": "Cette partie est introuvable.",
+    "loadFailed": "Impossible de charger cette partie.",
+    "soundOn": "Son activé",
+    "soundOff": "Son coupé",
+    "roll": "Lancer",
+    "newGame": "Nouvelle partie",
+    "status": {
+      "rolling": "Lancer en cours…",
+      "yourRoll": "À vous : lancez le dé",
+      "yourMove": "Vous avez fait {{die}} : touchez un pion",
+      "waiting": "En attente de {{name}}",
+      "turnOf": "Au tour de {{name}}",
+      "over": "Partie terminée",
+      "yourChoice": "Vous avez fait {{die}} : choisissez quoi jouer, puis touchez un pion",
+      "mustCountAll": "Vous avez fait {{die}} : les deux dés doivent être joués, un pion avance donc de {{total}}. Touchez-le"
+    },
+    "event": {
+      "moved": "{{name}} a fait {{die}} et a joué.",
+      "noMove": "{{name}} a fait {{die}} et n’a pas pu jouer.",
+      "capture": "{{name}} a fait {{die}} et renvoyé un pion à l’écurie.",
+      "home": "{{name}} a fait {{die}} et ramené un pion à la maison.",
+      "threeSixes": "{{name}} a fait trois six et perd son tour.",
+      "left": "{{name}} a quitté la table.",
+      "finished": "{{name}} a fait {{die}} et ramené son dernier pion à la maison.",
+      "threeDoubles": "{{name}} a fait double six trois fois et perd son tour.",
+      "rolled": "{{name}} a fait {{die}}.",
+      "full": "{{name}} a fait {{die}} et avancé un pion du total de {{total}}.",
+      "lay": "{{name}} a fait {{die}}, capturé, et posé son pion à la maison.",
+      "again": "{{name}} a fait {{die}} et relance."
+    },
+    "resign": {
+      "button": "Abandonner",
+      "title": "Abandonner cette partie ?",
+      "body": "{{opponent}} gagnera. Si aucun de vous n’a encore joué, la partie est simplement annulée.",
+      "cancel": "Continuer",
+      "confirm": "Abandonner",
+      "bodyTable": "Vous quitterez la table et les autres continueront. Si personne n’a encore joué, la partie est simplement annulée.",
+      "bodyTableStaked": "Vous quitterez la table et perdrez votre mise : elle reste dans le pot pour le vainqueur. Si personne n’a encore joué, la partie est simplement annulée."
+    },
+    "over": {
+      "youWon": "Vous avez gagné",
+      "youLost": "Vous avez perdu",
+      "winner": "{{name}} a gagné",
+      "calledOff": "Partie annulée",
+      "rating": "Classement",
+      "tokens": "Jetons",
+      "close": "Voir le plateau",
+      "playOn": "La partie a son vainqueur. Vous pouvez continuer à jouer pour la place suivante.",
+      "keepPlaying": "Continuer à jouer"
+    },
+    "reason": {
+      "all_home": "Tous les pions sont à la maison.",
+      "resignation": "Les autres joueurs ont quitté la partie.",
+      "timeout": "Au temps : les autres joueurs ont manqué leurs tours.",
+      "no_first_move": "La partie a été annulée car un joueur n’a pas joué son premier tour. Aucun résultat.",
+      "aborted_by_player": "La partie a été annulée avant que les deux joueurs aient joué. Aucun résultat.",
+      "admin_abort": "La partie a été annulée par notre équipe. Aucun résultat ; les mises ont été intégralement rendues.",
+      "other": "La partie est terminée."
+    },
+    "back": "Salon",
+    "playersCount_one": "{{count}} joueur",
+    "playersCount_other": "{{count}} joueurs",
+    "place": {
+      "1": "1er : vainqueur",
+      "2": "2e place",
+      "3": "3e place",
+      "4": "4e place"
+    },
+    "leftTable": "A quitté la table",
+    "stopPlaying": "Arrêter de jouer",
+    "computer": {
+      "link": "Jouer contre l’ordinateur",
+      "title": "Entraînement",
+      "heading": "Ludo contre l’ordinateur",
+      "intro": "Entraînement sans jetons ni classement. Vous êtes rouge et lancez en premier. Fonctionne sans connexion.",
+      "opponents": "Joueurs ordinateur",
+      "opponentsCount_one": "{{count}} ordinateur",
+      "opponentsCount_other": "{{count}} ordinateurs",
+      "start": "Commencer",
+      "you": "Vous",
+      "name": "Ordinateur",
+      "numbered": "Ordinateur {{number}}",
+      "again": "Rejouer",
+      "change": "Changer les réglages",
+      "leave": "Quitter cette partie"
+    },
+    "dieShows": "Dé : {{value}}",
+    "dieIdle": "Dé, pas encore lancé",
+    "diceCount_one": "{{count}} dé",
+    "diceCount_other": "{{count}} dés",
+    "playDie": "Jouer le {{value}}",
+    "settings": {
+      "dice": "Dés",
+      "board3d": "Plateau en 3D",
+      "board3dHint": "Le plateau est incliné comme une vraie table. Désactivez pour le voir du dessus.",
+      "board": "Plateau",
+      "sides": "Parties à deux",
+      "sidesHint": "Les deux côtés : vous et votre adversaire tenez chacun deux maisons opposées et jouez huit pions.",
+      "lay": "Pose à la capture",
+      "layHint": "Le pion qui capture rentre directement à la maison au lieu de finir le tour du plateau. Le pion capturé retourne à l’écurie.",
+      "rulesHint": "Dés, maisons et pose servent pour les parties que vous cherchez et pour l’entraînement. En ligne, vous jouez contre des joueurs qui ont fait les mêmes choix."
+    },
+    "sides": {
+      "1": "Un côté",
+      "2": "Les deux côtés"
+    },
+    "sidesHint": {
+      "1": "Une maison chacun : 4 pions",
+      "2": "Deux maisons chacun : 8 pions"
+    },
+    "lay": {
+      "on": "Pose",
+      "off": "Sans pose",
+      "onHint": "Le pion qui capture rentre directement",
+      "offHint": "Le pion qui capture reste où il est arrivé"
+    },
+    "rule": {
+      "lay": "la capture pose le pion",
+      "stay": "sans pose"
+    },
+    "rulesLine": "Cette partie : {{dice}}, {{capture}}.",
+    "wins_one": "{{count}} victoire",
+    "wins_other": "{{count}} victoires",
+    "playWith": "Jouer avec",
+    "fullCount": "Total {{total}}",
+    "logTitle": "La partie jusqu’ici",
+    "logEmpty": "Aucun lancer pour l’instant.",
+    "board": {
+      "classic": "Classique",
+      "wood": "Bois",
+      "night": "Nuit"
+    }
+  },
+  "pool": {
+    "lobby": {
+      "game": "Jeu",
+      "hint": {
+        "8ball": "Pleines ou rayées, puis la 8",
+        "9ball": "La plus petite d’abord ; la 9 gagne"
+      },
+      "note": "Deux joueurs. Chaque coup est limité en temps. Vos victoires à la 8 et à la 9 sont comptées séparément."
+    },
+    "variant": {
+      "8ball": "Jeu de la 8",
+      "9ball": "Jeu de la 9"
+    },
+    "group": {
+      "solids": "Pleines",
+      "stripes": "Rayées"
+    },
+    "openTable": "Table ouverte",
+    "nextBall": "Bille suivante",
+    "tableLabel": "Table de billard",
+    "clockLabel": "Secondes restantes pour ce coup",
+    "stake": "{{stake}} jetons",
+    "back": "Salon",
+    "backToLobby": "Retour au salon",
+    "notFound": "Cette partie est introuvable.",
+    "loadFailed": "Impossible de charger cette partie.",
+    "soundOn": "Son activé",
+    "soundOff": "Son coupé",
+    "newGame": "Nouvelle partie",
+    "power": "Force : tirez la queue en arrière et relâchez pour jouer",
+    "spin": "Effet : où la queue frappe la bille",
+    "aimLeft": "Viser un peu à gauche",
+    "aimRight": "Viser un peu à droite",
+    "aimLeftMore": "Viser plus à gauche",
+    "aimRightMore": "Viser plus à droite",
+    "howTo": "Touchez la table pour viser, puis tirez en arrière la queue à côté de la table et relâchez : plus vous tirez, plus le coup est fort. Les flèches affinent la visée ; la bille blanche ajoute de l’effet.",
+    "status": {
+      "yourShot": "À vous de jouer",
+      "ballInHand": "Bille en main : placez la blanche, puis tirez la queue",
+      "breakPlace": "Votre casse : placez la blanche, puis tirez la queue",
+      "waiting": "En attente de {{name}}",
+      "turnOf": "Au tour de {{name}}",
+      "over": "Partie terminée",
+      "callPocket": "Annoncez la 8 : touchez la poche visée",
+      "thinking": "{{name}} réfléchit"
+    },
+    "foul": {
+      "scratch": "Faute de {{name}} : la blanche est tombée.",
+      "no_contact": "Faute de {{name}} : la blanche n’a rien touché.",
+      "wrong_ball": "Faute de {{name}} : mauvaise bille touchée en premier.",
+      "no_rail": "Faute de {{name}} : aucune bille n’a touché une bande.",
+      "bad_placement": "Faute de {{name}}.",
+      "time": "{{name}} a dépassé le temps."
+    },
+    "resign": {
+      "button": "Abandonner",
+      "title": "Abandonner cette partie ?",
+      "body": "{{opponent}} gagnera. Si aucun de vous n’a encore joué, la partie est simplement annulée.",
+      "cancel": "Continuer",
+      "confirm": "Abandonner"
+    },
+    "over": {
+      "youWon": "Vous avez gagné",
+      "youLost": "Vous avez perdu",
+      "winner": "{{name}} a gagné",
+      "calledOff": "Partie annulée",
+      "tokens": "Jetons",
+      "close": "Voir la table",
+      "wins": "Parties gagnées ({{game}})"
+    },
+    "reason": {
+      "eight_ball": "La 8 a été empochée.",
+      "nine_ball": "La 9 a été empochée.",
+      "eight_early": "La 8 a été empochée trop tôt.",
+      "eight_foul": "La 8 a été empochée sur une faute.",
+      "three_fouls": "Trois fautes de suite.",
+      "resignation": "Par abandon.",
+      "timeout": "Au temps : trois coups de suite ont été manqués.",
+      "no_first_move": "La partie a été annulée car la casse n’a jamais été jouée. Aucun résultat.",
+      "aborted_by_player": "La partie a été annulée avant que les deux joueurs aient joué. Aucun résultat.",
+      "admin_abort": "La partie a été annulée par notre équipe. Aucun résultat ; les mises ont été intégralement rendues.",
+      "other": "La partie est terminée.",
+      "eight_wrong_pocket": "La 8 est tombée dans une poche qui n’était pas annoncée."
+    },
+    "calledPocket": "Poche annoncée pour la 8",
+    "settings": {
+      "cloth": "Tapis",
+      "guide": "Ligne de visée",
+      "guideHint": "La ligne complète montre où ira la bille touchée. La ligne courte s’arrête à la première bille, pour ceux qui aiment la difficulté. Cela ne change rien pour votre adversaire."
+    },
+    "cloth": {
+      "green": "Vert",
+      "blue": "Bleu",
+      "red": "Rouge"
+    },
+    "guide": {
+      "full": "Complète",
+      "short": "Courte"
+    },
+    "computer": {
+      "link": "Jouer au billard contre l’ordinateur",
+      "title": "Billard contre l’ordinateur",
+      "intro": "Entraînement, sans jetons ni classement. Vous cassez.",
+      "game": "Jeu",
+      "level": "Niveau de l’ordinateur",
+      "levels": {
+        "easy": "Facile",
+        "medium": "Moyen",
+        "hard": "Difficile"
+      },
+      "start": "Commencer",
+      "you": "Vous",
+      "name": "Ordinateur",
+      "again": "Rejouer",
+      "change": "Changer de jeu",
+      "youWon": "Vous avez gagné",
+      "youLost": "L’ordinateur a gagné"
+    },
+    "wins_one": "{{count}} victoire",
+    "wins_other": "{{count}} victoires"
+  }
+}

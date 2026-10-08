@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- App icon (original): four board squares on Indigo Vat, in the hub's own palette. -->
+  <rect width="512" height="512" fill="#1f2a7a"/>
+  <rect x="136" y="136" width="120" height="120" fill="#f5b700"/>
+  <rect x="256" y="256" width="120" height="120" fill="#f5b700"/>
+  <rect x="256" y="136" width="120" height="120" fill="#eef0fa"/>
+  <rect x="136" y="256" width="120" height="120" fill="#eef0fa"/>
+</svg>

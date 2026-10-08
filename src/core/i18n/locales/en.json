@@ -1,0 +1,979 @@
+{
+  "app": {
+    "name": "African Game Hub",
+    "loading": "Loading…",
+    "reconnecting": "Reconnecting…",
+    "offline": "You are offline. Online play needs a connection.",
+    "configMissing": "The app is not configured yet.",
+    "configMissingHint": "Copy .env.example to .env.local, add the Supabase URL and anon key, then restart the dev server."
+  },
+  "common": {
+    "retry": "Try again",
+    "reload": "Reload",
+    "backHome": "Back to home",
+    "logout": "Log out",
+    "language": "Language",
+    "dismiss": "Dismiss"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "network": "We could not reach the server. Check your connection and try again.",
+    "loadFailed": "We could not load this. Check your connection and try again.",
+    "sectionCrashed": "This part of the app ran into a problem.",
+    "invalidCredentials": "Wrong email or password.",
+    "emailNotConfirmed": "Confirm your email first. Check your inbox for the link we sent.",
+    "emailRateLimit": "Too many emails requested. Wait a few minutes and try again.",
+    "tooManyRequests": "Too many attempts. Wait a moment and try again.",
+    "userExists": "An account with this email already exists. Log in instead.",
+    "weakPassword": "Choose a stronger password.",
+    "signupDisabled": "New sign-ups are closed right now.",
+    "linkExpired": "This link has expired or was already used. Log in, or ask for a new email.",
+    "logoutFailed": "We could not reach the server, so you were logged out on this device only.",
+    "codes": {
+      "BANNED": "This account cannot play online. Contact support if you think this is a mistake.",
+      "GAME_NOT_AVAILABLE": "That game is not available right now.",
+      "OPTIONS_NOT_ALLOWED": "That time control is no longer offered. Pick another one.",
+      "STAKE_NOT_ALLOWED": "That stake is no longer offered. Pick another one.",
+      "NOT_AUTHENTICATED": "Your session has ended. Log in again.",
+      "NOT_A_PLAYER": "You are not a player in this game.",
+      "NOT_YOUR_TURN": "It is not your turn.",
+      "OUT_OF_SYNC": "The game moved on. Your board has been updated.",
+      "GAME_OVER": "This game is already over.",
+      "TIME_OUT": "Your time ran out.",
+      "ABORTED": "The game was called off because the first move took too long.",
+      "NO_OFFER": "There is no draw offer to answer.",
+      "OFFER_PENDING": "A draw has already been offered.",
+      "TOO_EARLY": "A draw can be offered once both players have moved.",
+      "SERVER_ERROR": "Something went wrong on our side. Please try again.",
+      "INSUFFICIENT_BALANCE": "You do not have enough tokens for that stake.",
+      "AGE_NOT_CONFIRMED": "Staked games are for players who have confirmed they are 18 or older.",
+      "PLAYER_NOT_FOUND": "There is no player with that username.",
+      "CANNOT_FRIEND_SELF": "That is your own username.",
+      "ALREADY_FRIENDS": "You are already friends.",
+      "REQUEST_ALREADY_SENT": "You have already sent this player a request.",
+      "TOO_MANY_REQUESTS": "You have too many requests waiting. Wait for some to be answered.",
+      "NO_SUCH_REQUEST": "That request is no longer there.",
+      "NOT_FRIENDS": "You can only message players who have accepted your friend request.",
+      "BAD_MESSAGE": "That message cannot be sent.",
+      "SLOW_DOWN": "You are sending too fast. Wait a few seconds.",
+      "CHAT_CLOSED": "Chat for this game has closed.",
+      "CHAT_OFF_YOU": "Your live chat is turned off.",
+      "CHAT_OFF_OPPONENT": "Your opponent has turned live chat off.",
+      "BAD_REQUEST": "That request could not be accepted.",
+      "CANNOT_CONTACT": "You cannot contact this player.",
+      "ALREADY_REPORTED": "You have already reported this. Our team will look at it.",
+      "TOO_MANY_REPORTS": "You have sent many reports today. Try again tomorrow.",
+      "REMATCH_NOT_AVAILABLE": "A rematch is not available for this game.",
+      "REMATCH_CLOSED": "It is too late for a rematch. Find a new game instead.",
+      "REMATCH_DECLINED": "Your opponent declined the rematch.",
+      "NO_REMATCH_OFFER": "That rematch offer is no longer open.",
+      "OPPONENT_UNAVAILABLE": "Your opponent has moved on. Find a new game instead.",
+      "ALREADY_PLAYING": "You are already in a game.",
+      "GAME_NOT_FOUND": "This game could not be found.",
+      "ILLEGAL_MOVE": "That move is not allowed.",
+      "ILLEGAL_SHOT": "That shot is not allowed. If you have the cue ball in hand, put it on a clear spot first."
+    }
+  },
+  "validation": {
+    "emailInvalid": "Enter a valid email address.",
+    "passwordRequired": "Enter your password.",
+    "passwordTooShort": "Use at least 8 characters.",
+    "usernameLength": "Use 3 to 20 characters.",
+    "usernameChars": "Use only letters, numbers and underscores.",
+    "ageRequired": "You must be 18 or older to play.",
+    "countryRequired": "Select your country.",
+    "usernameTaken": "This username is taken. Try another one."
+  },
+  "landing": {
+    "login": "Log in",
+    "goToLobby": "Go to the lobby",
+    "hero": {
+      "headline": "Your move.",
+      "sub": "Chess against real players across Africa. Start with {{tokens}} free tokens.",
+      "cta": "Play chess free",
+      "haveAccount": "I already have an account",
+      "posterAlt": "A chess board in the middle of a game. The opponent’s knight has just moved and it is your turn.",
+      "you": "You",
+      "opponent": "Opponent"
+    },
+    "games": {
+      "title": "The games",
+      "sub": "One account and one wallet for every game on the hub.",
+      "live": "Live now",
+      "soon": "Coming soon",
+      "play": "Play now",
+      "chessBlurb": "Blitz and rapid games against real opponents, paired by rating.",
+      "times": "Games from {{min}} to {{max}} minutes",
+      "stakes": "Play free, or stake {{min}} to {{max}} tokens",
+      "ludoBlurb": "The classic race home, one against one. The dice are thrown by the server, so nobody can load them.",
+      "poolBlurb": "8-ball and 9-ball on a full table. Every shot is played out on the server, so the table you see is the table that counts."
+    },
+    "how": {
+      "title": "How it works",
+      "steps": [
+        {
+          "title": "Create an account",
+          "body": "A username, an email and your country. It takes a minute. You must be 18 or older."
+        },
+        {
+          "title": "Get {{tokens}} free tokens",
+          "body": "They are in your wallet as soon as you confirm your email."
+        },
+        {
+          "title": "Play real opponents",
+          "body": "Pick a stake and a time control. We pair you with a player near your rating, from anywhere in Africa."
+        },
+        {
+          "title": "Win tokens",
+          "body": "The winner takes the pot, less a {{rake}}% fee. Tokens are for play: cashing out for real money is not available yet, and will only be offered in countries where it is licensed."
+        }
+      ]
+    },
+    "numbers": {
+      "title": "On the hub today",
+      "online": "players online",
+      "matches": "matches played today",
+      "countries": "countries represented"
+    },
+    "fair": {
+      "title": "Fair play",
+      "items": [
+        {
+          "title": "Every move is checked by the server.",
+          "body": "Your phone only shows the game. It cannot make an illegal move or change the position."
+        },
+        {
+          "title": "The clocks run on the server.",
+          "body": "Time is measured on our side, so nobody gains seconds by tampering with their device."
+        },
+        {
+          "title": "Your wallet records every token.",
+          "body": "Each stake, win and refund is written to a ledger that cannot be edited afterwards."
+        }
+      ]
+    },
+    "countries": {
+      "title": "Across the continent",
+      "sub": "Players from {{count}} countries can sign up today.",
+      "languages": "The hub speaks English and French. Portuguese, Swahili, Arabic and Kinyarwanda are on the way."
+    },
+    "footer": {
+      "age": "18+",
+      "responsible": "For adults only. Play for the game, set yourself limits, and stop when it stops being fun.",
+      "terms": "Terms",
+      "privacy": "Privacy",
+      "responsibleLink": "Responsible gaming",
+      "contact": "Contact",
+      "rights": "© {{year}} African Game Hub"
+    }
+  },
+  "auth": {
+    "loginTitle": "Log in",
+    "signupTitle": "Create your account",
+    "email": "Email",
+    "password": "Password",
+    "username": "Username",
+    "usernameHint": "This is the name other players see.",
+    "ageConfirm": "I confirm that I am 18 years old or older.",
+    "loginButton": "Log in",
+    "signupButton": "Create account",
+    "working": "Please wait…",
+    "noAccount": "New here?",
+    "haveAccount": "Already have an account?",
+    "createAccount": "Create an account",
+    "checkEmailTitle": "Check your email",
+    "checkEmailBody": "We sent a confirmation link to {{email}}. Open it to finish creating your account.",
+    "checkEmailBodyNoAddress": "We sent you a confirmation link. Open it to finish creating your account.",
+    "checkEmailSpam": "Nothing after a few minutes? Look in your spam folder.",
+    "resend": "Send the email again",
+    "resent": "Email sent. Check your inbox.",
+    "confirming": "Confirming your account…",
+    "backToLogin": "Back to log in",
+    "country": "Country",
+    "countryPlaceholder": "Select your country",
+    "countryHint": "Shown as a flag next to your name. It cannot be changed later.",
+    "countryLoading": "Loading countries…",
+    "countryLoadFailed": "We could not load the list of countries."
+  },
+  "lobby": {
+    "title": "Lobby",
+    "rating": "{{game}} rating {{rating}}",
+    "walletTitle": "Your tokens",
+    "bonus": "Bonus",
+    "cash": "Cash",
+    "playOnly": "In {{country}}, tokens are for play only for now. Buying tokens and cashing out are not available yet.",
+    "localValue": "For reference, {{tokens}} tokens are worth about {{amount}}.",
+    "chooseGame": "Game",
+    "stake": "Stake",
+    "free": "Free",
+    "notEnough": "Not enough tokens",
+    "stakeFreeNote": "A free game. No tokens at stake.",
+    "stakeNote": "You stake {{stake}} tokens. The winner gets {{payout}} ({{rake}}% fee). A draw returns your stake.",
+    "findMatch": "Find match",
+    "noGames": "No games are available right now.",
+    "gamesLoadFailed": "We could not load the games.",
+    "profileLoadFailed": "We could not load your profile.",
+    "countryPrompt": {
+      "title": "Which country do you play from?",
+      "save": "Save country"
+    },
+    "practice": "Practice",
+    "practiceHint": "No tokens, no rating. Good for a game with a friend next to you.",
+    "playLocal": "Play on this device",
+    "playComputer": "Play the computer",
+    "gameInProgress": "You have a game in progress.",
+    "returnToGame": "Return to game",
+    "searching": {
+      "title": "Looking for an opponent…",
+      "stake": "{{stake}} tokens",
+      "hint": "You will be paired with the first player who wants the same game. Keep this screen open.",
+      "cancel": "Cancel"
+    },
+    "wins_one": "{{game}}: {{count}} win",
+    "wins_other": "{{game}}: {{count}} wins"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "That page does not exist."
+  },
+  "games": {
+    "chess": "Chess",
+    "ludo": "Ludo",
+    "draughts": "Draughts",
+    "pool": "Pool",
+    "penalty": "Penalty Shootout"
+  },
+  "legal": {
+    "draft": "Draft. This text has not yet been reviewed by a lawyer.",
+    "terms": {
+      "title": "Terms of use",
+      "sections": [
+        {
+          "h": "Who can play",
+          "p": "You must be 18 or older and may hold one account only. You are responsible for keeping your login details private."
+        },
+        {
+          "h": "Tokens",
+          "p": "Tokens are the unit used in every game on the hub. Free tokens given at signup have no cash value. Real-money deposits and withdrawals are switched off and will only be offered in countries where African Game Hub is licensed to do so."
+        },
+        {
+          "h": "Matches and stakes",
+          "p": "When you join a staked match, your stake is held until the game ends. The winner receives the pot less the platform fee shown before the match. A drawn or aborted game returns each player’s stake in full."
+        },
+        {
+          "h": "Fair play",
+          "p": "Using a chess engine or outside help, playing against your own accounts, or arranging results is not allowed. We may close accounts and withhold tokens gained by cheating."
+        },
+        {
+          "h": "Changes",
+          "p": "We may update these terms as the hub grows. We will tell you in the app before a change takes effect."
+        }
+      ]
+    },
+    "privacy": {
+      "title": "Privacy",
+      "sections": [
+        {
+          "h": "What we store",
+          "p": "Your email address, username, country, language, a record of your games and token movements, your friends list, and the messages you send (private messages to friends, and chat during a match). A phone number will only be stored if you add one."
+        },
+        {
+          "h": "Why",
+          "p": "To run your account, pair you with opponents, keep an accurate wallet, and detect cheating."
+        },
+        {
+          "h": "What other players see",
+          "p": "Your username, country flag, rating and finished games. Never your email address, phone number or wallet."
+        },
+        {
+          "h": "Sharing",
+          "p": "We do not sell your data. It is held by our hosting provider and used only to operate the hub."
+        },
+        {
+          "h": "Your choices",
+          "p": "You can ask for a copy of your data or for your account to be closed by writing to the contact address on the home page."
+        }
+      ]
+    },
+    "responsible": {
+      "title": "Responsible gaming",
+      "sections": [
+        {
+          "h": "Play for the game",
+          "p": "African Game Hub is about skill and competition. It is not a way to earn a living, and nobody should stake what they cannot afford to lose."
+        },
+        {
+          "h": "Adults only",
+          "p": "You must be 18 or older. Accounts found to belong to minors are closed."
+        },
+        {
+          "h": "Keeping control",
+          "p": "Decide how much time and how many tokens you are willing to spend before you start, and stop when you reach that point. Limits, cool-off periods and self-exclusion will be available in your settings before real money is switched on anywhere."
+        },
+        {
+          "h": "If it stops being fun",
+          "p": "Take a break, and talk to someone you trust. If you want your account paused or closed, write to the contact address on the home page."
+        }
+      ]
+    }
+  },
+  "wallet": {
+    "loadFailed": "We could not load your wallet.",
+    "title": "Wallet",
+    "explain": "Bonus tokens are free tokens: you can play with them but never withdraw them. Cash tokens come from deposits and from winnings funded by cash.",
+    "deposit": "Deposit",
+    "withdraw": "Withdraw",
+    "comingSoon": "Coming soon",
+    "moneyOff": "Buying tokens and cashing out are not available yet. They will open country by country, where licensed.",
+    "history": "Transactions",
+    "empty": "No transactions yet.",
+    "historyFailed": "We could not load your transactions.",
+    "older": "Show older",
+    "balanceAfter": "Balance {{balance}}",
+    "bonus": "Bonus",
+    "cash": "Cash",
+    "entry": {
+      "signup_bonus": "Welcome bonus",
+      "stake": "Stake",
+      "stake_refund": "Stake returned",
+      "win_payout": "Winnings",
+      "deposit": "Deposit",
+      "withdrawal": "Withdrawal",
+      "adjustment": "Adjustment"
+    }
+  },
+  "chess": {
+    "lobby": {
+      "timeControl": "Time control",
+      "timeControlHint": "Minutes for each player. “3 | 2” adds 2 seconds after every move.",
+      "timePlain": "{{minutes}} minutes each",
+      "timeWithIncrement": "{{minutes}} minutes each, plus {{increment}} seconds per move",
+      "pace": {
+        "bullet": "Bullet",
+        "blitz": "Blitz",
+        "rapid": "Rapid"
+      }
+    },
+    "white": "White",
+    "black": "Black",
+    "clockWhite": "White’s clock",
+    "clockBlack": "Black’s clock",
+    "muteOn": "Sound is on. Turn sound off",
+    "muteOff": "Sound is off. Turn sound on",
+    "moveRejected": "That move was not accepted, so it was taken back.",
+    "moveNotSent": "We could not send that move, so it was taken back. Check your connection.",
+    "piece": {
+      "q": "Queen",
+      "r": "Rook",
+      "b": "Bishop",
+      "n": "Knight"
+    },
+    "promotion": {
+      "title": "Promote the pawn to"
+    },
+    "local": {
+      "title": "Two players, one phone",
+      "intro": "Pass the phone after each move. Pick how much time each player gets.",
+      "start": "Start game",
+      "back": "Lobby"
+    },
+    "moves": {
+      "title": "Moves",
+      "none": "No moves yet",
+      "previous": "Previous move",
+      "next": "Next move",
+      "backToGame": "Back to the current position",
+      "previousShort": "Previous",
+      "nextShort": "Next"
+    },
+    "actions": {
+      "draw": "Offer draw",
+      "resign": "Resign",
+      "flip": "Flip board",
+      "undo": "Take back",
+      "abort": "Abort",
+      "drawOffered": "Draw offered"
+    },
+    "resign": {
+      "title": "{{side}} resigns?",
+      "body": "{{side}} wins the game.",
+      "cancel": "Keep playing",
+      "confirm": "Resign",
+      "titleYou": "Resign this game?",
+      "bodyYou": "{{opponent}} wins."
+    },
+    "drawOffer": {
+      "title": "{{side}} offers a draw",
+      "body": "{{side}}, do you accept?",
+      "accept": "Accept draw",
+      "decline": "Decline",
+      "bodyOnline": "If you accept, the game ends as a draw."
+    },
+    "over": {
+      "draw": "Draw",
+      "whiteWins": "White wins",
+      "blackWins": "Black wins",
+      "youWon": "You won",
+      "youLost": "You lost",
+      "tokens": "Tokens",
+      "rating": "Rating",
+      "rematch": "Rematch",
+      "newGame": "New game",
+      "reason": {
+        "checkmate": "By checkmate.",
+        "stalemate": "Stalemate: the player to move has no legal move and is not in check.",
+        "insufficient": "Neither side has enough pieces left to checkmate.",
+        "repetition": "The same position came up three times.",
+        "fifty_moves": "Fifty moves passed with no capture and no pawn move.",
+        "resignation": "By resignation.",
+        "agreement": "Both players agreed to a draw.",
+        "timeout": "On time.",
+        "aborted": "The game was called off before both players had moved. No result.",
+        "called_off": "The game was called off by our team. No result; any stake was returned in full."
+      },
+      "aborted": "Game aborted",
+      "close": "Look at the board"
+    },
+    "settings": {
+      "title": "Board settings",
+      "board": "Board colours",
+      "pieces": "Pieces",
+      "sound": "Sounds",
+      "haptics": "Vibration",
+      "autoFlip": "Turn the board after each move",
+      "done": "Done",
+      "theme": {
+        "indigo": "Blue",
+        "green": "Green",
+        "wood": "Brown wood",
+        "grey": "Grey"
+      },
+      "pieceSet": {
+        "chessnut": "Classic pieces",
+        "rhosgfx": "Rounded pieces",
+        "hub": "Solid pieces"
+      },
+      "credits": "Solid pieces: drawn for African Game Hub. Classic pieces: Chessnut by Alexis Luengas (Apache 2.0). Rounded pieces: RhosGFX (CC0).",
+      "premoves": "Premoves",
+      "premovesHint": "Choose your next move while your opponent is thinking. It is played the instant it is your turn, if it is still legal."
+    },
+    "computer": {
+      "title": "Play the computer",
+      "intro": "Practice with no tokens and no rating. Take a move back whenever you like.",
+      "level": "Level",
+      "color": "Play as",
+      "random": "Random",
+      "start": "Start game",
+      "name": "Computer",
+      "you": "You",
+      "tableTitle": "Computer · {{level}}",
+      "thinking": "The computer is thinking…",
+      "loading": "Getting the computer ready…",
+      "failed": "The computer could not be loaded. Check your connection.",
+      "engineCredit": "The computer opponent is Stockfish 10, free software under the GPL-3.0 licence.",
+      "levels": {
+        "beginner": {
+          "name": "Beginner",
+          "hint": "Still learning. Makes plenty of mistakes."
+        },
+        "easy": {
+          "name": "Easy",
+          "hint": "Plays simple moves and slips up now and then."
+        },
+        "medium": {
+          "name": "Medium",
+          "hint": "A steady opponent that takes what you leave hanging."
+        },
+        "hard": {
+          "name": "Hard",
+          "hint": "Plans a few moves ahead and rarely blunders."
+        },
+        "expert": {
+          "name": "Expert",
+          "hint": "Strong and patient."
+        },
+        "master": {
+          "name": "Master",
+          "hint": "Full strength."
+        }
+      },
+      "clock": "Play with a clock",
+      "clockHint": "Both you and the computer are on the clock. Switch off for relaxed practice."
+    },
+    "abort": {
+      "title": "Abort this game?",
+      "body": "The game has not really started, so it will be called off with no result.",
+      "confirm": "Abort"
+    },
+    "online": {
+      "yourFirstMove": "Make your first move. Seconds left:",
+      "theirFirstMove": "Waiting for {{name}}’s first move. Seconds left:",
+      "drawSent": "Draw offered. Waiting for an answer.",
+      "newMatch": "Find a new match",
+      "backToLobby": "Back to the lobby",
+      "notFound": "This game could not be found.",
+      "loadFailed": "We could not load this game.",
+      "stake": "{{stake}} tokens"
+    },
+    "review": {
+      "title": "Game review",
+      "open": "Game Review",
+      "start": "Analyse this game",
+      "analysing": "Analysing the game… {{percent}}%",
+      "failed": "The analysis could not be run. Check your connection and try again.",
+      "yourAccuracy": "Your accuracy",
+      "accuracy": "Accuracy",
+      "mistakes": "Mistakes",
+      "balance": "Who is better: {{score}}",
+      "hint": "Step through the moves to see how each one was judged.",
+      "waiting": "This move has not been analysed yet.",
+      "better": "Best was {{move}}.",
+      "grade": {
+        "brilliant": "Brilliant",
+        "best": "Best",
+        "excellent": "Excellent",
+        "good": "Good",
+        "inaccuracy": "Inaccuracy",
+        "mistake": "Mistake",
+        "miss": "Miss",
+        "blunder": "Blunder"
+      },
+      "note": {
+        "brilliant": "is brilliant: the best move, and a sacrifice.",
+        "best": "is the best move.",
+        "excellent": "is an excellent move.",
+        "good": "is a good move.",
+        "inaccuracy": "is an inaccuracy.",
+        "mistake": "is a mistake.",
+        "miss": "misses a chance your opponent gave you.",
+        "blunder": "is a blunder."
+      },
+      "summary": "The whole game",
+      "showChat": "Chat with your opponent"
+    }
+  },
+  "ratingPools": {
+    "bullet": "Bullet",
+    "blitz": "Blitz",
+    "rapid": "Rapid",
+    "eight_ball": "8-ball",
+    "nine_ball": "9-ball"
+  },
+  "nav": {
+    "label": "Main",
+    "lobby": "Play",
+    "wallet": "Wallet",
+    "leaderboards": "Ranks",
+    "profile": "Profile",
+    "settings": "Settings",
+    "friends": "Friends"
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "account": "Account",
+    "about": "About",
+    "dataSaver": "Data saver",
+    "dataSaverHint": "Uses less mobile data: no 3D on the home page and no piece animations.",
+    "matchChat": "Live chat during games",
+    "matchChatHint": "When this is off, you cannot send or receive text or emoji during a match."
+  },
+  "leaderboards": {
+    "title": "Leaderboards",
+    "pool": "Rating",
+    "region": "Region",
+    "africa": "All of Africa",
+    "myCountry": "My country",
+    "empty": "Nobody is ranked here yet. Play a game to be the first.",
+    "loadFailed": "We could not load the leaderboard.",
+    "yourPlace": "Your place",
+    "count_one": "{{count}} ranked player",
+    "count_other": "{{count}} ranked players"
+  },
+  "profile": {
+    "loadFailed": "We could not load this profile.",
+    "notFound": "There is no player with that name.",
+    "joined": "Joined {{date}}",
+    "editName": "Change display name",
+    "displayName": "Display name",
+    "displayNameHint": "Shown instead of @{{username}}. Leave empty to show your username.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "ratingsFor": "{{game}} ratings",
+    "rating": "Rating",
+    "record": "{{wins}} W · {{losses}} L · {{draws}} D",
+    "noGames": "No games yet",
+    "history": "Games",
+    "historyEmpty": "No finished games yet.",
+    "historyFailed": "We could not load the games.",
+    "unknownOpponent": "Opponent",
+    "tokens": "{{amount}} tokens",
+    "outcome": {
+      "win": "Won",
+      "loss": "Lost",
+      "draw": "Draw"
+    },
+    "wins": "Games won",
+    "winsFor": "{{game}} games won"
+  },
+  "friends": {
+    "title": "Friends",
+    "add": "Add a friend",
+    "usernamePlaceholder": "Their username",
+    "send": "Send request",
+    "privacy": "You can only message a player after they accept your request.",
+    "incoming": "Friend requests",
+    "outgoing": "Requests you sent",
+    "list": "Your friends",
+    "empty": "No friends yet. Add someone by username, or from their profile after a game.",
+    "loadFailed": "We could not load your friends.",
+    "accept": "Accept",
+    "decline": "Decline",
+    "cancel": "Cancel request",
+    "remove": "Remove friend",
+    "message": "Message",
+    "addFriend": "Add friend",
+    "requestSent": "Friend request sent",
+    "nowFriends": "You are now friends.",
+    "unread_one": "{{count}} unread message",
+    "unread_other": "{{count}} unread messages"
+  },
+  "chat": {
+    "write": "Write a message",
+    "send": "Send",
+    "empty": "No messages yet. Say hello to {{name}}.",
+    "conversation": "Conversation with {{name}}",
+    "friendsOnly": "You can message a player once they have accepted your friend request.",
+    "loadFailed": "We could not load the messages.",
+    "newMessage": "New message from {{name}}",
+    "matchTitle": "Chat with your opponent",
+    "matchWrite": "Say something",
+    "emoji": "Quick reactions",
+    "turnOff": "Turn chat off",
+    "turnOn": "Turn chat on",
+    "offYou": "Live chat is off. You are not sending or receiving anything.",
+    "offOpponent": "Your opponent has turned live chat off."
+  },
+  "safety": {
+    "report": "Report",
+    "reportNamed": "Report {{name}}",
+    "reportTitle": "Report {{name}}",
+    "explain": "Your report goes to our team, with a copy of your private conversation with this player. They are not told who reported them.",
+    "explainMatch": "Your report goes to our team, with a copy of the chat from this game. Your opponent is not told who reported them.",
+    "reasonLabel": "What happened?",
+    "reasons": {
+      "abuse": "Abusive or insulting messages",
+      "cheating": "Cheating (for example, using a chess engine)",
+      "multiple_accounts": "Using several accounts",
+      "other": "Something else"
+    },
+    "noteLabel": "Anything we should know (optional)",
+    "alsoBlock": "Also block this player",
+    "send": "Send report",
+    "cancel": "Cancel",
+    "sent": "Report sent. Our team will look at it.",
+    "block": "Block",
+    "unblock": "Unblock",
+    "blocked": "You blocked {{name}}.",
+    "unblocked": "You unblocked {{name}}.",
+    "blockedNote": "You have blocked this player. They cannot send you friend requests or messages, and chat stays closed if you meet in a game."
+  },
+  "afterMatch": {
+    "newGame": "New {{pace}}",
+    "rematch": "Rematch",
+    "searching": "Looking for an opponent…",
+    "cancelSearch": "Cancel",
+    "sent": "Rematch offered. Waiting for {{name}}…",
+    "cancelOffer": "Cancel offer",
+    "incoming": "{{name}} wants a rematch.",
+    "accept": "Accept",
+    "decline": "Decline",
+    "declined": "{{name}} declined the rematch."
+  },
+  "ludo": {
+    "lobby": {
+      "length": "Game length",
+      "pieces_one": "{{count}} piece each",
+      "pieces_other": "{{count}} pieces each",
+      "hint": "First to bring every piece home wins. Only all sixes earns another throw. Each turn has a time limit. You are matched with players who chose the same.",
+      "players": "Players at the table",
+      "playersHint": "With tokens at stake, the first player home takes the whole pot. In a free game the others can play on for second and third place.",
+      "dice": "Dice",
+      "sides": "Houses",
+      "rules": "Rules"
+    },
+    "mode": {
+      "quick": "Quick",
+      "classic": "Classic"
+    },
+    "color": {
+      "red": "Red",
+      "green": "Green",
+      "yellow": "Yellow",
+      "blue": "Blue"
+    },
+    "boardLabel": "Ludo board",
+    "pieceLabel": {
+      "yard": "{{color}} piece {{number}}, in the yard",
+      "board": "{{color}} piece {{number}}, on the board",
+      "home": "{{color}} piece {{number}}, home"
+    },
+    "piecesHome": "{{home}} of {{total}} home",
+    "clockLabel": "Seconds left this turn",
+    "stake": "{{stake}} tokens",
+    "backToLobby": "Back to the lobby",
+    "notFound": "This game could not be found.",
+    "loadFailed": "We could not load this game.",
+    "soundOn": "Sound on",
+    "soundOff": "Sound off",
+    "roll": "Roll",
+    "newGame": "New game",
+    "status": {
+      "rolling": "Rolling…",
+      "yourRoll": "Your turn: roll",
+      "yourMove": "You rolled {{die}}: tap a piece",
+      "waiting": "Waiting for {{name}}",
+      "turnOf": "{{name}} to play",
+      "over": "Game over",
+      "yourChoice": "You rolled {{die}}: choose what to play, then tap a piece",
+      "mustCountAll": "You rolled {{die}}: both dice must be played, so one piece counts all {{total}}. Tap it"
+    },
+    "event": {
+      "moved": "{{name}} rolled {{die}} and moved.",
+      "noMove": "{{name}} rolled {{die}} and could not move.",
+      "capture": "{{name}} rolled {{die}} and sent a piece back to the yard.",
+      "home": "{{name}} rolled {{die}} and brought a piece home.",
+      "threeSixes": "{{name}} rolled three sixes and lost the turn.",
+      "left": "{{name}} left the table.",
+      "finished": "{{name}} rolled {{die}} and brought the last piece home.",
+      "threeDoubles": "{{name}} rolled double six three times and lost the turn.",
+      "rolled": "{{name}} rolled {{die}}.",
+      "full": "{{name}} rolled {{die}} and moved one piece the full count of {{total}}.",
+      "lay": "{{name}} rolled {{die}}, captured, and laid the piece home.",
+      "again": "{{name}} rolled {{die}} and throws again."
+    },
+    "resign": {
+      "button": "Resign",
+      "title": "Resign this game?",
+      "body": "{{opponent}} will win. If neither of you has played yet, the game is simply called off.",
+      "cancel": "Keep playing",
+      "confirm": "Resign",
+      "bodyTable": "You will leave the table and the others will play on. If nobody has played yet, the game is simply called off.",
+      "bodyTableStaked": "You will leave the table and lose your stake: it stays in the pot for the winner. If nobody has played yet, the game is simply called off."
+    },
+    "over": {
+      "youWon": "You won",
+      "youLost": "You lost",
+      "winner": "{{name}} won",
+      "calledOff": "Game called off",
+      "rating": "Rating",
+      "tokens": "Tokens",
+      "close": "Look at the board",
+      "playOn": "The game has its winner. You can keep playing for the next place.",
+      "keepPlaying": "Keep playing"
+    },
+    "reason": {
+      "all_home": "Every piece is home.",
+      "resignation": "The other players left the game.",
+      "timeout": "On time: the other players ran out of turns.",
+      "no_first_move": "The game was called off because a player did not take their first turn. No result.",
+      "aborted_by_player": "The game was called off before both players had played. No result.",
+      "admin_abort": "The game was called off by our team. No result; any stake was returned in full.",
+      "other": "The game is over."
+    },
+    "back": "Lobby",
+    "playersCount_one": "{{count}} player",
+    "playersCount_other": "{{count}} players",
+    "place": {
+      "1": "1st: winner",
+      "2": "2nd place",
+      "3": "3rd place",
+      "4": "4th place"
+    },
+    "leftTable": "Left the table",
+    "stopPlaying": "Stop playing",
+    "computer": {
+      "link": "Play the computer",
+      "title": "Practice",
+      "heading": "Ludo against the computer",
+      "intro": "Practice with no tokens and no rating. You are red and throw first. It works without a connection.",
+      "opponents": "Computer players",
+      "opponentsCount_one": "{{count}} computer",
+      "opponentsCount_other": "{{count}} computers",
+      "start": "Start game",
+      "you": "You",
+      "name": "Computer",
+      "numbered": "Computer {{number}}",
+      "again": "Play again",
+      "change": "Change setup",
+      "leave": "Leave this game"
+    },
+    "dieShows": "Die: {{value}}",
+    "dieIdle": "Die, not thrown yet",
+    "diceCount_one": "{{count}} die",
+    "diceCount_other": "{{count}} dice",
+    "playDie": "Play the {{value}}",
+    "settings": {
+      "dice": "Dice",
+      "board3d": "3D board",
+      "board3dHint": "The board leans away from you like a real table. Switch off to look at it from straight above.",
+      "board": "Board",
+      "sides": "Two-player games",
+      "sidesHint": "Both sides: you and your opponent each hold two houses, opposite each other, and play eight pieces.",
+      "lay": "Lay on capture",
+      "layHint": "A piece that captures goes straight home instead of walking the rest of the board. The captured piece goes back to its yard.",
+      "rulesHint": "Dice, houses and lay are used for the games you search for and for practice. Online you are matched with players who chose the same."
+    },
+    "sides": {
+      "1": "One side",
+      "2": "Both sides"
+    },
+    "sidesHint": {
+      "1": "One house each: 4 pieces",
+      "2": "Two houses each: 8 pieces"
+    },
+    "lay": {
+      "on": "Lay",
+      "off": "No lay",
+      "onHint": "A piece that captures goes straight home",
+      "offHint": "A piece that captures stays where it landed"
+    },
+    "rule": {
+      "lay": "a capture lays",
+      "stay": "no lay"
+    },
+    "rulesLine": "This game: {{dice}}, {{capture}}.",
+    "wins_one": "{{count}} win",
+    "wins_other": "{{count}} wins",
+    "playWith": "Play with",
+    "fullCount": "Full count {{total}}",
+    "logTitle": "The game so far",
+    "logEmpty": "Nothing has been thrown yet.",
+    "board": {
+      "classic": "Classic",
+      "wood": "Wooden",
+      "night": "Night"
+    }
+  },
+  "pool": {
+    "lobby": {
+      "game": "Game",
+      "hint": {
+        "8ball": "Solids or stripes, then the 8",
+        "9ball": "Lowest ball first; the 9 wins"
+      },
+      "note": "Two players. Each shot has a time limit. Your 8-ball and 9-ball wins are counted separately."
+    },
+    "variant": {
+      "8ball": "8-ball",
+      "9ball": "9-ball"
+    },
+    "group": {
+      "solids": "Solids",
+      "stripes": "Stripes"
+    },
+    "openTable": "Open table",
+    "nextBall": "Next ball",
+    "tableLabel": "Pool table",
+    "clockLabel": "Seconds left for this shot",
+    "stake": "{{stake}} tokens",
+    "back": "Lobby",
+    "backToLobby": "Back to the lobby",
+    "notFound": "This game could not be found.",
+    "loadFailed": "We could not load this game.",
+    "soundOn": "Sound on",
+    "soundOff": "Sound off",
+    "newGame": "New game",
+    "power": "Power: pull the cue back and let go to shoot",
+    "spin": "Spin: where the cue strikes the ball",
+    "aimLeft": "Aim a little left",
+    "aimRight": "Aim a little right",
+    "aimLeftMore": "Aim further left",
+    "aimRightMore": "Aim further right",
+    "howTo": "Touch the table to aim, then pull the cue beside the table back and let go: the further you pull, the harder the shot. The arrows fine-tune the aim; the white ball adds spin.",
+    "status": {
+      "yourShot": "Your shot",
+      "ballInHand": "Ball in hand: place the cue ball, then pull the cue",
+      "breakPlace": "Your break: place the cue ball, then pull the cue",
+      "waiting": "Waiting for {{name}}",
+      "turnOf": "{{name}} to shoot",
+      "over": "Game over",
+      "callPocket": "Call the 8: touch the pocket you will put it in",
+      "thinking": "{{name}} is thinking"
+    },
+    "foul": {
+      "scratch": "Foul by {{name}}: the cue ball was pocketed.",
+      "no_contact": "Foul by {{name}}: the cue ball hit nothing.",
+      "wrong_ball": "Foul by {{name}}: the wrong ball was hit first.",
+      "no_rail": "Foul by {{name}}: no ball reached a cushion.",
+      "bad_placement": "Foul by {{name}}.",
+      "time": "{{name}} ran out of time."
+    },
+    "resign": {
+      "button": "Resign",
+      "title": "Resign this game?",
+      "body": "{{opponent}} will win. If neither of you has played yet, the game is simply called off.",
+      "cancel": "Keep playing",
+      "confirm": "Resign"
+    },
+    "over": {
+      "youWon": "You won",
+      "youLost": "You lost",
+      "winner": "{{name}} won",
+      "calledOff": "Game called off",
+      "tokens": "Tokens",
+      "close": "Look at the table",
+      "wins": "{{game}} games won"
+    },
+    "reason": {
+      "eight_ball": "The 8 ball was pocketed.",
+      "nine_ball": "The 9 ball was pocketed.",
+      "eight_early": "The 8 ball was pocketed too early.",
+      "eight_foul": "The 8 ball was pocketed on a foul.",
+      "three_fouls": "Three fouls in a row.",
+      "resignation": "By resignation.",
+      "timeout": "On time: three shots in a row were missed.",
+      "no_first_move": "The game was called off because the break was never played. No result.",
+      "aborted_by_player": "The game was called off before both players had played. No result.",
+      "admin_abort": "The game was called off by our team. No result; any stake was returned in full.",
+      "other": "The game is over.",
+      "eight_wrong_pocket": "The 8 ball went into a pocket that was not called."
+    },
+    "calledPocket": "Pocket called for the 8",
+    "settings": {
+      "cloth": "Cloth",
+      "guide": "Aiming line",
+      "guideHint": "The full line shows where the ball you hit will go. The short line stops at the first ball, for players who like it harder. It changes nothing for your opponent."
+    },
+    "cloth": {
+      "green": "Green",
+      "blue": "Blue",
+      "red": "Red"
+    },
+    "guide": {
+      "full": "Full",
+      "short": "Short"
+    },
+    "computer": {
+      "link": "Play pool against the computer",
+      "title": "Pool against the computer",
+      "intro": "Practice, with no tokens and no rating. You break.",
+      "game": "Game",
+      "level": "Computer strength",
+      "levels": {
+        "easy": "Easy",
+        "medium": "Medium",
+        "hard": "Hard"
+      },
+      "start": "Start",
+      "you": "You",
+      "name": "Computer",
+      "again": "Play again",
+      "change": "Change game",
+      "youWon": "You won",
+      "youLost": "The computer won"
+    },
+    "wins_one": "{{count}} win",
+    "wins_other": "{{count}} wins"
+  }
+}

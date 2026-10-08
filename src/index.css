@@ -1,0 +1,164 @@
+@import 'tailwindcss';
+
+/* The approved palette and typefaces (landing page design plan, step 3).
+   Components use these names only, never raw hex values. */
+@theme {
+  /* Limewash: main light ground. */
+  --color-surface: #eef0fa;
+  --color-panel: #ffffff;
+  /* Night Ink: text, dark pieces. */
+  --color-ink: #0d1130;
+  --color-muted: #4a5078;
+  --color-line: #c9ceea;
+  /* Indigo Vat: hero grounds, headings and links on light. */
+  --color-primary: #1f2a7a;
+  --color-primary-soft: #4455c7;
+  --color-primary-tint: #c5cbf2;
+  /* Maize: the main button and the player's own clock. Nothing else. */
+  --color-brand: #f5b700;
+  --color-brand-strong: #dda400;
+  --color-brand-ink: #0d1130;
+  /* Hibiscus: live marks, 18+, low time, errors. */
+  --color-hibiscus: #d1264f;
+  --color-danger: #d1264f;
+  /* Palm: wins, gains, confirmations. */
+  --color-palm: #0b7a55;
+
+  --font-display: 'Ojuju Variable', 'Trebuchet MS', 'Segoe UI', sans-serif;
+  --font-sans: 'Atkinson Hyperlegible Next Variable', 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  @apply bg-surface font-sans text-ink antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The band: the one decorative motif. Imigongo zigzag over a run of strip-weave colour blocks.
+   Used on the board rim, the piece collars and between sections, and nowhere else. */
+.band {
+  height: 14px;
+  background:
+    linear-gradient(135deg, var(--band-ground, var(--color-primary)) 25%, transparent 25%) 0 0 / 28px 14px,
+    linear-gradient(225deg, var(--band-ground, var(--color-primary)) 25%, transparent 25%) 0 0 / 28px 14px,
+    linear-gradient(
+        90deg,
+        var(--color-brand) 0 40%,
+        var(--color-hibiscus) 40% 60%,
+        var(--color-palm) 60% 80%,
+        var(--color-surface) 80%
+      )
+      0 0 / 140px 14px;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.toast-in {
+  animation: toast-in 160ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-in {
+    animation: none;
+  }
+}
+
+/* Ludo: a table in three dimensions. The board leans away from the player; the pieces and the
+   die are real objects standing on it, each turned back to face the player. */
+.ludo-3d {
+  transform-style: preserve-3d;
+}
+/* The thickness of the tray, and the shadow it throws on the table under it. */
+.ludo-table {
+  border-radius: 4.2%;
+  box-shadow:
+    0 0.45rem 0 #4a2a10,
+    0 0.6rem 0 #2e1908,
+    0 1.5rem 1.8rem rgba(13, 17, 48, 0.45);
+}
+.ludo-shadow {
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0));
+  transform: translate(8%, 6%);
+}
+/* A piece that can be moved stands in a ring of light and lifts a little off the board. */
+.ludo-ring {
+  background: radial-gradient(closest-side, rgba(255, 243, 176, 0) 50%, #fff3b0 60%, rgba(255, 243, 176, 0) 100%);
+  animation: ludo-ring 0.9s ease-in-out infinite;
+}
+@keyframes ludo-ring {
+  0%, 100% { transform: scale(1.1); opacity: 1; }
+  50% { transform: scale(1.6); opacity: 0.5; }
+}
+.ludo-hop {
+  animation: ludo-hop 0.9s ease-in-out infinite;
+}
+@keyframes ludo-hop {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-16%); }
+}
+.ludo-glow {
+  animation: ludo-glow 1.2s ease-in-out infinite;
+}
+@keyframes ludo-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+/* The die: six ivory faces on a cube. */
+.ludo-die-face {
+  background: linear-gradient(145deg, var(--die-a, #ffffff), var(--die-b, #e3dccb));
+  border: 1px solid var(--die-edge, #a89f88);
+  box-shadow: inset 0 0 0.4em rgba(0, 0, 0, 0.18);
+  backface-visibility: hidden;
+}
+/* A die that has been played goes dull; the one about to be played is edged in gold. */
+.ludo-die-spent .ludo-die-face {
+  filter: grayscale(0.85) brightness(0.8);
+}
+.ludo-die-chosen .ludo-die-face {
+  border-color: #f5b700;
+  box-shadow: inset 0 0 0 2px #f5b700;
+}
+.ludo-pip {
+  border-radius: 9999px;
+  background: var(--die-pip, #0d1130);
+  box-shadow: inset 0 -1px 2px rgba(0, 0, 0, 0.25);
+}
+.ludo-die-rest {
+  transform: var(--face);
+  transition: transform 0.3s ease-out;
+}
+/* Waiting to be thrown: it lifts and settles, the right face still on top. */
+.ludo-die-bob {
+  animation: ludo-die-bob 1s ease-in-out infinite;
+}
+@keyframes ludo-die-bob {
+  0%, 100% { transform: translateZ(0) var(--face); }
+  50% { transform: translateZ(0.7rem) rotateZ(12deg) var(--face); }
+}
+/* Thrown: up off the board, turning on every axis, and down again. */
+.ludo-tumble {
+  animation: ludo-tumble 0.5s linear infinite;
+}
+@keyframes ludo-tumble {
+  0% { transform: translateZ(0) rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+  50% { transform: translateZ(2.4rem) rotateX(220deg) rotateY(160deg) rotateZ(90deg); }
+  100% { transform: translateZ(0) rotateX(360deg) rotateY(360deg) rotateZ(180deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ludo-ring, .ludo-hop, .ludo-glow, .ludo-die-bob, .ludo-tumble { animation: none; }
+  .ludo-die-bob, .ludo-tumble { transform: var(--face); }
+}
+
+/* Chess pieces cast a short, soft shadow, so they sit on the board instead of being printed on
+   it. Left off in data-saver mode, where the board is asked to do as little work as possible. */
+[data-testid='chess-board'][data-shaded='true'] [data-piece] > * {
+  filter: drop-shadow(0 0.09rem 0.06rem rgba(13, 17, 48, 0.42));
+}
