@@ -1,0 +1,159 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: African Game Hub - one static site (private S3 bucket behind CloudFront with HTTPS). Deployed once for the player site and once for the admin site.
+
+Parameters:
+  ShellPath:
+    Type: String
+    Default: /app.html
+    Description: File served for app routes that are not real files (/lobby, /play/...). The player site uses /app.html, the admin site /index.html.
+  Hardened:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: true for the admin site - strict Content-Security-Policy and "do not index" headers.
+  Enabled:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: The kill switch. false takes the site offline (CloudFront stops serving it, so it stops costing anything) without deleting it. See infra/kill-switch.ps1.
+
+Conditions:
+  IsHardened: !Equals [!Ref Hardened, 'true']
+
+Resources:
+  # The files live here. The bucket is private: nobody can read it directly, only CloudFront can.
+  SiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  # Lets CloudFront sign its requests to the bucket, so the bucket can tell them apart from anyone else's.
+  SiteOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub ${AWS::StackName}-oac
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  # A single-page app has addresses like /lobby that are not files. This sends them to the app's
+  # entry file. Anything with a dot in it (a real file) and the static folders pass through
+  # untouched, so a missing file is still an error rather than a page of HTML.
+  RouteFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub ${AWS::StackName}-routes
+      AutoPublish: true
+      FunctionConfig:
+        Comment: Send app routes to the entry file
+        Runtime: cloudfront-js-2.0
+      FunctionCode: !Sub |
+        function handler(event) {
+          var request = event.request;
+          var uri = request.uri;
+          if (uri === '/' || uri.indexOf('.') !== -1) return request;
+          if (/^\/(assets|engine|sounds|landing)\//.test(uri)) return request;
+          request.uri = '${ShellPath}';
+          return request;
+        }
+
+  # Admin site only: nothing may be loaded from anywhere but the site itself and Supabase,
+  # it may not be framed, and search engines are told to stay away.
+  HardenedHeaders:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Condition: IsHardened
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: !Sub ${AWS::StackName}-headers
+        SecurityHeadersConfig:
+          ContentSecurityPolicy:
+            ContentSecurityPolicy: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+            Override: true
+          ContentTypeOptions:
+            Override: true
+          FrameOptions:
+            FrameOption: DENY
+            Override: true
+          ReferrerPolicy:
+            ReferrerPolicy: no-referrer
+            Override: true
+          StrictTransportSecurity:
+            AccessControlMaxAgeSec: 63072000
+            IncludeSubdomains: true
+            Override: true
+        CustomHeadersConfig:
+          Items:
+            - Header: X-Robots-Tag
+              Value: noindex, nofollow
+              Override: true
+
+  SiteDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: !Ref Enabled
+        Comment: !Sub ${AWS::StackName} African Game Hub
+        DefaultRootObject: index.html
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        # Includes the edge locations in South Africa, Kenya and Nigeria.
+        PriceClass: PriceClass_200
+        Origins:
+          - Id: site-bucket
+            DomainName: !GetAtt SiteBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt SiteOriginAccessControl.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        DefaultCacheBehavior:
+          TargetOriginId: site-bucket
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD]
+          Compress: true
+          # AWS managed "CachingOptimized": keeps files at the edge for as long as each file's own
+          # Cache-Control header allows (set at upload by the deploy script).
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          # Player site: AWS managed "SecurityHeadersPolicy".
+          ResponseHeadersPolicyId: !If [IsHardened, !Ref HardenedHeaders, 67f7725c-6f97-4210-82d7-5512b31e9d03]
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt RouteFunction.FunctionMetadata.FunctionARN
+
+  SiteBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref SiteBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudFrontRead
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub ${SiteBucket.Arn}/*
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${SiteDistribution}
+
+Outputs:
+  SiteBucketName:
+    Description: Bucket the website files are uploaded to
+    Value: !Ref SiteBucket
+  DistributionId:
+    Description: CloudFront distribution ID (used to clear the cache)
+    Value: !Ref SiteDistribution
+  SiteUrl:
+    Description: Public HTTPS address of the site
+    Value: !Sub https://${SiteDistribution.DomainName}

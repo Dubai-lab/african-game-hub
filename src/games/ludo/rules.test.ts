@@ -218,9 +218,9 @@ describe('both dice must be played; the gate', () => {
     expect(after.positions).toMatchObject({ red: [23, 56, -1, -1], yellow: [-1, -1, -1, -1] })
   })
 
-  it('a gate shelters a piece from everyone but its owner', () => {
+  it('a gate shelters nobody: landing on an opponent standing on their own gate captures', () => {
     // Yellow's own gate is red's square 26.
     const start: LocalGame = { ...lay({ lay: false, positions: { red: [22, 56, 56, 56], yellow: [0, -1, -1, -1] } }), rolled: [4, 1], dice: [4], phase: 'move' }
-    expect(applyMove(start, { piece: 0, die: 4 }).positions).toMatchObject({ red: [26, 56, 56, 56], yellow: [0, -1, -1, -1] })
+    expect(applyMove(start, { piece: 0, die: 4 }).positions).toMatchObject({ red: [26, 56, 56, 56], yellow: [-1, -1, -1, -1] })
   })
 })

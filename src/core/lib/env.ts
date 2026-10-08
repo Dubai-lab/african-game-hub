@@ -6,6 +6,10 @@ const envSchema = z.object({
   VITE_SUPABASE_ANON_KEY: z.string().check(z.minLength(20)),
   // Shown in the landing page footer. Optional: the line is left out when unset.
   VITE_CONTACT_EMAIL: z.optional(z.email()),
+  // Who runs the hub: shown in the footer and on the legal pages. Real details only.
+  VITE_BUSINESS_NAME: z.optional(z.string()),
+  VITE_BUSINESS_ADDRESS: z.optional(z.string()),
+  VITE_BUSINESS_REGISTRATION: z.optional(z.string()),
 })
 
 const parsed = envSchema.safeParse(import.meta.env)

@@ -265,13 +265,38 @@ export function LudoTable({ title, state, players, mySeat, deadline, busy, notic
           ? t('ludo.status.waiting', { name: name(shown.turn) })
           : t('ludo.status.turnOf', { name: name(shown.turn) })
 
-  const chip = (on: boolean) =>
-    `min-h-11 flex-1 border-2 px-2 text-sm font-bold ${on ? 'border-ink bg-brand text-brand-ink' : 'border-line bg-panel text-ink'}`
+  // The throw as three round buttons under the board: each die on its own, and between them
+  // the two counted together. Touching one says what the next piece touched will be moved by.
+  const thrownTotal = shown.rolled.reduce((sum, value) => sum + value, 0)
+  const showThrow = shown.phase === 'move' && shown.rolled.length > 0 && !rolling
+  const round = (size: string, color: string, on: boolean, usable: boolean, dim: boolean) =>
+    `flex ${size} shrink-0 items-center justify-center rounded-full border-4 font-display font-extrabold tabular-nums text-white shadow-[inset_0_-6px_10px_rgba(0,0,0,0.28),inset_0_5px_8px_rgba(255,255,255,0.35),0_3px_6px_rgba(0,0,0,0.35)] transition-transform ${color} ${on ? 'scale-110 border-ink' : 'border-[#3a2a1c]'} ${dim ? 'opacity-35' : usable ? '' : 'opacity-70'}`
+  const dieButton = (index: number, color: string) => {
+    const die = dice[index]
+    if (!die || die.value === null) return null
+    const value = die.value
+    const usable = choosing && !busy && !die.spent && playable.includes(value)
+    return (
+      <button
+        key={index}
+        type="button"
+        aria-label={t('ludo.playDie', { value })}
+        aria-pressed={usable && die.chosen && choice !== 'full'}
+        disabled={!usable}
+        data-testid="ludo-play-die"
+        data-value={value}
+        className={round('size-14 text-2xl', color, usable && die.chosen && choice !== 'full', usable, die.spent)}
+        onClick={() => setPicked(value)}
+      >
+        {value}
+      </button>
+    )
+  }
 
   return (
     // Phone: one column. Computer: the board takes the height of the window, with the record
     // of the game, the chat and the buttons in a panel beside it.
-    <div className="mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-2 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 lg:grid lg:h-dvh lg:max-w-none lg:grid-cols-[min(calc(100dvh-13rem),calc(100vw-30rem))_24rem] lg:grid-rows-[auto_minmax(0,1fr)] lg:justify-center lg:gap-x-8 lg:gap-y-3 lg:px-8 lg:py-4">
+    <div className="mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-2 px-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 lg:grid lg:h-dvh lg:max-w-none lg:grid-cols-[min(calc(100dvh-13rem),calc(100vw-30rem))_24rem] lg:grid-rows-[auto_minmax(0,1fr)] lg:justify-center lg:gap-x-8 lg:gap-y-3 lg:px-8 lg:py-4">
       <header className="flex items-center justify-between gap-2 lg:col-start-2 lg:row-start-1">
         <Link to="/lobby" className="flex min-h-11 items-center font-semibold text-primary underline underline-offset-4">
           {t('ludo.back')}
@@ -288,7 +313,7 @@ export function LudoTable({ title, state, players, mySeat, deadline, busy, notic
       </header>
 
       <div className="flex flex-col lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:justify-center">
-        <div className="mx-auto flex w-full max-w-[min(100%,calc(100dvh-24rem))] flex-col gap-1.5 lg:max-w-full">
+        <div className="mx-auto flex w-full max-w-[min(100%,calc(100dvh-19rem))] flex-col gap-1.5 lg:max-w-full">
           {notice && (
             <div role="status" className="bg-ink px-3 py-1.5 text-center text-sm font-semibold text-surface">
               {notice}
@@ -318,36 +343,36 @@ export function LudoTable({ title, state, players, mySeat, deadline, busy, notic
           />
 
           {/* What happens next, right under the board: whose turn, and the player's own choices. */}
-          <div className="flex min-h-11 items-center gap-2" data-testid="ludo-turn" data-turn={shown.turn} data-phase={shown.phase} data-turn-no={shown.turnNo}>
-            {choosing && hasChoice ? (
-              <div className="flex flex-1 gap-1.5" role="group" aria-label={t('ludo.playWith')}>
-                {playable.map((value) => (
-                  <button key={value} type="button" aria-pressed={choice === value} className={chip(choice === value)} onClick={() => setPicked(value)}>
-                    {t('ludo.playDie', { value })}
-                  </button>
-                ))}
-                {fullPieces.length > 0 && (
-                  <button type="button" aria-pressed={choice === 'full'} className={chip(choice === 'full')} onClick={() => setPicked('full')} data-testid="ludo-full-count">
-                    {t('ludo.fullCount', { total })}
+          <div className="flex min-h-16 items-center justify-center gap-4" data-testid="ludo-turn" data-turn={shown.turn} data-phase={shown.phase} data-turn-no={shown.turnNo}>
+            {showThrow ? (
+              <div className="flex items-center gap-4" role="group" aria-label={t('ludo.playWith')}>
+                {dieButton(0, 'bg-[#1e88c8]')}
+                {dice.length > 1 && (
+                  <button
+                    type="button"
+                    aria-label={t('ludo.fullCount', { total: thrownTotal })}
+                    aria-pressed={choice === 'full'}
+                    disabled={!choosing || busy || fullPieces.length === 0}
+                    data-testid="ludo-full-count"
+                    className={round('size-16 text-3xl', 'bg-[#d6283b]', choosing && choice === 'full', choosing && !busy && fullPieces.length > 0, false)}
+                    onClick={() => setPicked('full')}
+                  >
+                    {thrownTotal}
                   </button>
                 )}
+                {dieButton(1, 'bg-[#2f9e44]')}
               </div>
             ) : (
-              <p className="flex-1 font-display text-lg font-extrabold text-primary" role="status">
-                {note}
-              </p>
-            )}
-            {canRoll && (
-              <Button onClick={onRoll} disabled={busy}>
-                {t('ludo.roll')}
-              </Button>
+              canRoll && (
+                <Button onClick={onRoll} disabled={busy}>
+                  {t('ludo.roll')}
+                </Button>
+              )
             )}
           </div>
-          {choosing && hasChoice && (
-            <p className="text-sm font-semibold text-primary" role="status">
-              {note}
-            </p>
-          )}
+          <p className="text-center font-display text-base font-extrabold text-primary lg:text-lg" role="status">
+            {note}
+          </p>
 
           {seated.includes(bottomSeat) && card(bottomSeat, false)}
         </div>

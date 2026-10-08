@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
+import { TEST_PASSWORD } from '../scripts/lib/testAccounts.ts'
 
 process.loadEnvFile('.env.local')
 
@@ -60,7 +61,7 @@ test.describe('with a confirmed account', () => {
   const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
   // One fixed test account, reused on every run: accounts own ledger rows, so they are never deleted.
   const email = 'e2e-player@example.com'
-  const password = 'e2e-Password-123'
+  const password = TEST_PASSWORD
 
   test.beforeAll(async () => {
     // Created already confirmed through the admin API, so no email is sent.

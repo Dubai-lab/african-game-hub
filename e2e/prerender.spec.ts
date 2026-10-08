@@ -4,6 +4,7 @@
 import { existsSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
 import { preview, type PreviewServer } from 'vite'
+import { TEST_PASSWORD } from '../scripts/lib/testAccounts.ts'
 
 const PORT = 4199
 const origin = `http://localhost:${PORT}`
@@ -60,7 +61,7 @@ test('offline: the installed app still opens, shows the saved wallet and profile
   const page = await context.newPage()
   await page.goto(`${origin}/login`)
   await page.getByLabel('Email').fill('e2e-player@example.com')
-  await page.getByLabel('Password').fill('e2e-Password-123')
+  await page.getByLabel('Password').fill(TEST_PASSWORD)
   await page.getByRole('button', { name: 'Log in' }).click()
   await expect(page.getByTestId('balance-bonus')).toHaveText(/^[\d,]+$/)
   const balance = await page.getByTestId('balance-bonus').textContent()
@@ -102,5 +103,64 @@ test('offline: the installed app still opens, shows the saved wallet and profile
   await context.setOffline(false)
   await page.getByRole('link', { name: 'Lobby' }).click()
   await expect(page.getByText('You are offline. Online play needs a connection.')).toHaveCount(0)
+  await context.close()
+})
+
+test('the security policy is in both entry pages and the app works under it, chess engine included', async ({ browser }) => {
+  test.setTimeout(120_000)
+  const context = await browser.newContext({ viewport: { width: 393, height: 851 }, locale: 'en-US' })
+  const page = await context.newPage()
+  const blocked: string[] = []
+  page.on('console', (message) => {
+    if (/Content Security Policy|Refused to/i.test(message.text())) blocked.push(message.text())
+  })
+  for (const path of ['/', '/login']) {
+    await page.goto(origin + path)
+    const policy = await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute('content')
+    expect(policy).toContain("script-src 'self'")
+    expect(policy).toContain("connect-src 'self' https://*.supabase.co wss://*.supabase.co")
+    expect(policy).not.toContain("'unsafe-eval'")
+  }
+  // An injected inline script does not run.
+  const ran = await page.evaluate(() => {
+    const script = document.createElement('script')
+    script.textContent = 'window.__injected = true'
+    document.body.appendChild(script)
+    return (window as unknown as { __injected?: boolean }).__injected === true
+  })
+  expect(ran).toBe(false)
+  blocked.length = 0
+
+  await page.getByLabel('Email').fill('e2e-player@example.com')
+  await page.getByLabel('Password').fill(TEST_PASSWORD)
+  await page.getByRole('button', { name: 'Log in' }).click()
+  await expect(page.getByTestId('balance-bonus')).toHaveText(/^[\d,]+$/)
+  // The chess engine: a worker running WebAssembly.
+  const best = await page.evaluate(
+    () =>
+      new Promise<string>((resolve, reject) => {
+        const worker = new Worker('/engine/stockfish.wasm.js')
+        const timer = setTimeout(() => reject(new Error('engine did not answer')), 25_000)
+        worker.onerror = (event) => reject(new Error(event.message))
+        worker.onmessage = (event) => {
+          const line = String(event.data)
+          if (line.startsWith('bestmove')) {
+            clearTimeout(timer)
+            worker.terminate()
+            resolve(line.split(' ')[1]!)
+          }
+        }
+        worker.postMessage('uci')
+        worker.postMessage('position fen 6k1/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1')
+        worker.postMessage('go depth 6')
+      }),
+  )
+  expect(best).toBe('a1a8')
+  // A game screen with canvas drawing and sound.
+  await page.goto(origin + '/play/pool/computer')
+  await page.getByRole('button', { name: 'Start' }).click()
+  await expect(page.getByTestId('pool-table')).toBeVisible()
+  await page.waitForTimeout(1000)
+  expect(blocked).toEqual([])
   await context.close()
 })

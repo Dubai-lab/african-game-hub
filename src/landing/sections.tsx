@@ -1,8 +1,8 @@
+import { BusinessDetails } from './LegalPage'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { flagEmoji, guessCountry, useCountries } from '@/core/countries/useCountries'
-import { env } from '@/core/lib/env'
 import { buttonClass } from '@/core/ui/Button'
 import { LanguageSwitcher } from '@/core/ui/LanguageSwitcher'
 import {
@@ -243,7 +243,6 @@ export function Countries() {
 
 export function Footer() {
   const { t } = useTranslation()
-  const contact = env?.VITE_CONTACT_EMAIL
   const link = 'underline underline-offset-4'
   return (
     <footer className="bg-ink text-surface">
@@ -261,19 +260,18 @@ export function Footer() {
           <Link to="/privacy" className={link}>
             {t('landing.footer.privacy')}
           </Link>
+          <Link to="/cookies" className={link}>
+            {t('landing.footer.cookies')}
+          </Link>
+          <Link to="/refunds" className={link}>
+            {t('landing.footer.refunds')}
+          </Link>
           <Link to="/responsible-gaming" className={link}>
             {t('landing.footer.responsibleLink')}
           </Link>
           <LanguageSwitcher />
         </nav>
-        {contact && (
-          <p className="text-primary-tint">
-            {t('landing.footer.contact')}:{' '}
-            <a href={`mailto:${contact}`} className={`${link} text-surface`}>
-              {contact}
-            </a>
-          </p>
-        )}
+        <BusinessDetails className="text-primary-tint" />
         <p className="text-sm text-primary-tint">{t('landing.footer.rights', { year: new Date().getFullYear() })}</p>
       </div>
     </footer>

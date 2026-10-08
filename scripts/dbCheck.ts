@@ -6,6 +6,7 @@
 // Exits with code 1 if anything fails.
 import { createClient } from '@supabase/supabase-js'
 import { requireEnv, runSql } from './lib/managementApi.ts'
+import { TEST_PASSWORD } from './lib/testAccounts.ts'
 
 const url = requireEnv('VITE_SUPABASE_URL')
 const anonKey = requireEnv('VITE_SUPABASE_ANON_KEY')
@@ -119,7 +120,7 @@ const visitor = createClient(url, anonKey, noSession)
 const player = createClient(url, anonKey, noSession)
 
 const email = 'e2e-player@example.com'
-const password = 'e2e-Password-123'
+const password = TEST_PASSWORD
 const created = await admin.auth.admin.createUser({
   email,
   password,

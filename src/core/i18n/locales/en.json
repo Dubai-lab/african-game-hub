@@ -71,7 +71,8 @@
       "ALREADY_PLAYING": "You are already in a game.",
       "GAME_NOT_FOUND": "This game could not be found.",
       "ILLEGAL_MOVE": "That move is not allowed.",
-      "ILLEGAL_SHOT": "That shot is not allowed. If you have the cue ball in hand, put it on a clear spot first."
+      "ILLEGAL_SHOT": "That shot is not allowed. If you have the cue ball in hand, put it on a clear spot first.",
+      "RATE_LIMITED": "Too many requests. Wait a few seconds and try again."
     }
   },
   "validation": {
@@ -164,7 +165,9 @@
       "privacy": "Privacy",
       "responsibleLink": "Responsible gaming",
       "contact": "Contact",
-      "rights": "© {{year}} African Game Hub"
+      "rights": "© {{year}} African Game Hub",
+      "cookies": "Cookies",
+      "refunds": "Refunds"
     }
   },
   "auth": {
@@ -193,7 +196,8 @@
     "countryPlaceholder": "Select your country",
     "countryHint": "Shown as a flag next to your name. It cannot be changed later.",
     "countryLoading": "Loading countries…",
-    "countryLoadFailed": "We could not load the list of countries."
+    "countryLoadFailed": "We could not load the list of countries.",
+    "consent": "By creating an account you agree to the <terms>Terms of use</terms> and confirm you have read the <privacy>Privacy policy</privacy>."
   },
   "lobby": {
     "title": "Lobby",
@@ -265,33 +269,73 @@
           "p": "Using a chess engine or outside help, playing against your own accounts, or arranging results is not allowed. We may close accounts and withhold tokens gained by cheating."
         },
         {
+          "h": "Refunds",
+          "p": "What happens to stakes and purchases when something goes wrong is set out in the Refund policy."
+        },
+        {
+          "h": "Your conduct",
+          "p": "Be decent to other players. Abuse, threats, hate speech and spam in chat are not allowed. You can block and report a player; we may mute or close accounts that break this rule."
+        },
+        {
+          "h": "Closing an account",
+          "p": "You may close your account at any time by writing to us. We may suspend or close an account that breaks these terms. Free tokens are lost when an account is closed."
+        },
+        {
+          "h": "The service",
+          "p": "We work to keep the hub running and fair, but games can be interrupted by faults or by lost connections. A game that cannot be finished because of a fault on our side is called off and every stake returned."
+        },
+        {
           "h": "Changes",
           "p": "We may update these terms as the hub grows. We will tell you in the app before a change takes effect."
         }
       ]
     },
     "privacy": {
-      "title": "Privacy",
+      "title": "Privacy policy",
       "sections": [
         {
           "h": "What we store",
-          "p": "Your email address, username, country, language, a record of your games and token movements, your friends list, and the messages you send (private messages to friends, and chat during a match). A phone number will only be stored if you add one."
+          "p": "Your email address, username, country, language, a record of your games and token movements, your friends list, and the messages you send (private messages to friends, and chat during a match). A phone number will only be stored if you add one. We ask for nothing we do not need to run your account."
         },
         {
           "h": "Why",
-          "p": "To run your account, pair you with opponents, keep an accurate wallet, and detect cheating."
+          "p": "To run your account, pair you with opponents, keep an accurate wallet, keep players safe, and detect cheating. We rely on your agreement to the Terms of use when you create an account, and on our duty to keep the games fair."
         },
         {
           "h": "What other players see",
-          "p": "Your username, country flag, rating and finished games. Never your email address, phone number or wallet."
+          "p": "Your username, country flag, games won or rating, and finished games. Never your email address, phone number or wallet."
         },
         {
-          "h": "Sharing",
-          "p": "We do not sell your data. It is held by our hosting provider and used only to operate the hub."
+          "h": "No tracking, no advertising",
+          "p": "We use no advertising or analytics trackers and embed nothing from other companies in our pages. We do not build a profile of you for marketing and we do not sell or rent your data."
         },
         {
-          "h": "Your choices",
-          "p": "You can ask for a copy of your data or for your account to be closed by writing to the contact address on the home page."
+          "h": "Stored on your device",
+          "p": "To keep you signed in and remember your settings, the app saves a small amount of information in your browser. The Cookies policy lists exactly what."
+        },
+        {
+          "h": "Who handles the data for us",
+          "p": "Your account and game data are held by our database provider (Supabase), and our pages are delivered by our web host (Amazon Web Services), which sees your internet address as any web host does. Sign-in emails are sent through our email provider. They act only on our instructions."
+        },
+        {
+          "h": "How long we keep it",
+          "p": "For as long as your account is open. When an account is closed we delete or anonymise personal details within 90 days, except records of token movements and games, which we keep for as long as the law and fair-play investigations require."
+        },
+        {
+          "h": "Security",
+          "p": "Passwords are stored only in scrambled (hashed) form that we cannot read. All connections are encrypted. Each player can read only their own wallet and messages, and only our servers can change balances or games."
+        },
+        {
+          "h": "Children",
+          "p": "The hub is for adults. We do not knowingly keep data about anyone under 18; an account found to belong to a minor is closed and its details removed."
+        },
+        {
+          "h": "Your rights",
+          "p": "You can ask us for a copy of your data, to correct it, or to close your account and delete it, by writing to the contact address below. If you are unhappy with our answer you may complain to the data protection authority in your country."
+        },
+        {
+          "h": "Changes",
+          "p": "If we change how we use your data we will update this page and tell you in the app before the change takes effect."
         }
       ]
     },
@@ -313,6 +357,56 @@
         {
           "h": "If it stops being fun",
           "p": "Take a break, and talk to someone you trust. If you want your account paused or closed, write to the contact address on the home page."
+        }
+      ]
+    },
+    "updated": "Last updated: 8 October 2026",
+    "who": "Who we are",
+    "whoIntro": "African Game Hub is run by the business below. Write to us about anything on this page.",
+    "more": "Other policies",
+    "cookies": {
+      "title": "Cookies policy",
+      "sections": [
+        {
+          "h": "The short version",
+          "p": "We set no advertising or tracking cookies, and no other company sets any through our pages. That is why you are not shown a cookie banner: there is nothing optional to accept or refuse."
+        },
+        {
+          "h": "What the app saves in your browser",
+          "p": "Three things, all needed for the app to work: your sign-in session, so you stay logged in; your settings, such as sound, board and language; and your last choices in the lobby. For offline use, the app also keeps a copy of its own files and of the last wallet and profile it showed you."
+        },
+        {
+          "h": "How to clear it",
+          "p": "Logging out removes your session. Clearing this site’s data in your browser settings removes everything; you will simply need to log in again."
+        },
+        {
+          "h": "If this changes",
+          "p": "If we ever add anything that is not strictly needed, such as measuring visits, we will ask for your consent first and update this page."
+        }
+      ]
+    },
+    "refunds": {
+      "title": "Refund policy",
+      "sections": [
+        {
+          "h": "Today: play tokens only",
+          "p": "At present the hub uses free play tokens with no cash value. Nothing can be bought, so there is nothing to refund."
+        },
+        {
+          "h": "Stakes",
+          "p": "A stake is returned in full, automatically, when a game is drawn, is called off before both players have played, or is cancelled by our team. A stake on a game you lost fairly is not returned."
+        },
+        {
+          "h": "Mistakes on our side",
+          "p": "If a fault on our side costs you tokens, write to us with the date and your username. Every token movement is recorded, so we can check it, and we will put right what was lost."
+        },
+        {
+          "h": "When real money is offered",
+          "p": "Deposits and withdrawals will only be switched on in countries where we are licensed. Before that happens, this page will set out how to ask for a refund of a deposit that has not been played, how long it takes, and any fees. Money lost in a fairly played game will not be refundable."
+        },
+        {
+          "h": "Cheating",
+          "p": "Where a game is found to have been won by cheating, we may reverse the result and return the stake to the player who was cheated."
         }
       ]
     }

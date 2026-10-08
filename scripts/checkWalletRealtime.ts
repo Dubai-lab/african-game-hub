@@ -5,6 +5,7 @@
 import { chromium, devices } from '@playwright/test'
 import { createServer } from 'vite'
 import { runSql } from './lib/managementApi.ts'
+import { TEST_PASSWORD } from './lib/testAccounts.ts'
 
 const email = 'e2e-player@example.com'
 const adjust = (amount: number) =>
@@ -19,7 +20,7 @@ try {
   const page = await (await browser.newContext({ ...devices['Pixel 5'], locale: 'en-US' })).newPage()
   await page.goto('http://localhost:5196/login')
   await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Password').fill('e2e-Password-123')
+  await page.getByLabel('Password').fill(TEST_PASSWORD)
   await page.getByRole('button', { name: 'Log in' }).click()
   const bonus = page.getByTestId('balance-bonus')
   await bonus.waitFor()

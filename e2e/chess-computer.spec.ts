@@ -1,7 +1,8 @@
 import { expect, type Page, test } from '@playwright/test'
+import { TEST_PASSWORD } from '../scripts/lib/testAccounts.ts'
 
 const email = 'e2e-player@example.com'
-const password = 'e2e-Password-123'
+const password = TEST_PASSWORD
 
 async function openComputerSetup(page: Page) {
   await page.goto('/login')

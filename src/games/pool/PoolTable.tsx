@@ -98,15 +98,58 @@ function PlayerCard({ player, seat, toShoot, clock, label, left }: { player: Tab
   )
 }
 
-function useWide(): boolean {
-  const [wide, setWide] = useState(() => window.matchMedia('(min-width: 1024px)').matches)
+/**
+ * How the screen is being held:
+ *  - portrait: a phone upright. The table stands on end and fills the width.
+ *  - landscape: a phone on its side. The table lies flat and fills the height, as a pool
+ *    table should, with the cue to its left and a narrow strip of controls to its right.
+ *  - desktop: a computer or tablet. The table lies flat beside a full panel.
+ */
+type Layout = 'portrait' | 'landscape' | 'desktop'
+const DESKTOP = '(min-width: 1024px) and (min-height: 560px)'
+const SIDEWAYS = '(orientation: landscape)'
+function useLayout(): Layout {
+  const read = (): Layout => (window.matchMedia(DESKTOP).matches ? 'desktop' : window.matchMedia(SIDEWAYS).matches ? 'landscape' : 'portrait')
+  const [layout, setLayout] = useState(read)
   useEffect(() => {
-    const query = window.matchMedia('(min-width: 1024px)')
-    const update = () => setWide(query.matches)
-    query.addEventListener('change', update)
-    return () => query.removeEventListener('change', update)
+    const queries = [window.matchMedia(DESKTOP), window.matchMedia(SIDEWAYS)]
+    const update = () => setLayout(read())
+    queries.forEach((query) => query.addEventListener('change', update))
+    return () => queries.forEach((query) => query.removeEventListener('change', update))
   }, [])
-  return wide
+  return layout
+}
+
+/** The classes of each part of the screen, for each way of holding it. */
+const LAYOUT: Record<Layout, { root: string; header: string; main: string; cards: string; table: string; cue: string; aside: string }> = {
+  portrait: {
+    root: 'mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-2 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2',
+    header: '',
+    main: 'gap-1.5',
+    cards: '',
+    table: 'max-w-[calc((100dvh-20rem)*0.553)]',
+    cue: 'order-last',
+    aside: 'gap-3',
+  },
+  landscape: {
+    // The whole screen, nothing to scroll: the table is as tall as the screen allows.
+    root: 'grid h-dvh w-full grid-cols-[minmax(0,1fr)_10.5rem] grid-rows-[auto_minmax(0,1fr)] gap-x-2 gap-y-1 overflow-hidden py-1 ps-[max(0.5rem,env(safe-area-inset-left))] pe-[max(0.5rem,env(safe-area-inset-right))]',
+    header: 'col-start-2 row-start-1',
+    main: 'col-start-1 row-span-2 row-start-1 justify-center gap-1',
+    cards: 'mx-auto w-full max-w-[calc((100dvh-4.5rem)*1.809+3.25rem)]',
+    table: 'max-w-[calc((100dvh-4.5rem)*1.809)]',
+    cue: 'order-first',
+    aside: 'col-start-2 row-start-2 min-h-0 gap-2 overflow-y-auto',
+  },
+  desktop: {
+    root: 'grid h-dvh w-full grid-cols-[minmax(0,1fr)_23rem] grid-rows-[auto_minmax(0,1fr)] gap-x-6 gap-y-3 px-6 py-4',
+    header: 'col-start-2 row-start-1',
+    main: 'col-start-1 row-span-2 row-start-1 justify-center gap-1.5',
+    cards: 'mx-auto w-full max-w-[calc((100dvh-9rem)*1.78)]',
+    table: 'max-w-[calc((100dvh-9rem)*1.78)]',
+    cue: 'order-first',
+    aside: 'col-start-2 row-start-2 min-h-0 gap-3 overflow-y-auto border-2 border-line bg-panel p-4',
+  },
 }
 
 type Props = {
@@ -138,7 +181,9 @@ type Props = {
 export function PoolTable({ title, game, players, mySeat, decided, busy = false, connected = true, deadline = null, onShoot, onPlaying, waitingText, children, footer }: Props) {
   const { t } = useTranslation()
   const settings = useSettingsStore()
-  const wide = useWide()
+  const layout = useLayout()
+  const look = LAYOUT[layout]
+  const tight = layout === 'landscape'
 
   // What is drawn. While a shot is being played back it runs ahead of (or behind) the game; when
   // the balls stop it is the game again. `seen` is the game as the cards and the status line
@@ -347,26 +392,26 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
   const nudge = (degrees: number) => setAngle((a) => a + (degrees * Math.PI) / 180)
 
   return (
-    // Phone: the table stands upright and fills the width. Computer: it lies on its side, with
-    // the controls, chat and buttons in a panel beside it.
-    <div className="mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-2 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 lg:grid lg:h-dvh lg:max-w-none lg:grid-cols-[minmax(0,1fr)_23rem] lg:grid-rows-[auto_minmax(0,1fr)] lg:gap-x-6 lg:gap-y-3 lg:px-6 lg:py-4">
-      <header className="flex items-center justify-between gap-2 lg:col-start-2 lg:row-start-1">
-        <Link to="/lobby" className="flex min-h-11 items-center font-semibold text-primary underline underline-offset-4">
+    // See useLayout: upright phone, phone on its side, or computer.
+    <div className={look.root} data-testid="pool-screen" data-layout={layout}>
+      <header className={`flex items-center justify-between gap-2 ${look.header}`}>
+        <Link to="/lobby" className={`flex items-center font-semibold text-primary underline underline-offset-4 ${tight ? 'min-h-9 text-sm' : 'min-h-11'}`}>
           {t('pool.back')}
         </Link>
-        <p className="truncate font-display text-lg font-extrabold text-primary">{title}</p>
-        <button type="button" className="flex min-h-11 items-center border-2 border-line bg-panel px-3 text-sm font-semibold" aria-pressed={settings.soundOn} onClick={() => settings.set({ soundOn: !settings.soundOn })}>
+        {/* On a phone held sideways there is no room for the title; the cards say who is playing. */}
+        {!tight && <p className="truncate font-display text-lg font-extrabold text-primary">{title}</p>}
+        <button type="button" className={`flex items-center border-2 border-line bg-panel font-semibold ${tight ? 'min-h-9 px-2 text-xs' : 'min-h-11 px-3 text-sm'}`} aria-pressed={settings.soundOn} onClick={() => settings.set({ soundOn: !settings.soundOn })}>
           {t(settings.soundOn ? 'pool.soundOn' : 'pool.soundOff')}
         </button>
       </header>
 
-      <div className="flex flex-col gap-1.5 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:justify-center">
+      <div className={`flex min-h-0 flex-col ${look.main}`}>
         {!decided && !connected && (
           <div role="status" className="bg-ink px-3 py-1.5 text-center text-sm font-semibold text-surface">
             {t('app.reconnecting')}
           </div>
         )}
-        <div className="grid grid-cols-2 gap-2 lg:mx-auto lg:w-full lg:max-w-[calc((100dvh-9rem)*1.78)]">
+        <div className={`grid grid-cols-2 gap-2 ${look.cards}`}>
           {cardFor(bottomSeat)}
           {cardFor(topSeat)}
         </div>
@@ -378,10 +423,10 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
           label={t('pool.power')}
           onPull={(pulled) => setPower(pulled * 1000)}
           onShoot={(pulled) => shoot(Math.max(1, Math.round(pulled * 1000)))}
-          className="order-last lg:order-first"
+          className={look.cue}
         />
         <div
-          className="min-w-0 flex-1 max-w-[calc((100dvh-20rem)*0.553)] lg:max-w-[calc((100dvh-9rem)*1.78)]"
+          className={`min-w-0 flex-1 ${look.table}`}
           data-testid="pool-state"
           data-turn={game.turn}
           data-shot-no={game.shotNo}
@@ -392,7 +437,7 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
         >
           <PoolCanvas
             balls={table}
-            vertical={!wide}
+            vertical={layout === 'portrait'}
             aim={aim}
             power={power / 1000}
             ballInHand={myShot && game.ballInHand}
@@ -412,24 +457,24 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
         </div>
       </div>
 
-      <aside className="flex flex-col gap-3 lg:col-start-2 lg:row-start-2 lg:min-h-0 lg:overflow-y-auto lg:border-2 lg:border-line lg:bg-panel lg:p-4">
+      <aside className={`flex flex-col ${look.aside}`}>
         <div>
-          <p className="min-h-7 font-display text-base font-extrabold text-primary lg:text-lg" role="status">
+          <p className={`font-display font-extrabold text-primary ${tight ? 'min-h-5 text-sm leading-tight' : layout === 'desktop' ? 'min-h-7 text-lg' : 'min-h-7 text-base'}`} role="status">
             {status}
           </p>
-          <p className="min-h-5 text-sm text-muted" data-testid="pool-last">
+          <p className={`text-muted ${tight ? 'text-xs' : 'min-h-5 text-sm'}`} data-testid="pool-last">
             {!playing && foul ? t(`pool.foul.${foul}`, { name: lastBy }) : ' '}
           </p>
         </div>
 
         {myShot && (
-          <div className="flex flex-col gap-2 lg:gap-3" data-testid="pool-controls">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-2" data-testid="pool-controls">
+            <div className={tight ? 'flex flex-col items-center gap-2' : 'flex items-center gap-3'}>
               {/* Where the cue strikes the ball: up for follow, down for draw, sideways for side. */}
               <button
                 type="button"
                 aria-label={t('pool.spin')}
-                className="relative size-16 shrink-0 rounded-full border-2 border-ink bg-[#f7f5ec]"
+                className={`relative shrink-0 rounded-full border-2 border-ink bg-[#f7f5ec] ${tight ? 'size-14' : 'size-16'}`}
                 onPointerDown={(event) => {
                   const box = event.currentTarget.getBoundingClientRect()
                   const x = ((event.clientX - box.left) / box.width) * 2 - 1
@@ -441,7 +486,7 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
               >
                 <span className="absolute size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-hibiscus" style={{ left: `${50 + spin.x * 50}%`, top: `${50 - spin.y * 50}%` }} />
               </button>
-              <div className="grid flex-1 grid-cols-4 gap-1.5 *:min-h-11 *:px-0 *:text-sm">
+              <div className={`grid gap-1.5 *:px-0 *:text-sm ${tight ? 'w-full grid-cols-4 *:min-h-10' : 'flex-1 grid-cols-4 *:min-h-11'}`}>
                 <Button variant="ghost" onClick={() => nudge(-2)} aria-label={t('pool.aimLeftMore')}>
                   «
                 </Button>
@@ -456,7 +501,7 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
                 </Button>
               </div>
             </div>
-            <p className="text-xs text-muted">{t('pool.howTo')}</p>
+            {!tight && <p className="text-xs text-muted">{t('pool.howTo')}</p>}
           </div>
         )}
 

@@ -77,6 +77,8 @@ export default function App({ staticLocation }: { staticLocation?: string }) {
                 <Route index element={<LandingPage />} />
                 <Route path="terms" element={<LegalPage doc="terms" />} />
                 <Route path="privacy" element={<LegalPage doc="privacy" />} />
+                <Route path="cookies" element={<LegalPage doc="cookies" />} />
+                <Route path="refunds" element={<LegalPage doc="refunds" />} />
                 <Route path="responsible-gaming" element={<LegalPage doc="responsible" />} />
                 <Route path="auth/callback" element={<AuthCallbackPage />} />
                 <Route element={<PublicOnlyRoute />}>

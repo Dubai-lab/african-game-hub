@@ -852,11 +852,19 @@ describe('both dice must be played; the gate', () => {
     expect(log).toEqual({ die: 6, from_progress: -1, to_progress: 56, captured: 1 })
   })
 
-  it('a gate shelters a piece from everyone but its owner, and the stars shelter everyone', async () => {
+  it('a gate shelters nobody: landing on an opponent standing on their own gate captures', async () => {
     const { matchId, red } = await table({ lay: false })
-    // Yellow's own gate is red's square 26: red lands there and captures nothing.
+    // Yellow's own gate is red's square 26: red lands there and yellow goes back to the yard.
     await set(matchId, { dice: [4], rolled: [4, 1], phase: 'move', die: 4, turn: 'red', positions: { red: [22, 56, 56, 56], yellow: [0, -1, -1, -1] } })
     await play(red, matchId, 0, 4)
-    expect((await game(matchId)).positions).toEqual({ red: [26, 56, 56, 56], yellow: [0, -1, -1, -1] })
+    expect((await game(matchId)).positions).toEqual({ red: [26, 56, 56, 56], yellow: [-1, -1, -1, -1] })
+
+    // With lay, the usual game: 5 and 4 thrown, several pieces out. The 5 captures on the gate
+    // and that piece lays home; the 4 is then played by another piece. Nobody shares a square.
+    const second = await table({ lay: true })
+    await set(second.matchId, { dice: [5, 4], rolled: [5, 4], phase: 'move', turn: 'red', positions: { red: [21, 10, 56, 56], yellow: [0, 30, -1, -1] } })
+    await play(second.red, second.matchId, 0, 5)
+    // (The 4 has only one piece left to take it, so it is played at once.)
+    expect((await game(second.matchId)).positions).toEqual({ red: [56, 14, 56, 56], yellow: [-1, 30, -1, -1] })
   })
 })

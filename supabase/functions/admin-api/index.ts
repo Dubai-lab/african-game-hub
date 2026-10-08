@@ -10,17 +10,26 @@
 // functions write the audit log themselves, in the same transaction as the change.
 //
 // Optional: set the secret ADMIN_APP_ORIGIN to the admin app's address (for example
-// https://admin.example.com) and browsers on any other site are refused.
+// https://admin.example.com) and browsers on any other site are refused. Several addresses may
+// be given, separated by commas (the live admin site and http://localhost:5180 for development).
 import { z } from 'npm:zod@4'
 import { admin } from '../_shared/http.ts'
 
-const allowedOrigin = Deno.env.get('ADMIN_APP_ORIGIN')?.replace(/\/$/, '') || null
+const allowedOrigins = (Deno.env.get('ADMIN_APP_ORIGIN') ?? '')
+  .split(',')
+  .map((origin) => origin.trim().replace(/\/$/, ''))
+  .filter(Boolean)
+const allowedOrigin = allowedOrigins[0] ?? null
+const allowedFor = (request: Request) => {
+  const origin = request.headers.get('Origin')
+  return origin && allowedOrigins.includes(origin) ? origin : allowedOrigin
+}
 
 function reply(request: Request, body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
-      'Access-Control-Allow-Origin': allowedOrigin ?? request.headers.get('Origin') ?? '*',
+      'Access-Control-Allow-Origin': allowedFor(request) ?? request.headers.get('Origin') ?? '*',
       'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       Vary: 'Origin',
@@ -107,7 +116,7 @@ function assuranceLevel(token: string): string | null {
 
 Deno.serve(async (request) => {
   const origin = request.headers.get('Origin')
-  if (allowedOrigin && origin && origin.replace(/\/$/, '') !== allowedOrigin) {
+  if (allowedOrigin && origin && !allowedOrigins.includes(origin.replace(/\/$/, ''))) {
     return reply(request, { ok: false, code: 'FORBIDDEN' }, 403)
   }
   if (request.method === 'OPTIONS') return reply(request, 'ok')

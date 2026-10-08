@@ -71,7 +71,8 @@
       "ALREADY_PLAYING": "Vous êtes déjà en partie.",
       "GAME_NOT_FOUND": "Cette partie est introuvable.",
       "ILLEGAL_MOVE": "Ce coup n’est pas autorisé.",
-      "ILLEGAL_SHOT": "Ce coup n’est pas autorisé. Si vous avez la bille en main, posez-la d’abord à un endroit libre."
+      "ILLEGAL_SHOT": "Ce coup n’est pas autorisé. Si vous avez la bille en main, posez-la d’abord à un endroit libre.",
+      "RATE_LIMITED": "Trop de demandes. Patientez quelques secondes et réessayez."
     }
   },
   "validation": {
@@ -164,7 +165,9 @@
       "privacy": "Confidentialité",
       "responsibleLink": "Jeu responsable",
       "contact": "Contact",
-      "rights": "© {{year}} African Game Hub"
+      "rights": "© {{year}} African Game Hub",
+      "cookies": "Cookies",
+      "refunds": "Remboursements"
     }
   },
   "auth": {
@@ -193,7 +196,8 @@
     "countryPlaceholder": "Sélectionnez votre pays",
     "countryHint": "Affiché sous forme de drapeau à côté de votre nom. Il ne pourra pas être modifié ensuite.",
     "countryLoading": "Chargement des pays…",
-    "countryLoadFailed": "Impossible de charger la liste des pays."
+    "countryLoadFailed": "Impossible de charger la liste des pays.",
+    "consent": "En créant un compte, vous acceptez les <terms>Conditions d’utilisation</terms> et confirmez avoir lu la <privacy>Politique de confidentialité</privacy>."
   },
   "lobby": {
     "title": "Salon",
@@ -265,33 +269,73 @@
           "p": "Il est interdit d’utiliser un moteur d’échecs ou une aide extérieure, de jouer contre ses propres comptes ou d’arranger des résultats. Nous pouvons fermer les comptes concernés et retenir les jetons obtenus en trichant."
         },
         {
+          "h": "Remboursements",
+          "p": "Ce qu’il advient des mises et des achats en cas de problème est décrit dans la Politique de remboursement."
+        },
+        {
+          "h": "Votre conduite",
+          "p": "Respectez les autres joueurs. Les insultes, menaces, propos haineux et le spam dans le chat sont interdits. Vous pouvez bloquer et signaler un joueur ; nous pouvons réduire au silence ou fermer les comptes qui enfreignent cette règle."
+        },
+        {
+          "h": "Fermer un compte",
+          "p": "Vous pouvez fermer votre compte à tout moment en nous écrivant. Nous pouvons suspendre ou fermer un compte qui enfreint ces conditions. Les jetons gratuits sont perdus à la fermeture du compte."
+        },
+        {
+          "h": "Le service",
+          "p": "Nous faisons en sorte que le hub reste disponible et équitable, mais une partie peut être interrompue par une panne ou une perte de connexion. Une partie qui ne peut pas être terminée à cause d’une panne de notre côté est annulée et chaque mise est rendue."
+        },
+        {
           "h": "Modifications",
           "p": "Nous pouvons mettre à jour ces conditions à mesure que le hub évolue. Vous serez prévenu dans l’application avant toute entrée en vigueur."
         }
       ]
     },
     "privacy": {
-      "title": "Confidentialité",
+      "title": "Politique de confidentialité",
       "sections": [
         {
           "h": "Ce que nous conservons",
-          "p": "Votre adresse e-mail, nom d’utilisateur, pays, langue, l’historique de vos parties et de vos mouvements de jetons, votre liste d’amis et les messages que vous envoyez (messages privés à vos amis et discussion pendant une partie). Un numéro de téléphone n’est conservé que si vous en ajoutez un."
+          "p": "Votre adresse e-mail, nom d’utilisateur, pays, langue, l’historique de vos parties et de vos mouvements de jetons, votre liste d’amis et les messages que vous envoyez (messages privés à vos amis et chat pendant une partie). Un numéro de téléphone n’est conservé que si vous en ajoutez un. Nous ne demandons rien qui ne soit nécessaire à votre compte."
         },
         {
           "h": "Pourquoi",
-          "p": "Pour gérer votre compte, vous trouver des adversaires, tenir un portefeuille exact et détecter la triche."
+          "p": "Pour gérer votre compte, vous trouver des adversaires, tenir un portefeuille exact, protéger les joueurs et détecter la triche. Nous nous fondons sur votre acceptation des Conditions d’utilisation à la création du compte, et sur notre devoir de garantir des parties équitables."
         },
         {
           "h": "Ce que voient les autres joueurs",
-          "p": "Votre nom d’utilisateur, le drapeau de votre pays, votre classement et vos parties terminées. Jamais votre e-mail, votre numéro de téléphone ni votre portefeuille."
+          "p": "Votre nom d’utilisateur, le drapeau de votre pays, vos victoires ou votre classement, et vos parties terminées. Jamais votre adresse e-mail, votre numéro de téléphone ni votre portefeuille."
         },
         {
-          "h": "Partage",
-          "p": "Nous ne vendons pas vos données. Elles sont hébergées par notre prestataire et servent uniquement au fonctionnement du hub."
+          "h": "Ni suivi, ni publicité",
+          "p": "Nous n’utilisons aucun traceur publicitaire ou de mesure d’audience et n’intégrons rien provenant d’autres entreprises dans nos pages. Nous ne dressons aucun profil marketing et ne vendons ni ne louons vos données."
         },
         {
-          "h": "Vos choix",
-          "p": "Vous pouvez demander une copie de vos données ou la fermeture de votre compte en écrivant à l’adresse de contact de la page d’accueil."
+          "h": "Conservé sur votre appareil",
+          "p": "Pour vous garder connecté et retenir vos réglages, l’application enregistre un peu d’information dans votre navigateur. La Politique relative aux cookies en donne la liste exacte."
+        },
+        {
+          "h": "Qui traite les données pour nous",
+          "p": "Les données de votre compte et de vos parties sont hébergées par notre fournisseur de base de données (Supabase), et nos pages sont servies par notre hébergeur (Amazon Web Services), qui voit votre adresse internet comme tout hébergeur. Les e-mails de connexion passent par notre fournisseur de messagerie. Ils n’agissent que sur nos instructions."
+        },
+        {
+          "h": "Combien de temps",
+          "p": "Tant que votre compte est ouvert. À la fermeture d’un compte, nous supprimons ou anonymisons les données personnelles sous 90 jours, sauf les mouvements de jetons et les parties, conservés aussi longtemps que la loi et les enquêtes sur le fair-play l’exigent."
+        },
+        {
+          "h": "Sécurité",
+          "p": "Les mots de passe ne sont conservés que sous forme chiffrée (hachée), illisible pour nous. Toutes les connexions sont chiffrées. Chaque joueur ne peut lire que son propre portefeuille et ses propres messages, et seuls nos serveurs peuvent modifier les soldes ou les parties."
+        },
+        {
+          "h": "Mineurs",
+          "p": "Le hub est réservé aux adultes. Nous ne conservons sciemment aucune donnée sur une personne de moins de 18 ans ; un compte appartenant à un mineur est fermé et ses données supprimées."
+        },
+        {
+          "h": "Vos droits",
+          "p": "Vous pouvez nous demander une copie de vos données, leur correction, ou la fermeture et la suppression de votre compte, en écrivant à l’adresse de contact ci-dessous. Si notre réponse ne vous satisfait pas, vous pouvez saisir l’autorité de protection des données de votre pays."
+        },
+        {
+          "h": "Modifications",
+          "p": "Si nous changeons l’usage de vos données, nous mettrons cette page à jour et vous en informerons dans l’application avant que le changement prenne effet."
         }
       ]
     },
@@ -313,6 +357,56 @@
         {
           "h": "Si ce n’est plus un plaisir",
           "p": "Faites une pause et parlez-en à une personne de confiance. Pour suspendre ou fermer votre compte, écrivez à l’adresse de contact de la page d’accueil."
+        }
+      ]
+    },
+    "updated": "Dernière mise à jour : 8 octobre 2026",
+    "who": "Qui sommes-nous",
+    "whoIntro": "African Game Hub est exploité par l’entreprise ci-dessous. Écrivez-nous pour toute question sur cette page.",
+    "more": "Autres politiques",
+    "cookies": {
+      "title": "Politique relative aux cookies",
+      "sections": [
+        {
+          "h": "En bref",
+          "p": "Nous ne déposons aucun cookie publicitaire ou de suivi, et aucune autre entreprise n’en dépose par nos pages. C’est pourquoi aucun bandeau de cookies ne vous est présenté : il n’y a rien de facultatif à accepter ou refuser."
+        },
+        {
+          "h": "Ce que l’application enregistre dans votre navigateur",
+          "p": "Trois choses, toutes nécessaires à son fonctionnement : votre session, pour rester connecté ; vos réglages, comme le son, le plateau et la langue ; et vos derniers choix dans le salon. Pour l’usage hors ligne, l’application garde aussi une copie de ses propres fichiers et du dernier portefeuille et profil affichés."
+        },
+        {
+          "h": "Comment l’effacer",
+          "p": "La déconnexion supprime votre session. Effacer les données de ce site dans les réglages du navigateur supprime tout ; il vous suffira de vous reconnecter."
+        },
+        {
+          "h": "Si cela change",
+          "p": "Si nous ajoutons un jour quoi que ce soit de non indispensable, comme la mesure des visites, nous demanderons d’abord votre accord et mettrons cette page à jour."
+        }
+      ]
+    },
+    "refunds": {
+      "title": "Politique de remboursement",
+      "sections": [
+        {
+          "h": "Aujourd’hui : jetons de jeu uniquement",
+          "p": "Pour l’instant, le hub utilise des jetons gratuits sans valeur monétaire. Rien ne peut être acheté ; il n’y a donc rien à rembourser."
+        },
+        {
+          "h": "Mises",
+          "p": "Une mise est rendue intégralement et automatiquement lorsqu’une partie est nulle, annulée avant que les deux joueurs aient joué, ou annulée par notre équipe. La mise d’une partie perdue loyalement n’est pas rendue."
+        },
+        {
+          "h": "Erreurs de notre part",
+          "p": "Si une panne de notre côté vous coûte des jetons, écrivez-nous avec la date et votre nom d’utilisateur. Chaque mouvement de jetons est enregistré ; nous pouvons donc le vérifier et nous réparerons la perte."
+        },
+        {
+          "h": "Quand l’argent réel sera proposé",
+          "p": "Les dépôts et retraits ne seront activés que dans les pays où nous sommes agréés. Avant cela, cette page précisera comment demander le remboursement d’un dépôt non joué, les délais et les frais éventuels. L’argent perdu dans une partie jouée loyalement ne sera pas remboursable."
+        },
+        {
+          "h": "Triche",
+          "p": "Lorsqu’une partie a été gagnée par la triche, nous pouvons annuler le résultat et rendre la mise au joueur lésé."
         }
       ]
     }

@@ -3,7 +3,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { requireDevelopmentProject, requireEnv, runSql } from './managementApi.ts'
 
-export const TEST_PASSWORD = 'e2e-Password-123'
+/** The test accounts' password: from .env.local, never written in the code. */
+export const TEST_PASSWORD = requireEnv('E2E_TEST_PASSWORD')
 export const TEST_ACCOUNTS = [
   { email: 'e2e-player@example.com', username: 'e2e_player', country: 'RW' },
   { email: 'e2e-player-2@example.com', username: 'e2e_player2', country: 'NG' },
@@ -31,6 +32,15 @@ export async function ensureTestAccounts() {
       user_metadata: { username: account.username, age_confirmed: true, country_code: account.country },
     })
     if (error && error.code !== 'email_exists') throw error
+  }
+  // Accounts made earlier keep whatever password they were made with: bring them into line.
+  const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
+  if (error) throw error
+  const wanted = new Set<string>(TEST_ACCOUNTS.map((a) => a.email))
+  for (const user of data.users) {
+    if (!user.email || !wanted.has(user.email)) continue
+    const updated = await admin.auth.admin.updateUserById(user.id, { password: TEST_PASSWORD })
+    if (updated.error) throw updated.error
   }
 }
 

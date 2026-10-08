@@ -163,10 +163,9 @@ export function preview(game: LudoState, seat: Seat, color: Seat, piece: number,
   const from = game.positions[color]![piece]!
   const landed = from === YARD ? steps - 6 : from + steps
   const square = landed <= 50 ? (START[color] + landed) % 52 : null
-  // The stars shelter everyone. A start square (a gate) shelters everyone except from its owner:
-  // a piece coming out captures whoever is standing on its own gate.
-  const gate = square !== null && Object.values(START).includes(square)
-  const safe = square !== null && ((STAR_SQUARES as readonly number[]).includes(square) || (gate && square !== START[color]))
+  // Only the stars shelter. A gate (a start square) shelters nobody: landing on an opponent
+  // there captures, as on any other square.
+  const safe = square !== null && (STAR_SQUARES as readonly number[]).includes(square)
   const captures: { color: Seat; piece: number }[] = []
   if (square !== null && !safe) {
     for (const other of SEATS) {

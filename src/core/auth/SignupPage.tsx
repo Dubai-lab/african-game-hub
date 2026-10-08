@@ -1,5 +1,5 @@
 import { type FormEvent, useId, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { useTranslation, Trans } from 'react-i18next'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { guessCountry, useCountries } from '@/core/countries/useCountries'
 import { supabase } from '@/core/lib/supabase'
@@ -144,6 +144,15 @@ export default function SignupPage() {
           </label>
           {errors.isAdult && <p className="mt-1 text-sm text-danger">{t(errors.isAdult)}</p>}
         </div>
+        <p className="text-sm text-muted">
+          <Trans
+            i18nKey="auth.consent"
+            components={{
+              terms: <Link to="/terms" target="_blank" className="font-semibold text-primary underline" />,
+              privacy: <Link to="/privacy" target="_blank" className="font-semibold text-primary underline" />,
+            }}
+          />
+        </p>
         <Button type="submit" disabled={busy} className="mt-2">
           {busy ? t('auth.working') : t('auth.signupButton')}
         </Button>

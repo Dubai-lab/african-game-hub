@@ -122,12 +122,53 @@ delete from auth.mfa_factors where user_id = (select id from auth.users where em
 
 To run the admin app on your own computer: `npm --prefix admin install` once, then `npm run admin:dev` and open http://localhost:5180.
 
+## 4c. Hosting on AWS (S3 + CloudFront)
+
+Both sites are also hosted on AWS, in account profile `myprofile`, Region `eu-north-1`. Supabase stays the backend; AWS only serves the static files.
+
+| | Player site | Admin site |
+| --- | --- | --- |
+| Address | https://d2xirivzgoo9lw.cloudfront.net | https://d2hp5w4slz51xb.cloudfront.net |
+| CloudFormation stack | `agh-player` | `agh-admin` |
+| Publish a new version | `npm run deploy:player` | `npm run deploy:admin` |
+
+**How it is built.** `infra/site.yaml` describes one site: a private S3 bucket that holds the files, and a CloudFront distribution in front of it that provides HTTPS, compression and caching close to the player. Only CloudFront may read the bucket. A small CloudFront Function sends app addresses such as `/lobby` to the entry file (`app.html` for players, `index.html` for admin). The same template is deployed twice; the admin copy has `Hardened=true`, which adds the strict security headers.
+
+**Publishing.** `deploy.ps1` reads the bucket and address from the stack, builds with that address, refuses to continue if a server-side secret from `.env.local` is found in the built files, uploads, and refreshes the few files whose names never change. If AWS reports an expired session, run `aws login --profile myprofile` first.
+
+**Caching.** Files in `/assets/` have their content's fingerprint in their name, so they are kept for a year. Sounds, the chess engine and landing pictures are kept for 30 days. The entry pages and the service worker are always re-checked, which is how a new version reaches everyone. Files from earlier versions are left in the bucket so that a phone part-way through loading yesterday's version can finish.
+
+**Rolling back.** Check out the earlier commit and run the deploy command again.
+
+**Cost.** Expected to be $0 a month: CloudFront's free allowance is 1 TB and 10 million requests a month across the whole account, and the two sites store under 4 MB. The budget `portfolio-monthly-1usd` covers the whole account and emails at 50% and 100% of $1 spent, and when the forecast passes $1. An alert only warns; it does not stop anything.
+
+**Kill switch.** `npm run aws:off` takes both sites offline without deleting them (`npm run aws:on` brings them back; add `-- -Site player` or `-- -Site admin` for one). An offline distribution serves nothing and costs nothing.
+
+**Removing everything.** Empty each bucket, then delete each stack:
+
+```
+aws s3 rm s3://BUCKET_NAME --recursive --profile myprofile
+aws cloudformation delete-stack --stack-name agh-player --profile myprofile --region eu-north-1
+```
+
+**Not possible on this account:** a custom domain (its certificate must be created in `us-east-1`, which the organization blocks), AWS WAF rate limiting (same reason), and automatic deployment from GitHub (OIDC is blocked).
+
 ## 5. Before real players arrive
 
 - **Rotate every secret that was ever pasted into a chat or email:** the access token, the `service_role` key and the mail password. A fresh production project gives you new keys automatically; the mail password you must change yourself.
 - **Legal review.** The terms, privacy and responsible gaming pages are drafts and say so on the page. `ASSETS.md` explains how Stockfish (GPL) is used; have that arrangement confirmed too.
 - **Real money stays off.** Every country has `real_money_enabled = false`. Do not change that without a licence for that country, a payment provider integration, and refreshed exchange rates (`countries.token_to_currency_rate` was set from rates on 7 October 2026).
 - **Install icons and name.** `public/icon.svg` is a simple placeholder mark. Replace it and run `npm run icons`.
+- **Business details.** Set `VITE_BUSINESS_NAME`, `VITE_BUSINESS_ADDRESS` and `VITE_BUSINESS_REGISTRATION` (and `VITE_CONTACT_EMAIL`) where the player site is built. They appear in the footer and on every legal page. Use the real registered details only.
+- **Check local law** in every country you open: gaming licence, data-protection registration, consumer and tax rules. The policy pages (terms, privacy, cookies, refunds, responsible gaming) are plain-language drafts for a lawyer to finish, including which country's law applies.
+
+## 5b. Security settings worth knowing
+
+- **Which websites may call the server.** Two Edge Function secrets hold the allowed addresses, separated by commas: `APP_ORIGINS` for the player app and `ADMIN_APP_ORIGIN` for the admin app. A browser on any other site is refused. **When the player or admin site gets a new address (a custom domain, another host), add it to the secret or that site will stop working.** Current values: player `https://d2xirivzgoo9lw.cloudfront.net` plus the local development addresses; admin `https://d2hp5w4slz51xb.cloudfront.net` plus `http://localhost:5180`.
+- **Rate limit.** Each player may call each server function at most 60 times in 10 seconds; beyond that the answer is `RATE_LIMITED`. Sign-in, sign-up and password emails are limited by Supabase itself (Authentication > Rate limits in the dashboard).
+- **Content security policy.** `npm run build` writes a policy into both entry pages of the player site: scripts run only from the site itself, and the page talks only to the site and Supabase. If you ever add something from another address (a font, an analytics script, a payment widget), it must be added to the policy in `scripts/prerender.ts`, and to the cookies and privacy pages. The admin site's stricter policy is set by its host (`infra/site.yaml`, `admin/vercel.json`).
+- **Test accounts.** The `e2e-*` accounts exist only on a development project. Their password is `E2E_TEST_PASSWORD` in `.env.local`, never in the code. Delete those accounts before a project takes real players.
+- **Checks to rerun before each release:** `npm audit` (known faults in packages), `npm test`, `npx playwright test e2e/accessibility.spec.ts` (contrast, labels, alt text, keyboard), and `npm run db:check` (what a player can and cannot reach in the database).
 
 ## Running it day to day
 
