@@ -140,3 +140,44 @@ test('a staked game of draughts pays the winner the pot less the commission', as
   await one.context.close()
   await two.context.close()
 })
+
+test('the Back button does not walk a player out of a live game without asking', async ({ browser }) => {
+  const one = await signedIn(browser, TEST_ACCOUNTS[0]!.email)
+  const two = await signedIn(browser, TEST_ACCOUNTS[1]!.email)
+  const [white, black] = await startGame(one, two)
+  const match = white.url()
+  await play(white, 32, 28)
+  await expect(sq(black, 28)).toHaveAttribute('data-piece', 'w', { timeout: 15_000 })
+  await play(black, 19, 23)
+  await expect(sq(white, 23)).toHaveAttribute('data-piece', 'b', { timeout: 15_000 })
+
+  // Back: the game stays on screen and the player is asked.
+  await white.goBack()
+  const question = white.getByRole('alertdialog', { name: 'Leave this game?' })
+  await expect(question).toBeVisible()
+  expect(white.url()).toBe(match)
+  await expect(white.getByTestId('draughts-board')).toBeVisible()
+
+  // Stay: back to the game, which is exactly as it was. And Back asks again next time.
+  await question.getByRole('button', { name: 'Stay' }).click()
+  await expect(question).toHaveCount(0)
+  await expect(moves(white)).toHaveText(['32-28', '19-23'])
+  await white.goBack()
+  await expect(question).toBeVisible()
+
+  // Leave: now the player really goes, and the game goes on without them.
+  await question.getByRole('button', { name: 'Leave' }).click()
+  await expect(white).not.toHaveURL(match)
+  await expect(black.getByTestId('draughts-board')).toBeVisible()
+
+  // Once a game is over there is nothing to ask: Back simply leaves.
+  await black.getByRole('button', { name: 'Resign' }).click()
+  await black.getByRole('dialog').getByRole('button', { name: 'Resign' }).click()
+  await expect(black.getByRole('heading', { name: 'You lost' })).toBeVisible({ timeout: 15_000 })
+  await black.goBack()
+  await expect(black.getByRole('alertdialog')).toHaveCount(0)
+  await expect(black).not.toHaveURL(match, { timeout: 10_000 })
+
+  await one.context.close()
+  await two.context.close()
+})

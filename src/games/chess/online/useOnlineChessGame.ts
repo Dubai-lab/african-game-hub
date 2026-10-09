@@ -67,7 +67,7 @@ type MatchRow = {
 type Snapshot = { match: MatchRow; players: OnlinePlayer[]; game: GameRow; sans: string[] }
 type MoveReply = { ply: number; white_time_ms: number; black_time_ms: number; last_move_at: string; san: string; finished: boolean }
 
-const BOARD_REASONS = ['checkmate', 'stalemate', 'insufficient', 'repetition', 'fifty_moves', 'resignation', 'agreement', 'timeout'] as const
+const BOARD_REASONS = ['checkmate', 'stalemate', 'insufficient', 'repetition', 'fifty_moves', 'resignation', 'agreement', 'timeout', 'no_show'] as const
 const CLAIM_EVERY_MS = 3000
 // Refusals after which the app's picture of the game is clearly out of date.
 const RELOAD_AFTER = new Set(['SERVER_ERROR', 'OUT_OF_SYNC', 'GAME_OVER', 'TIME_OUT', 'ABORTED', 'NOT_YOUR_TURN'])

@@ -33,6 +33,8 @@ export type Outcome = {
     | 'resignation'
     | 'agreement'
     | 'timeout'
+    /** A tournament game one player never started: that player loses. */
+    | 'no_show'
     /** Called off before both players had moved: no winner, no rating change. */
     | 'aborted'
     /** Called off by the platform's staff: no winner, stakes returned. */

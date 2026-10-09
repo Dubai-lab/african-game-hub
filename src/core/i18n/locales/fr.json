@@ -13,7 +13,8 @@
     "backHome": "Retour à l'accueil",
     "logout": "Se déconnecter",
     "language": "Langue",
-    "dismiss": "Fermer"
+    "dismiss": "Fermer",
+    "close": "Fermer"
   },
   "errors": {
     "generic": "Une erreur s'est produite. Veuillez réessayer.",
@@ -545,10 +546,12 @@
         "agreement": "Les deux joueurs ont accepté la nulle.",
         "timeout": "Au temps.",
         "aborted": "La partie a été annulée avant que les deux joueurs aient joué. Aucun résultat.",
-        "called_off": "La partie a été annulée par notre équipe. Aucun résultat ; les mises ont été intégralement rendues."
+        "called_off": "La partie a été annulée par notre équipe. Aucun résultat ; les mises ont été intégralement rendues.",
+        "no_show": "Un joueur n’a pas joué son premier coup à temps et perd la partie."
       },
       "aborted": "Partie annulée",
-      "close": "Voir l’échiquier"
+      "close": "Voir l’échiquier",
+      "showResult": "Voir le résultat"
     },
     "settings": {
       "title": "Réglages de l’échiquier",
@@ -889,7 +892,8 @@
       "tokens": "Jetons",
       "close": "Voir le plateau",
       "playOn": "La partie a son vainqueur. Vous pouvez continuer à jouer pour la place suivante.",
-      "keepPlaying": "Continuer à jouer"
+      "keepPlaying": "Continuer à jouer",
+      "showResult": "Voir le résultat"
     },
     "reason": {
       "all_home": "Tous les pions sont à la maison.",
@@ -898,7 +902,8 @@
       "no_first_move": "La partie a été annulée car un joueur n’a pas joué son premier tour. Aucun résultat.",
       "aborted_by_player": "La partie a été annulée avant que les deux joueurs aient joué. Aucun résultat.",
       "admin_abort": "La partie a été annulée par notre équipe. Aucun résultat ; les mises ont été intégralement rendues.",
-      "other": "La partie est terminée."
+      "other": "La partie est terminée.",
+      "no_show": "Un joueur n’a pas joué son premier tour à temps et perd la partie."
     },
     "back": "Salon",
     "playersCount_one": "{{count}} joueur",
@@ -1042,7 +1047,8 @@
       "calledOff": "Partie annulée",
       "tokens": "Jetons",
       "close": "Voir la table",
-      "wins": "Parties gagnées ({{game}})"
+      "wins": "Parties gagnées ({{game}})",
+      "showResult": "Voir le résultat"
     },
     "reason": {
       "eight_ball": "La 8 a été empochée.",
@@ -1056,7 +1062,8 @@
       "aborted_by_player": "La partie a été annulée avant que les deux joueurs aient joué. Aucun résultat.",
       "admin_abort": "La partie a été annulée par notre équipe. Aucun résultat ; les mises ont été intégralement rendues.",
       "other": "La partie est terminée.",
-      "eight_wrong_pocket": "La 8 est tombée dans une poche qui n’était pas annoncée."
+      "eight_wrong_pocket": "La 8 est tombée dans une poche qui n’était pas annoncée.",
+      "no_show": "Un joueur n’a pas joué son premier coup à temps et perd la partie."
     },
     "calledPocket": "Poche annoncée pour la 8",
     "settings": {
@@ -1372,8 +1379,10 @@
         "timeout": "Au temps.",
         "aborted": "La partie a été annulée avant que les deux joueurs aient joué. Pas de résultat.",
         "called_off": "La partie a été annulée par notre équipe. Pas de résultat ; toute mise a été rendue en entier.",
-        "other": "La partie est terminée."
-      }
+        "other": "La partie est terminée.",
+        "no_show": "Un joueur n’a pas joué son premier coup à temps et perd la partie."
+      },
+      "showResult": "Voir le résultat"
     },
     "settings": {
       "title": "Réglages des dames",
@@ -1443,5 +1452,11 @@
       "again": "Rejouer",
       "change": "Changer de partie"
     }
+  },
+  "leaveGame": {
+    "title": "Quitter cette partie ?",
+    "body": "La partie continue sans vous et votre pendule tourne toujours. Si votre temps s’écoule, vous perdez.",
+    "stay": "Rester",
+    "leave": "Quitter"
   }
 }

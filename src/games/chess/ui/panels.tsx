@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/core/ui/Button'
+import { ResultDialog, ResultStat, ResultStats, type ResultTone } from '@/core/ui/ResultDialog'
 import type { Color, Outcome, PieceSymbol, PlayedMove } from '../engine/chessLogic'
 import { type ClockState, formatClock, LOW_TIME_MS, remainingMs, TENTHS_BELOW_MS } from '../engine/clock'
 import type { PieceSet } from '../pieces/usePieceSet'
@@ -58,6 +59,7 @@ type PlayerCardProps = {
   color: Color
   flag?: string
   rating?: number
+  ratingChange?: number
   /** Pieces this player has taken (they belong to the other colour). */
   captured: PieceSymbol[]
   lead: number
@@ -67,7 +69,7 @@ type PlayerCardProps = {
   pieceSet: PieceSet
 }
 
-export function PlayerCard({ name, color, flag, rating, captured, lead, clock, toMove, pieceSet }: PlayerCardProps) {
+export function PlayerCard({ name, color, flag, rating, ratingChange, captured, lead, clock, toMove, pieceSet }: PlayerCardProps) {
   const theirs = color === 'w' ? 'b' : 'w'
   const sorted = [...captured].sort((a, b) => VALUE_ORDER.indexOf(a) - VALUE_ORDER.indexOf(b))
   return (
@@ -85,6 +87,11 @@ export function PlayerCard({ name, color, flag, rating, captured, lead, clock, t
           {flag && <span aria-hidden="true">{flag}</span>}
           <span className="truncate">{name}</span>
           {rating !== undefined && <span className="text-sm font-semibold tabular-nums text-muted">{rating}</span>}
+          {ratingChange !== undefined && (
+            <span className={`text-sm font-bold tabular-nums ${ratingChange > 0 ? 'text-palm' : ratingChange < 0 ? 'text-hibiscus' : 'text-muted'}`}>
+              {ratingChange > 0 ? `+${ratingChange}` : ratingChange < 0 ? `−${Math.abs(ratingChange)}` : '±0'}
+            </span>
+          )}
           {toMove && <span className="size-2 shrink-0 rounded-full bg-palm" aria-hidden="true" />}
         </p>
         <p className="flex h-5 items-center" data-testid={`captured-${color}`}>
@@ -224,42 +231,25 @@ export function GameOverSheet({ outcome, perspective, rating, ratingChange, toke
       : perspective === null
         ? t(outcome.winner === 'w' ? 'chess.over.whiteWins' : 'chess.over.blackWins')
         : t(outcome.winner === perspective ? 'chess.over.youWon' : 'chess.over.youLost')
-  const signed = (value: number) => (value > 0 ? `+${value}` : value < 0 ? `−${Math.abs(value)}` : '±0')
-  const tone = (value: number) => (value > 0 ? 'text-palm' : value < 0 ? 'text-hibiscus' : 'text-muted')
   const mine = perspective && review?.summary ? review.summary[perspective] : null
+  const called = outcome.reason === 'aborted' || outcome.reason === 'called_off'
+  const tone: ResultTone = called ? 'neutral' : outcome.winner === null ? 'draw' : perspective === null || outcome.winner === perspective ? 'win' : 'loss'
 
   return (
-    <Sheet title={title} onClose={onClose}>
-      <p className="mt-1 text-muted" data-testid="game-over-reason">
-        {t(`chess.over.reason.${outcome.reason}`)}
-      </p>
-
+    <ResultDialog title={title} tone={tone} reason={t(`chess.over.reason.${outcome.reason}`)} onClose={onClose} closeLabel={t('chess.over.close')}>
       {(tokensChange !== undefined || ratingChange !== undefined) && (
-        <dl className="mt-4 grid grid-cols-2 gap-4 border-y-2 border-line py-3">
-          {ratingChange !== undefined && (
-            <div className="flex flex-col-reverse" data-testid="game-over-rating">
-              <dt className="text-sm text-muted">{t('chess.over.rating')}</dt>
-              <dd className="flex items-baseline gap-2 font-display text-3xl font-extrabold tabular-nums">
-                {rating ?? ''}
-                <span className={`text-lg ${tone(ratingChange)}`}>{signed(ratingChange)}</span>
-              </dd>
-            </div>
-          )}
-          {tokensChange !== undefined && (
-            <div className="flex flex-col-reverse" data-testid="game-over-tokens">
-              <dt className="text-sm text-muted">{t('chess.over.tokens')}</dt>
-              <dd className={`font-display text-3xl font-extrabold tabular-nums ${tone(tokensChange)}`}>{signed(tokensChange)}</dd>
-            </div>
-          )}
-        </dl>
+        <ResultStats>
+          {ratingChange !== undefined && <ResultStat testId="game-over-rating" label={t('chess.over.rating')} value={rating ?? ''} change={ratingChange} />}
+          {tokensChange !== undefined && <ResultStat testId="game-over-tokens" label={t('chess.over.tokens')} change={tokensChange} />}
+        </ResultStats>
       )}
 
       {review && (
-        <div className="mt-4 flex flex-col gap-3">
+        <div className="flex flex-col gap-3">
           {review.status === 'running' && <ReviewProgress review={review} />}
           {mine && (
             <>
-              <p className="text-sm font-semibold">
+              <p className="text-center text-sm font-semibold">
                 {t('chess.review.yourAccuracy')} <span className="font-display text-xl font-extrabold tabular-nums">{mine.accuracy.toFixed(1)}</span>
               </p>
               <ReviewTiles side={mine} />
@@ -271,12 +261,7 @@ export function GameOverSheet({ outcome, perspective, rating, ratingChange, toke
         </div>
       )}
 
-      <div className="mt-3">{actions}</div>
-      {!review && (
-        <button type="button" onClick={onClose} className="mt-2 min-h-11 w-full font-semibold text-primary underline underline-offset-4">
-          {t('chess.over.close')}
-        </button>
-      )}
-    </Sheet>
+      <div>{actions}</div>
+    </ResultDialog>
   )
 }

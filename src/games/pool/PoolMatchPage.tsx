@@ -2,8 +2,10 @@ import { type ReactNode, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { AfterMatchActions, useAfterMatch } from '@/core/matchmaking/afterMatch'
+import { LeaveGuard } from '@/core/matchmaking/LeaveGuard'
 import { MatchChat } from '@/core/social/MatchChat'
 import { Button, buttonClass } from '@/core/ui/Button'
+import { ResultDialog, ResultStat, ResultStats, type ResultTone } from '@/core/ui/ResultDialog'
 import { LoadingScreen } from '@/core/ui/LoadingScreen'
 import { useOnline } from '@/core/ui/OfflineBanner'
 import type { GameOptions } from '@/games/types'
@@ -61,8 +63,7 @@ export default function PoolMatchPage({ matchId }: { matchId: string }) {
   // Shown once the result has been settled (the count then includes this game).
   const winsNow = me && match.result === 'win' && me.ratingAfter !== null ? me.wins : undefined
   const tokensChange = me && match.stake_amount > 0 && me.tokensChange !== null ? me.tokensChange : undefined
-  const signed = (value: number) => (value > 0 ? `+${value}` : value < 0 ? `−${Math.abs(value)}` : '±0')
-  const tone = (value: number) => (value > 0 ? 'text-palm' : value < 0 ? 'text-hibiscus' : 'text-muted')
+  const resultTone: ResultTone = match.result !== 'win' ? 'neutral' : mySeat === null || iWon ? 'win' : 'loss'
   const resultTitle = match.result !== 'win' ? t('pool.over.calledOff') : mySeat === null ? t('pool.over.winner', { name: winner?.name ?? '' }) : t(iWon ? 'pool.over.youWon' : 'pool.over.youLost')
   const actions = mySeat ? (
     <AfterMatchActions state={after} opponent={opponent?.name ?? ''} newGameLabel={t('pool.newGame')} />
@@ -74,6 +75,7 @@ export default function PoolMatchPage({ matchId }: { matchId: string }) {
 
   return (
     <>
+      <LeaveGuard active={mySeat !== null && !decided && !game.over} />
       <PoolTable
         title={title}
         game={game}
@@ -87,7 +89,14 @@ export default function PoolMatchPage({ matchId }: { matchId: string }) {
         onPlaying={setPlaying}
         footer={
           decided ? (
-            actions
+            <div className="flex flex-col gap-2">
+              {resultClosed && (
+                <Button variant="ghost" className="w-full" onClick={() => setResultClosed(false)} data-testid="show-result">
+                  {t('pool.over.showResult')}
+                </Button>
+              )}
+              {actions}
+            </div>
           ) : mySeat ? (
             <Button variant="ghost" className="w-full" onClick={() => setConfirmResign(true)}>
               {t('pool.resign.button')}
@@ -119,31 +128,21 @@ export default function PoolMatchPage({ matchId }: { matchId: string }) {
       )}
 
       {decided && !playing && !resultClosed && (
-        <Sheet title={resultTitle} onClose={() => setResultClosed(true)}>
-          <p className="mt-1 text-muted" data-testid="game-over-reason">
-            {t(`pool.reason.${match.end_reason}`, { defaultValue: t('pool.reason.other') })}
-          </p>
+        <ResultDialog
+          title={resultTitle}
+          tone={resultTone}
+          reason={t(`pool.reason.${match.end_reason}`, { defaultValue: t('pool.reason.other') })}
+          onClose={() => setResultClosed(true)}
+          closeLabel={t('pool.over.close')}
+        >
           {(tokensChange !== undefined || winsNow !== undefined) && (
-            <dl className="mt-4 grid grid-cols-2 gap-4 border-y-2 border-line py-3">
-              {winsNow !== undefined && (
-                <div className="flex flex-col-reverse" data-testid="game-over-wins">
-                  <dt className="text-sm text-muted">{t('pool.over.wins', { game: t(`pool.variant.${game.variant}`) })}</dt>
-                  <dd className="font-display text-3xl font-extrabold tabular-nums">{winsNow}</dd>
-                </div>
-              )}
-              {tokensChange !== undefined && (
-                <div className="flex flex-col-reverse" data-testid="game-over-tokens">
-                  <dt className="text-sm text-muted">{t('pool.over.tokens')}</dt>
-                  <dd className={`font-display text-3xl font-extrabold tabular-nums ${tone(tokensChange)}`}>{signed(tokensChange)}</dd>
-                </div>
-              )}
-            </dl>
+            <ResultStats>
+              {winsNow !== undefined && <ResultStat testId="game-over-wins" label={t('pool.over.wins', { game: t(`pool.variant.${game.variant}`) })} value={winsNow} />}
+              {tokensChange !== undefined && <ResultStat testId="game-over-tokens" label={t('pool.over.tokens')} change={tokensChange} />}
+            </ResultStats>
           )}
-          <div className="mt-4">{actions}</div>
-          <button type="button" onClick={() => setResultClosed(true)} className="mt-2 min-h-11 w-full font-semibold text-primary underline underline-offset-4">
-            {t('pool.over.close')}
-          </button>
-        </Sheet>
+          <div>{actions}</div>
+        </ResultDialog>
       )}
     </>
   )

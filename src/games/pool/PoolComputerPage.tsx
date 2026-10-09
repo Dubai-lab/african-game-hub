@@ -2,10 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { Button, buttonClass } from '@/core/ui/Button'
+import { ResultDialog } from '@/core/ui/ResultDialog'
 import { toast } from '@/core/ui/toast'
 import { applyShot, type PoolState, rack, type Seat, type Shot, type ShotResult, type Variant } from '../../../supabase/functions/_shared/pool'
 import { chooseShot, type Level } from './computer'
-import { PoolTable, Sheet, type TableGame } from './PoolTable'
+import { PoolTable, type TableGame } from './PoolTable'
 
 // Practice against the computer: no tokens, no rating, nothing sent anywhere. The same rules
 // and physics as a real match, run on this device. The player is seat 1 and breaks.
@@ -173,15 +174,15 @@ export default function PoolComputerPage() {
         }
       />
       {over && !playing && !closed && (
-        <Sheet title={t(over.winner === 1 ? 'pool.computer.youWon' : 'pool.computer.youLost')} onClose={() => setClosed(true)}>
-          <p className="mt-1 text-muted" data-testid="game-over-reason">
-            {t(`pool.reason.${over.reason}`, { defaultValue: t('pool.reason.other') })}
-          </p>
-          <div className="mt-4">{actions}</div>
-          <button type="button" onClick={() => setClosed(true)} className="mt-2 min-h-11 w-full font-semibold text-primary underline underline-offset-4">
-            {t('pool.over.close')}
-          </button>
-        </Sheet>
+        <ResultDialog
+          title={t(over.winner === 1 ? 'pool.computer.youWon' : 'pool.computer.youLost')}
+          tone={over.winner === 1 ? 'win' : 'loss'}
+          reason={t(`pool.reason.${over.reason}`, { defaultValue: t('pool.reason.other') })}
+          onClose={() => setClosed(true)}
+          closeLabel={t('pool.over.close')}
+        >
+          <div>{actions}</div>
+        </ResultDialog>
       )}
     </>
   )

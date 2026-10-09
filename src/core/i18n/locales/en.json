@@ -13,7 +13,8 @@
     "backHome": "Back to home",
     "logout": "Log out",
     "language": "Language",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "close": "Close"
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
@@ -545,10 +546,12 @@
         "agreement": "Both players agreed to a draw.",
         "timeout": "On time.",
         "aborted": "The game was called off before both players had moved. No result.",
-        "called_off": "The game was called off by our team. No result; any stake was returned in full."
+        "called_off": "The game was called off by our team. No result; any stake was returned in full.",
+        "no_show": "A player did not make their first move in time, and loses the game."
       },
       "aborted": "Game aborted",
-      "close": "Look at the board"
+      "close": "Look at the board",
+      "showResult": "Show result"
     },
     "settings": {
       "title": "Board settings",
@@ -889,7 +892,8 @@
       "tokens": "Tokens",
       "close": "Look at the board",
       "playOn": "The game has its winner. You can keep playing for the next place.",
-      "keepPlaying": "Keep playing"
+      "keepPlaying": "Keep playing",
+      "showResult": "Show result"
     },
     "reason": {
       "all_home": "Every piece is home.",
@@ -898,7 +902,8 @@
       "no_first_move": "The game was called off because a player did not take their first turn. No result.",
       "aborted_by_player": "The game was called off before both players had played. No result.",
       "admin_abort": "The game was called off by our team. No result; any stake was returned in full.",
-      "other": "The game is over."
+      "other": "The game is over.",
+      "no_show": "A player did not take their first turn in time, and loses the game."
     },
     "back": "Lobby",
     "playersCount_one": "{{count}} player",
@@ -1042,7 +1047,8 @@
       "calledOff": "Game called off",
       "tokens": "Tokens",
       "close": "Look at the table",
-      "wins": "{{game}} games won"
+      "wins": "{{game}} games won",
+      "showResult": "Show result"
     },
     "reason": {
       "eight_ball": "The 8 ball was pocketed.",
@@ -1056,7 +1062,8 @@
       "aborted_by_player": "The game was called off before both players had played. No result.",
       "admin_abort": "The game was called off by our team. No result; any stake was returned in full.",
       "other": "The game is over.",
-      "eight_wrong_pocket": "The 8 ball went into a pocket that was not called."
+      "eight_wrong_pocket": "The 8 ball went into a pocket that was not called.",
+      "no_show": "A player did not play their first shot in time, and loses the game."
     },
     "calledPocket": "Pocket called for the 8",
     "settings": {
@@ -1372,8 +1379,10 @@
         "timeout": "On time.",
         "aborted": "The game was called off before both players had moved. No result.",
         "called_off": "The game was called off by our team. No result; any stake was returned in full.",
-        "other": "The game is over."
-      }
+        "other": "The game is over.",
+        "no_show": "A player did not make their first move in time, and loses the game."
+      },
+      "showResult": "Show result"
     },
     "settings": {
       "title": "Draughts settings",
@@ -1443,5 +1452,11 @@
       "again": "Play again",
       "change": "Change game"
     }
+  },
+  "leaveGame": {
+    "title": "Leave this game?",
+    "body": "The game goes on without you, and your clock keeps running. If your time runs out, you lose.",
+    "stay": "Stay",
+    "leave": "Leave"
   }
 }

@@ -475,7 +475,19 @@ describe('tournaments by rounds', () => {
     expect(places.map((row) => name(row.user_id))).toEqual([a, c, b])
   })
 
-  it('a game called off before it began scores nothing, and the round moves on', async () => {
+  /** Lets the first-move window of a chess game run out, and has the server look at the clock. */
+  const neverStarted = async (matchId: string) => {
+    await db.pg.query(`update public.chess_games set last_move_at = last_move_at - interval '31 seconds' where match_id = $1`, [matchId])
+    await db.pg.query(`select private.chess_check_clock($1)`, [matchId])
+  }
+  const seatOf = async (matchId: string, seat: string) =>
+    (await one<{ user_id: string }>(`select user_id from public.match_players where match_id = $1 and seat = $2`, [matchId, seat])).user_id
+  const result = (matchId: string) =>
+    one<{ status: string; result: string; end_reason: string; winner_id: string | null }>(`select status, result, end_reason, winner_id from public.matches where id = $1`, [matchId])
+  const points = async (id: string, userId: string) =>
+    (await one<{ points: number; games: number; wins: number; losses: number }>(`select points, games, wins, losses from public.tournament_players where tournament_id = $1 and user_id = $2`, [id, userId]))
+
+  it('a player who never makes their first move loses the game, and the player who was there gets the win', async () => {
     const host = await player('host')
     const [a, b] = [await player(), await player()]
     const { id } = await create(host, 3)
@@ -484,7 +496,48 @@ describe('tournaments by rounds', () => {
     await start(id)
     await here(a, id)
     const game = await here(b, id)
-    await db.pg.query(`select private.finish_match($1, 'aborted', null, 'no_first_move')`, [game.match_id])
+    const white = await seatOf(game.match_id, 'white')
+    const black = await seatOf(game.match_id, 'black')
+
+    // White never plays the first move.
+    await neverStarted(game.match_id)
+    expect(await result(game.match_id)).toEqual({ status: 'finished', result: 'win', end_reason: 'no_show', winner_id: black })
+    expect(await points(id, black)).toEqual({ points: 2, games: 1, wins: 1, losses: 0 })
+    expect(await points(id, white)).toEqual({ points: 0, games: 1, wins: 0, losses: 1 })
+    expect((await pairings(id, 1))[0]!.result).toBe('played')
+    // It is recorded once: looking at the clock again changes nothing.
+    await db.pg.query(`select private.chess_check_clock($1)`, [game.match_id])
+    expect(await points(id, black)).toEqual({ points: 2, games: 1, wins: 1, losses: 0 })
+  })
+
+  it('when White has moved and Black never answers, it is Black who loses', async () => {
+    const host = await player('host')
+    const [a, b] = [await player(), await player()]
+    const { id } = await create(host, 3)
+    await join(a, id)
+    await join(b, id)
+    await start(id)
+    await here(a, id)
+    const game = await here(b, id)
+    const white = await seatOf(game.match_id, 'white')
+    await db.pg.query(`select public.chess_apply_move($1, $2, 0, 'e4', 'e2e4', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1', null, null)`, [game.match_id, white])
+    await neverStarted(game.match_id)
+    expect(await result(game.match_id)).toMatchObject({ result: 'win', end_reason: 'no_show', winner_id: white })
+    expect(await points(id, white)).toMatchObject({ points: 2, wins: 1 })
+  })
+
+  it('a game called off any other way still scores nothing, and the round moves on', async () => {
+    const host = await player('host')
+    const [a, b] = [await player(), await player()]
+    const { id } = await create(host, 3)
+    await join(a, id)
+    await join(b, id)
+    await start(id)
+    await here(a, id)
+    const game = await here(b, id)
+    // A player leaves before both have moved.
+    await db.pg.query(`select private.finish_match($1, 'aborted', null, 'aborted_by_player')`, [game.match_id])
+    expect(await result(game.match_id)).toMatchObject({ status: 'aborted', result: 'aborted' })
     expect((await pairings(id, 1))[0]!.result).toBe('void')
     await here(a, id)
     await here(b, id)
@@ -494,6 +547,14 @@ describe('tournaments by rounds', () => {
     await tick()
     // Nobody finished a game, so nobody is placed.
     expect(await state(id)).toMatchObject({ status: 'finished', settled: true })
+  })
+
+  it('outside a tournament, a game nobody starts is still called off with no result', async () => {
+    const [a, b] = [await player(), await player()]
+    await db.pg.query(`select public.join_match_queue($1, 'chess', 0, $2, 'blitz')`, [users[a], CHESS])
+    const joined = await call(`public.join_match_queue($1, 'chess', 0, $2, 'blitz')`, [users[b], CHESS])
+    await neverStarted(joined.match_id)
+    expect(await result(joined.match_id)).toEqual({ status: 'aborted', result: 'aborted', end_reason: 'no_first_move', winner_id: null })
   })
 })
 

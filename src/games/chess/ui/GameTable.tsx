@@ -37,7 +37,7 @@ function GearIcon() {
   )
 }
 
-export type TablePlayer = { name: string; flag?: string; rating?: number }
+export type TablePlayer = { name: string; flag?: string; rating?: number; /** How the rating moved, once the game is settled. */ ratingChange?: number }
 
 type Props = {
   title: string
@@ -109,6 +109,8 @@ export function GameTable({
   const [viewPly, setViewPly] = useState<number | null>(null)
   const [dialog, setDialog] = useState<'resign' | 'settings' | null>(null)
   const [reviewing, setReviewing] = useState(false)
+  // The result can be put aside to look at the board, and brought back.
+  const [resultClosed, setResultClosed] = useState(false)
 
   const { chess, played, turn, outcome } = game
   const livePly = played.length
@@ -133,6 +135,9 @@ export function GameTable({
   // Game review. The engine is only ever started for a game that is over, and by itself only
   // when the player has not asked to save data (it is a download the first time).
   const over = outcome !== null
+  useEffect(() => {
+    if (!over) setResultClosed(false)
+  }, [over])
   const reviewable = over && livePly >= 2
   const review = useGameReview(played, reviewable)
   const startReview = review.start
@@ -156,6 +161,7 @@ export function GameTable({
         name={players[color].name}
         flag={players[color].flag}
         rating={players[color].rating}
+        ratingChange={outcome ? players[color].ratingChange : undefined}
         color={color}
         captured={shown.material.captured[color]}
         lead={shown.material.lead[color]}
@@ -168,9 +174,16 @@ export function GameTable({
   const rematch = () => {
     setViewPly(null)
     setReviewing(false)
+    setResultClosed(false)
     onRematch()
   }
   const view = (ply: number) => setViewPly(ply >= livePly ? null : Math.max(0, ply))
+  // Review starts from the first move, the way a game is gone over.
+  const openReview = () => {
+    setReviewing(true)
+    setViewPly(Math.min(1, livePly))
+    review.start()
+  }
 
   const actions = overActions ?? (
     <div className="grid grid-cols-2 gap-2">
@@ -291,7 +304,23 @@ export function GameTable({
         )}
 
         {outcome ? (
-          actions
+          <>
+            {/* With the result put aside: the way into the review, and the way back to the result. */}
+            {!reviewing && resultClosed && (
+              <div className="grid auto-cols-fr grid-flow-col gap-2">
+                {reviewable && (
+                  <Button onClick={openReview} data-testid="open-review">
+                    <span aria-hidden="true" className="me-1.5">★</span>
+                    {t('chess.review.open')}
+                  </Button>
+                )}
+                <Button variant="ghost" onClick={() => setResultClosed(false)} data-testid="show-result">
+                  {t('chess.over.showResult')}
+                </Button>
+              </div>
+            )}
+            {actions}
+          </>
         ) : !atLive ? (
           <Button onClick={() => setViewPly(null)}>{t('chess.moves.backToGame')}</Button>
         ) : (
@@ -367,7 +396,7 @@ export function GameTable({
         </Sheet>
       )}
 
-      {outcome && !reviewing && (
+      {outcome && !reviewing && !resultClosed && (
         <GameOverSheet
           outcome={outcome}
           perspective={perspective}
@@ -376,13 +405,8 @@ export function GameTable({
           ratingChange={ratingChange}
           review={reviewable ? review : undefined}
           actions={actions}
-          onReview={() => {
-            // Review starts from the first move, the way a game is gone over.
-            setReviewing(true)
-            setViewPly(Math.min(1, livePly))
-            review.start()
-          }}
-          onClose={() => setReviewing(true)}
+          onReview={openReview}
+          onClose={() => setResultClosed(true)}
         />
       )}
 

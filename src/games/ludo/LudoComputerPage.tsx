@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { useSettingsStore } from '@/core/settings/settingsStore'
 import { Button, buttonClass } from '@/core/ui/Button'
+import { ResultDialog } from '@/core/ui/ResultDialog'
 import { Toggle } from '@/core/ui/Toggle'
 import { type Seat, SEATS } from './board'
-import { LudoTable, Sheet, type TablePlayer } from './LudoTable'
+import { LudoTable, type TablePlayer } from './LudoTable'
 import { applyMove, applyRoll, chooseMove, type LocalGame, newLocalGame, throwDice } from './rules'
 import { ludoFeedback } from './sound'
 
@@ -144,15 +145,15 @@ function Game({ setup, onSetup, resume }: { setup: Setup; onSetup: () => void; r
       }
     >
       {over && !resultClosed && (
-        <Sheet title={winner === HUMAN ? t('ludo.over.youWon') : t('ludo.over.winner', { name: players[winner!]?.name ?? '' })} onClose={() => setResultClosed(true)}>
-          <p className="mt-1 text-muted" data-testid="game-over-reason">
-            {t('ludo.reason.all_home')}
-          </p>
-          <div className="mt-4">{actions}</div>
-          <button type="button" onClick={() => setResultClosed(true)} className="mt-2 min-h-11 w-full font-semibold text-primary underline underline-offset-4">
-            {t('ludo.over.close')}
-          </button>
-        </Sheet>
+        <ResultDialog
+          title={winner === HUMAN ? t('ludo.over.youWon') : t('ludo.over.winner', { name: players[winner!]?.name ?? '' })}
+          tone={winner === HUMAN ? 'win' : 'loss'}
+          reason={t('ludo.reason.all_home')}
+          onClose={() => setResultClosed(true)}
+          closeLabel={t('ludo.over.close')}
+        >
+          <div>{actions}</div>
+        </ResultDialog>
       )}
     </LudoTable>
   )

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { useSettingsStore } from '@/core/settings/settingsStore'
 import { Button } from '@/core/ui/Button'
+import { ResultDialog, ResultStat, ResultStats, type ResultTone } from '@/core/ui/ResultDialog'
 import { Toggle } from '@/core/ui/Toggle'
 import { type ClockState, formatClock, LOW_TIME_MS, remainingMs, TENTHS_BELOW_MS } from '@/games/chess/engine/clock'
 import { type Color, legalMoves, material, type Move, type Played, START } from '../../../supabase/functions/_shared/draughts'
@@ -62,7 +63,7 @@ function Clock({ clock, color }: { clock: ClockState; color: Color }) {
   )
 }
 
-export type TablePlayer = { name: string; flag?: string; rating?: number }
+export type TablePlayer = { name: string; flag?: string; rating?: number; /** How the rating moved, once the game is settled. */ ratingChange?: number }
 
 function PlayerCard({ player, color, taken, lead, clock, toMove, disc }: { player: TablePlayer; color: Color; taken: number; lead: number; clock?: ClockState; toMove: boolean; disc: { top: string; edge: string } }) {
   const { t } = useTranslation()
@@ -80,6 +81,11 @@ function PlayerCard({ player, color, taken, lead, clock, toMove, disc }: { playe
           {player.flag && <span aria-hidden="true">{player.flag}</span>}
           <span className="truncate">{player.name}</span>
           {player.rating !== undefined && <span className="text-sm font-semibold tabular-nums text-muted">{player.rating}</span>}
+          {player.ratingChange !== undefined && (
+            <span className={`text-sm font-bold tabular-nums ${player.ratingChange > 0 ? 'text-palm' : player.ratingChange < 0 ? 'text-hibiscus' : 'text-muted'}`}>
+              {player.ratingChange > 0 ? `+${player.ratingChange}` : player.ratingChange < 0 ? `−${Math.abs(player.ratingChange)}` : '±0'}
+            </span>
+          )}
           {toMove && <span className="size-2 shrink-0 rounded-full bg-palm" aria-hidden="true" />}
         </p>
         <p className="h-5 text-sm font-semibold tabular-nums text-muted" data-testid={`taken-${color}`}>
@@ -235,8 +241,8 @@ export function DraughtsTable({ title, game, players, movable, perspective, time
         : perspective === null
           ? t(outcome.winner === 'w' ? 'draughts.over.whiteWins' : 'draughts.over.blackWins')
           : t(outcome.winner === perspective ? 'draughts.over.youWon' : 'draughts.over.youLost')
-  const signed = (value: number) => (value > 0 ? `+${value}` : value < 0 ? `−${Math.abs(value)}` : '±0')
-  const tone = (value: number) => (value > 0 ? 'text-palm' : value < 0 ? 'text-hibiscus' : 'text-muted')
+  const called = outcome?.reason === 'aborted' || outcome?.reason === 'called_off'
+  const resultTone: ResultTone = called ? 'neutral' : !outcome || outcome.winner === null ? 'draw' : perspective === null || outcome.winner === perspective ? 'win' : 'loss'
 
   return (
     // Phone: one column (bar, board, moves, buttons). Computer: the board takes the height of
@@ -295,7 +301,14 @@ export function DraughtsTable({ title, game, players, movable, perspective, time
         {chat}
 
         {outcome ? (
-          overActions
+          <>
+            {resultClosed && (
+              <Button variant="ghost" onClick={() => setResultClosed(false)} data-testid="show-result">
+                {t('draughts.over.showResult')}
+              </Button>
+            )}
+            {overActions}
+          </>
         ) : !atLive ? (
           <Button onClick={() => setViewPly(null)}>{t('draughts.moves.backToGame')}</Button>
         ) : (
@@ -358,34 +371,21 @@ export function DraughtsTable({ title, game, players, movable, perspective, time
       )}
 
       {outcome && !resultClosed && (
-        <Sheet title={resultTitle} onClose={() => setResultClosed(true)}>
-          <p className="mt-1 text-muted" data-testid="game-over-reason">
-            {t(`draughts.over.reason.${outcome.reason}`, { defaultValue: t('draughts.over.reason.other') })}
-          </p>
+        <ResultDialog
+          title={resultTitle}
+          tone={resultTone}
+          reason={t(`draughts.over.reason.${outcome.reason}`, { defaultValue: t('draughts.over.reason.other') })}
+          onClose={() => setResultClosed(true)}
+          closeLabel={t('draughts.over.close')}
+        >
           {(tokensChange !== undefined || ratingChange !== undefined) && (
-            <dl className="mt-4 grid grid-cols-2 gap-4 border-y-2 border-line py-3">
-              {ratingChange !== undefined && (
-                <div className="flex flex-col-reverse" data-testid="game-over-rating">
-                  <dt className="text-sm text-muted">{t('draughts.over.rating')}</dt>
-                  <dd className="flex items-baseline gap-2 font-display text-3xl font-extrabold tabular-nums">
-                    {rating ?? ''}
-                    <span className={`text-lg ${tone(ratingChange)}`}>{signed(ratingChange)}</span>
-                  </dd>
-                </div>
-              )}
-              {tokensChange !== undefined && (
-                <div className="flex flex-col-reverse" data-testid="game-over-tokens">
-                  <dt className="text-sm text-muted">{t('draughts.over.tokens')}</dt>
-                  <dd className={`font-display text-3xl font-extrabold tabular-nums ${tone(tokensChange)}`}>{signed(tokensChange)}</dd>
-                </div>
-              )}
-            </dl>
+            <ResultStats>
+              {ratingChange !== undefined && <ResultStat testId="game-over-rating" label={t('draughts.over.rating')} value={rating ?? ''} change={ratingChange} />}
+              {tokensChange !== undefined && <ResultStat testId="game-over-tokens" label={t('draughts.over.tokens')} change={tokensChange} />}
+            </ResultStats>
           )}
-          <div className="mt-4">{overActions}</div>
-          <button type="button" onClick={() => setResultClosed(true)} className="mt-2 min-h-11 w-full font-semibold text-primary underline underline-offset-4">
-            {t('draughts.over.close')}
-          </button>
-        </Sheet>
+          <div>{overActions}</div>
+        </ResultDialog>
       )}
 
       {dialog === 'settings' && (

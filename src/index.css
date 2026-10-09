@@ -54,6 +54,22 @@ body {
       0 0 / 140px 14px;
 }
 
+/* The result of a game arrives in the middle of the screen. Still, for anyone who asked for less motion. */
+@keyframes result-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+}
+.result-in {
+  animation: result-in 220ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .result-in {
+    animation: none;
+  }
+}
+
 @keyframes toast-in {
   from {
     opacity: 0;

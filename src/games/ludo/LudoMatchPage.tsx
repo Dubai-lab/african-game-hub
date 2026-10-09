@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { flagEmoji } from '@/core/countries/useCountries'
 import { AfterMatchActions, useAfterMatch } from '@/core/matchmaking/afterMatch'
+import { LeaveGuard } from '@/core/matchmaking/LeaveGuard'
 import { MatchChat } from '@/core/social/MatchChat'
 import { Button, buttonClass } from '@/core/ui/Button'
+import { ResultDialog, ResultStat, ResultStats, type ResultTone } from '@/core/ui/ResultDialog'
 import { LoadingScreen } from '@/core/ui/LoadingScreen'
 import { useOnline } from '@/core/ui/OfflineBanner'
 import type { GameOptions } from '@/games/types'
@@ -80,8 +82,6 @@ export default function LudoMatchPage({ matchId }: { matchId: string }) {
 
   const ratingChange = me && me.ratingAfter !== null && me.rating !== null ? me.ratingAfter - me.rating : undefined
   const tokensChange = me && match.stake_amount > 0 && me.tokensChange !== null ? me.tokensChange : undefined
-  const signed = (value: number) => (value > 0 ? `+${value}` : value < 0 ? `−${Math.abs(value)}` : '±0')
-  const tone = (value: number) => (value > 0 ? 'text-palm' : value < 0 ? 'text-hibiscus' : 'text-muted')
   const resultTitle =
     match.result !== 'win' ? t('ludo.over.calledOff') : mySeat === null || (!iWon && players.length > 2) ? t('ludo.over.winner', { name: winner?.name ?? '' }) : t(iWon ? 'ludo.over.youWon' : 'ludo.over.youLost')
 
@@ -93,9 +93,12 @@ export default function LudoMatchPage({ matchId }: { matchId: string }) {
     </Link>
   )
   const playingOn = decided && tableOpen && stillIn
+  const resultTone: ResultTone = match.result !== 'win' ? 'neutral' : mySeat === null || iWon ? 'win' : 'loss'
 
   return (
-    <LudoTable
+    <>
+      <LeaveGuard active={mySeat !== null && !decided && tableOpen && stillIn} />
+      <LudoTable
       title={title}
       state={game}
       players={seats}
@@ -108,6 +111,11 @@ export default function LudoMatchPage({ matchId }: { matchId: string }) {
       chat={mySeat ? <MatchChat matchId={matchId} names={Object.fromEntries(players.map((p) => [p.userId, p.name]))} /> : undefined}
       footer={
         <div className="flex flex-col gap-2">
+          {decided && resultClosed && (
+            <Button variant="ghost" className="w-full" onClick={() => setResultClosed(false)} data-testid="show-result">
+              {t('ludo.over.showResult')}
+            </Button>
+          )}
           {decided && actions}
           {tableOpen && stillIn && (
             <Button variant="ghost" className="w-full" onClick={() => (playingOn ? ludo.resign() : setConfirmResign(true))}>
@@ -142,43 +150,24 @@ export default function LudoMatchPage({ matchId }: { matchId: string }) {
       )}
 
       {decided && !resultClosed && (
-        <Sheet title={resultTitle} onClose={() => setResultClosed(true)}>
-          <p className="mt-1 text-muted" data-testid="game-over-reason">
-            {t(`ludo.reason.${match.end_reason}`, { defaultValue: t('ludo.reason.other') })}
-          </p>
+        <ResultDialog
+          title={resultTitle}
+          tone={resultTone}
+          reason={t(`ludo.reason.${match.end_reason}`, { defaultValue: t('ludo.reason.other') })}
+          onClose={() => setResultClosed(true)}
+          closeLabel={t(playingOn ? 'ludo.over.keepPlaying' : 'ludo.over.close')}
+        >
           {(tokensChange !== undefined || ratingChange !== undefined) && (
-            <dl className="mt-4 grid grid-cols-2 gap-4 border-y-2 border-line py-3">
-              {ratingChange !== undefined && (
-                <div className="flex flex-col-reverse" data-testid="game-over-rating">
-                  <dt className="text-sm text-muted">{t('ludo.over.rating')}</dt>
-                  <dd className="flex items-baseline gap-2 font-display text-3xl font-extrabold tabular-nums">
-                    {me?.ratingAfter}
-                    <span className={`text-lg ${tone(ratingChange)}`}>{signed(ratingChange)}</span>
-                  </dd>
-                </div>
-              )}
-              {tokensChange !== undefined && (
-                <div className="flex flex-col-reverse" data-testid="game-over-tokens">
-                  <dt className="text-sm text-muted">{t('ludo.over.tokens')}</dt>
-                  <dd className={`font-display text-3xl font-extrabold tabular-nums ${tone(tokensChange)}`}>{signed(tokensChange)}</dd>
-                </div>
-              )}
-            </dl>
+            <ResultStats>
+              {ratingChange !== undefined && <ResultStat testId="game-over-rating" label={t('ludo.over.rating')} value={me?.ratingAfter ?? ''} change={ratingChange} />}
+              {tokensChange !== undefined && <ResultStat testId="game-over-tokens" label={t('ludo.over.tokens')} change={tokensChange} />}
+            </ResultStats>
           )}
-          {playingOn && (
-            <div className="mt-4 flex flex-col gap-2">
-              <p className="text-sm font-semibold">{t('ludo.over.playOn')}</p>
-              <Button onClick={() => setResultClosed(true)}>{t('ludo.over.keepPlaying')}</Button>
-            </div>
-          )}
-          <div className="mt-4">{actions}</div>
-          {!playingOn && (
-            <button type="button" onClick={() => setResultClosed(true)} className="mt-2 min-h-11 w-full font-semibold text-primary underline underline-offset-4">
-              {t('ludo.over.close')}
-            </button>
-          )}
-        </Sheet>
+          {playingOn && <p className="text-center text-sm font-semibold">{t('ludo.over.playOn')}</p>}
+          <div>{actions}</div>
+        </ResultDialog>
       )}
     </LudoTable>
+    </>
   )
 }

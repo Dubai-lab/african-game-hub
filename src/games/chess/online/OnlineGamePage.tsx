@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 import { flagEmoji } from '@/core/countries/useCountries'
 import { useGameTypes } from '@/core/games/useGameTypes'
 import { AfterMatchActions, useAfterMatch } from '@/core/matchmaking/afterMatch'
+import { LeaveGuard } from '@/core/matchmaking/LeaveGuard'
 import { MatchChat } from '@/core/social/MatchChat'
 import { Button, buttonClass } from '@/core/ui/Button'
 import type { GameOptions } from '@/games/types'
@@ -77,6 +78,7 @@ export default function OnlineGamePage({ matchId }: { matchId: string }) {
       name: player?.name ?? t(color === 'w' ? 'chess.white' : 'chess.black'),
       flag: player?.countryCode ? flagEmoji(player.countryCode) : undefined,
       rating: player?.rating ?? undefined,
+      ratingChange: player && player.ratingAfter !== null && player.rating !== null ? player.ratingAfter - player.rating : undefined,
     }
   }
 
@@ -107,7 +109,9 @@ export default function OnlineGamePage({ matchId }: { matchId: string }) {
   )
 
   return (
-    <GameTable
+    <>
+      <LeaveGuard active={myColor !== null && !over} />
+      <GameTable
       title={title}
       game={controller}
       players={{ w: seat('w'), b: seat('b') }}
@@ -134,5 +138,6 @@ export default function OnlineGamePage({ matchId }: { matchId: string }) {
       }
       onRematch={() => undefined}
     />
+    </>
   )
 }

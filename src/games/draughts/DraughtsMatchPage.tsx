@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 import { flagEmoji } from '@/core/countries/useCountries'
 import { useGameTypes } from '@/core/games/useGameTypes'
 import { AfterMatchActions, useAfterMatch } from '@/core/matchmaking/afterMatch'
+import { LeaveGuard } from '@/core/matchmaking/LeaveGuard'
 import { MatchChat } from '@/core/social/MatchChat'
 import { Button, buttonClass } from '@/core/ui/Button'
 import { LoadingScreen } from '@/core/ui/LoadingScreen'
@@ -77,6 +78,7 @@ export default function DraughtsMatchPage({ matchId }: { matchId: string }) {
       name: player?.name ?? t(color === 'w' ? 'draughts.white' : 'draughts.black'),
       flag: player?.countryCode ? flagEmoji(player.countryCode) : undefined,
       rating: player?.rating ?? undefined,
+      ratingChange: player && player.ratingAfter !== null && player.rating !== null ? player.ratingAfter - player.rating : undefined,
     }
   }
 
@@ -102,7 +104,9 @@ export default function DraughtsMatchPage({ matchId }: { matchId: string }) {
   ) : undefined
 
   return (
-    <DraughtsTable
+    <>
+      <LeaveGuard active={myColor !== null && !over} />
+      <DraughtsTable
       title={title}
       game={controller}
       players={{ w: seat('w'), b: seat('b') }}
@@ -127,5 +131,6 @@ export default function DraughtsMatchPage({ matchId }: { matchId: string }) {
         )
       }
     />
+    </>
   )
 }
