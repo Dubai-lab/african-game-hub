@@ -1,6 +1,6 @@
 # The game server
 
-One small program that keeps an open connection (WebSocket) to each player in a live game, so a move reaches the opponent in one short hop. It carries **chess and draughts**; pool and Ludo still use the Edge Functions only.
+One small program that keeps an open connection (WebSocket) to each player in a live game, so a move reaches the opponent in one short hop. It carries all four games: chess, draughts, pool and Ludo.
 
 ## What it is, and what it is not
 
@@ -10,8 +10,9 @@ It is a faster road for moves. It is not a second authority.
 - **A move is shown to the opponent a moment before the database confirms it.** If the database then refuses (the mover's time ran out, the game had ended), both players are told to take it back and reload.
 - **Nothing is held only in memory.** A game is read from the database when a player connects and dropped when both have gone. If the server stops, the app plays through the Edge Functions, as it does whenever it cannot reach the server.
 - **Resigning, draw offers, time-outs and settlement** still go through the Edge Functions and the database's own sweep. Only moves use the server.
+- **Ludo is carried, not judged.** Its rules and its dice live in the database (`public.ludo_action`). For Ludo the server only takes the player's request to the database over the open connection and hands the new state to everyone at the table. The dice are never rolled here.
 
-The code: `src/main.ts` (the network side), `src/live.ts` (what happens to a move, the same for every game) and one small file per game (`src/chess.ts`, `src/draughts.ts`) naming its rules and its database functions. The rules themselves are in `supabase/functions/_shared/`, shared with the Edge Functions.
+The code: `src/main.ts` (the network side), `src/live.ts` (what happens to a move, the same for every game) and one small file per game (`src/chess.ts`, `src/draughts.ts`, `src/pool.ts`) naming its rules and its database functions. `src/ludo.ts` is the carrier for Ludo. The rules themselves are in `supabase/functions/_shared/`, shared with the Edge Functions.
 
 ## Running it
 
@@ -60,8 +61,8 @@ The app uses the server only when it was built with `VITE_GAME_SERVER_URL` set (
 
 All JSON. From the app:
 
-- `{"t":"hello","game":"chess" or "draughts","match":"<match id>","token":"<session token>"}` — once, within ten seconds of connecting. The token is checked with the auth server; who the player is never comes from anything else.
-- `{"t":"move","id":<number>,"uci":"e2e4","ply":<moves the app has seen>}` for chess; for draughts `"path":[32,28]` (the squares the piece visits) in place of `uci`
+- `{"t":"hello","game":"chess" | "draughts" | "pool" | "ludo","match":"<match id>","token":"<session token>"}` — once, within ten seconds of connecting. The token is checked with the auth server; who the player is never comes from anything else.
+- `{"t":"move","id":<number>,"uci":"e2e4","ply":<moves the app has seen>}` for chess; for draughts `"path":[32,28]` (the squares the piece visits) in place of `uci`; for pool `"shot":{dx,dy,power,spinX,spinY,cue?,pocket?}` with `ply` the shot number; for Ludo `"action":"roll"|"move"` with `piece`, `die`, `color`, `full` and `turn_no`
 
 From the server:
 

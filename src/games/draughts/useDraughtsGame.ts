@@ -43,7 +43,7 @@ type MoveReply = { ply: number; white_time_ms: number; black_time_ms: number; la
 const COLUMNS = 'ply, turn, white_time_ms, black_time_ms, increment_ms, last_move_at, draw_offer_by'
 const CLAIM_EVERY_MS = 3000
 // Refusals after which the app's picture of the game is clearly out of date.
-const RELOAD_AFTER = new Set(['OUT_OF_SYNC', 'GAME_OVER', 'TIME_OUT', 'ABORTED', 'NOT_YOUR_TURN', 'ILLEGAL_MOVE', 'CORRUPT_GAME'])
+const RELOAD_AFTER = new Set(['SERVER_ERROR', 'OUT_OF_SYNC', 'GAME_OVER', 'TIME_OUT', 'ABORTED', 'NOT_YOUR_TURN', 'ILLEGAL_MOVE', 'CORRUPT_GAME'])
 const EMPTY = replay([])!
 
 let channelSeq = 0

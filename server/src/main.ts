@@ -13,7 +13,9 @@ import { createClient } from '@supabase/supabase-js'
 import { type WebSocket, WebSocketServer } from 'ws'
 import { type ChessContext, ChessGames, chessRequest } from './chess.ts'
 import { type DraughtsContext, DraughtsGames, draughtsRequest } from './draughts.ts'
-import type { Applied, Member } from './live.ts'
+import { type Applied, describe, type Member } from './live.ts'
+import { ludoRequest, LudoTables } from './ludo.ts'
+import { type PoolContext, PoolGames, poolRequest, type PoolRow } from './pool.ts'
 
 // Local runs only: `npm run on-dev -- server:dev` names the development project's file.
 if (process.env.AGH_ENV_FILE) process.loadEnvFile(process.env.AGH_ENV_FILE)
@@ -81,6 +83,60 @@ const draughts = new DraughtsGames({
   },
 })
 
+const pool = new PoolGames({
+  context: async (matchId, userId): Promise<PoolContext | null> => {
+    const [game, seat, match] = await Promise.all([
+      admin.from('pool_games').select('variant, balls, turn, break_shot, ball_in_hand, solids_seat, fouls, shot_no, phase, shot_seconds').eq('match_id', matchId).maybeSingle(),
+      admin.from('match_players').select('seat').eq('match_id', matchId).eq('user_id', userId).maybeSingle(),
+      admin.from('matches').select('status').eq('id', matchId).maybeSingle(),
+    ])
+    if (game.error || seat.error || match.error) throw game.error ?? seat.error ?? match.error
+    if (!game.data || !seat.data || !match.data) return null
+    const row = game.data as PoolRow
+    return { status: row.phase === 'over' ? 'finished' : (match.data.status as string), seat: seat.data.seat as string, ply: row.shot_no, row }
+  },
+  applyShot: async (shot) => {
+    const { data, error } = await admin.rpc('pool_apply_shot', {
+      p_match_id: shot.matchId,
+      p_user_id: shot.userId,
+      p_shot_no: shot.shotNo,
+      p_state: shot.state,
+      p_shot: shot.shot,
+      p_result: shot.result,
+    })
+    if (error) throw error
+    return data as Applied
+  },
+})
+
+const LUDO_COLUMNS = 'positions, teams, capture_home, turn, phase, dice, rolled, dice_count, turn_no, deadline, last_event, places, gone'
+const ludo = new LudoTables({
+  seated: async (matchId, userId) => {
+    const { data, error } = await admin.from('match_players').select('seat').eq('match_id', matchId).eq('user_id', userId).maybeSingle()
+    if (error) throw error
+    return data !== null
+  },
+  action: async (matchId, userId, request) => {
+    const { data, error } = await admin.rpc('ludo_action', {
+      p_match_id: matchId,
+      p_user_id: userId,
+      p_action: request.action,
+      p_piece: request.piece,
+      p_turn_no: request.turnNo,
+      p_die: request.die,
+      p_color: request.color,
+      p_full: request.full,
+    })
+    if (error) throw error
+    return data as { ok: boolean; code?: string }
+  },
+  row: async (matchId) => {
+    const { data, error } = await admin.from('ludo_games').select(LUDO_COLUMNS).eq('match_id', matchId).maybeSingle()
+    if (error) throw error
+    return data as Record<string, unknown> | null
+  },
+})
+
 /** Every game played here: how to join and leave it, and how to read and play a move. */
 type Table = {
   join: (member: Member, matchId: string) => Promise<{ ok: true; ply: number } | { ok: false; code: string }>
@@ -111,6 +167,27 @@ const tables: Record<string, Table> = {
     live: () => draughts.live,
     idle: () => draughts.idle(),
   },
+}
+tables.pool = {
+  join: (member, matchId) => pool.join(member, matchId),
+  leave: (member, matchId) => pool.leave(member, matchId),
+  move: (member, matchId, ply, message) => {
+    const request = poolRequest(message)
+    return request && pool.move(member, matchId, ply, request)
+  },
+  live: () => pool.live,
+  idle: () => pool.idle(),
+}
+tables.ludo = {
+  join: (member, matchId) => ludo.join(member, matchId),
+  leave: (member, matchId) => ludo.leave(member, matchId),
+  // The database decides whether the request is on the right turn (it carries its own turn number).
+  move: (member, matchId, _ply, message) => {
+    const request = ludoRequest(message)
+    return request && ludo.act(member, matchId, request)
+  },
+  live: () => ludo.live,
+  idle: () => Promise.resolve(),
 }
 const liveGames = () => Object.values(tables).reduce((sum, table) => sum + table.live(), 0)
 
@@ -194,7 +271,7 @@ wss.on('connection', (ws: WebSocket, request: IncomingMessage) => {
       return ws.close(4000, 'bad message')
     }
     void handle(message).catch((error) => {
-      log('error', 'message_failed', { message: String(error) })
+      log('error', 'message_failed', { message: describe(error) })
       if (typeof message.id === 'number') send({ t: 'ack', id: message.id, ok: false, code: 'SERVER_ERROR' })
     })
   })
@@ -265,4 +342,4 @@ async function shutdown(signal: string) {
 }
 process.on('SIGTERM', () => void shutdown('SIGTERM'))
 process.on('SIGINT', () => void shutdown('SIGINT'))
-process.on('unhandledRejection', (error) => log('error', 'unhandled_rejection', { message: String(error) }))
+process.on('unhandledRejection', (error) => log('error', 'unhandled_rejection', { message: describe(error) }))

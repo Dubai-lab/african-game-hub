@@ -4,7 +4,7 @@
 import { applyMove, type DraughtsState, replay } from '../../supabase/functions/_shared/draughts.ts'
 import { type Applied, type Color, type GameKind, LiveGames, type Stored } from './live.ts'
 
-export type DraughtsContext = Stored & { board: string; turn: Color; paths: number[][] }
+export type DraughtsContext = Omit<Stored, 'seat'> & { color: Color; board: string; turn: Color; paths: number[][] }
 
 /** The few things the game server asks of the database for draughts. */
 export type DraughtsDb = {
@@ -32,8 +32,14 @@ export function draughtsRequest(message: Record<string, unknown>): DraughtsReque
   return path.every((square) => Number.isInteger(square) && square >= 1 && square <= 50) ? { path: path as number[] } : null
 }
 
-const kind = (db: DraughtsDb): GameKind<DraughtsContext, DraughtsState, DraughtsRequest> => ({
-  context: db.context,
+type Seated = DraughtsContext & Stored
+
+const kind = (db: DraughtsDb): GameKind<Seated, DraughtsState, DraughtsRequest> => ({
+  context: async (matchId, userId) => {
+    const stored = await db.context(matchId, userId)
+    return stored && { ...stored, seat: stored.color }
+  },
+  turn: (state) => state.turn,
   // The whole game is played through from the first move: the draw rules depend on its
   // history, and a record that does not replay to the stored board is not played on.
   open: (stored) => {
@@ -63,7 +69,7 @@ const kind = (db: DraughtsDb): GameKind<DraughtsContext, DraughtsState, Draughts
   },
 })
 
-export class DraughtsGames extends LiveGames<DraughtsContext, DraughtsState, DraughtsRequest> {
+export class DraughtsGames extends LiveGames<Seated, DraughtsState, DraughtsRequest> {
   constructor(db: DraughtsDb) {
     super('draughts', kind(db))
   }

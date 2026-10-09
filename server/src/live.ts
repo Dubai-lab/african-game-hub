@@ -1,6 +1,6 @@
-// Live games, as the game server holds them. The same handling serves every game that is
-// played move by move with White (seat 1) first: chess and draughts so far. Each game supplies
-// its own rules and its own database functions (see chess.ts, draughts.ts).
+// Live games, as the game server holds them. The same handling serves every game whose rules
+// the server can run itself: chess, draughts and pool. Each game supplies its own rules, says
+// whose turn it is, and names its own database functions (see chess.ts, draughts.ts, pool.ts).
 //
 // What this is for: speed. A move sent to an Edge Function travels a long way and waits for
 // several things before the opponent hears of it. Here both players hold an open connection,
@@ -19,10 +19,11 @@
 export type Color = 'w' | 'b'
 
 /** What every game's stored context says, whatever else it carries. */
-export type Stored = { status: string; color: Color; ply: number }
+export type Stored = { status: string; /** Which side of the game this player is. */ seat: string; ply: number }
 
+/** The database's answer to a move. Games with clocks send their new clock values with it. */
 export type Applied =
-  | { ok: true; ply: number; white_time_ms: number; black_time_ms: number; last_move_at: string; finished: boolean }
+  | ({ ok: true; finished?: boolean; ply?: number; white_time_ms?: number; black_time_ms?: number; last_move_at?: string } & Record<string, unknown>)
   | { ok: false; code: string }
 
 /** A move judged legal: the position after it, what to tell the players, and how to record it. */
@@ -31,6 +32,8 @@ export type Judged<S> = {
   state: S
   /** The move as the players are told it (for chess `{san}`, for draughts `{path}`). */
   told: Record<string, unknown>
+  /** For games whose database function does not say so itself: this move ends the game. */
+  finished?: boolean
   record: (matchId: string, userId: string, expectedPly: number) => Promise<Applied>
 }
 
@@ -40,9 +43,14 @@ export type GameKind<C extends Stored, S, R> = {
   context: (matchId: string, userId: string) => Promise<C | null>
   /** The position to play from. Null when the stored record does not hold together. */
   open: (stored: C) => S | null
+  /** Whose move it is, as a seat. `ply` is how many moves have been played. */
+  turn: (state: S, ply: number) => string
   /** Tries a move. `CORRUPT_GAME` makes the server read the game again. */
   judge: (state: S, request: R) => Judged<S> | { ok: false; code: string }
 }
+
+/** An error in words. (The database client throws plain objects, which print as "[object Object]".) */
+export const describe = (error: unknown): string => (error instanceof Error ? error.message : typeof error === "object" && error !== null ? JSON.stringify(error) : String(error))
 
 /** One player's connection, as far as a game is concerned. */
 export type Member = { userId: string; send: (message: Record<string, unknown>) => void }
@@ -54,7 +62,7 @@ type Room<S> = {
   /** How many moves have been played, counting that one. */
   ply: number
   over: boolean
-  members: Map<Member, Color>
+  members: Map<Member, string>
   /** Moves in one game are handled strictly one after another. */
   tail: Promise<unknown>
 }
@@ -104,7 +112,7 @@ export class LiveGames<C extends Stored, S, R> {
       await room.tail.catch(() => undefined)
       if (stored.ply > room.ply || stored.status !== 'active') this.take(room, stored)
     }
-    room.members.set(member, stored.color)
+    room.members.set(member, stored.seat)
     return { ok: true, ply: room.ply }
   }
 
@@ -140,8 +148,8 @@ export class LiveGames<C extends Stored, S, R> {
   }
 
   private async play(room: Room<S>, member: Member, ply: number, request: R): Promise<Applied & Record<string, unknown>> {
-    const color = room.members.get(member)
-    if (!color) return { ok: false, code: 'NOT_A_PLAYER' }
+    const seat = room.members.get(member)
+    if (!seat) return { ok: false, code: 'NOT_A_PLAYER' }
 
     // The app and the server disagree about how far the game has got: one of them missed
     // something. Ask the database before answering.
@@ -149,8 +157,7 @@ export class LiveGames<C extends Stored, S, R> {
     if (room.over) return { ok: false, code: 'GAME_OVER' }
     if (room.state === null) return { ok: false, code: 'CORRUPT_GAME' }
     if (ply !== room.ply) return { ok: false, code: 'OUT_OF_SYNC' }
-    // White (seat 1) plays the first move and every other one after it.
-    if ((room.ply % 2 === 0 ? 'w' : 'b') !== color) return { ok: false, code: 'NOT_YOUR_TURN' }
+    if (this.kind.turn(room.state, room.ply) !== seat) return { ok: false, code: 'NOT_YOUR_TURN' }
 
     const verdict = this.kind.judge(room.state, request)
     if (!verdict.ok) {
@@ -171,7 +178,7 @@ export class LiveGames<C extends Stored, S, R> {
     try {
       applied = await verdict.record(room.matchId, member.userId, before.ply)
     } catch (error) {
-      console.error(JSON.stringify({ level: 'error', event: 'apply_failed', game: this.name, match: room.matchId, message: String(error) }))
+      console.error(JSON.stringify({ level: 'error', event: 'apply_failed', game: this.name, match: room.matchId, message: describe(error) }))
       applied = { ok: false, code: 'SERVER_ERROR' }
     }
 
@@ -184,8 +191,11 @@ export class LiveGames<C extends Stored, S, R> {
       return applied
     }
 
-    if (applied.finished) room.over = true
-    this.others(room, member, { t: 'clock', ply: applied.ply, white_time_ms: applied.white_time_ms, black_time_ms: applied.black_time_ms, last_move_at: applied.last_move_at })
+    if (applied.finished || verdict.finished) room.over = true
+    // Games with clocks: the database's own clock values, for the opponent's screen.
+    if (typeof applied.white_time_ms === 'number') {
+      this.others(room, member, { t: 'clock', ply: applied.ply, white_time_ms: applied.white_time_ms, black_time_ms: applied.black_time_ms, last_move_at: applied.last_move_at })
+    }
     return { ...applied, ...verdict.told }
   }
 }

@@ -70,7 +70,7 @@ type MoveReply = { ply: number; white_time_ms: number; black_time_ms: number; la
 const BOARD_REASONS = ['checkmate', 'stalemate', 'insufficient', 'repetition', 'fifty_moves', 'resignation', 'agreement', 'timeout'] as const
 const CLAIM_EVERY_MS = 3000
 // Refusals after which the app's picture of the game is clearly out of date.
-const RELOAD_AFTER = new Set(['OUT_OF_SYNC', 'GAME_OVER', 'TIME_OUT', 'ABORTED', 'NOT_YOUR_TURN'])
+const RELOAD_AFTER = new Set(['SERVER_ERROR', 'OUT_OF_SYNC', 'GAME_OVER', 'TIME_OUT', 'ABORTED', 'NOT_YOUR_TURN'])
 
 let channelSeq = 0
 

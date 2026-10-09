@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/core/auth/AuthContext'
 import i18n from '@/core/i18n'
-import { callFunction, refusalMessage } from '@/core/lib/functions'
+import { callFunction, type FunctionReply, refusalMessage } from '@/core/lib/functions'
+import { type GameLink, openGameLink } from '@/core/lib/gameServer'
 import { supabase } from '@/core/lib/supabase'
 import { toast } from '@/core/ui/toast'
 import type { LastShot } from './PoolTable'
@@ -9,6 +10,11 @@ import { type Ball, type PoolState, rack, type Seat, type Shot, type Variant } f
 
 // One online pool match. The server holds the game and plays out every shot; this loads it,
 // listens for changes, and passes on what the player asks for.
+//
+// Where there is a game server, shots also travel over one open connection to it, which is
+// much quicker: it plays the shot out with the same rules, shows it to the opponent at once and
+// records it with the same database function. Whenever that connection is not there, the Edge
+// Function is used, as before.
 
 export type PoolPlayer = {
   userId: string
@@ -68,7 +74,7 @@ function toGame(row: GameRow): PoolGame {
 }
 
 const COLUMNS = 'variant, balls, turn, break_shot, ball_in_hand, solids_seat, fouls, shot_no, deadline, phase, last_shot'
-const RELOAD_AFTER = new Set(['OUT_OF_SYNC', 'GAME_OVER', 'NOT_YOUR_TURN', 'ILLEGAL_SHOT'])
+const RELOAD_AFTER = new Set(['SERVER_ERROR', 'OUT_OF_SYNC', 'GAME_OVER', 'NOT_YOUR_TURN', 'ILLEGAL_SHOT'])
 const CLAIM_EVERY_MS = 3000
 
 let channelSeq = 0
@@ -169,18 +175,85 @@ export function usePoolGame(matchId: string) {
   const live = useRef(snapshot)
   live.current = snapshot
 
+  // The quick road, for the two players while the game is on.
+  const link = useRef<GameLink | null>(null)
+  const seated = snapshot?.players.some((p) => p.userId === userId) ?? false
+  const playing = seated && snapshot !== null && !snapshot.game.over && snapshot.match.status === 'active'
+  useEffect(() => {
+    if (!playing) return
+    const opened = openGameLink('pool', matchId, {
+      // The server holds a different shot number than we do: one of us is behind.
+      onReady: (shotNo) => {
+        if (shotNo !== (live.current?.game.shotNo ?? 0)) void load()
+      },
+      onMessage: (message) => {
+        if (message.t === 'move' && typeof message.ply === 'number') {
+          // The opponent's shot, straight from the server: what was asked, where it was played
+          // from, what the rules made of it, and the table afterwards.
+          const told = message as unknown as {
+            ply: number
+            seat: string
+            shot: Shot
+            result: LastShot['result'] & { winner?: unknown }
+            from: Ball[]
+            state: { balls: Ball[]; turn: string; breakShot: boolean; ballInHand: boolean; solidsSeat: string | null; fouls: [number, number] }
+            deadline: string | null
+          }
+          setSnapshot((prev) =>
+            prev && told.ply > prev.game.shotNo
+              ? {
+                  ...prev,
+                  game: {
+                    ...prev.game,
+                    balls: told.state.balls,
+                    turn: Number(told.state.turn) as Seat,
+                    breakShot: told.state.breakShot,
+                    ballInHand: told.state.ballInHand,
+                    solidsSeat: told.state.solidsSeat ? (Number(told.state.solidsSeat) as Seat) : null,
+                    fouls: told.state.fouls,
+                    shotNo: told.ply,
+                    deadline: told.deadline ? Date.parse(told.deadline) : null,
+                    over: told.result.winner !== null && told.result.winner !== undefined,
+                    lastShot: { no: told.ply - 1, seat: Number(told.seat) as Seat, shot: told.shot, from: told.from, result: { ...told.result, winner: told.result.winner ? (Number(told.result.winner) as Seat) : null } },
+                  },
+                }
+              : prev,
+          )
+        } else if (message.t === 'revert' || message.t === 'restarting') {
+          // A shot was taken back, or the server is going away: the database has the truth.
+          void load()
+        }
+      },
+    })
+    link.current = opened
+    return () => {
+      opened?.close()
+      link.current = null
+    }
+  }, [playing, matchId, load])
+
   /** Sends a request to the server. Resolves true when it was accepted. */
   const act = useCallback(
     async (action: 'shoot' | 'resign' | 'claim', shot?: Shot): Promise<boolean> => {
       const quiet = action === 'claim'
       if (!quiet) setBusy(true)
       try {
-        const reply = await callFunction('pool-action', {
-          match_id: matchId,
-          action,
-          shot_no: live.current?.game.shotNo ?? 0,
-          ...(shot ? { shot } : {}),
-        })
+        const shotNo = live.current?.game.shotNo ?? 0
+        // A shot goes over the open connection when there is one; everything else, and every
+        // shot when there is not, through the Edge Function.
+        const server = action === 'shoot' && shot && link.current?.ready ? link.current : null
+        let reply: FunctionReply<Record<string, never>>
+        if (server) {
+          try {
+            reply = await server.request<FunctionReply<Record<string, never>>>({ t: 'move', ply: shotNo, shot })
+          } catch (error) {
+            // The connection dropped with the shot in the air: the database knows whether it counted.
+            void load()
+            throw error
+          }
+        } else {
+          reply = await callFunction('pool-action', { match_id: matchId, action, shot_no: shotNo, ...(shot ? { shot } : {}) })
+        }
         if (!reply.ok) {
           if (!quiet && reply.code !== 'OUT_OF_SYNC') toast.error(refusalMessage(reply.code))
           if (RELOAD_AFTER.has(reply.code)) void load()

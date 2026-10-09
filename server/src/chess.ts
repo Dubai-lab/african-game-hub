@@ -5,7 +5,7 @@ import { type Applied, type Color, type GameKind, LiveGames, type Member, type S
 
 export type { Applied, Color, Member }
 
-export type ChessContext = Stored & { fen: string; turn: Color; sans: string[] }
+export type ChessContext = Omit<Stored, 'seat'> & { color: Color; fen: string; turn: Color; sans: string[] }
 
 /** The few things the game server asks of the database for chess. */
 export type ChessDb = {
@@ -33,9 +33,16 @@ export function chessRequest(message: Record<string, unknown>): ChessRequest | n
   return typeof message.uci === 'string' && UCI.test(message.uci) ? { uci: message.uci } : null
 }
 
-const kind = (db: ChessDb): GameKind<ChessContext, Position, ChessRequest> => ({
-  context: db.context,
+type Seated = ChessContext & Stored
+
+const kind = (db: ChessDb): GameKind<Seated, Position, ChessRequest> => ({
+  context: async (matchId, userId) => {
+    const stored = await db.context(matchId, userId)
+    return stored && { ...stored, seat: stored.color }
+  },
   open: (stored) => ({ sans: stored.sans, fen: stored.fen }),
+  // White plays the first move and every other one after it.
+  turn: (_position, ply) => (ply % 2 === 0 ? 'w' : 'b'),
   judge: (position, request) => {
     const verdict = judgeMove(position.sans, position.fen, request.uci)
     if (!verdict.ok) return verdict
@@ -49,7 +56,7 @@ const kind = (db: ChessDb): GameKind<ChessContext, Position, ChessRequest> => ({
   },
 })
 
-export class ChessGames extends LiveGames<ChessContext, Position, ChessRequest> {
+export class ChessGames extends LiveGames<Seated, Position, ChessRequest> {
   constructor(db: ChessDb) {
     super('chess', kind(db))
   }

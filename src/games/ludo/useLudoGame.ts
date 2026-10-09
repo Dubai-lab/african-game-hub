@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/core/auth/AuthContext'
 import i18n from '@/core/i18n'
-import { callFunction, refusalMessage } from '@/core/lib/functions'
+import { callFunction, type FunctionReply, refusalMessage } from '@/core/lib/functions'
+import { type GameLink, openGameLink } from '@/core/lib/gameServer'
 import { supabase } from '@/core/lib/supabase'
 import { toast } from '@/core/ui/toast'
 import type { Seat } from './board'
@@ -11,6 +12,11 @@ import { canFull, type LudoEvent, type LudoState, plays, preview } from './rules
 // passes on what the player asks for. It never rolls a die, and the server alone decides every
 // move. The player's own piece is shown setting off at once, so the game does not feel as if
 // it waits on the network; if the server says no, the piece is put back.
+//
+// Where there is a game server, rolling and moving also travel over one open connection to it.
+// It decides nothing (the rules and the dice stay in the database): it only carries the request
+// faster and hands the new state to every player at the table at once. Whenever that
+// connection is not there, the Edge Function is used, as before.
 
 export type LudoPlayer = {
   userId: string
@@ -60,7 +66,7 @@ const toState = (row: GameRow): LudoState => ({
 })
 
 const GAME_COLUMNS = 'positions, teams, capture_home, turn, phase, dice, rolled, dice_count, turn_no, deadline, last_event, places, gone'
-const RELOAD_AFTER = new Set(['OUT_OF_SYNC', 'GAME_OVER', 'NOT_YOUR_TURN', 'ILLEGAL_MOVE'])
+const RELOAD_AFTER = new Set(['SERVER_ERROR', 'OUT_OF_SYNC', 'GAME_OVER', 'NOT_YOUR_TURN', 'ILLEGAL_MOVE'])
 const CLAIM_EVERY_MS = 3000
 
 let channelSeq = 0
@@ -165,6 +171,34 @@ export function useLudoGame(matchId: string) {
   const live = useRef(snapshot)
   live.current = snapshot
 
+  /** A newer state of the game, from wherever it came. Only the newest is ever shown. */
+  const takeState = useCallback((row: GameRow) => {
+    const next = toState(row)
+    setSnapshot((prev) => (prev && next.turnNo > prev.game.turnNo ? { ...prev, game: next } : prev))
+  }, [])
+
+  // The quick road, for the players at the table while it is open.
+  const link = useRef<GameLink | null>(null)
+  const seated = snapshot?.players.some((p) => p.userId === userId) ?? false
+  const playing = seated && snapshot !== null && snapshot.game.phase !== 'over'
+  useEffect(() => {
+    if (!playing) return
+    const opened = openGameLink('ludo', matchId, {
+      onReady: (turnNo) => {
+        if (turnNo !== (live.current?.game.turnNo ?? 0)) void load()
+      },
+      onMessage: (message) => {
+        if (message.t === 'state' && typeof message.row === 'object' && message.row !== null) takeState(message.row as GameRow)
+        else if (message.t === 'restarting') void load()
+      },
+    })
+    link.current = opened
+    return () => {
+      opened?.close()
+      link.current = null
+    }
+  }, [playing, matchId, load, takeState])
+
   const act = useCallback(
     async (action: 'roll' | 'move' | 'resign' | 'claim', move?: { color: Seat; piece: number; die: number | null; full: boolean }) => {
       const quiet = action === 'claim'
@@ -181,16 +215,31 @@ export function useLudoGame(matchId: string) {
         }
       }
       try {
-        const reply = await callFunction('ludo-action', {
-          match_id: matchId,
-          action,
-          ...(move ? { color: move.color, piece: move.piece, full: move.full, ...(move.die === null ? {} : { die: move.die }) } : {}),
-          turn_no: live.current?.game.turnNo ?? 0,
-        })
+        const turnNo = live.current?.game.turnNo ?? 0
+        const asked = { action, ...(move ? { color: move.color, piece: move.piece, full: move.full, ...(move.die === null ? {} : { die: move.die }) } : {}), turn_no: turnNo }
+        // Rolling and moving go over the open connection when there is one; everything else,
+        // and everything when there is not, through the Edge Function.
+        const server = (action === 'roll' || action === 'move') && link.current?.ready ? link.current : null
+        let reply: FunctionReply<{ row?: GameRow }>
+        if (server) {
+          try {
+            reply = await server.request<FunctionReply<{ row?: GameRow }>>({ t: 'move', ply: turnNo, ...asked })
+          } catch (error) {
+            // The connection dropped with the request in the air: the database knows what happened.
+            if (action === 'move') setPending(null)
+            void load()
+            throw error
+          }
+        } else {
+          reply = await callFunction<{ row?: GameRow }>('ludo-action', { match_id: matchId, ...asked })
+        }
         if (!reply.ok) {
           if (!quiet && reply.code !== 'OUT_OF_SYNC') toast.error(refusalMessage(reply.code))
           if (action === 'move') setPending(null)
           if (RELOAD_AFTER.has(reply.code)) void load()
+        } else if (reply.row) {
+          // The game server sent the new state with its answer: nothing more to fetch.
+          takeState(reply.row)
         } else {
           // The new state normally arrives by itself a moment later. Asking for it as well costs
           // one small request and means a lost message can never leave the table stuck.
@@ -203,7 +252,7 @@ export function useLudoGame(matchId: string) {
         if (!quiet) setBusy(false)
       }
     },
-    [matchId, load],
+    [matchId, load, takeState],
   )
 
   const me = snapshot?.players.find((p) => p.userId === userId) ?? null

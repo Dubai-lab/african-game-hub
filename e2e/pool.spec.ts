@@ -12,9 +12,22 @@ test.afterAll(resetTestAccounts)
 
 type Seat = { context: BrowserContext; page: Page }
 
+const roads = { server: 0, edge: 0 }
+test.beforeEach(() => {
+  roads.server = 0
+  roads.edge = 0
+})
+
 async function signedIn(browser: Browser, index: number): Promise<Seat> {
   const context = await browser.newContext({ viewport: { width: 393, height: 851 }, locale: 'en-US', hasTouch: true })
   const page = await context.newPage()
+  // Which road each request to play takes: the game server's open connection, or the Edge Function.
+  page.on('websocket', (ws) => {
+    if (ws.url().includes('localhost')) ws.on('framesent', (frame) => String(frame.payload).includes('"t":"move"') && roads.server++)
+  })
+  page.on('request', (request) => {
+    if (request.url().includes('/functions/v1/pool-action') && /"action":"(shoot)"/.test(request.postData() ?? '')) roads.edge++
+  })
   await page.goto('/login')
   await page.getByLabel('Email').fill(TEST_ACCOUNTS[index]!.email)
   await page.getByLabel('Password').fill(TEST_PASSWORD)
@@ -113,6 +126,12 @@ test('two players are paired at 9-ball, the break is played on the server, and p
   const [match] = await runSql<{ status: string; end_reason: string; settled: boolean }>(`select status, end_reason, settled from public.matches where id = '${matchId}'`)
   expect(match).toMatchObject({ status: 'finished', end_reason: 'nine_ball', settled: true })
   expect(errors).toEqual([])
+  if (process.env.VITE_GAME_SERVER_URL) {
+    // With a game server in the setup, play went over its open connection. (The very first
+    // request can be made before that connection is up, and then rightly takes the Edge Function.)
+    expect(roads.server).toBeGreaterThan(0)
+    expect(roads.edge).toBeLessThanOrEqual(1)
+  }
   await one.context.close()
   await two.context.close()
 })
