@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import { TEST_PASSWORD } from '../scripts/lib/testAccounts.ts'
 
-process.loadEnvFile('.env.local')
+process.loadEnvFile(process.env.AGH_ENV_FILE ?? '.env.local')
 
 const url = process.env.VITE_SUPABASE_URL!
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!

@@ -7,7 +7,7 @@ import { type Browser, expect, type Page, test } from '@playwright/test'
 import { requireEnv, runSql } from '../scripts/lib/managementApi.ts'
 import { ensureTestAccounts, resetTestAccounts, TEST_ACCOUNTS, TEST_PASSWORD } from '../scripts/lib/testAccounts.ts'
 
-const ADMIN_APP = 'http://localhost:5180'
+const ADMIN_APP = process.env.AGH_ENV_FILE ? 'http://localhost:5280' : 'http://localhost:5180'
 const ADMIN = TEST_ACCOUNTS[5]
 const PLAYER = TEST_ACCOUNTS[0]
 const TARGET = TEST_ACCOUNTS[1]

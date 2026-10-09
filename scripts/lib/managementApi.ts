@@ -1,11 +1,15 @@
 // Runs SQL on the hosted database through the Supabase Management API.
 // Needs SUPABASE_ACCESS_TOKEN and SUPABASE_PROJECT_REF in .env.local. Never used by the app itself.
+//
+// `npm run on-dev -- <script>` points every script at the development project instead, by
+// naming another file (.env.dev.local) in AGH_ENV_FILE.
 
-process.loadEnvFile('.env.local')
+export const ENV_FILE = process.env.AGH_ENV_FILE ?? '.env.local'
+process.loadEnvFile(ENV_FILE)
 
 export function requireEnv(name: string): string {
   const value = process.env[name]
-  if (!value) throw new Error(`${name} is missing from .env.local`)
+  if (!value) throw new Error(`${name} is missing from ${ENV_FILE}`)
   return value
 }
 

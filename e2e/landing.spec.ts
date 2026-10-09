@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 
-process.loadEnvFile('.env.local')
+process.loadEnvFile(process.env.AGH_ENV_FILE ?? '.env.local')
 
 test('landing page shows every section from live data, with honest copy', async ({ page }) => {
   const errors: string[] = []

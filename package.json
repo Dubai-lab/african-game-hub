@@ -9,6 +9,7 @@
     "typecheck": "tsc",
     "e2e": "playwright test",
     "db:bundle": "node scripts/bundleMigrations.ts",
+    "on-dev": "node scripts/onDev.ts",
     "db:push": "node scripts/dbPush.ts",
     "db:check": "node scripts/dbCheck.ts",
     "db:types": "node scripts/dbTypes.ts",
