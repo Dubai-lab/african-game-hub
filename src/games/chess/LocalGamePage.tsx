@@ -44,9 +44,32 @@ function Setup({ onStart }: { onStart: (control: TimeControl) => void }) {
   )
 }
 
+/** The game in progress and its time control, kept on this device across a refresh. */
+const GAME_KEY = 'agh.chess.local.game'
+const SETUP_KEY = 'agh.chess.local.setup'
+
+function savedControl(): TimeControl | null {
+  try {
+    // Only when there is a game to go back to.
+    if (!localStorage.getItem(GAME_KEY)) return null
+    const saved = JSON.parse(localStorage.getItem(SETUP_KEY) ?? 'null') as Partial<TimeControl> | null
+    return saved && typeof saved.base_ms === 'number' && typeof saved.increment_ms === 'number' ? (saved as TimeControl) : null
+  } catch {
+    return null
+  }
+}
+function forget() {
+  try {
+    localStorage.removeItem(GAME_KEY)
+    localStorage.removeItem(SETUP_KEY)
+  } catch {
+    // Nothing was saved.
+  }
+}
+
 function Table({ control, onNewGame }: { control: TimeControl; onNewGame: () => void }) {
   const { t } = useTranslation()
-  const game = useLocalChessGame({ baseMs: control.base_ms, incrementMs: control.increment_ms, referee: testReferee })
+  const game = useLocalChessGame({ baseMs: control.base_ms, incrementMs: control.increment_ms, referee: testReferee, saveKey: GAME_KEY })
   return (
     <GameTable
       title={`${t('games.chess')} · ${timeControlLabel(control)}`}
@@ -67,7 +90,8 @@ function Table({ control, onNewGame }: { control: TimeControl; onNewGame: () => 
 
 /** Chess for two players sharing one phone. No account data, no tokens, works offline. */
 export default function LocalGamePage() {
-  const [control, setControl] = useState<TimeControl | null>(null)
+  // A game left unfinished (the page was refreshed, or the tab closed) is carried on from where it stood.
+  const [control, setControl] = useState<TimeControl | null>(savedControl)
   // A new key gives a completely fresh table (game, clocks, view) for each new game.
   const [gameNumber, setGameNumber] = useState(0)
 
@@ -75,6 +99,12 @@ export default function LocalGamePage() {
     return (
       <Setup
         onStart={(chosen) => {
+          forget()
+          try {
+            localStorage.setItem(SETUP_KEY, JSON.stringify(chosen))
+          } catch {
+            // Private browsing: the game simply is not kept.
+          }
           setControl(chosen)
           setGameNumber((n) => n + 1)
           // Started by a tap, which is also what lets the browser play sound from here on.
@@ -83,5 +113,14 @@ export default function LocalGamePage() {
       />
     )
   }
-  return <Table key={gameNumber} control={control} onNewGame={() => setControl(null)} />
+  return (
+    <Table
+      key={gameNumber}
+      control={control}
+      onNewGame={() => {
+        forget()
+        setControl(null)
+      }}
+    />
+  )
 }

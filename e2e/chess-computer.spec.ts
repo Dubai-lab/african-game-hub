@@ -111,9 +111,15 @@ test('playing Black: the computer opens and the board faces the player', async (
   await square(page, 'e5').click()
   await expect(moves(page)).toHaveCount(3, { timeout: 30_000 })
 
-  // The chosen level and colour are remembered for next time.
+  // Leaving for the lobby does not lose the game: coming back, it is still on the board.
   await page.getByRole('link', { name: 'Lobby' }).click()
   await page.getByRole('link', { name: 'Play the computer' }).click()
+  await expect.poll(() => moves(page).count(), { timeout: 30_000 }).toBeGreaterThanOrEqual(3)
+  // Ending it (here by resigning) leads back to the setup, where the chosen level and colour
+  // are remembered for next time.
+  await page.getByRole('button', { name: 'Resign' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Resign' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'New game' }).click()
   await expect(page.getByRole('radio', { name: /Beginner/ })).toBeChecked()
   await expect(page.getByRole('radio', { name: 'Black' })).toBeChecked()
   await expect(page.getByRole('checkbox', { name: /Play with a clock/ })).not.toBeChecked()

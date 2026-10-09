@@ -16,7 +16,27 @@ import { ludoFeedback } from './sound'
 
 type Setup = { opponents: number; pieces: number }
 const STORAGE_KEY = 'agh.ludo.computer'
+/** The practice game in progress, kept on this device so a refresh (or a closed tab) does not lose it. */
+const GAME_KEY = 'agh.ludo.practice'
 const HUMAN: Seat = 'red'
+
+function loadGame(): { setup: Setup; game: LocalGame } | null {
+  try {
+    const saved = JSON.parse(localStorage.getItem(GAME_KEY) ?? 'null') as { setup?: Setup; game?: LocalGame } | null
+    // Only a game that is really under way, and whole enough to carry on from.
+    if (!saved?.setup || !saved.game?.positions || !saved.game.teams || saved.game.phase === 'over') return null
+    return { setup: saved.setup, game: saved.game }
+  } catch {
+    return null
+  }
+}
+function forgetGame() {
+  try {
+    localStorage.removeItem(GAME_KEY)
+  } catch {
+    // Nothing was saved.
+  }
+}
 /** Long enough to see the dice roll and the piece walk before the next thing happens. */
 const COMPUTER_PAUSE_MS = 1500
 
@@ -48,14 +68,24 @@ function Choice<T extends number>({ legend, name, value, options, onChange }: { 
   )
 }
 
-function Game({ setup, onSetup }: { setup: Setup; onSetup: () => void }) {
+function Game({ setup, onSetup, resume }: { setup: Setup; onSetup: () => void; resume: LocalGame | null }) {
   const { t } = useTranslation()
   const start = () => {
     const { ludoDice, ludoSides, ludoLay } = useSettingsStore.getState()
     return newLocalGame({ players: setup.opponents + 1, pieces: setup.pieces, dice: ludoDice, sides: setup.opponents === 1 ? ludoSides : 1, lay: ludoLay })
   }
-  const [game, setGame] = useState<LocalGame>(start)
+  const [game, setGame] = useState<LocalGame>(() => resume ?? start())
   const [resultClosed, setResultClosed] = useState(false)
+
+  // Every change is written down at once: the page can be refreshed at any moment.
+  useEffect(() => {
+    try {
+      if (game.phase === 'over') localStorage.removeItem(GAME_KEY)
+      else localStorage.setItem(GAME_KEY, JSON.stringify({ setup, game }))
+    } catch {
+      // Private browsing: the game simply is not kept.
+    }
+  }, [game, setup])
 
   const players = useMemo(() => {
     const names: Partial<Record<Seat, TablePlayer>> = { [HUMAN]: { name: t('ludo.computer.you') } }
@@ -131,8 +161,10 @@ function Game({ setup, onSetup }: { setup: Setup; onSetup: () => void }) {
 export default function LudoComputerPage() {
   const { t } = useTranslation()
   const settings = useSettingsStore()
-  const [setup, setSetup] = useState<Setup>(loadSetup)
-  const [playing, setPlaying] = useState(false)
+  // A game left unfinished (the page was refreshed, or the tab closed) is carried on from where it stood.
+  const [saved, setSaved] = useState(loadGame)
+  const [setup, setSetup] = useState<Setup>(() => saved?.setup ?? loadSetup())
+  const [playing, setPlaying] = useState(saved !== null)
   const [round, setRound] = useState(0)
 
   const change = (next: Setup) => {
@@ -144,7 +176,20 @@ export default function LudoComputerPage() {
     }
   }
 
-  if (playing) return <Game key={round} setup={setup} onSetup={() => setPlaying(false)} />
+  if (playing) {
+    return (
+      <Game
+        key={round}
+        setup={setup}
+        resume={saved?.game ?? null}
+        onSetup={() => {
+          forgetGame()
+          setSaved(null)
+          setPlaying(false)
+        }}
+      />
+    )
+  }
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-5 py-6">

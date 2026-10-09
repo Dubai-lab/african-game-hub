@@ -13,6 +13,20 @@ import { PoolTable, Sheet, type TableGame } from './PoolTable'
 const LEVELS: Level[] = ['easy', 'medium', 'hard']
 const VARIANTS: Variant[] = ['8ball', '9ball']
 const THINKING_MS = 900
+/** The practice game in progress, kept on this device so a refresh (or a closed tab) does not lose it. */
+const GAME_KEY = 'agh.pool.practice'
+type Saved = { variant: Variant; level: Level; game: TableGame }
+
+function loadGame(): Saved | null {
+  try {
+    const saved = JSON.parse(localStorage.getItem(GAME_KEY) ?? 'null') as Partial<Saved> | null
+    if (!saved?.game || !Array.isArray(saved.game.balls) || !VARIANTS.includes(saved.variant!) || !LEVELS.includes(saved.level!)) return null
+    // Nothing is played back on return: the balls are simply where they came to rest.
+    return { variant: saved.variant!, level: saved.level!, game: { ...saved.game, lastShot: null } }
+  } catch {
+    return null
+  }
+}
 
 const newGame = (variant: Variant): TableGame => ({ variant, balls: rack(variant), turn: 1, breakShot: true, ballInHand: true, solidsSeat: null, fouls: [0, 0], shotNo: 0, lastShot: null })
 
@@ -28,9 +42,11 @@ function play(game: TableGame, shot: Shot): { game: TableGame; result: ShotResul
 
 export default function PoolComputerPage() {
   const { t } = useTranslation()
-  const [variant, setVariant] = useState<Variant>('8ball')
-  const [level, setLevel] = useState<Level>('medium')
-  const [game, setGame] = useState<TableGame | null>(null)
+  // A game left unfinished (the page was refreshed, or the tab closed) is carried on from where it stood.
+  const [saved] = useState(loadGame)
+  const [variant, setVariant] = useState<Variant>(saved?.variant ?? '8ball')
+  const [level, setLevel] = useState<Level>(saved?.level ?? 'medium')
+  const [game, setGame] = useState<TableGame | null>(saved?.game ?? null)
   const [over, setOver] = useState<{ winner: Seat; reason: string } | null>(null)
   const [playing, setPlaying] = useState(false)
   const [closed, setClosed] = useState(false)
@@ -38,6 +54,16 @@ export default function PoolComputerPage() {
   const [round, setRound] = useState(0)
   const live = useRef(game)
   live.current = game
+
+  // Every change is written down at once: the page can be refreshed at any moment.
+  useEffect(() => {
+    try {
+      if (!game || over) localStorage.removeItem(GAME_KEY)
+      else localStorage.setItem(GAME_KEY, JSON.stringify({ variant: game.variant, level, game }))
+    } catch {
+      // Private browsing: the game simply is not kept.
+    }
+  }, [game, over, level])
 
   function start() {
     setGame(newGame(variant))

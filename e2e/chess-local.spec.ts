@@ -198,7 +198,7 @@ test('board theme, piece set and sound choices are saved to the account', async 
   await saved
   await page.evaluate(() => localStorage.removeItem('agh.settings'))
   await page.reload()
-  await page.getByRole('button', { name: 'Start game' }).click()
+  // (The game in progress is still on the board after the refresh; no need to start another.)
   await expect(square(page, 'a1')).toHaveCSS('background-color', 'rgb(111, 154, 82)')
 
   // Put the defaults back for the next run.

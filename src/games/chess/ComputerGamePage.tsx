@@ -145,6 +145,31 @@ function Setup({ onStart }: { onStart: (choices: Choices, control: TimeControl |
   )
 }
 
+/** The game in progress and how it was set up, kept on this device across a refresh. */
+const GAME_KEY = 'agh.chess.computer.game'
+const SETUP_KEY = 'agh.chess.computer.setup'
+type GameSetup = { level: Level; human: Color; control: TimeControl | null; game: number }
+
+function savedSetup(): GameSetup | null {
+  try {
+    // Only when there is a game to go back to.
+    if (!localStorage.getItem(GAME_KEY)) return null
+    const saved = JSON.parse(localStorage.getItem(SETUP_KEY) ?? 'null') as { level?: string; human?: Color; control?: TimeControl | null } | null
+    if (!saved?.level || (saved.human !== 'w' && saved.human !== 'b')) return null
+    return { level: levelById(saved.level as Level['id']), human: saved.human, control: saved.control ?? null, game: 1 }
+  } catch {
+    return null
+  }
+}
+function forget() {
+  try {
+    localStorage.removeItem(GAME_KEY)
+    localStorage.removeItem(SETUP_KEY)
+  } catch {
+    // Nothing was saved.
+  }
+}
+
 type TableProps = { level: Level; human: Color; control: TimeControl | null; onNewGame: () => void }
 
 function Table({ level, human, control, onNewGame }: TableProps) {
@@ -154,6 +179,7 @@ function Table({ level, human, control, onNewGame }: TableProps) {
     baseMs: control?.base_ms ?? 0,
     incrementMs: control?.increment_ms ?? 0,
     timed: control !== null,
+    saveKey: GAME_KEY,
   })
   const computer: Color = human === 'w' ? 'b' : 'w'
 
@@ -285,18 +311,36 @@ function Table({ level, human, control, onNewGame }: TableProps) {
 
 /** Practice against Stockfish. No tokens and no rating; moves can be taken back. */
 export default function ComputerGamePage() {
-  const [setup, setSetup] = useState<{ level: Level; human: Color; control: TimeControl | null; game: number } | null>(null)
+  // A game left unfinished (the page was refreshed, or the tab closed) is carried on from where it stood.
+  const [setup, setSetup] = useState<GameSetup | null>(savedSetup)
 
   if (!setup) {
     return (
       <Setup
         onStart={(choices, control) => {
           const human: Color = choices.color === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : choices.color
+          forget()
+          try {
+            localStorage.setItem(SETUP_KEY, JSON.stringify({ level: choices.level, human, control }))
+          } catch {
+            // Private browsing: the game simply is not kept.
+          }
           setSetup((previous) => ({ level: levelById(choices.level), human, control, game: (previous?.game ?? 0) + 1 }))
           feedback('gameStart')
         }}
       />
     )
   }
-  return <Table key={setup.game} level={setup.level} human={setup.human} control={setup.control} onNewGame={() => setSetup(null)} />
+  return (
+    <Table
+      key={setup.game}
+      level={setup.level}
+      human={setup.human}
+      control={setup.control}
+      onNewGame={() => {
+        forget()
+        setSetup(null)
+      }}
+    />
+  )
 }

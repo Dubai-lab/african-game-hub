@@ -49,6 +49,12 @@ type Config = {
   /** False for untimed practice: the clocks never start. */
   timed?: boolean
   referee?: Referee
+  /**
+   * Where to keep the game on this device, so that a refresh (or a closed tab) does not lose
+   * it. The clocks are kept as real times, so they go on running while the page is away, as
+   * they would in a game against a person.
+   */
+  saveKey?: string
 }
 
 type GameState = {
@@ -67,9 +73,34 @@ const fresh = (config: Config): GameState => ({
 
 const other = (color: Color): Color => (color === 'w' ? 'b' : 'w')
 
+/** A game saved earlier under this key, if it is whole and still being played. */
+function saved(key: string | undefined): GameState | null {
+  if (!key) return null
+  try {
+    const state = JSON.parse(localStorage.getItem(key) ?? 'null') as Partial<GameState> | null
+    if (!state || state.outcome || !Array.isArray(state.sans) || !state.sans.every((san) => typeof san === 'string') || typeof state.clock !== 'object' || state.clock === null) return null
+    // Must be a game that can really be played through from the start.
+    if (replay(state.sans).played.length !== state.sans.length) return null
+    return { sans: state.sans, clock: state.clock, outcome: null, drawOfferBy: state.drawOfferBy ?? null }
+  } catch {
+    return null
+  }
+}
+
 /** A whole game of chess played on one device: both sides, clocks, draw offers and resignation. */
 export function useLocalChessGame(config: Config) {
-  const [state, setState] = useState<GameState>(() => fresh(config))
+  const [state, setState] = useState<GameState>(() => saved(config.saveKey) ?? fresh(config))
+  // Written down after every move; forgotten once the game is over.
+  const saveKey = config.saveKey
+  useEffect(() => {
+    if (!saveKey) return
+    try {
+      if (state.outcome) localStorage.removeItem(saveKey)
+      else localStorage.setItem(saveKey, JSON.stringify(state))
+    } catch {
+      // Private browsing: the game simply is not kept.
+    }
+  }, [state, saveKey])
   // Callbacks read the latest state from here, so a fast second tap never acts on a stale game.
   const live = useRef(state)
   const commit = useCallback((next: GameState) => {
