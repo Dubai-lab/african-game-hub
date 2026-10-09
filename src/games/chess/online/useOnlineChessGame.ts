@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '@/core/auth/AuthContext'
 import i18n from '@/core/i18n'
-import { callFunction, refusalMessage } from '@/core/lib/functions'
+import { callFunction, type FunctionReply, refusalMessage } from '@/core/lib/functions'
+import { type GameLink, openGameLink } from '@/core/lib/gameServer'
 import { supabase } from '@/core/lib/supabase'
 import { toast } from '@/core/ui/toast'
 import {
@@ -24,6 +25,9 @@ import type { ChessGameController, MoveResult } from '../useLocalChessGame'
 //    time the live connection (re)connects or the app returns to the foreground. That is what
 //    keeps a game from drifting after a dropped connection.
 //  - Between loads, tiny Realtime messages keep it current: one row per move, plus the clock.
+//  - Where there is a game server, moves also travel over one open connection to it, which is
+//    much quicker. It is a faster road to the same place: the server records each move with the
+//    same database function, and whenever that connection is not there the Edge Function is used.
 //  - The player's own move is shown at once and then confirmed by the server, or taken back.
 //  - Clocks are drawn from the server's values and the measured difference between this
 //    device's time and the server's. The device never decides that time has run out; it can
@@ -143,6 +147,22 @@ export function useOnlineChessGame(matchId: string) {
       })
   }, [])
 
+  /** A move heard about from elsewhere (the database's live messages, or the game server). */
+  const addMove = useCallback(
+    (row: { ply: number; san: string }) => {
+      const current = live.current.snapshot
+      if (!current) return
+      if (row.ply === current.sans.length + 1) {
+        setSnapshot((prev) => (prev && row.ply === prev.sans.length + 1 ? { ...prev, sans: [...prev.sans, row.san] } : prev))
+        setPending((p) => (p && p.ply <= row.ply ? null : p))
+      } else if (row.ply > current.sans.length + 1) {
+        // A move went missing in between: do not guess, reload.
+        void load()
+      }
+    },
+    [load],
+  )
+
   // Live updates. Every (re)connect reloads the full game, so nothing missed while away is lost.
   useEffect(() => {
     setStatus('loading')
@@ -151,16 +171,7 @@ export function useOnlineChessGame(matchId: string) {
     const channel = supabase
       .channel(`chess:${matchId}:${++channelSeq}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chess_moves', filter: `match_id=eq.${matchId}` }, (payload) => {
-        const row = payload.new as { ply: number; san: string }
-        const current = live.current.snapshot
-        if (!current) return
-        if (row.ply === current.sans.length + 1) {
-          setSnapshot((prev) => (prev && row.ply === prev.sans.length + 1 ? { ...prev, sans: [...prev.sans, row.san] } : prev))
-          setPending((p) => (p && p.ply <= row.ply ? null : p))
-        } else if (row.ply > current.sans.length + 1) {
-          // A move went missing in between: do not guess, reload.
-          void load()
-        }
+        addMove(payload.new as { ply: number; san: string })
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chess_games', filter: `match_id=eq.${matchId}` }, (payload) => {
         const row = payload.new as GameRow
@@ -192,12 +203,46 @@ export function useOnlineChessGame(matchId: string) {
       document.removeEventListener('visibilitychange', refresh)
       window.removeEventListener('online', refresh)
     }
-  }, [matchId, load])
+  }, [matchId, load, addMove])
 
   // ---- What the table shows ----
 
   const me = snapshot?.players.find((p) => p.userId === userId) ?? null
   const myColor = me?.color ?? null
+
+  // The quick road, for the two players while the game is on: the opponent's move arrives here
+  // a moment before the database's own message (which is then recognised as already known).
+  const link = useRef<GameLink | null>(null)
+  const playing = myColor !== null && snapshot?.match.status === 'active'
+  useEffect(() => {
+    if (!playing) return
+    const opened = openGameLink('chess', matchId, {
+      // The server holds a different number of moves than we do: one of us is behind.
+      onReady: (ply) => {
+        if (ply !== (live.current.snapshot?.sans.length ?? 0)) void load()
+      },
+      onMessage: (message) => {
+        if (message.t === 'move' && typeof message.ply === 'number' && typeof message.san === 'string') {
+          addMove({ ply: message.ply, san: message.san })
+        } else if (message.t === 'clock' && typeof message.ply === 'number') {
+          const row = message as unknown as { ply: number; white_time_ms: number; black_time_ms: number; last_move_at: string }
+          setSnapshot((prev) =>
+            prev && row.ply >= prev.game.ply
+              ? { ...prev, game: { ...prev.game, ply: row.ply, turn: row.ply % 2 === 0 ? 'w' : 'b', white_time_ms: row.white_time_ms, black_time_ms: row.black_time_ms, last_move_at: row.last_move_at, draw_offer_by: null } }
+              : prev,
+          )
+        } else if (message.t === 'revert' || message.t === 'restarting') {
+          // A move was taken back, or the server is going away: the database has the truth.
+          void load()
+        }
+      },
+    })
+    link.current = opened
+    return () => {
+      opened?.close()
+      link.current = null
+    }
+  }, [playing, matchId, load, addMove])
 
   const sans = useMemo(() => {
     if (!snapshot) return []
@@ -300,7 +345,13 @@ export function useOnlineChessGame(matchId: string) {
         setPending((p) => (p && p.ply === ply ? null : p))
         toast.info(message)
       }
-      callFunction<MoveReply>('chess-make-move', { match_id: matchId, uci: from + to + (promotion ?? ''), ply: ply - 1 })
+      const uci = from + to + (promotion ?? '')
+      // Over the open connection when there is one; otherwise the Edge Function, as always.
+      const server = link.current?.ready ? link.current : null
+      const sent: Promise<FunctionReply<MoveReply>> = server
+        ? server.request<FunctionReply<MoveReply>>({ t: 'move', uci, ply: ply - 1 })
+        : callFunction<MoveReply>('chess-make-move', { match_id: matchId, uci, ply: ply - 1 })
+      sent
         .then((reply) => {
           if (!reply.ok) {
             takeBack(reply.code === 'ILLEGAL_MOVE' ? i18n.t('chess.moveRejected') : refusalMessage(reply.code))
@@ -327,8 +378,13 @@ export function useOnlineChessGame(matchId: string) {
           setPending((p) => (p && p.ply <= reply.ply ? null : p))
         })
         .catch(() => {
-          takeBack(i18n.t('chess.moveNotSent'))
-          void load()
+          if (!server) {
+            takeBack(i18n.t('chess.moveNotSent'))
+            return void load()
+          }
+          // The connection dropped with the move in the air: it may or may not have been
+          // played. The database knows; only if it was not is the move taken back.
+          void load().then(() => setTimeout(() => live.current.pending?.ply === ply && takeBack(i18n.t('chess.moveNotSent')), 60))
         })
       return 'ok'
     },

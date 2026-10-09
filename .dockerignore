@@ -1,0 +1,10 @@
+# The game server image needs only server/ and the shared rules.
+*
+!server
+server/node_modules
+server/dist
+!supabase
+supabase/*
+!supabase/functions
+supabase/functions/*
+!supabase/functions/_shared

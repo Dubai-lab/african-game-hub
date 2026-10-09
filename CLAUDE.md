@@ -32,7 +32,7 @@ The frontend is **React**. This is decided; do not propose another framework. Th
 - **Testing:** Vitest for unit tests, Playwright for end-to-end tests (including two-browser online games).
 - **Chess rules:** `chess.js`. Never write chess rule logic by hand.
 - **Board UI:** `react-chessboard` (MIT license). Do not use `chessground` (GPL license, incompatible with our commercial closed-source app).
-- **Backend:** Supabase only (no separate server).
+- **Backend:** Supabase, plus one game server (see `server/`). The game server exists only to make moves fast: players in a live game hold an open connection to it, and it passes each move to the opponent at once. It is not a second authority. It records every move through the same Postgres functions the Edge Functions use, never touches wallets, the ledger or escrow, and the app must keep working through the Edge Functions whenever the game server cannot be reached. (Decided by the owner on 9 October 2026; before that the rule was "Supabase only".)
   - Supabase Auth for accounts
   - Postgres for all data
   - Supabase Realtime for live game updates

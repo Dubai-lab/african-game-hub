@@ -1,0 +1,19 @@
+{
+  "name": "african-game-hub-server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "The game server: open connections to players in a live game. Built into one file by build.mjs.",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node dist/server.cjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.2",
+    "chess.js": "^1.4.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

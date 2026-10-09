@@ -87,11 +87,15 @@ export default defineConfig({
   // first time a game screen is opened.
   optimizeDeps: { include: ['chess.js', 'react-chessboard'] },
   resolve: {
-    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+    alias: [
+      { find: '@', replacement: fileURLToPath(new URL('./src', import.meta.url)) },
+      // The game rules shared with the Edge Functions name their libraries the Deno way.
+      { find: /^npm:chess.js@.*$/, replacement: 'chess.js' },
+    ],
   },
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts', 'supabase/tests/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'supabase/tests/**/*.test.ts', 'server/src/**/*.test.ts'],
     testTimeout: 30_000,
   },
 })

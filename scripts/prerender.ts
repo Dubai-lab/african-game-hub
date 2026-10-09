@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto'
 import { readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { build } from 'vite'
+import { build, loadEnv } from 'vite'
 
 const root = process.cwd()
 const ssrDir = join(root, 'dist-ssr')
@@ -39,6 +39,10 @@ try {
   // fingerprint), and will talk only to this site and Supabase. Injected text that somehow
   // reached a page could therefore neither run nor send anything anywhere.
   const guardHash = createHash('sha256').update(guardCode).digest('base64')
+  // The game server, when this build has one. (On the site's own address 'self' already covers
+  // it, but some older browsers do not count a wss: address as 'self', so it is named.)
+  const gameServerUrl = loadEnv('production', root, 'VITE_').VITE_GAME_SERVER_URL
+  const gameServer = gameServerUrl ? ` ${new URL(gameServerUrl).origin}` : ''
   const policy = [
     "default-src 'self'",
     // 'wasm-unsafe-eval' lets the chess engine (WebAssembly) start; it does not allow eval().
@@ -48,7 +52,7 @@ try {
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
     "media-src 'self' blob:",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+    `connect-src 'self' https://*.supabase.co wss://*.supabase.co${gameServer}`,
     "manifest-src 'self'",
     "object-src 'none'",
     "base-uri 'none'",

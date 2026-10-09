@@ -7,6 +7,8 @@ const onDev = Boolean(process.env.AGH_ENV_FILE)
 const playerPort = onDev ? 5273 : 5173
 const adminPort = onDev ? 5280 : 5180
 const mode = onDev ? ' --mode dev' : ''
+// Tests read the same file the scripts do (for example, whether a game server is configured).
+if (onDev) process.loadEnvFile(process.env.AGH_ENV_FILE)
 
 export default defineConfig({
   testDir: './e2e',
@@ -35,5 +37,7 @@ export default defineConfig({
       reuseExistingServer: true,
       timeout: 60_000,
     },
+    // The game server (see server/), on the development project only.
+    ...(onDev ? [{ command: 'npm run server:dev', url: 'http://localhost:8787/health', reuseExistingServer: true, timeout: 60_000 }] : []),
   ],
 })
