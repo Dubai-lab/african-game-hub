@@ -37,6 +37,10 @@ if (-not $SkipBuild) {
   # A variable set here wins over the same line in .env.local, so link previews carry the real
   # address instead of localhost. The Supabase URL and anon key still come from .env.local.
   $env:VITE_SITE_URL = $siteUrl
+  # Player site only: live games use the game server in Cape Town (see server/README.md). It is
+  # set here and not in .env.local, so the site on a developer's machine keeps using the Edge
+  # Functions. To switch the game server off for players, remove this line and deploy again.
+  if ($Site -eq 'player') { $env:VITE_GAME_SERVER_URL = 'wss://d2xirivzgoo9lw.cloudfront.net/ws' }
   if ($Site -eq 'admin') { npm --prefix (Join-Path $root 'admin') run build } else { npm --prefix $root run build }
   Check 'The build'
 }

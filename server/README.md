@@ -1,6 +1,6 @@
 # The game server
 
-One small program that keeps an open connection (WebSocket) to each player in a live game, so a move reaches the opponent in one short hop. The first version carries **chess only**, as a trial.
+One small program that keeps an open connection (WebSocket) to each player in a live game, so a move reaches the opponent in one short hop. It carries **chess and draughts**; pool and Ludo still use the Edge Functions only.
 
 ## What it is, and what it is not
 
@@ -11,7 +11,7 @@ It is a faster road for moves. It is not a second authority.
 - **Nothing is held only in memory.** A game is read from the database when a player connects and dropped when both have gone. If the server stops, the app plays through the Edge Functions, as it does whenever it cannot reach the server.
 - **Resigning, draw offers, time-outs and settlement** still go through the Edge Functions and the database's own sweep. Only moves use the server.
 
-The code: `src/main.ts` (the network side) and `src/chess.ts` (what happens to a move). The chess rules are `supabase/functions/_shared/chessRules.ts`, shared with the Edge Function.
+The code: `src/main.ts` (the network side), `src/live.ts` (what happens to a move, the same for every game) and one small file per game (`src/chess.ts`, `src/draughts.ts`) naming its rules and its database functions. The rules themselves are in `supabase/functions/_shared/`, shared with the Edge Functions.
 
 ## Running it
 
@@ -60,8 +60,8 @@ The app uses the server only when it was built with `VITE_GAME_SERVER_URL` set (
 
 All JSON. From the app:
 
-- `{"t":"hello","game":"chess","match":"<match id>","token":"<session token>"}` — once, within ten seconds of connecting. The token is checked with the auth server; who the player is never comes from anything else.
-- `{"t":"move","id":<number>,"uci":"e2e4","ply":<moves the app has seen>}`
+- `{"t":"hello","game":"chess" or "draughts","match":"<match id>","token":"<session token>"}` — once, within ten seconds of connecting. The token is checked with the auth server; who the player is never comes from anything else.
+- `{"t":"move","id":<number>,"uci":"e2e4","ply":<moves the app has seen>}` for chess; for draughts `"path":[32,28]` (the squares the piece visits) in place of `uci`
 
 From the server:
 

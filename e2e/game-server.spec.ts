@@ -14,8 +14,8 @@ test.afterAll(resetTestAccounts)
 
 type Seat = { context: BrowserContext; page: Page; viaFunction: string[]; viaServer: string[] }
 
-async function signedIn(browser: Browser, email: string, options: { stake?: string; cutOff?: boolean } = {}): Promise<Seat> {
-  const { stake, cutOff } = options
+async function signedIn(browser: Browser, email: string, options: { stake?: string; cutOff?: boolean; game?: string } = {}): Promise<Seat> {
+  const { stake, cutOff, game = 'chess' } = options
   const context = await browser.newContext({ viewport: { width: 393, height: 851 }, locale: 'en-US', hasTouch: true })
   // This phone cannot reach the game server at all: every connection is dropped at once.
   if (cutOff) await context.routeWebSocket(/localhost:8787/, (ws) => ws.close())
@@ -24,7 +24,7 @@ async function signedIn(browser: Browser, email: string, options: { stake?: stri
   const viaFunction: string[] = []
   const viaServer: string[] = []
   page.on('request', (request) => {
-    if (request.url().includes('/functions/v1/chess-make-move') && request.method() === 'POST') viaFunction.push(request.postData() ?? '')
+    if (/\/functions\/v1\/(chess-make-move|draughts-action)/.test(request.url()) && request.method() === 'POST' && (request.postData() ?? '').includes('"ply"')) viaFunction.push(request.postData() ?? '')
   })
   page.on('websocket', (ws) => {
     if (!ws.url().includes('localhost')) return
@@ -36,8 +36,8 @@ async function signedIn(browser: Browser, email: string, options: { stake?: stri
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill(TEST_PASSWORD)
   await page.getByRole('button', { name: 'Log in' }).click()
-  await expect(page.getByTestId('game-chess')).toBeVisible({ timeout: 20_000 })
-  await page.getByTestId('game-chess').click()
+  await expect(page.getByTestId(`game-${game}`)).toBeVisible({ timeout: 20_000 })
+  await page.getByTestId(`game-${game}`).click()
   await page.getByTestId('game-play').click()
   await page.getByTestId('play-stake-toggle').click()
   if (stake) await page.getByRole('radio', { name: stake, exact: true }).check({ force: true })
@@ -140,6 +140,49 @@ test('without the game server the same game is played through the Edge Functions
   // A refresh in the middle changes nothing.
   await two.page.reload()
   await expect(moves(two.page)).toHaveText(['e4', 'e5', 'Nf3', 'Nc6'], { timeout: 20_000 })
+  await one.context.close()
+  await two.context.close()
+})
+
+test('draughts through the game server: moves take the quick road, a forced capture included', async ({ browser }) => {
+  const one = await signedIn(browser, TEST_ACCOUNTS[0]!.email, { game: 'draughts' })
+  const two = await signedIn(browser, TEST_ACCOUNTS[1]!.email, { game: 'draughts' })
+  await one.page.getByRole('button', { name: 'Find match' }).click()
+  await expect(one.page.getByRole('heading', { name: 'Looking for an opponent…' })).toBeVisible()
+  await two.page.getByRole('button', { name: 'Find match' }).click()
+  for (const { page } of [one, two]) {
+    await expect(page).toHaveURL(/\/play\/draughts\/match\/[0-9a-f-]{36}$/, { timeout: 20_000 })
+    await expect(page.getByTestId('draughts-board')).toBeVisible()
+  }
+  const sq = (page: Page, n: number) => page.getByTestId(`sq-${n}`)
+  const oneIsWhite = (await sq(one.page, 50).boundingBox())!.y > (await sq(one.page, 1).boundingBox())!.y
+  const [white, black] = oneIsWhite ? [one, two] : [two, one]
+  await white.page.waitForTimeout(2500)
+
+  const play = async (page: Page, ...path: number[]) => {
+    for (const n of path) await sq(page, n).click()
+  }
+  await play(white.page, 32, 28)
+  await expect(sq(black.page, 28)).toHaveAttribute('data-piece', 'w', { timeout: 15_000 })
+  await play(black.page, 19, 23)
+  await expect(sq(white.page, 23)).toHaveAttribute('data-piece', 'b', { timeout: 15_000 })
+  await play(white.page, 28, 19)
+  await expect(sq(black.page, 19)).toHaveAttribute('data-piece', 'w', { timeout: 15_000 })
+  await expect(sq(black.page, 23)).toHaveAttribute('data-piece', '.')
+  await play(black.page, 14, 23)
+  await expect(moves(white.page)).toHaveText(['32-28', '19-23', '28x19', '14x23'], { timeout: 15_000 })
+  await expect(moves(black.page)).toHaveText(['32-28', '19-23', '28x19', '14x23'])
+
+  expect(white.viaServer.length + black.viaServer.length).toBe(4)
+  expect(white.viaFunction.length + black.viaFunction.length).toBe(0)
+  // The clocks came from the database, through the server: White's is running.
+  await expect(white.page.getByTestId('clock-w')).toHaveAttribute('data-active', 'true')
+
+  const [stored] = await runSql<{ ply: number; plies: number }>(
+    `select g.ply, (select count(*)::int from public.draughts_moves mv where mv.match_id = g.match_id) as plies
+       from public.draughts_games g where g.match_id = '${white.page.url().split('/').pop()}'`,
+  )
+  expect(stored).toEqual({ ply: 4, plies: 4 })
   await one.context.close()
   await two.context.close()
 })
