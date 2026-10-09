@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/core/lib/supabase'
 
 // The landing page is saved as ready-made HTML at build time, so it needs something to show
-// before the database answers. These snapshots match the seed data; the live values replace
+// before the database answers. These snapshots match the games as they stand (update them when a game goes live); the live values replace
 // them as soon as the page loads, so a new game or a changed bonus appears without a rebuild.
 
 export type LandingGame = {
@@ -14,11 +14,12 @@ export type LandingGame = {
   minutes: [number, number] | null
 }
 
+const STAKES = [0, 50, 100, 250, 500, 1000]
 const FALLBACK_GAMES: LandingGame[] = [
-  { id: 'chess', name: 'Chess', status: 'live', stakeLevels: [0, 50, 100, 250, 500, 1000], minutes: [1, 10] },
-  { id: 'ludo', name: 'Ludo', status: 'coming_soon', stakeLevels: [], minutes: null },
-  { id: 'draughts', name: 'Draughts', status: 'coming_soon', stakeLevels: [], minutes: null },
-  { id: 'pool', name: 'Pool', status: 'coming_soon', stakeLevels: [], minutes: null },
+  { id: 'chess', name: 'Chess', status: 'live', stakeLevels: STAKES, minutes: [1, 10] },
+  { id: 'ludo', name: 'Ludo', status: 'live', stakeLevels: STAKES, minutes: null },
+  { id: 'draughts', name: 'Draughts', status: 'live', stakeLevels: STAKES, minutes: [3, 15] },
+  { id: 'pool', name: 'Pool', status: 'live', stakeLevels: STAKES, minutes: null },
   { id: 'penalty', name: 'Penalty Shootout', status: 'coming_soon', stakeLevels: [], minutes: null },
 ]
 
