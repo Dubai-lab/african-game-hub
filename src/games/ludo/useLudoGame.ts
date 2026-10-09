@@ -5,10 +5,12 @@ import { callFunction, refusalMessage } from '@/core/lib/functions'
 import { supabase } from '@/core/lib/supabase'
 import { toast } from '@/core/ui/toast'
 import type { Seat } from './board'
-import type { LudoEvent, LudoState } from './rules'
+import { canFull, type LudoEvent, type LudoState, plays, preview } from './rules'
 
 // One online Ludo match. The server holds the game; this loads it, listens for changes, and
-// passes on what the player asks for. It never rolls a die or moves a piece by itself.
+// passes on what the player asks for. It never rolls a die, and the server alone decides every
+// move. The player's own piece is shown setting off at once, so the game does not feel as if
+// it waits on the network; if the server says no, the piece is put back.
 
 export type LudoPlayer = {
   userId: string
@@ -70,6 +72,8 @@ export function useLudoGame(matchId: string) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'not_found' | 'error'>('loading')
   const [connected, setConnected] = useState(true)
   const [busy, setBusy] = useState(false)
+  /** The player's own move, shown while the server is deciding: the board after it, on the turn it was made. */
+  const [pending, setPending] = useState<{ turnNo: number; positions: LudoState['positions']; dice: number[] } | null>(null)
   /** Server time minus this device's time, in milliseconds. */
   const offset = useRef(0)
   const loadSeq = useRef(0)
@@ -165,6 +169,17 @@ export function useLudoGame(matchId: string) {
     async (action: 'roll' | 'move' | 'resign' | 'claim', move?: { color: Seat; piece: number; die: number | null; full: boolean }) => {
       const quiet = action === 'claim'
       if (!quiet) setBusy(true)
+      const game = live.current?.game
+      if (action === 'move' && move && game && game.phase === 'move') {
+        // Only a move the rules allow is shown early; anything else simply waits for the server.
+        const allowed = move.full ? canFull(game, move.color, move.piece) : plays(game).some((play) => play.color === move.color && play.piece === move.piece && play.die === move.die)
+        if (allowed) {
+          const steps = move.full ? game.dice[0]! + game.dice[1]! : move.die!
+          const dice = move.full ? [] : [...game.dice]
+          if (!move.full) dice.splice(dice.indexOf(move.die!), 1)
+          setPending({ turnNo: game.turnNo, positions: preview(game, game.turn, move.color, move.piece, steps).positions, dice })
+        }
+      }
       try {
         const reply = await callFunction('ludo-action', {
           match_id: matchId,
@@ -174,6 +189,7 @@ export function useLudoGame(matchId: string) {
         })
         if (!reply.ok) {
           if (!quiet && reply.code !== 'OUT_OF_SYNC') toast.error(refusalMessage(reply.code))
+          if (action === 'move') setPending(null)
           if (RELOAD_AFTER.has(reply.code)) void load()
         } else {
           // The new state normally arrives by itself a moment later. Asking for it as well costs
@@ -182,6 +198,7 @@ export function useLudoGame(matchId: string) {
         }
       } catch {
         if (!quiet) toast.error(i18n.t('errors.network'))
+        if (action === 'move') setPending(null)
       } finally {
         if (!quiet) setBusy(false)
       }
@@ -190,6 +207,8 @@ export function useLudoGame(matchId: string) {
   )
 
   const me = snapshot?.players.find((p) => p.userId === userId) ?? null
+  // The early picture lasts only until the server's own state for that move arrives.
+  const shownGame = snapshot ? (pending && pending.turnNo === snapshot.game.turnNo && snapshot.game.phase === 'move' ? { ...snapshot.game, positions: pending.positions, dice: pending.dice } : snapshot.game) : null
   /** The turn deadline on this device's clock, while the table is open. */
   const deadline = snapshot && snapshot.game.phase !== 'over' && snapshot.game.deadline ? snapshot.game.deadline - offset.current : null
 
@@ -230,7 +249,7 @@ export function useLudoGame(matchId: string) {
     busy,
     match: snapshot?.match ?? null,
     players: snapshot?.players ?? [],
-    game: snapshot?.game ?? null,
+    game: shownGame,
     mySeat: me?.seat ?? null,
     deadline,
     roll: () => void act('roll'),

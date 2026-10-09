@@ -23,6 +23,13 @@ function corsFor(request: Request | null): Record<string, string> {
     Vary: 'Origin',
   }
 }
+// Before its first call to a function, a browser asks permission (a "preflight"), which is a
+// whole extra trip to the server. Unless told otherwise it asks again every few seconds, so
+// nearly every move in a game paid for two trips. This lets it remember the answer (browsers
+// cap it: about two hours in Chrome, a day in Firefox). The real request is still checked in
+// full every time; only the question "may this site call at all?" is remembered.
+const PREFLIGHT_MAX_AGE_SECONDS = '86400'
+
 /** True when the request comes from a browser on a site that is not ours. */
 function foreignSite(request: Request): boolean {
   const origin = request.headers.get('Origin')
@@ -67,7 +74,12 @@ type Handler<T> = (context: { userId: string; body: T }) => Promise<Response>
  */
 export function serve<S extends z.ZodType>(schema: S, handler: Handler<z.infer<S>>) {
   Deno.serve(async (request) => {
-    if (request.method === 'OPTIONS') return new Response('ok', { status: foreignSite(request) ? 403 : 200, headers: corsFor(request) })
+    if (request.method === 'OPTIONS') {
+      // A refusal is never remembered.
+      return foreignSite(request)
+        ? new Response('ok', { status: 403, headers: corsFor(request) })
+        : new Response('ok', { status: 200, headers: { ...corsFor(request), 'Access-Control-Max-Age': PREFLIGHT_MAX_AGE_SECONDS } })
+    }
     if (foreignSite(request)) return json({ ok: false, code: 'FORBIDDEN' }, 403, request)
     if (request.method !== 'POST') return json({ ok: false, code: 'METHOD_NOT_ALLOWED' }, 405, request)
 
