@@ -13,6 +13,8 @@ async function openLocalGame(page: Page, query = '') {
   if (query) {
     await page.goto(`/play/chess/local${query}`)
   } else {
+    await page.getByTestId('game-chess').click()
+    await page.getByTestId('game-play').click()
     await page.getByRole('link', { name: 'Play on this device' }).click()
   }
   await expect(page.getByRole('heading', { name: 'Two players, one phone' })).toBeVisible()

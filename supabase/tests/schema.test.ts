@@ -85,7 +85,8 @@ describe('migrations', () => {
         join pg_namespace n on n.oid = p.pronamespace
        cross join unnest(array['anon', 'authenticated', 'service_role']) as r(role)
        where n.nspname = 'private'
-         and p.proname not in ('is_match_player', 'is_match_finished')
+         -- (The three helpers the access rules themselves call: each only answers yes or no about a match.)
+         and p.proname not in ('is_match_player', 'is_match_finished', 'is_tournament_match')
          and has_function_privilege(r.role, p.oid, 'EXECUTE')`)
     expect(callable).toEqual([])
   })

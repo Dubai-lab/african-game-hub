@@ -21,7 +21,7 @@ async function problems(page: Page): Promise<string[]> {
 test.beforeAll(ensureTestAccounts)
 
 const PUBLIC = ['/', '/login', '/signup', '/terms', '/privacy', '/cookies', '/refunds', '/responsible-gaming']
-const SIGNED_IN = ['/lobby', '/wallet', '/leaderboards', '/friends', '/profile', '/settings', '/play/pool/computer', '/play/chess/computer', '/play/ludo/computer']
+const SIGNED_IN = ['/lobby', '/play/chess', '/play/chess/new', '/play/chess/friend', '/play/chess/tournaments', '/play/chess/settings', '/play/ludo', '/play/ludo/new', '/play/pool', '/play/pool/new', '/wallet', '/leaderboards', '/friends', '/profile', '/settings', '/play/pool/computer', '/play/chess/computer', '/play/ludo/computer']
 
 for (const width of [393, 1366]) {
   test(`public pages have no accessibility faults (${width}px wide)`, async ({ browser }) => {
@@ -46,7 +46,7 @@ for (const width of [393, 1366]) {
     await page.getByLabel('Email').fill(TEST_ACCOUNTS[0].email)
     await page.getByLabel('Password').fill(TEST_PASSWORD)
     await page.getByRole('button', { name: 'Log in' }).click()
-    await expect(page.getByRole('button', { name: 'Find match' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByTestId('game-chess')).toBeVisible({ timeout: 20_000 })
     const found: Record<string, string[]> = {}
     for (const path of SIGNED_IN) {
       await page.goto(path)

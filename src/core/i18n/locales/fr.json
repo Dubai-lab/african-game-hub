@@ -54,9 +54,9 @@
       "TOO_MANY_REQUESTS": "Trop de demandes en attente. Attendez que certaines reçoivent une réponse.",
       "NO_SUCH_REQUEST": "Cette demande n’existe plus.",
       "NOT_FRIENDS": "Vous ne pouvez écrire qu’aux joueurs ayant accepté votre demande d’amitié.",
-      "BAD_MESSAGE": "Ce message ne peut pas être envoyé.",
+      "BAD_MESSAGE": "Écrivez un message de 300 caractères au plus.",
       "SLOW_DOWN": "Vous envoyez trop vite. Patientez quelques secondes.",
-      "CHAT_CLOSED": "La discussion de cette partie est fermée.",
+      "CHAT_CLOSED": "Ce chat est fermé.",
       "CHAT_OFF_YOU": "Votre discussion en direct est désactivée.",
       "CHAT_OFF_OPPONENT": "Votre adversaire a désactivé la discussion en direct.",
       "BAD_REQUEST": "Cette demande n’a pas pu être acceptée.",
@@ -72,7 +72,22 @@
       "GAME_NOT_FOUND": "Cette partie est introuvable.",
       "ILLEGAL_MOVE": "Ce coup n’est pas autorisé.",
       "ILLEGAL_SHOT": "Ce coup n’est pas autorisé. Si vous avez la bille en main, posez-la d’abord à un endroit libre.",
-      "RATE_LIMITED": "Trop de demandes. Patientez quelques secondes et réessayez."
+      "RATE_LIMITED": "Trop de demandes. Patientez quelques secondes et réessayez.",
+      "NOT_A_FRIEND": "Vous ne pouvez inviter par son nom qu’un ami. Utilisez un lien pour les autres.",
+      "BAD_STAKE": "Cette mise n’est pas proposée.",
+      "CHALLENGE_NOT_FOUND": "Cette invitation est introuvable.",
+      "CHALLENGE_CLOSED": "Cette invitation n’est plus ouverte.",
+      "NOT_ALLOWED": "Vous ne pouvez pas faire cela.",
+      "BAD_TOURNAMENT_NAME": "Donnez au tournoi un nom de 3 à 60 caractères.",
+      "BAD_TOURNAMENT_TIME": "Choisissez un début dans les deux semaines et une des durées proposées.",
+      "BAD_PRIZE": "Ce prix n’est pas autorisé.",
+      "TOO_MANY_TOURNAMENTS": "Vous avez déjà trois tournois ouverts. Attendez qu’un se termine.",
+      "TOURNAMENT_NOT_CANCELLABLE": "Seul son créateur peut annuler un tournoi, et avant son début.",
+      "TOURNAMENT_NOT_FOUND": "Ce tournoi est introuvable.",
+      "TOURNAMENT_OVER": "Ce tournoi est terminé.",
+      "NOT_JOINED": "Rejoignez d’abord le tournoi.",
+      "TOURNAMENT_STARTED": "Ce tournoi a commencé. Un tournoi par rondes ne peut être rejoint qu’avant la première ronde.",
+      "TOO_FAST": "Un message à la fois. Patientez un instant."
     }
   },
   "validation": {
@@ -234,7 +249,10 @@
       "cancel": "Annuler"
     },
     "wins_one": "{{game}} : {{count}} victoire",
-    "wins_other": "{{game}} : {{count}} victoires"
+    "wins_other": "{{game}} : {{count}} victoires",
+    "games": "Jeux",
+    "allGames": "‹ Tous les jeux",
+    "gameNotOpen": "Ce jeu n’est pas encore ouvert."
   },
   "notFound": {
     "title": "Page introuvable",
@@ -433,7 +451,10 @@
       "win_payout": "Gains",
       "deposit": "Dépôt",
       "withdrawal": "Retrait",
-      "adjustment": "Ajustement"
+      "adjustment": "Ajustement",
+      "tournament_prize": "Prix de tournoi mis en jeu",
+      "tournament_payout": "Prix de tournoi gagné",
+      "tournament_refund": "Prix de tournoi rendu"
     }
   },
   "chess": {
@@ -688,7 +709,7 @@
     "loadFailed": "Impossible de charger ce profil.",
     "notFound": "Aucun joueur ne porte ce nom.",
     "joined": "Inscrit le {{date}}",
-    "editName": "Modifier le nom affiché",
+    "editName": "Modifier le profil",
     "displayName": "Nom affiché",
     "displayNameHint": "Affiché à la place de @{{username}}. Laissez vide pour afficher votre nom d’utilisateur.",
     "save": "Enregistrer",
@@ -697,7 +718,7 @@
     "rating": "Classement",
     "record": "{{wins}} V · {{losses}} D · {{draws}} N",
     "noGames": "Aucune partie",
-    "history": "Parties",
+    "history": "Historique des parties",
     "historyEmpty": "Aucune partie terminée pour l’instant.",
     "historyFailed": "Impossible de charger les parties.",
     "unknownOpponent": "Adversaire",
@@ -708,7 +729,10 @@
       "draw": "Nulle"
     },
     "wins": "Parties gagnées",
-    "winsFor": "Parties gagnées : {{game}}"
+    "winsFor": "Parties gagnées : {{game}}",
+    "share": "Partager le profil",
+    "shareHint": "Envoyez votre profil à vos amis pour qu’ils vous trouvent et vous ajoutent.",
+    "shareText": "Retrouvez-moi sur African Game Hub :"
   },
   "friends": {
     "title": "Amis",
@@ -1087,5 +1111,177 @@
       "spinReset": "Centre"
     },
     "rotate": "Tournez votre téléphone pour une table plus grande."
+  },
+  "share": {
+    "link": "Lien à partager",
+    "copy": "Copier le lien",
+    "copied": "Copié",
+    "whatsapp": "Partager sur WhatsApp"
+  },
+  "play": {
+    "home": {
+      "play": "Jouer",
+      "stats": "Statistiques",
+      "friends": "Amis",
+      "friendsEmpty": "Ajoutez des amis pour les défier.",
+      "findFriends": "Trouver des amis",
+      "challenge": "Défier",
+      "history": "Historique",
+      "historyEmpty": "Aucune partie terminée pour l’instant.",
+      "viewAll": "Tout voir",
+      "settings": "Réglages",
+      "tournaments": "Tournois"
+    },
+    "new": {
+      "title": "Jouer",
+      "more": "Autres façons de jouer",
+      "tournaments": "Tournois",
+      "friend": "Jouer contre un ami",
+      "backTo": "‹ {{game}}",
+      "how": "Partie",
+      "options": "Options",
+      "stakeValue": "{{stake}} jetons",
+      "tokens": "Vos jetons :"
+    },
+    "settingsTitle": "Réglages",
+    "settingsFor": "Réglages : {{game}}",
+    "noSettings": "Ce jeu n’a pas de réglages propres."
+  },
+  "challenge": {
+    "title": "Jouer contre un ami",
+    "who": "Qui",
+    "anyone": "Toute personne ayant le lien",
+    "anyoneHint": "Vous obtenez un lien à partager sur WhatsApp ou ailleurs. La première personne qui accepte joue contre vous.",
+    "friendHint": "Votre ami voit l’invitation dans l’application aussitôt.",
+    "send": "Envoyer le défi",
+    "sendLink": "Créer le lien",
+    "waitingFor": "En attente de {{name}}…",
+    "waitingLink": "En attente d’une réponse…",
+    "expires": "L’invitation reste ouverte 15 minutes. Restez sur cette page : la partie s’ouvre ici dès qu’elle est acceptée.",
+    "shareText": "Affrontez-moi à {{game}} sur African Game Hub :",
+    "cancel": "Annuler l’invitation",
+    "declined": "{{name}} a refusé votre défi.",
+    "closed": "Cette invitation n’est plus ouverte.",
+    "yours": "C’est votre propre invitation. Partagez le lien avec la personne que vous voulez affronter.",
+    "incomingTitle": "{{name}} vous défie",
+    "free": "Partie gratuite. Aucun jeton en jeu.",
+    "stake": "Mise : {{stake}} jetons chacun. Le gagnant prend le pot moins la commission habituelle.",
+    "accept": "Accepter",
+    "decline": "Refuser",
+    "notNow": "Pas maintenant",
+    "later": "Décider plus tard"
+  },
+  "tournament": {
+    "title": "Tournois",
+    "back": "Retour au tournoi",
+    "tabs": {
+      "open": "En cours et à venir",
+      "finished": "Terminés",
+      "create": "Créer"
+    },
+    "none": "Aucun tournoi pour l’instant. Créez-en un et partagez le lien.",
+    "noneFinished": "Aucun tournoi terminé pour l’instant.",
+    "players_one": "{{count}} joueur",
+    "players_other": "{{count}} joueurs",
+    "prize": "Prix {{amount}}",
+    "noPrize": "Sans prix",
+    "endsIn": "Fin dans {{time}}",
+    "startsIn": "Début dans {{time}}",
+    "timeUp": "Se termine",
+    "ended": "Terminé",
+    "cancelled": "Annulé",
+    "form": {
+      "name": "Nom",
+      "namePlaceholder": "Blitz du vendredi soir",
+      "twoPlayers": "Les parties de tournoi se jouent à deux. Choisissez deux joueurs ci-dessus.",
+      "when": "Début",
+      "start": {
+        "15": "Dans 15 minutes",
+        "60": "Dans 1 heure",
+        "now": "Maintenant",
+        "pick": "Choisir une heure"
+      },
+      "length": "Durée",
+      "minutes": "{{count}} min",
+      "prize": "Prix",
+      "prizeFree": "Sans prix",
+      "prizeTokens": "Jetons de mon portefeuille",
+      "prizeAmount": "Prix en jetons",
+      "balance": "Vous avez {{amount}} jetons.",
+      "tooMuch": "Vous n’avez pas autant de jetons.",
+      "prizeHint": "Le prix est prélevé sur vos jetons maintenant et mis de côté. Les trois premiers se le partagent : 50 % / 30 % / 20 %. Si vous annulez avant le début, ou si moins de deux joueurs terminent une partie, il vous est rendu en entier.",
+      "submit": "Créer le tournoi",
+      "kind": "Type de tournoi",
+      "kinds": {
+        "arena": "Au temps",
+        "rounds": "Par rondes"
+      },
+      "kindHint": {
+        "arena": "Dure un temps fixé. On rejoint à tout moment et on appuie sur Suivante après chaque partie pour affronter un joueur libre. Le plus de points à la fin l’emporte.",
+        "rounds": "Un nombre fixe de rondes, quel que soit le nombre de joueurs. Chacun joue chaque ronde ; la suivante commence quand toutes les parties sont finies. Le système apparie les joueurs à égalité de points, au classement le plus proche. Les inscriptions ferment au début de la ronde 1."
+      },
+      "rounds": "Rondes"
+    },
+    "page": {
+      "back": "‹ Tournois",
+      "notFound": "Ce tournoi est introuvable.",
+      "by": "Créé par {{name}}",
+      "how": "Rejoignez à tout moment. Après chaque partie, appuyez sur Suivante pour affronter un joueur libre : 2 points la victoire, 1 la nulle. Le plus de points à la fin du temps l’emporte.",
+      "split": "Le prix va aux trois premiers : 50 %, 30 % et 20 %.",
+      "join": "Rejoindre",
+      "cancel": "Annuler le tournoi",
+      "share": "Inviter des joueurs",
+      "shareText": "Rejoignez mon tournoi de {{game}} « {{name}} » sur African Game Hub :",
+      "standings": "Classement",
+      "nobody": "Personne n’a encore rejoint.",
+      "record": "{{wins}} V · {{draws}} N · {{losses}} D",
+      "points_one": "{{count}} point",
+      "points_other": "{{count}} points",
+      "waiting": "Recherche de votre prochain adversaire…",
+      "notStarted": "Vous êtes inscrit. Le tournoi n’a pas commencé ; vous serez apparié dès son début.",
+      "timeUp": "Le temps est écoulé. Les dernières parties se terminent.",
+      "youWon": "Vous avez gagné {{amount}} jetons.",
+      "games_one": "Parties ({{count}})",
+      "games_other": "Parties ({{count}})",
+      "chat": "Chat",
+      "watch": "Regarder",
+      "noGames": "Aucune partie en cours pour l’instant.",
+      "noGamesOver": "Toutes les parties sont terminées.",
+      "out": "éliminé",
+      "closed": "Ce tournoi a commencé. Les inscriptions ont fermé à la ronde 1, mais vous pouvez regarder les parties.",
+      "howRounds": "Chacun joue chaque ronde. Le système apparie les joueurs à égalité de points, au classement le plus proche, et la ronde suivante commence quand toutes les parties sont finies. 2 points la victoire, 1 la nulle. Un joueur absent au début de sa partie la perd et ne joue pas les rondes suivantes.",
+      "pressNext": "Quand vous voulez. Appuyez sur le bouton pour affronter un joueur libre.",
+      "first": "Jouer",
+      "next": "Partie suivante",
+      "stop": "Arrêter la recherche",
+      "dropped": "Vous étiez absent pour une partie : vous ne jouez pas les rondes suivantes. Vous gardez vos points.",
+      "roundSoon": "La prochaine ronde est en cours d’appariement.",
+      "bye": "Le nombre de joueurs est impair : vous n’avez pas d’adversaire cette ronde et recevez la victoire.",
+      "roundWait": "Votre partie est finie. La ronde suivante commence quand toutes les parties de celle-ci sont terminées. Vous pouvez regarder les autres sous Parties.",
+      "yourGame": "Votre partie a commencé.",
+      "gameSoon": "Vous affrontez {{name}}. La partie commence dès que vous êtes tous les deux là."
+    },
+    "byTime": "Au temps",
+    "roundsCount_one": "{{count}} ronde",
+    "roundsCount_other": "{{count}} rondes",
+    "round": "Ronde {{round}} sur {{rounds}}",
+    "starting": "Démarrage",
+    "watching": "‹ Retour au tournoi",
+    "pairing": {
+      "playing": "En cours",
+      "waiting": "Pas commencée",
+      "played": "Terminée",
+      "bye": "Sans adversaire : victoire",
+      "forfeit_a": "Gagnée par forfait",
+      "forfeit_b": "Gagnée par forfait",
+      "double_forfeit": "Aucun présent",
+      "void": "Annulée"
+    },
+    "chat": {
+      "empty": "Personne n’a encore rien dit.",
+      "placeholder": "Dites quelque chose au tournoi",
+      "send": "Envoyer",
+      "joinToWrite": "Rejoignez le tournoi pour écrire ici."
+    }
   }
 }

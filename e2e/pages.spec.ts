@@ -28,7 +28,7 @@ async function logIn(page: Page, index = 0) {
   await page.getByLabel('Email').fill(TEST_ACCOUNTS[index]!.email)
   await page.getByLabel('Password').fill(TEST_PASSWORD)
   await page.getByRole('button', { name: 'Log in' }).click()
-  await expect(page.getByRole('button', { name: 'Find match' })).toBeVisible()
+  await expect(page.getByTestId('game-chess')).toBeVisible({ timeout: 20_000 })
 }
 
 test('profile shows ratings per pace and the match history, and a past game can be replayed', async ({ page }) => {
@@ -37,12 +37,20 @@ test('profile shows ratings per pace and the match history, and a past game can 
 
   await expect(page.getByText('@e2e_player')).toBeVisible()
   await expect(page.getByText(/Rwanda/)).toBeVisible()
-  // Separate ratings: blitz moved with the game, bullet and rapid are untouched.
-  await expect(page.getByTestId('rating-blitz')).toContainText(firstPlayerWon ? '1220' : '1180')
-  await expect(page.getByTestId('rating-blitz')).toContainText(firstPlayerWon ? '1 W · 0 L · 0 D' : '0 W · 1 L · 0 D')
-  await expect(page.getByTestId('rating-bullet')).toContainText('1200')
-  await expect(page.getByTestId('rating-bullet')).toContainText('No games yet')
-  await expect(page.getByTestId('rating-rapid')).toContainText('No games yet')
+  // The profile is about the person: no per-game ratings here (those are on each game's home).
+  await expect(page.getByText('Chess ratings')).toHaveCount(0)
+  await expect(page.getByTestId('rating-blitz')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Game history' })).toBeVisible()
+  // It can be shared: a link to the public profile, to copy or send on WhatsApp.
+  await expect(page.getByRole('heading', { name: 'Share profile' })).toBeVisible()
+  await expect(page.getByTestId('share-link')).toHaveValue(/\/players\/e2e_player$/)
+  await expect(page.getByRole('link', { name: 'Share on WhatsApp' })).toHaveAttribute('href', /^https:\/\/wa\.me\//)
+  // Chess's home is where the ratings are: blitz moved with the game, bullet and rapid did not.
+  await page.goto('/play/chess')
+  await expect(page.getByTestId('stat-blitz')).toContainText(firstPlayerWon ? '1220' : '1180')
+  await expect(page.getByTestId('stat-blitz')).toContainText(firstPlayerWon ? '1 W · 0 L · 0 D' : '0 W · 1 L · 0 D')
+  await expect(page.getByTestId('stat-bullet')).toContainText('No games yet')
+  await page.getByRole('link', { name: 'Profile' }).click()
 
   // Newest first. (The test accounts keep their older staked games, so there are more below.)
   const games = page.getByTestId('match-history').getByRole('listitem')
@@ -66,12 +74,12 @@ test('profile shows ratings per pace and the match history, and a past game can 
   // The display name can be changed; the username cannot.
   await page.getByRole('link', { name: 'Lobby' }).click()
   await page.getByRole('link', { name: 'Profile' }).click()
-  await page.getByRole('button', { name: 'Change display name' }).click()
+  await page.getByRole('button', { name: 'Edit profile' }).click()
   await page.getByLabel('Display name').fill('Amina of Kigali')
   await page.getByRole('button', { name: 'Save' }).click()
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Amina of Kigali')
   await expect(page.getByText('@e2e_player')).toBeVisible()
-  await page.getByRole('button', { name: 'Change display name' }).click()
+  await page.getByRole('button', { name: 'Edit profile' }).click()
   await page.getByLabel('Display name').fill('E2E Player')
   await page.getByRole('button', { name: 'Save' }).click()
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('E2E Player')
@@ -83,7 +91,10 @@ test('leaderboards rank players per pace, for all of Africa and per country', as
   await expect(page.getByRole('heading', { name: 'Leaderboards' })).toBeVisible()
 
   // Blitz, all of Africa: both players, the winner first.
-  await expect(page.getByRole('radio', { name: 'Blitz' })).toBeChecked()
+  // The game and the pace are chosen from dropdowns, like the country.
+  await expect(page.getByLabel('Game')).toHaveValue('chess')
+  await expect(page.getByLabel('Ranking')).toHaveValue('blitz')
+  await expect(page.getByRole('radio')).toHaveCount(0)
   const rows = page.getByTestId('leaderboard-row')
   await expect(rows).toHaveCount(2)
   await expect(rows.nth(0)).toContainText('1220')
@@ -104,19 +115,23 @@ test('leaderboards rank players per pace, for all of Africa and per country', as
 
   // Other paces have their own tables.
   await page.getByLabel('Region').selectOption('')
-  await page.getByRole('radio', { name: 'Rapid' }).click()
-  await expect(page.getByRole('radio', { name: 'Rapid' })).toBeChecked()
+  await page.getByLabel('Ranking').selectOption('rapid')
   // Real players may be ranked at this pace; the two test players, who only played blitz, are not.
   await expect(rows.filter({ hasText: 'e2e_player' })).toHaveCount(0)
 
   // A name leads to that player's profile: public figures only.
-  await page.getByRole('radio', { name: 'Blitz' }).click()
+  await page.getByLabel('Ranking').selectOption('blitz')
+  // Another game has its own table (and, for pool, its own two rankings).
+  await page.getByLabel('Game').selectOption('pool')
+  await expect(page.getByLabel('Ranking')).toHaveValue('eight_ball')
+  await page.getByLabel('Game').selectOption('chess')
+  await page.getByLabel('Ranking').selectOption('blitz')
   await page.getByRole('link', { name: /e2e_player2/ }).click()
   await expect(page).toHaveURL(/\/players\/e2e_player2$/)
   await expect(page.getByText('@e2e_player2')).toBeVisible()
   await expect(page.getByText(/Nigeria/)).toBeVisible()
   await expect(page.getByTestId('match-history').getByRole('listitem').first()).toContainText(firstPlayerWon ? 'Lost' : 'Won')
-  await expect(page.getByRole('button', { name: 'Change display name' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Edit profile' })).toHaveCount(0)
   // Another player's token results are not shown.
   await expect(page.getByTestId('match-history')).not.toContainText('tokens')
 
@@ -136,16 +151,25 @@ test('settings: language, data saver, board choices and logging out', async ({ p
   await expect(page.getByRole('link', { name: 'Portefeuille' })).toBeVisible()
   await page.getByLabel('Langue').selectOption('en')
 
-  // Board colours chosen here are used by the board.
-  // ...even when the page is reloaded the very next moment.
+  // The Settings page is for the system only: nothing about any game is on it.
+  await expect(page.getByRole('radio', { name: 'Brown wood' })).toHaveCount(0)
+  await expect(page.getByText('Game settings')).toHaveCount(0)
+  await expect(page.getByRole('main').getByRole('link', { name: /Chess|Ludo|Pool/ })).toHaveCount(0)
+  // A game's settings are reached from that game's own home.
+  await page.goto('/play/chess')
+  await page.getByRole('main').getByRole('link', { name: 'Settings', exact: true }).click()
+  await expect(page).toHaveURL(/\/play\/chess\/settings$/)
+  // Board colours chosen there are used by the board,
+  // even when the page is reloaded the very next moment.
   await page.getByRole('radio', { name: 'Brown wood' }).click()
   await page.goto('/play/chess/local')
   await page.getByRole('button', { name: 'Start game' }).click()
   await expect(page.locator('[data-square="a1"]')).toHaveCSS('background-color', 'rgb(168, 115, 74)')
 
   // Data saver: the home page keeps its still picture and never downloads the 3D scene.
+  await page.goto('/play/chess/settings')
+  await page.getByRole('region', { name: 'Chess settings' }).getByRole('radio', { name: 'Blue' }).click()
   await page.goto('/settings')
-  await page.getByRole('region', { name: 'Chess' }).getByRole('radio', { name: 'Blue' }).click()
   await page.getByRole('checkbox', { name: /Data saver/ }).check()
   const requested: string[] = []
   page.on('request', (request) => requested.push(request.url()))

@@ -17,6 +17,12 @@ async function signedIn(browser: Browser, index: number): Promise<Seat> {
   await page.getByLabel('Email').fill(TEST_ACCOUNTS[index]!.email)
   await page.getByLabel('Password').fill(TEST_PASSWORD)
   await page.getByRole('button', { name: 'Log in' }).click()
+  await expect(page.getByTestId('game-chess')).toBeVisible({ timeout: 20_000 })
+  // The lobby lists the games; chess has its own home, and Play there leads to the match setup.
+  await page.getByTestId('game-chess').click()
+  await page.getByTestId('game-play').click()
+  await page.getByTestId('play-options-toggle').click()
+  await page.getByTestId('play-stake-toggle').click()
   await expect(page.getByRole('button', { name: 'Find match' })).toBeVisible()
   return { context, page }
 }
@@ -131,6 +137,8 @@ test('during a match: emoji and text between opponents, the off switch, and a pr
   await black.getByRole('link', { name: 'Settings' }).click()
   await expect(black.getByRole('checkbox', { name: /Live chat during games/ })).not.toBeChecked()
   await black.getByRole('checkbox', { name: /Live chat during games/ }).check()
+  // Premoves are a chess setting, so they are on the chess settings page.
+  await black.goto('/play/chess/settings')
   await expect(black.getByRole('checkbox', { name: /Premoves/ })).toBeChecked()
 
   await one.context.close()

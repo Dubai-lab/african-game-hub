@@ -93,6 +93,8 @@ test('offline: the installed app still opens, shows the saved wallet and profile
 
   // Practice against a friend on the same phone works with no connection.
   await page.getByRole('link', { name: 'Play', exact: true }).click()
+  await page.getByTestId('game-chess').click()
+  await page.getByTestId('game-play').click()
   await page.getByRole('link', { name: 'Play on this device' }).click()
   await page.getByRole('button', { name: 'Start game' }).click()
   await page.locator('[data-square="e2"]').click()

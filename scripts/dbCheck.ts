@@ -67,7 +67,7 @@ await expectEmpty(
   `select r.role, p.proname
      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     cross join unnest(array['anon', 'authenticated', 'service_role']) as r(role)
-    where n.nspname = 'private' and p.proname not in ('is_match_player', 'is_match_finished')
+    where n.nspname = 'private' and p.proname not in ('is_match_player', 'is_match_finished', 'is_tournament_match')
       and has_function_privilege(r.role, p.oid, 'EXECUTE')`,
 )
 await expectEmpty(

@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => {
   await page.getByLabel('Email').fill(TEST_ACCOUNTS[0].email)
   await page.getByLabel('Password').fill(TEST_PASSWORD)
   await page.getByRole('button', { name: 'Log in' }).click()
-  await expect(page.getByRole('button', { name: 'Find match' })).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByTestId('game-chess')).toBeVisible({ timeout: 20_000 })
 })
 
 test('pool against the computer survives a refresh', async ({ page }) => {
@@ -65,6 +65,8 @@ test('Ludo against the computer survives a refresh', async ({ page }) => {
 })
 
 test('chess against the computer survives a refresh, with the clock still running', async ({ page }) => {
+  await page.getByTestId('game-chess').click()
+  await page.getByTestId('game-play').click()
   await page.getByRole('link', { name: 'Play the computer' }).click()
   await expect(page.getByRole('heading', { name: 'Play the computer' })).toBeVisible()
   await page.getByRole('button', { name: 'Start game' }).click()

@@ -54,9 +54,9 @@
       "TOO_MANY_REQUESTS": "You have too many requests waiting. Wait for some to be answered.",
       "NO_SUCH_REQUEST": "That request is no longer there.",
       "NOT_FRIENDS": "You can only message players who have accepted your friend request.",
-      "BAD_MESSAGE": "That message cannot be sent.",
+      "BAD_MESSAGE": "Write a message of up to 300 characters.",
       "SLOW_DOWN": "You are sending too fast. Wait a few seconds.",
-      "CHAT_CLOSED": "Chat for this game has closed.",
+      "CHAT_CLOSED": "This chat is closed.",
       "CHAT_OFF_YOU": "Your live chat is turned off.",
       "CHAT_OFF_OPPONENT": "Your opponent has turned live chat off.",
       "BAD_REQUEST": "That request could not be accepted.",
@@ -72,7 +72,22 @@
       "GAME_NOT_FOUND": "This game could not be found.",
       "ILLEGAL_MOVE": "That move is not allowed.",
       "ILLEGAL_SHOT": "That shot is not allowed. If you have the cue ball in hand, put it on a clear spot first.",
-      "RATE_LIMITED": "Too many requests. Wait a few seconds and try again."
+      "RATE_LIMITED": "Too many requests. Wait a few seconds and try again.",
+      "NOT_A_FRIEND": "You can only invite a friend by name. Use a link for anyone else.",
+      "BAD_STAKE": "That stake is not on offer.",
+      "CHALLENGE_NOT_FOUND": "That invitation could not be found.",
+      "CHALLENGE_CLOSED": "That invitation is no longer open.",
+      "NOT_ALLOWED": "You cannot do that.",
+      "BAD_TOURNAMENT_NAME": "Give the tournament a name of 3 to 60 characters.",
+      "BAD_TOURNAMENT_TIME": "Choose a start within the next two weeks and one of the lengths offered.",
+      "BAD_PRIZE": "That prize is not allowed.",
+      "TOO_MANY_TOURNAMENTS": "You already have three tournaments open. Wait for one to finish.",
+      "TOURNAMENT_NOT_CANCELLABLE": "A tournament can only be cancelled by its creator, before it starts.",
+      "TOURNAMENT_NOT_FOUND": "That tournament could not be found.",
+      "TOURNAMENT_OVER": "That tournament is over.",
+      "NOT_JOINED": "Join the tournament first.",
+      "TOURNAMENT_STARTED": "This tournament has started. A tournament played in rounds can only be joined before round 1.",
+      "TOO_FAST": "One message at a time. Wait a moment."
     }
   },
   "validation": {
@@ -234,7 +249,10 @@
       "cancel": "Cancel"
     },
     "wins_one": "{{game}}: {{count}} win",
-    "wins_other": "{{game}}: {{count}} wins"
+    "wins_other": "{{game}}: {{count}} wins",
+    "games": "Games",
+    "allGames": "‹ All games",
+    "gameNotOpen": "This game is not open yet."
   },
   "notFound": {
     "title": "Page not found",
@@ -433,7 +451,10 @@
       "win_payout": "Winnings",
       "deposit": "Deposit",
       "withdrawal": "Withdrawal",
-      "adjustment": "Adjustment"
+      "adjustment": "Adjustment",
+      "tournament_prize": "Tournament prize put up",
+      "tournament_payout": "Tournament prize won",
+      "tournament_refund": "Tournament prize returned"
     }
   },
   "chess": {
@@ -674,7 +695,7 @@
   },
   "leaderboards": {
     "title": "Leaderboards",
-    "pool": "Rating",
+    "pool": "Ranking",
     "region": "Region",
     "africa": "All of Africa",
     "myCountry": "My country",
@@ -688,7 +709,7 @@
     "loadFailed": "We could not load this profile.",
     "notFound": "There is no player with that name.",
     "joined": "Joined {{date}}",
-    "editName": "Change display name",
+    "editName": "Edit profile",
     "displayName": "Display name",
     "displayNameHint": "Shown instead of @{{username}}. Leave empty to show your username.",
     "save": "Save",
@@ -697,7 +718,7 @@
     "rating": "Rating",
     "record": "{{wins}} W · {{losses}} L · {{draws}} D",
     "noGames": "No games yet",
-    "history": "Games",
+    "history": "Game history",
     "historyEmpty": "No finished games yet.",
     "historyFailed": "We could not load the games.",
     "unknownOpponent": "Opponent",
@@ -708,7 +729,10 @@
       "draw": "Draw"
     },
     "wins": "Games won",
-    "winsFor": "{{game}} games won"
+    "winsFor": "{{game}} games won",
+    "share": "Share profile",
+    "shareHint": "Send your profile to friends so they can find you and add you.",
+    "shareText": "Find me on African Game Hub:"
   },
   "friends": {
     "title": "Friends",
@@ -1087,5 +1111,177 @@
       "spinReset": "Centre"
     },
     "rotate": "Turn your phone sideways for a bigger table."
+  },
+  "share": {
+    "link": "Link to share",
+    "copy": "Copy link",
+    "copied": "Copied",
+    "whatsapp": "Share on WhatsApp"
+  },
+  "play": {
+    "home": {
+      "play": "Play",
+      "stats": "Stats",
+      "friends": "Friends",
+      "friendsEmpty": "Add friends to challenge them to a game.",
+      "findFriends": "Find friends",
+      "challenge": "Challenge",
+      "history": "Game history",
+      "historyEmpty": "No finished games yet.",
+      "viewAll": "View all",
+      "settings": "Settings",
+      "tournaments": "Tournaments"
+    },
+    "new": {
+      "title": "Play",
+      "more": "More ways to play",
+      "tournaments": "Tournaments",
+      "friend": "Play a friend",
+      "backTo": "‹ {{game}}",
+      "how": "Game",
+      "options": "Options",
+      "stakeValue": "{{stake}} tokens",
+      "tokens": "Your tokens:"
+    },
+    "settingsTitle": "Settings",
+    "settingsFor": "{{game}} settings",
+    "noSettings": "This game has no settings of its own."
+  },
+  "challenge": {
+    "title": "Play a friend",
+    "who": "Who",
+    "anyone": "Anyone with the link",
+    "anyoneHint": "You get a link to share on WhatsApp or anywhere else. The first person to accept plays you.",
+    "friendHint": "Your friend sees the invitation in the app straight away.",
+    "send": "Send challenge",
+    "sendLink": "Create link",
+    "waitingFor": "Waiting for {{name}}…",
+    "waitingLink": "Waiting for someone to accept…",
+    "expires": "The invitation stays open for 15 minutes. Stay on this page: the game opens here when it is accepted.",
+    "shareText": "Play me at {{game}} on African Game Hub:",
+    "cancel": "Cancel invitation",
+    "declined": "{{name}} declined your challenge.",
+    "closed": "This invitation is no longer open.",
+    "yours": "This is your own invitation. Share the link with the person you want to play.",
+    "incomingTitle": "{{name}} challenges you",
+    "free": "A free game. No tokens at stake.",
+    "stake": "Stake: {{stake}} tokens each. The winner takes the pot less the usual fee.",
+    "accept": "Accept",
+    "decline": "Decline",
+    "notNow": "Not now",
+    "later": "Decide later"
+  },
+  "tournament": {
+    "title": "Tournaments",
+    "back": "Back to the tournament",
+    "tabs": {
+      "open": "Now and upcoming",
+      "finished": "Finished",
+      "create": "Create"
+    },
+    "none": "No tournaments right now. Create one and share the link.",
+    "noneFinished": "No finished tournaments yet.",
+    "players_one": "{{count}} player",
+    "players_other": "{{count}} players",
+    "prize": "Prize {{amount}}",
+    "noPrize": "No prize",
+    "endsIn": "Ends in {{time}}",
+    "startsIn": "Starts in {{time}}",
+    "timeUp": "Finishing",
+    "ended": "Finished",
+    "cancelled": "Cancelled",
+    "form": {
+      "name": "Name",
+      "namePlaceholder": "Friday night blitz",
+      "twoPlayers": "Tournament games are for two players. Choose two players above.",
+      "when": "Starts",
+      "start": {
+        "15": "In 15 minutes",
+        "60": "In 1 hour",
+        "now": "Now",
+        "pick": "Choose a time"
+      },
+      "length": "Lasts",
+      "minutes": "{{count}} min",
+      "prize": "Prize",
+      "prizeFree": "No prize",
+      "prizeTokens": "Tokens from my wallet",
+      "prizeAmount": "Prize in tokens",
+      "balance": "You have {{amount}} tokens.",
+      "tooMuch": "You do not have that many tokens.",
+      "prizeHint": "The prize is taken from your tokens now and held. The top three share it 50% / 30% / 20%. If you cancel before the start, or fewer than two players finish a game, it all comes back to you.",
+      "submit": "Create tournament",
+      "kind": "Kind of tournament",
+      "kinds": {
+        "arena": "By time",
+        "rounds": "By rounds"
+      },
+      "kindHint": {
+        "arena": "Runs for a set time. Players join at any time and press Next after each game to play whoever else is free. Most points when time runs out wins.",
+        "rounds": "A fixed number of rounds, however many players join. Everyone plays each round; the next round starts when every game is over. The system pairs players on the same points, closest rating first. Entry closes when round 1 starts."
+      },
+      "rounds": "Rounds"
+    },
+    "page": {
+      "back": "‹ Tournaments",
+      "notFound": "This tournament could not be found.",
+      "by": "Created by {{name}}",
+      "how": "Join at any time while it runs. After each game, press Next to play whoever else is free: 2 points for a win, 1 for a draw. Most points when the time runs out wins.",
+      "split": "The prize goes to the top three: 50%, 30% and 20%.",
+      "join": "Join",
+      "cancel": "Cancel tournament",
+      "share": "Invite players",
+      "shareText": "Join my {{game}} tournament \"{{name}}\" on African Game Hub:",
+      "standings": "Standings",
+      "nobody": "Nobody has joined yet.",
+      "record": "{{wins}} W · {{draws}} D · {{losses}} L",
+      "points_one": "{{count}} point",
+      "points_other": "{{count}} points",
+      "waiting": "Looking for your next opponent…",
+      "notStarted": "You are in. It has not started yet; you will be paired as soon as it does.",
+      "timeUp": "Time is up. The last games are finishing.",
+      "youWon": "You won {{amount}} tokens.",
+      "games_one": "Games ({{count}})",
+      "games_other": "Games ({{count}})",
+      "chat": "Chat",
+      "watch": "Watch",
+      "noGames": "No game is being played right now.",
+      "noGamesOver": "Every game is over.",
+      "out": "out",
+      "closed": "This tournament has started. Entry closed when round 1 began, but you can watch the games.",
+      "howRounds": "Everyone plays each round. The system pairs players on the same points, closest rating first, and the next round starts when every game of the round is over. 2 points for a win, 1 for a draw. A player who is not there when their game should start loses it and is out of the rounds that follow.",
+      "pressNext": "Ready when you are. Press the button to be given a game against whoever else is free.",
+      "first": "Play",
+      "next": "Next game",
+      "stop": "Stop looking",
+      "dropped": "You were not there for a game, so you are out of the rounds that follow. You keep the points you have.",
+      "roundSoon": "The next round is being paired.",
+      "bye": "There is an odd number of players, so you have no opponent this round and are given the win.",
+      "roundWait": "Your game is over. The next round starts when every game of this round has finished. You can watch the others under Games.",
+      "yourGame": "Your game has started.",
+      "gameSoon": "You play {{name}}. The game starts as soon as you are both here."
+    },
+    "byTime": "By time",
+    "roundsCount_one": "{{count}} round",
+    "roundsCount_other": "{{count}} rounds",
+    "round": "Round {{round}} of {{rounds}}",
+    "starting": "Starting",
+    "watching": "‹ Back to the tournament",
+    "pairing": {
+      "playing": "Playing",
+      "waiting": "Not started",
+      "played": "Finished",
+      "bye": "No opponent: win",
+      "forfeit_a": "Won by no-show",
+      "forfeit_b": "Won by no-show",
+      "double_forfeit": "Neither came",
+      "void": "Called off"
+    },
+    "chat": {
+      "empty": "Nobody has said anything yet.",
+      "placeholder": "Say something to the tournament",
+      "send": "Send",
+      "joinToWrite": "Join the tournament to write here."
+    }
   }
 }

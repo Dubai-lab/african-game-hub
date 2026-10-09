@@ -48,7 +48,11 @@ describe('one die', () => {
   it('captures on an ordinary square, never on a safe square, and a capture earns no extra throw', () => {
     // Red's square 30 is yellow's square 4.
     const hit = applyMove(thrown(one({ positions: { red: [27, 5], yellow: [4, 4] } }), [3]), { piece: 0, die: 3 })
-    expect(hit).toMatchObject({ positions: { red: [30, 5], yellow: [-1, -1] }, turn: 'yellow', lastEvent: { captured: 2 } })
+    // Yellow has two pieces stacked there: one goes back to the yard, the other stays.
+    expect(hit).toMatchObject({ positions: { red: [30, 5], yellow: [-1, 4] }, turn: 'yellow', lastEvent: { captured: 1 } })
+    // Three stacked on their own gate, as after three sixes: still only one is captured. (The 1 is then played by the only piece left to take it.)
+    const gate: LocalGame = { ...newLocalGame({ players: 2, pieces: 4, dice: 2, lay: true }), positions: { red: [22, 10, 56, 56], yellow: [0, 0, 0, -1] }, rolled: [4, 1], dice: [4, 1], phase: 'move' }
+    expect(applyMove(gate, { piece: 0, die: 4 }).positions).toMatchObject({ red: [56, 11, 56, 56], yellow: [-1, 0, 0, -1] })
     // Square 34 is a star.
     const safe = applyMove(thrown(one({ positions: { red: [31, 5], yellow: [8, 6] } }), [3]), { piece: 0, die: 3 })
     expect(safe).toMatchObject({ positions: { red: [34, 5], yellow: [8, 6] }, turn: 'yellow' })

@@ -74,6 +74,11 @@ export const chessModule: GameModule = {
     const control = parseTimeControls(schema).find((c) => c.id === selectedId(value))
     return control ? paceOf(control) : 'blitz'
   },
+  optionsLabel: (schema, value) => {
+    const control = parseTimeControls(schema).find((c) => c.id === selectedId(value))
+    // "10 min" when it is minutes alone; "3 | 2" (minutes, seconds added per move) speaks for itself.
+    return control ? (control.increment_ms > 0 ? timeControlLabel(control) : `${timeControlLabel(control)} min`) : ''
+  },
   OptionsPicker: TimeControlPicker,
   MatchScreen: lazy(() => import('./online/OnlineGamePage')),
   SettingsSection: lazy(() => import('./ui/AppearanceSettings')),

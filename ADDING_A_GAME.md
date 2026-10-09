@@ -71,6 +71,8 @@ Add tests beside the existing ones in `supabase/tests/` (they run against a loca
 
 **More than two players.** The core handles any number: matchmaking fills a table of the size your game asks for (return `players` from `queueChoice`, within the registry row's `min_players` and `max_players`), every stake goes into escrow together, the one winner takes the pot less the rake, and ratings are worked out for the whole table. Ludo plays with two, three or four. What the core does not have is a shared pot: there is one winner. The rematch offer is for two-player matches only; bigger tables are offered a new game instead.
 
+**Play a friend and tournaments.** Both belong to the core (`supabase/migrations/20261009100000_challenges_and_tournaments.sql`, `core-challenge`, `core-tournament`, `src/core/lobby/`) and work for any two-player game with no extra code: an accepted invitation or a tournament pairing starts a match through the same `<game>_init_match` hook, and a finished tournament game is scored when the match is settled. A game only needs to say what its options are called, by giving its module an `optionsLabel` (chess returns "5 | 3"). Each game also has its own pages under `/play/<game>`: a home (stats, friends, history), Play (stake and options), tournaments, and its settings (the module's `SettingsSection`), so the general Settings page never grows with the number of games.
+
 **After the result.** A match is over for the core (paid, rated, players free to start another) the moment you call `finish_match`. If your game lets the others carry on for fun, as free Ludo does for second and third place, keep your own table open in your own state; do not delay the result.
 
 ### 2. Server: validate options, then one function per kind of action

@@ -1,3 +1,4 @@
+import { TournamentPresence } from '@/core/lobby/tournamentPresence'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { lazy, type ReactNode, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -20,6 +21,13 @@ const SignupPage = lazy(() => import('@/core/auth/SignupPage'))
 const CheckEmailPage = lazy(() => import('@/core/auth/CheckEmailPage'))
 const AuthCallbackPage = lazy(() => import('@/core/auth/AuthCallbackPage'))
 const LobbyPage = lazy(() => import('@/core/lobby/LobbyPage'))
+const GamePage = lazy(() => import('@/core/lobby/GamePage'))
+const GameHomePage = lazy(() => import('@/core/lobby/GameHomePage'))
+const FriendPage = lazy(() => import('@/core/lobby/FriendPage'))
+const ChallengePage = lazy(() => import('@/core/lobby/ChallengePage'))
+const TournamentsPage = lazy(() => import('@/core/lobby/TournamentsPage'))
+const TournamentPage = lazy(() => import('@/core/lobby/TournamentPage'))
+const GameSettingsPage = lazy(() => import('@/core/lobby/GameSettingsPage'))
 // The chess screens (rules library, board, piece art) load only when a game is opened.
 const LocalChessPage = lazy(() => import('@/games/chess/LocalGamePage'))
 const ComputerChessPage = lazy(() => import('@/games/chess/ComputerGamePage'))
@@ -72,6 +80,8 @@ export default function App({ staticLocation }: { staticLocation?: string }) {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <Router staticLocation={staticLocation}>
+            {/* In a tournament: "I am here", wherever the player is in the app. */}
+            {!staticLocation && <TournamentPresence />}
             <Routes>
               <Route element={<PublicFrame />}>
                 <Route index element={<LandingPage />} />
@@ -91,6 +101,14 @@ export default function App({ staticLocation }: { staticLocation?: string }) {
               <Route element={<ProtectedRoute />}>
                 <Route element={<AppShell />}>
                   <Route path="lobby" element={<LobbyPage />} />
+                  {/* A game's own pages: its home, setting up a match, a friend, tournaments, its settings. */}
+                  <Route path="play/:gameId" element={<GameHomePage />} />
+                  <Route path="play/:gameId/new" element={<GamePage />} />
+                  <Route path="play/:gameId/friend" element={<FriendPage />} />
+                  <Route path="play/:gameId/tournaments" element={<TournamentsPage />} />
+                  <Route path="play/:gameId/settings" element={<GameSettingsPage />} />
+                  <Route path="tournaments/:id" element={<TournamentPage />} />
+                  <Route path="challenge/:id" element={<ChallengePage />} />
                   <Route path="wallet" element={<WalletPage />} />
                   <Route path="leaderboards" element={<LeaderboardsPage />} />
                   <Route path="friends" element={<FriendsPage />} />

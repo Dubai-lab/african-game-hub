@@ -19,7 +19,7 @@ async function signedIn(browser: Browser, index: number): Promise<Seat> {
   await page.getByLabel('Email').fill(TEST_ACCOUNTS[index]!.email)
   await page.getByLabel('Password').fill(TEST_PASSWORD)
   await page.getByRole('button', { name: 'Log in' }).click()
-  await expect(page.getByRole('button', { name: 'Find match' })).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByTestId('game-chess')).toBeVisible({ timeout: 20_000 })
   return { context, page }
 }
 
@@ -37,7 +37,13 @@ test('two players are paired, take turns with the server’s dice, and a win pay
   // Both choose Ludo, the quick game, for 100 tokens.
   for (const { page } of [one, two]) {
     await page.getByText('Ludo', { exact: true }).click()
-    await expect(page.getByRole('radio', { name: /Ludo/ })).toBeChecked()
+    // Ludo's home shows games won, not a rating number.
+    await expect(page.getByTestId('stat-default')).toContainText('Games won')
+    await page.getByTestId('game-play').click()
+    // How to play and the stake each open from their own row.
+    await page.getByTestId('play-options-toggle').click()
+    await page.getByTestId('play-stake-toggle').click()
+    await expect(page).toHaveURL(/\/play\/ludo\/new$/)
     // The usual game is offered first: both sides, two dice, lay. This test plays the short
     // one-house game.
     await expect(page.getByRole('radio', { name: /Both sides/ })).toBeChecked()
@@ -46,8 +52,6 @@ test('two players are paired, take turns with the server’s dice, and a win pay
     await page.getByText('One side', { exact: true }).click()
     await page.getByText('Quick', { exact: true }).click()
     await expect(page.getByRole('radio', { name: /Quick/ })).toBeChecked()
-    // Ludo players are known by their wins, not a rating number.
-    await expect(page.getByText(/Ludo: [0-9]+ wins?/)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Find match' })).toBeEnabled()
     await page.getByText('100', { exact: true }).click()
   }
@@ -144,6 +148,12 @@ test('three players, free: the first home wins, and the other two play on for se
   const seatsIn = [await signedIn(browser, 0), await signedIn(browser, 1), await signedIn(browser, 2)]
   for (const { page } of seatsIn) {
     await page.getByText('Ludo', { exact: true }).click()
+    // Ludo's home shows games won, not a rating number.
+    await expect(page.getByTestId('stat-default')).toContainText('Games won')
+    await page.getByTestId('game-play').click()
+    // How to play and the stake each open from their own row.
+    await page.getByTestId('play-options-toggle').click()
+    await page.getByTestId('play-stake-toggle').click()
     await page.getByText('3 players', { exact: true }).click()
     await page.getByText('Quick', { exact: true }).click()
     await expect(page.getByRole('radio', { name: '3 players' })).toBeChecked()
@@ -153,7 +163,7 @@ test('three players, free: the first home wins, and the other two play on for se
   await expect(seatsIn[0]!.page.getByRole('heading', { name: 'Looking for an opponent…' })).toBeVisible()
   await seatsIn[1]!.page.getByRole('button', { name: 'Find match' }).click()
   await expect(seatsIn[1]!.page.getByRole('heading', { name: 'Looking for an opponent…' })).toBeVisible()
-  await expect(seatsIn[0]!.page).toHaveURL(/\/lobby$/)
+  await expect(seatsIn[0]!.page).toHaveURL(/\/play\/ludo\/new$/)
   await seatsIn[2]!.page.getByRole('button', { name: 'Find match' }).click()
   for (const { page } of seatsIn) {
     await expect(page).toHaveURL(/\/play\/ludo\/match\/[0-9a-f-]{36}$/, { timeout: 25_000 })
@@ -234,10 +244,14 @@ test('against the computer: three computer players take their turns and the game
   await page.getByLabel('Email').fill(TEST_ACCOUNTS[0].email)
   await page.getByLabel('Password').fill(TEST_PASSWORD)
   await page.getByRole('button', { name: 'Log in' }).click()
-  await expect(page.getByRole('button', { name: 'Find match' })).toBeVisible()
+  await expect(page.getByTestId('game-chess')).toBeVisible({ timeout: 20_000 })
 
   // The practice link belongs to the game that is selected.
   await page.getByText('Ludo', { exact: true }).click()
+    await page.getByTestId('game-play').click()
+    // How to play and the stake each open from their own row.
+    await page.getByTestId('play-options-toggle').click()
+    await page.getByTestId('play-stake-toggle').click()
   await expect(page.getByRole('link', { name: 'Play on this device' })).toHaveCount(0)
   await page.getByRole('link', { name: 'Play the computer' }).click()
   await expect(page.getByRole('heading', { name: 'Ludo against the computer' })).toBeVisible()
@@ -277,13 +291,14 @@ test('against the computer: three computer players take their turns and the game
   await expect(page.getByRole('radio', { name: '2 dice' })).toBeChecked()
 
   // Ludo has its own settings: one die instead of two, and the board seen from above.
-  await page.goto('/settings')
-  const ludo = page.getByRole('region', { name: 'Ludo' })
+  await page.goto('/play/ludo/settings')
+  const ludo = page.getByRole('region', { name: 'Ludo settings' })
   await expect(ludo.getByRole('radio', { name: '2 dice' })).toBeChecked()
   await ludo.getByRole('radio', { name: '1 die' }).click()
   await ludo.getByRole('checkbox', { name: /3D board/ }).uncheck()
   // The lobby and the practice game both follow it.
-  await page.goto('/lobby')
+  await page.goto('/play/ludo/new')
+  await page.getByTestId('play-options-toggle').click()
   await expect(page.getByRole('radio', { name: '1 die' })).toBeChecked()
   await page.getByRole('link', { name: 'Play the computer' }).click()
   await expect(page.getByRole('radio', { name: '1 die' })).toBeChecked()
@@ -293,9 +308,10 @@ test('against the computer: three computer players take their turns and the game
   await expect.poll(() => turnNo(page)).toBeGreaterThan(0)
 
   // Back to two dice, from the lobby this time; the setting follows.
-  await page.goto('/lobby')
+  await page.goto('/play/ludo/new')
+  await page.getByTestId('play-options-toggle').click()
   await page.getByText('2 dice', { exact: true }).click()
-  await page.goto('/settings')
-  await expect(page.getByRole('region', { name: 'Ludo' }).getByRole('radio', { name: '2 dice' })).toBeChecked()
+  await page.goto('/play/ludo/settings')
+  await expect(page.getByRole('region', { name: 'Ludo settings' }).getByRole('radio', { name: '2 dice' })).toBeChecked()
   expect(errors).toEqual([])
 })

@@ -1,11 +1,10 @@
+import { ShareLink } from '@/core/lobby/challenges'
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getGameModule } from '@/games/registry'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 import { useAuth } from '@/core/auth/AuthContext'
 import { flagEmoji } from '@/core/countries/useCountries'
-import { DEFAULT_RATING, useGameTypes } from '@/core/games/useGameTypes'
 import { supabase } from '@/core/lib/supabase'
 import { Button } from '@/core/ui/Button'
 import { Skeleton } from '@/core/ui/Skeleton'
@@ -39,23 +38,6 @@ function usePublicProfile(username: string | undefined) {
         countryCode: data.country_code,
         createdAt: data.created_at,
       }
-    },
-  })
-}
-
-function useRatings(userId: string | undefined) {
-  return useQuery({
-    queryKey: ['ratings', userId],
-    enabled: Boolean(userId),
-    staleTime: 0,
-    meta: { silent: true },
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('player_ratings')
-        .select('game_type, pool, rating, games_played, wins, losses, draws')
-        .eq('user_id', userId!)
-      if (error) throw error
-      return data
     },
   })
 }
@@ -239,9 +221,7 @@ export default function ProfilePage() {
   const { username } = useParams()
   const { user } = useAuth()
   const profile = usePublicProfile(username)
-  const games = useGameTypes()
   const target = profile.data
-  const ratings = useRatings(target?.id)
   const history = useMatchHistory(target?.id)
   const isMe = target?.id === user?.id
   const matches = history.data?.pages.flat() ?? []
@@ -266,8 +246,6 @@ export default function ProfilePage() {
     )
   }
   if (!target) return <p>{t('profile.notFound')}</p>
-
-  const liveGames = games.data?.filter((g) => g.status === 'live') ?? []
 
   return (
     <div className="flex flex-col gap-7 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-x-10">
@@ -302,33 +280,17 @@ export default function ProfilePage() {
         </div>
       </header>
 
-      {liveGames.map((game) => (
-        <section key={game.id} aria-labelledby={`ratings-${game.id}`}>
-          <h2 id={`ratings-${game.id}`} className={sectionTitle}>
-            {t(getGameModule(game.id)?.standing === 'wins' ? 'profile.winsFor' : 'profile.ratingsFor', { game: t(`games.${game.id}`, { defaultValue: game.name }) })}
+      {isMe && (
+        <section aria-labelledby="profile-share">
+          <h2 id="profile-share" className={sectionTitle}>
+            {t('profile.share')}
           </h2>
-          <dl className="mt-3 grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(3, game.ratingPools.length)}, minmax(0, 1fr))` }}>
-            {game.ratingPools.map((pool) => {
-              const row = ratings.data?.find((r) => r.game_type === game.id && r.pool === pool)
-              // Some games are known by games won, not by a rating number (the game module says which).
-              const byWins = getGameModule(game.id)?.standing === 'wins'
-              return (
-                <div key={pool} className="border-2 border-line bg-panel p-3" data-testid={`rating-${pool}`}>
-                  <dt className="text-sm font-semibold text-muted">
-                    {pool === 'default' ? t(byWins ? 'profile.wins' : 'profile.rating') : t(`ratingPools.${pool}`, { defaultValue: pool })}
-                                      </dt>
-                  <dd className="font-display text-3xl font-extrabold tabular-nums text-primary">{byWins ? (row?.wins ?? 0) : (row?.rating ?? DEFAULT_RATING)}</dd>
-                  <dd className="text-xs tabular-nums text-muted">
-                    {row
-                      ? t('profile.record', { wins: row.wins, losses: row.losses, draws: row.draws })
-                      : t('profile.noGames')}
-                  </dd>
-                </div>
-              )
-            })}
-          </dl>
+          <p className="mt-1 text-sm text-muted">{t('profile.shareHint')}</p>
+          <div className="mt-3">
+            <ShareLink path={`/players/${target.username}`} text={t('profile.shareText')} />
+          </div>
         </section>
-      ))}
+      )}
       </div>
 
       <section aria-labelledby="profile-history">

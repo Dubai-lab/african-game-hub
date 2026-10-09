@@ -310,9 +310,12 @@ export function GameTable({
                 {t('chess.actions.undo')}
               </Button>
             )}
-            <Button variant="ghost" onClick={() => setDialog('resign')}>
-              {canAbort ? t('chess.actions.abort') : t('chess.actions.resign')}
-            </Button>
+            {/* Someone only watching the game has nothing to resign. */}
+            {movable !== 'none' && (
+              <Button variant="ghost" onClick={() => setDialog('resign')}>
+                {canAbort ? t('chess.actions.abort') : t('chess.actions.resign')}
+              </Button>
+            )}
             <Button variant="ghost" onClick={() => setFlipped((f) => !f)} disabled={passAndPlay && autoFlip}>
               {t('chess.actions.flip')}
             </Button>

@@ -1,12 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { useAuth } from '@/core/auth/AuthContext'
 import i18n from '@/core/i18n'
 import { callFunction, refusalMessage } from '@/core/lib/functions'
 import { supabase } from '@/core/lib/supabase'
-import { Button } from '@/core/ui/Button'
+import { Button, buttonClass } from '@/core/ui/Button'
 import { toast } from '@/core/ui/toast'
 import type { GameOptions } from '@/games/types'
 import { useMatchmaking } from './useMatchmaking'
@@ -49,6 +49,18 @@ export function useAfterMatch({ matchId, gameId, stake, options, enabled }: Conf
     },
     [navigate],
   )
+
+  // --- A tournament game: the next game is found by the tournament, not from here -----------------
+  const tournament = useQuery({
+    queryKey: ['match-tournament', matchId],
+    staleTime: Infinity,
+    meta: { silent: true },
+    queryFn: async (): Promise<string | null> => {
+      const { data, error } = await supabase.from('matches').select('tournament_id').eq('id', matchId).maybeSingle()
+      if (error) throw error
+      return data?.tournament_id ?? null
+    },
+  })
 
   // --- Someone new, same terms -----------------------------------------------------------------
   const matchmaking = useMatchmaking(open)
@@ -164,6 +176,7 @@ export function useAfterMatch({ matchId, gameId, stake, options, enabled }: Conf
       if (options) void matchmaking.start({ gameId, stake, options })
     },
     cancelSearch: matchmaking.cancel,
+    tournamentId: tournament.data ?? null,
   }
 }
 
@@ -175,6 +188,16 @@ export type AfterMatch = ReturnType<typeof useAfterMatch>
  */
 export function AfterMatchActions({ state, opponent, newGameLabel }: { state: AfterMatch; opponent: string; newGameLabel: string }) {
   const { t } = useTranslation()
+
+  if (state.tournamentId) {
+    return (
+      <div className="flex flex-col gap-2" data-testid="after-match">
+        <Link to={`/tournaments/${state.tournamentId}`} className={buttonClass('primary', 'w-full')}>
+          {t('tournament.back')}
+        </Link>
+      </div>
+    )
+  }
 
   if (state.searching) {
     return (

@@ -61,6 +61,21 @@ export async function resetTestAccounts() {
      where m.status = 'active'
        and exists (select 1 from public.match_players mp where mp.match_id = m.id and mp.user_id in ${theirIds});
 
+    -- Invitations and tournaments involving the test accounts are closed: a prize still held
+    -- goes back to its creator (or is paid out) through the normal settlement.
+    delete from public.challenges where from_user in ${theirIds} or to_user in ${theirIds};
+    update public.tournaments
+       set starts_at = least(starts_at, now() - interval '2 hours'), ends_at = now() - interval '1 second'
+     where status in ('scheduled', 'running')
+       and (created_by in ${theirIds} or id in (select tp.tournament_id from public.tournament_players tp where tp.user_id in ${theirIds}));
+    select private.tournament_advance(t.id) from public.tournaments t where t.status in ('scheduled', 'running') and t.ends_at < now();
+    update public.tournament_pairings p set result = 'void', resolved_at = now()
+      from public.tournaments t
+     where t.id = p.tournament_id and t.status = 'running' and t.format = 'rounds' and t.ends_at < now() and p.result is null;
+    update public.tournaments set rounds = greatest(current_round, 1) where status = 'running' and format = 'rounds' and ends_at < now();
+    select private.tournament_advance(t.id) from public.tournaments t where t.status = 'running' and t.format = 'rounds' and t.ends_at < now();
+    delete from public.tournament_messages where sender_id in ${theirIds};
+
     with gone as (
            select distinct mp.match_id from public.match_players mp
             where mp.user_id in ${theirIds}

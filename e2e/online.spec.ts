@@ -23,6 +23,12 @@ async function signedIn(browser: Browser, email: string): Promise<Seat> {
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill(password)
   await page.getByRole('button', { name: 'Log in' }).click()
+  await expect(page.getByTestId('game-chess')).toBeVisible({ timeout: 20_000 })
+  // The lobby lists the games; chess has its own home, and Play there leads to the match setup.
+  await page.getByTestId('game-chess').click()
+  await page.getByTestId('game-play').click()
+  await page.getByTestId('play-options-toggle').click()
+  await page.getByTestId('play-stake-toggle').click()
   await expect(page.getByRole('button', { name: 'Find match' })).toBeVisible()
   return { context, page }
 }
@@ -148,7 +154,8 @@ test('two players are paired and play a game to checkmate, each seeing the other
   await expect(white.getByRole('dialog').getByRole('button', { name: /^New / })).toBeVisible()
 
   // The lobby no longer offers a game to return to.
-  await white.goto('/lobby')
+  await white.goto('/play/chess/new')
+  await white.getByTestId('play-stake-toggle').click()
   await expect(white.getByRole('button', { name: 'Find match' })).toBeVisible()
   await expect(white.getByText('You have a game in progress.')).toHaveCount(0)
 
@@ -283,12 +290,14 @@ test('a staked game: both stakes are held, the winner is paid, and both wallets 
   await expect(black.getByRole('button', { name: /Deposit/ })).toBeDisabled()
   await expect(black.getByRole('button', { name: /Withdraw/ })).toBeDisabled()
 
-  await white.goto('/lobby')
+  await white.goto('/play/chess/new')
+  await white.getByTestId('play-stake-toggle').click()
   await expect(white.getByTestId('balance-bonus')).toHaveText('900')
   // The loser can no longer afford the top stake, and the lobby says so.
   await expect(white.getByRole('radio', { name: /1,000/ })).toBeDisabled()
-  // Rating shown in the lobby reflects the loss.
-  await expect(white.getByText('Blitz rating 1180')).toBeVisible()
+  // The rating on chess's home reflects the loss.
+  await white.goto('/play/chess')
+  await expect(white.getByTestId('stat-blitz')).toContainText('1180')
 
   const problems = await runSql(`select * from public.verify_ledger_integrity()`)
   expect(problems).toEqual([])

@@ -1,6 +1,7 @@
+import { ChallengeInbox } from '@/core/lobby/ChallengePage'
 import { Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, NavLink, Outlet } from 'react-router'
+import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { useSocialBadge } from '@/core/social/social'
 import { RouteErrorBoundary } from './ErrorBoundary'
 import { OfflineBanner } from './OfflineBanner'
@@ -23,6 +24,9 @@ export function AppShell() {
       </span>
     ) : null
 
+  // A game's own page (/play/chess) belongs to the Play tab.
+  const inGame = /^\/(play|tournaments|challenge)\//.test(useLocation().pathname)
+
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[15rem_minmax(0,1fr)]">
       <aside className="sticky top-0 hidden h-dvh flex-col bg-primary px-4 py-6 text-surface lg:flex">
@@ -36,7 +40,7 @@ export function AppShell() {
                 <NavLink
                   to={`/${tab}`}
                   className={({ isActive }) =>
-                    `flex min-h-12 items-center px-3 font-display text-lg font-extrabold ${isActive ? 'bg-brand text-brand-ink' : 'hover:bg-primary-soft'}`
+                    `flex min-h-12 items-center px-3 font-display text-lg font-extrabold ${isActive || (tab === 'lobby' && inGame) ? 'bg-brand text-brand-ink' : 'hover:bg-primary-soft'}`
                   }
                 >
                   {t(`nav.${tab}`)}
@@ -67,6 +71,9 @@ export function AppShell() {
         </main>
       </div>
 
+      {/* A friend's invitation to a game pops up wherever the player is in the app. */}
+      <ChallengeInbox />
+
       <nav
         aria-label={t('nav.label')}
         className="fixed inset-x-0 bottom-0 z-30 border-t-2 border-ink bg-panel pb-[env(safe-area-inset-bottom)] lg:hidden"
@@ -77,7 +84,7 @@ export function AppShell() {
               <NavLink
                 to={`/${tab}`}
                 className={({ isActive }) =>
-                  `flex h-full items-center justify-center px-0.5 text-center font-display text-[0.7rem] font-extrabold leading-tight ${isActive ? 'bg-primary text-surface' : 'text-primary'}`
+                  `flex h-full items-center justify-center px-0.5 text-center font-display text-[0.7rem] font-extrabold leading-tight ${isActive || (tab === 'lobby' && inGame) ? 'bg-primary text-surface' : 'text-primary'}`
                 }
               >
                 {t(`nav.${tab}`)}

@@ -36,6 +36,8 @@ export type GameModule = {
   players?: (schema: unknown, value: GameOptions | null) => number
   /** Ways to play this game without an opponent or tokens (for chess: the computer, or two players on one phone). */
   practice?: { to: string; labelKey: string }[]
+  /** A short name for a set of options, for lists of invitations and tournaments ("5 | 3", "9-ball"). */
+  optionsLabel?: (schema: unknown, value: GameOptions | null) => string
   /** This game's part of the Settings page (for chess: board colours and pieces), if it has one. */
   SettingsSection?: LazyExoticComponent<ComponentType>
 }

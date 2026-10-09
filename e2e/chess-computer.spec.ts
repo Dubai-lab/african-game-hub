@@ -10,6 +10,8 @@ async function openComputerSetup(page: Page) {
   await page.getByLabel('Password').fill(password)
   await page.getByRole('button', { name: 'Log in' }).click()
   await expect(page).toHaveURL(/\/lobby$/)
+  await page.getByTestId('game-chess').click()
+  await page.getByTestId('game-play').click()
   await page.getByRole('link', { name: 'Play the computer' }).click()
   await expect(page.getByRole('heading', { name: 'Play the computer' })).toBeVisible()
 }
@@ -113,6 +115,8 @@ test('playing Black: the computer opens and the board faces the player', async (
 
   // Leaving for the lobby does not lose the game: coming back, it is still on the board.
   await page.getByRole('link', { name: 'Lobby' }).click()
+  await page.getByTestId('game-chess').click()
+  await page.getByTestId('game-play').click()
   await page.getByRole('link', { name: 'Play the computer' }).click()
   await expect.poll(() => moves(page).count(), { timeout: 30_000 }).toBeGreaterThanOrEqual(3)
   // Ending it (here by resigning) leads back to the setup, where the chosen level and colour

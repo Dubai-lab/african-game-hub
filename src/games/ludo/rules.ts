@@ -164,15 +164,19 @@ export function preview(game: LudoState, seat: Seat, color: Seat, piece: number,
   const landed = from === YARD ? steps - 6 : from + steps
   const square = landed <= 50 ? (START[color] + landed) % 52 : null
   // Only the stars shelter. A gate (a start square) shelters nobody: landing on an opponent
-  // there captures, as on any other square.
+  // there captures, as on any other square. One piece lands, so one piece is captured, however
+  // many are stacked on the square; the rest stay and play on. (Colours are looked at in the
+  // same order as on the server: alphabetical.)
   const safe = square !== null && (STAR_SQUARES as readonly number[]).includes(square)
   const captures: { color: Seat; piece: number }[] = []
   if (square !== null && !safe) {
-    for (const other of SEATS) {
+    for (const other of [...SEATS].sort()) {
       if (own.includes(other)) continue
-      game.positions[other]?.forEach((progress, index) => {
-        if (progress >= 0 && progress <= 50 && (START[other] + progress) % 52 === square) captures.push({ color: other, piece: index })
-      })
+      const index = game.positions[other]?.findIndex((progress) => progress >= 0 && progress <= 50 && (START[other] + progress) % 52 === square) ?? -1
+      if (index >= 0) {
+        captures.push({ color: other, piece: index })
+        break
+      }
     }
   }
   const to = captures.length > 0 && game.lay ? HOME : landed

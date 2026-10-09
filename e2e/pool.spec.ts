@@ -19,7 +19,7 @@ async function signedIn(browser: Browser, index: number): Promise<Seat> {
   await page.getByLabel('Email').fill(TEST_ACCOUNTS[index]!.email)
   await page.getByLabel('Password').fill(TEST_PASSWORD)
   await page.getByRole('button', { name: 'Log in' }).click()
-  await expect(page.getByRole('button', { name: 'Find match' })).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByTestId('game-chess')).toBeVisible({ timeout: 20_000 })
   return { context, page }
 }
 
@@ -45,7 +45,11 @@ test('two players are paired at 9-ball, the break is played on the server, and p
 
   for (const { page } of [one, two]) {
     await page.getByText('Pool', { exact: true }).click()
-    await expect(page.getByRole('radio', { name: /Pool/ })).toBeChecked()
+    await page.getByTestId('game-play').click()
+    // How to play and the stake each open from their own row.
+    await page.getByTestId('play-options-toggle').click()
+    await page.getByTestId('play-stake-toggle').click()
+    await expect(page).toHaveURL(/\/play\/pool\/new$/)
     // 8-ball is offered first; this test plays 9-ball.
     await expect(page.getByRole('radio', { name: /^8-ball/ })).toBeChecked()
     await page.getByText('9-ball', { exact: true }).click()
@@ -118,6 +122,10 @@ test('8-ball: the 8 is a called shot, and going down in the called pocket wins',
   const two = await signedIn(browser, 1)
   for (const { page } of [one, two]) {
     await page.getByText('Pool', { exact: true }).click()
+    await page.getByTestId('game-play').click()
+    // How to play and the stake each open from their own row.
+    await page.getByTestId('play-options-toggle').click()
+    await page.getByTestId('play-stake-toggle').click()
     await expect(page.getByRole('radio', { name: /^8-ball/ })).toBeChecked()
     await page.getByText('100', { exact: true }).click()
   }
@@ -178,9 +186,9 @@ test('practice against the computer, with the cloth chosen in Settings', async (
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
 
-  // Pool has its own part of the Settings page.
-  await page.goto('/settings')
-  const section = page.getByRole('region', { name: 'Pool' })
+  // Pool keeps its settings on its own page.
+  await page.goto('/play/pool/settings')
+  const section = page.getByRole('region', { name: 'Pool settings' })
   await expect(section.getByRole('radio', { name: 'Green' })).toBeChecked()
   await section.getByRole('radio', { name: 'Blue' }).click()
   await expect(section.getByRole('radio', { name: 'Blue' })).toBeChecked()
@@ -190,6 +198,10 @@ test('practice against the computer, with the cloth chosen in Settings', async (
   // From the lobby, Practice leads to the computer.
   await page.goto('/lobby')
   await page.getByText('Pool', { exact: true }).click()
+    await page.getByTestId('game-play').click()
+    // How to play and the stake each open from their own row.
+    await page.getByTestId('play-options-toggle').click()
+    await page.getByTestId('play-stake-toggle').click()
   await page.getByRole('link', { name: 'Play pool against the computer' }).click()
   await expect(page.getByRole('heading', { name: 'Pool against the computer' })).toBeVisible()
   await page.getByRole('radio', { name: '9-ball' }).click()

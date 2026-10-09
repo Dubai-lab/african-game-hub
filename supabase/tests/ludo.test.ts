@@ -148,13 +148,14 @@ describe('moving', () => {
   it('landing on an opponent sends it home and earns another roll', async () => {
     const { matchId, red } = await newGame()
     // Red's square 30 is yellow's square 4 (yellow starts 26 squares round the board).
+    // Yellow has two pieces stacked on that square: one piece lands, so one is sent home.
     await set(matchId, { positions: { red: [27, 5], yellow: [4, 4] }, phase: 'move', die: 3 })
     expect(await act(red, matchId, 'move', 0)).toEqual({ ok: true })
     const g = await game(matchId)
-    expect(g.positions).toEqual({ red: [30, 5], yellow: [-1, -1] })
+    expect(g.positions).toEqual({ red: [30, 5], yellow: [-1, 4] })
     // A capture does not earn another throw: only a six does.
     expect(g).toMatchObject({ turn: 'yellow', phase: 'roll' })
-    expect(g.last_event!.captured).toBe(2)
+    expect(g.last_event!.captured).toBe(1)
   })
 
   it('no capture on a safe square, in a home column, or by a piece merely passing over', async () => {

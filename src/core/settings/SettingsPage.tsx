@@ -1,13 +1,9 @@
-import { Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { useAuth } from '@/core/auth/AuthContext'
-import { useGameTypes } from '@/core/games/useGameTypes'
 import { Button } from '@/core/ui/Button'
 import { LanguageSwitcher } from '@/core/ui/LanguageSwitcher'
-import { Skeleton } from '@/core/ui/Skeleton'
 import { Toggle } from '@/core/ui/Toggle'
-import { getGameModule } from '@/games/registry'
 import { useMatchChatSetting } from '@/core/social/social'
 import { useSettingsStore } from './settingsStore'
 
@@ -17,13 +13,7 @@ export default function SettingsPage() {
   const { t } = useTranslation()
   const { user, signOut } = useAuth()
   const settings = useSettingsStore()
-  const games = useGameTypes()
   const matchChat = useMatchChatSetting()
-  // Each live game brings its own settings (for chess: board colours and pieces).
-  const gameSections = (games.data ?? [])
-    .filter((game) => game.status === 'live')
-    .map((game) => ({ game, Section: getGameModule(game.id)?.SettingsSection }))
-    .filter((entry) => entry.Section)
 
   return (
     <div className="flex flex-col gap-8 lg:max-w-2xl">
@@ -54,17 +44,6 @@ export default function SettingsPage() {
           />
         </div>
       </section>
-
-      {gameSections.map(({ game, Section }) => (
-        <section key={game.id} aria-labelledby={`settings-${game.id}`}>
-          <h2 id={`settings-${game.id}`} className={sectionTitle}>
-            {t(`games.${game.id}`, { defaultValue: game.name })}
-          </h2>
-          <div className="mt-3">
-            <Suspense fallback={<Skeleton className="h-40" />}>{Section && <Section />}</Suspense>
-          </div>
-        </section>
-      ))}
 
       <section aria-labelledby="settings-account">
         <h2 id="settings-account" className={sectionTitle}>

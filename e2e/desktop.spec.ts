@@ -12,6 +12,10 @@ test('on a computer the pages use the width and the board fills the window heigh
   await page.getByLabel('Email').fill(TEST_ACCOUNTS[0].email)
   await page.getByLabel('Password').fill(TEST_PASSWORD)
   await page.getByRole('button', { name: 'Log in' }).click()
+  await expect(page.getByTestId('game-chess')).toBeVisible({ timeout: 20_000 })
+  // The lobby lists the games; chess has its own home, and Play there leads to the match setup.
+  await page.getByTestId('game-chess').click()
+  await page.getByTestId('game-play').click()
   await expect(page.getByRole('button', { name: 'Find match' })).toBeVisible()
 
   // Navigation is a sidebar on the left, not a bar at the bottom.
@@ -21,10 +25,9 @@ test('on a computer the pages use the width and the board fills the window heigh
   expect(navBox.x).toBeLessThan(50)
   expect(navBox.height).toBeGreaterThan(200)
 
-  // Lobby: wallet and match setup side by side, and Find match needs no scrolling.
-  const wallet = (await page.getByTestId('balance-bonus').boundingBox())!
+  // Play: one column of choices beside the sidebar, and Find match needs no scrolling.
   const find = (await page.getByRole('button', { name: 'Find match' }).boundingBox())!
-  expect(find.x).toBeGreaterThan(wallet.x + 300)
+  expect(find.x).toBeGreaterThan(navBox.x + navBox.width)
   expect(find.y + find.height).toBeLessThanOrEqual(900)
   expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0)
 

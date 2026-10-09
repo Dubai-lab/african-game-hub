@@ -112,32 +112,37 @@ export default function LeaderboardsPage() {
   const board = useLeaderboard(game?.id, pool, country, by)
   const myCountry = profile.data?.country?.code
 
-  const chip = (chosen: boolean) =>
-    `min-h-11 flex-1 border-2 px-3 text-base font-bold ${chosen ? 'border-ink bg-brand text-brand-ink' : 'border-line bg-panel'}`
+  const select = 'min-h-11 w-full rounded-lg border border-line bg-panel px-3 text-base font-semibold'
 
   return (
     <div className="flex flex-col gap-5 lg:max-w-3xl">
       <h1 className="font-display text-3xl font-extrabold text-primary lg:text-4xl">{t('leaderboards.title')}</h1>
 
-      {liveGames.length > 1 && (
-        <div role="radiogroup" aria-label={t('lobby.chooseGame')} className="flex gap-2">
-          {liveGames.map((g) => (
-            <button key={g.id} type="button" role="radio" aria-checked={g.id === game?.id} className={chip(g.id === game?.id)} onClick={() => setGameChoice(g.id)}>
-              {t(`games.${g.id}`, { defaultValue: g.name })}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {pools.length > 1 && (
-        <div role="radiogroup" aria-label={t('leaderboards.pool')} className="flex gap-2">
-          {pools.map((p) => (
-            <button key={p} type="button" role="radio" aria-checked={p === pool} className={chip(p === pool)} onClick={() => setPoolChoice(p)}>
-              {t(`ratingPools.${p}`, { defaultValue: p })}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Which game, and which of its rankings (for chess: bullet, blitz or rapid). */}
+      <div className="grid gap-2 sm:grid-cols-2">
+        <label className="min-w-0">
+          <span className="sr-only">{t('lobby.chooseGame')}</span>
+          <select value={game?.id ?? ''} onChange={(event) => setGameChoice(event.target.value)} className={select}>
+            {liveGames.map((g) => (
+              <option key={g.id} value={g.id}>
+                {t(`games.${g.id}`, { defaultValue: g.name })}
+              </option>
+            ))}
+          </select>
+        </label>
+        {pools.length > 1 && (
+          <label className="min-w-0">
+            <span className="sr-only">{t('leaderboards.pool')}</span>
+            <select value={pool ?? ''} onChange={(event) => setPoolChoice(event.target.value)} className={select}>
+              {pools.map((p) => (
+                <option key={p} value={p}>
+                  {t(`ratingPools.${p}`, { defaultValue: p })}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <label className="min-w-0 flex-1">
@@ -145,7 +150,7 @@ export default function LeaderboardsPage() {
           <select
             value={country}
             onChange={(event) => setCountry(event.target.value)}
-            className="min-h-11 w-full rounded-lg border border-line bg-panel px-3 text-base font-semibold"
+            className={select}
           >
             <option value="">{t('leaderboards.africa')}</option>
             {countries.map((c) => (
