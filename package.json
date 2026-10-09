@@ -26,6 +26,7 @@
     "admin:build": "npm --prefix admin run build",
     "deploy:player": "powershell -NoProfile -ExecutionPolicy Bypass -File deploy.ps1 -Site player",
     "deploy:admin": "powershell -NoProfile -ExecutionPolicy Bypass -File deploy.ps1 -Site admin",
+    "deploy:server": "powershell -NoProfile -ExecutionPolicy Bypass -File deploy-server.ps1",
     "aws:off": "powershell -NoProfile -ExecutionPolicy Bypass -File infra/kill-switch.ps1",
     "aws:on": "powershell -NoProfile -ExecutionPolicy Bypass -File infra/kill-switch.ps1 -On"
   },

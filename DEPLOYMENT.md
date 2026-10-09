@@ -153,6 +153,35 @@ aws cloudformation delete-stack --stack-name agh-player --profile myprofile --re
 
 **Not possible on this account:** a custom domain (its certificate must be created in `us-east-1`, which the organization blocks), AWS WAF rate limiting (same reason), and automatic deployment from GitHub (OIDC is blocked).
 
+## 4d. The game server on AWS (Cape Town)
+
+The game server (`server/`, see its README) runs on one small machine in `af-south-1`, created from `infra/game-server.yaml` as the stack `agh-game-server`.
+
+| | |
+| --- | --- |
+| Address players use | `wss://d2xirivzgoo9lw.cloudfront.net/ws` (the `/ws` path on the player site's CloudFront distribution) |
+| Machine | one `t4g.micro`, Amazon Linux, Docker; fixed address `13.245.60.78` |
+| Publish a new version | `npm run deploy:server` (the commit on `origin/main`), or `npm run deploy:server -- -Commit abc1234` |
+| Logs | CloudWatch log group `/agh/game-server` in `af-south-1` (kept 14 days) |
+
+**How it is reached.** Browsers connect to CloudFront over `wss://`, which is what gives the server an encrypted address without a domain of its own. CloudFront passes `/ws` to the machine over plain HTTP on port 8080 and adds a secret header (`X-Origin-Secret`). The machine's firewall accepts connections from CloudFront's addresses only, and the server refuses any request without the header. There is no SSH; the machine is managed through AWS Systems Manager.
+
+**Exactly one copy.** There is no load balancer and no auto-scaling. Docker restarts the container if it crashes, and AWS restarts or moves the machine if it stops responding.
+
+**Secrets** are in Parameter Store in `af-south-1`, encrypted, under `/agh/game-server/`: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `APP_ORIGINS`, `ORIGIN_SECRET`. The machine reads them each time a version is started; they are never in the image or the repository. After changing one, run `npm run deploy:server` again so the server picks it up. `ORIGIN_SECRET` is also held by the player stack (parameter `GameServerSecret`), so changing it means updating both.
+
+**Publishing.** The commit must be pushed to GitHub first. The machine fetches it, builds the image from the repository root, stops the running container (which tells its players it is restarting) and starts the new one. If the new one does not report healthy within a minute, the previous image is started again and the command fails. While the server is away the app plays through the Edge Functions.
+
+**Switching the app over.** The player site uses the server only when it is built with `VITE_GAME_SERVER_URL=wss://d2xirivzgoo9lw.cloudfront.net/ws`.
+
+**Alarms** (emailed): the server has not reported healthy for 3 minutes; Docker restarted it 3 times in 15 minutes; memory above 85% for 5 minutes; an out-of-memory message in the logs; AWS's hardware and machine checks (which also recover or reboot it).
+
+**Cost.** About $12.50 a month: the machine ($7.88), its public address ($3.65) and a 10 GB disk (about $1). The budget `account-monthly-15usd-before-credit` emails at 50%, 80% and 100% of $15.
+
+**Stopping it in an emergency.** Stop the machine (`aws ec2 stop-instances --instance-ids <id> --region af-south-1 --profile myprofile`): the app falls back to the Edge Functions by itself. `npm run aws:off -- -Site player` also cuts it off, along with the player site.
+
+**Removing it.** First update the `agh-player` stack with `GameServerOrigin` set to empty, then delete the `agh-game-server` stack and the four parameters.
+
 ## 5. Before real players arrive
 
 - **Rotate every secret that was ever pasted into a chat or email:** the access token, the `service_role` key and the mail password. A fresh production project gives you new keys automatically; the mail password you must change yourself.

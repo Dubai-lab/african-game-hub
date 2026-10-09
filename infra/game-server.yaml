@@ -1,0 +1,348 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: African Game Hub - the game server. One small machine in Cape Town running one Docker container, reachable only through CloudFront. See server/README.md.
+
+Parameters:
+  AlertEmail:
+    Type: String
+    Description: Where alarms are sent.
+  CloudFrontPrefixList:
+    Type: String
+    Default: pl-c0aa4fa9
+    Description: AWS's list of CloudFront's own addresses in this Region (com.amazonaws.global.cloudfront.origin-facing).
+  ImageId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64
+  Repository:
+    Type: String
+    Default: https://github.com/Dubai-lab/african-game-hub.git
+
+Resources:
+  # What the machine itself is allowed to do: be managed without SSH, read its own secrets,
+  # write its logs and its health numbers. Nothing else.
+  ServerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ec2.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: game-server
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ReadOwnSecrets
+                Effect: Allow
+                Action: [ssm:GetParametersByPath, ssm:GetParameters, ssm:GetParameter]
+                Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/agh/game-server*
+              - Sid: DecryptThem
+                Effect: Allow
+                Action: kms:Decrypt
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    kms:ViaService: !Sub ssm.${AWS::Region}.amazonaws.com
+              - Sid: WriteLogs
+                Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents, logs:DescribeLogStreams]
+                Resource: !Sub ${ServerLogs.Arn}
+              - Sid: ReportHealth
+                Effect: Allow
+                Action: cloudwatch:PutMetricData
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    cloudwatch:namespace: AGH/GameServer
+
+  ServerProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: [!Ref ServerRole]
+
+  # The only way in is from CloudFront, on the server's port. No SSH.
+  ServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Game server - reachable from CloudFront only
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          SourcePrefixListId: !Ref CloudFrontPrefixList
+          Description: CloudFront to the game server
+
+  ServerLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /agh/game-server
+      RetentionInDays: 14
+
+  Server:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t4g.micro
+      ImageId: !Ref ImageId
+      IamInstanceProfile: !Ref ServerProfile
+      SecurityGroupIds: [!GetAtt ServerSecurityGroup.GroupId]
+      MetadataOptions:
+        HttpTokens: required
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs: { VolumeSize: 10, VolumeType: gp3, Encrypted: true }
+      Tags:
+        - { Key: Name, Value: agh-game-server }
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          # First boot only: Docker, git, some swap, and two small programs:
+          #   agh-deploy <commit>   builds that commit and runs it as THE one container
+          #   agh-heartbeat         once a minute, tells CloudWatch whether the server is well
+          set -eux
+          dnf install -y docker git
+          systemctl enable --now docker
+
+          # One gigabyte of memory is enough to run the server but tight for building it.
+          dd if=/dev/zero of=/swapfile bs=1M count=1024
+          chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+          echo '/swapfile none swap sw 0 0' >> /etc/fstab
+
+          mkdir -p /opt/agh
+
+          cat > /usr/local/bin/agh-deploy <<'DEPLOY'
+          #!/bin/bash
+          # Builds one commit of the game server and runs it, replacing the copy that was running.
+          # There is only ever ONE container (see server/README.md). If the new one does not
+          # report healthy, the previous image is started again.
+          set -euo pipefail
+          COMMIT="$1"
+          cd /opt/agh
+          [ -d repo/.git ] || git clone --quiet ${Repository} repo
+          cd repo
+          git fetch --quiet origin
+          git checkout --quiet --detach "$COMMIT"
+          SHA=$(git rev-parse --short HEAD)
+          echo "building $SHA"
+          docker build --quiet -f server/Dockerfile -t agh-game-server:$SHA . >/dev/null
+
+          # Secrets come from Parameter Store at start time; they are never in the image.
+          umask 077
+          ENVFILE=$(mktemp)
+          trap 'rm -f "$ENVFILE"' EXIT
+          aws ssm get-parameters-by-path --region ${AWS::Region} --path /agh/game-server/ --with-decryption \
+            --query 'Parameters[].[Name,Value]' --output text |
+            while read -r name value; do echo "$(basename "$name")=$value"; done > "$ENVFILE"
+          for key in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY APP_ORIGINS ORIGIN_SECRET; do
+            grep -q "^$key=" "$ENVFILE" || { echo "missing secret: $key"; exit 1; }
+          done
+
+          start() {
+            docker run -d --name agh-game-server --restart unless-stopped --network host \
+              --env-file "$ENVFILE" --memory 512m --stop-timeout 12 \
+              --log-driver awslogs --log-opt awslogs-region=${AWS::Region} \
+              --log-opt awslogs-group=${ServerLogs} --log-opt awslogs-stream=server \
+              "$1" >/dev/null
+          }
+          healthy() {
+            for i in $(seq 1 30); do
+              curl -fs -m 3 http://127.0.0.1:8080/health >/dev/null && return 0
+              sleep 2
+            done
+            return 1
+          }
+
+          PREVIOUS=$(docker inspect -f '{{.Config.Image}}' agh-game-server 2>/dev/null || true)
+          # The server tells its players it is restarting and leaves within ten seconds.
+          docker stop -t 12 agh-game-server >/dev/null 2>&1 || true
+          docker rm agh-game-server >/dev/null 2>&1 || true
+          start agh-game-server:$SHA
+          if healthy; then
+            echo "running $SHA: $(curl -s -m 3 http://127.0.0.1:8080/health)"
+          else
+            echo "$SHA did not become healthy; last lines:"; docker logs --tail 20 agh-game-server 2>&1 || true
+            docker rm -f agh-game-server >/dev/null 2>&1 || true
+            if [ -n "$PREVIOUS" ]; then start "$PREVIOUS"; echo "went back to $PREVIOUS"; fi
+            exit 1
+          fi
+          # Keep this image and the one before it; drop older ones.
+          docker images agh-game-server --format '{{.Repository}}:{{.Tag}}' | tail -n +3 | xargs -r docker rmi >/dev/null 2>&1 || true
+          docker builder prune -f >/dev/null 2>&1 || true
+          DEPLOY
+          chmod +x /usr/local/bin/agh-deploy
+
+          cat > /usr/local/bin/agh-heartbeat <<'BEAT'
+          #!/bin/bash
+          # Once a minute: is the server answering, has Docker had to restart it, how full is memory.
+          BODY=$(curl -s -m 5 http://127.0.0.1:8080/health || true)
+          HEALTHY=0; echo "$BODY" | grep -q '"ok":true' && HEALTHY=1
+          GAMES=$(echo "$BODY" | sed -n 's/.*"games":\([0-9]*\).*/\1/p'); [ -z "$GAMES" ] && GAMES=0
+          CONNECTIONS=$(echo "$BODY" | sed -n 's/.*"connections":\([0-9]*\).*/\1/p'); [ -z "$CONNECTIONS" ] && CONNECTIONS=0
+          COUNT=$(docker inspect -f '{{.RestartCount}}' agh-game-server 2>/dev/null || echo 0)
+          LAST=$(cat /run/agh-restarts 2>/dev/null || echo "$COUNT")
+          echo "$COUNT" > /run/agh-restarts
+          RESTARTS=$((COUNT - LAST)); [ "$RESTARTS" -lt 0 ] && RESTARTS=0
+          MEMORY=$(awk '/MemTotal/ {t=$2} /MemAvailable/ {a=$2} END {printf "%.1f", (t-a)*100/t}' /proc/meminfo)
+          aws cloudwatch put-metric-data --region ${AWS::Region} --namespace AGH/GameServer --metric-data \
+            MetricName=Healthy,Value=$HEALTHY MetricName=Restarts,Value=$RESTARTS \
+            MetricName=MemoryUsedPercent,Value=$MEMORY MetricName=Games,Value=$GAMES MetricName=Connections,Value=$CONNECTIONS
+          BEAT
+          chmod +x /usr/local/bin/agh-heartbeat
+
+          cat > /etc/systemd/system/agh-heartbeat.service <<'UNIT'
+          [Unit]
+          Description=Report game server health to CloudWatch
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/local/bin/agh-heartbeat
+          UNIT
+          cat > /etc/systemd/system/agh-heartbeat.timer <<'UNIT'
+          [Unit]
+          Description=Report game server health every minute
+          [Timer]
+          OnBootSec=60
+          OnUnitActiveSec=60
+          AccuracySec=5
+          [Install]
+          WantedBy=timers.target
+          UNIT
+          systemctl daemon-reload
+          systemctl enable --now agh-heartbeat.timer
+
+  # A fixed public address, so CloudFront keeps pointing at the right place if the machine is
+  # ever stopped and started.
+  ServerAddress:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      InstanceId: !Ref Server
+
+  # ---- Alarms: all email the same address ----
+  Alerts:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: agh-game-server-alerts
+      Subscription:
+        - { Protocol: email, Endpoint: !Ref AlertEmail }
+
+  ServerDownAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: agh-game-server-down
+      AlarmDescription: The game server has not reported healthy for 3 minutes. Players are on the Edge Function fallback.
+      Namespace: AGH/GameServer
+      MetricName: Healthy
+      Statistic: Minimum
+      Period: 60
+      EvaluationPeriods: 3
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: breaching
+      AlarmActions: [!Ref Alerts]
+      OKActions: [!Ref Alerts]
+
+  RestartingAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: agh-game-server-restarting
+      AlarmDescription: Docker has restarted the game server 3 or more times in 15 minutes.
+      Namespace: AGH/GameServer
+      MetricName: Restarts
+      Statistic: Sum
+      Period: 900
+      EvaluationPeriods: 1
+      Threshold: 3
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Alerts]
+
+  MemoryAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: agh-game-server-memory
+      AlarmDescription: The machine's memory has been above 85% for 5 minutes.
+      Namespace: AGH/GameServer
+      MetricName: MemoryUsedPercent
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 5
+      Threshold: 85
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Alerts]
+
+  OutOfMemoryFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref ServerLogs
+      FilterPattern: '"out of memory"'
+      MetricTransformations:
+        - MetricNamespace: AGH/GameServer
+          MetricName: OutOfMemory
+          MetricValue: '1'
+          DefaultValue: 0
+
+  OutOfMemoryAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: agh-game-server-out-of-memory
+      AlarmDescription: The game server logged that it ran out of memory.
+      Namespace: AGH/GameServer
+      MetricName: OutOfMemory
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Alerts]
+
+  # The hardware under the machine has failed: AWS moves it to healthy hardware, same address.
+  HardwareAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: agh-game-server-hardware
+      AlarmDescription: AWS's own check of the underlying hardware failed. The machine is recovered automatically.
+      Namespace: AWS/EC2
+      MetricName: StatusCheckFailed_System
+      Dimensions:
+        - { Name: InstanceId, Value: !Ref Server }
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Sub arn:aws:automate:${AWS::Region}:ec2:recover
+        - !Ref Alerts
+
+  # The machine itself has stopped responding: restart it.
+  MachineAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: agh-game-server-machine
+      AlarmDescription: The machine stopped responding to AWS's check for 5 minutes. It is rebooted automatically.
+      Namespace: AWS/EC2
+      MetricName: StatusCheckFailed_Instance
+      Dimensions:
+        - { Name: InstanceId, Value: !Ref Server }
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 5
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Sub arn:aws:automate:${AWS::Region}:ec2:reboot
+        - !Ref Alerts
+
+Outputs:
+  InstanceId:
+    Description: The machine (used by the deploy command)
+    Value: !Ref Server
+  PublicIp:
+    Description: Its fixed public address
+    Value: !Ref ServerAddress
+  PrivateIp:
+    Value: !GetAtt Server.PrivateIp

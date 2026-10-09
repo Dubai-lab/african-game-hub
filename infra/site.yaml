@@ -16,9 +16,19 @@ Parameters:
     Default: 'true'
     AllowedValues: ['true', 'false']
     Description: The kill switch. false takes the site offline (CloudFront stops serving it, so it stops costing anything) without deleting it. See infra/kill-switch.ps1.
+  GameServerOrigin:
+    Type: String
+    Default: ''
+    Description: Player site only. The game server's public DNS name (see infra/game-server.yaml). When set, /ws on this site is passed to it, which is what gives the game server a secure wss:// address without a domain of its own. Empty for no game server.
+  GameServerSecret:
+    Type: String
+    Default: ''
+    NoEcho: true
+    Description: Sent to the game server as the X-Origin-Secret header, so it can tell CloudFront from anyone else. The same value as the parameter /agh/game-server/ORIGIN_SECRET in af-south-1.
 
 Conditions:
   IsHardened: !Equals [!Ref Hardened, 'true']
+  HasGameServer: !Not [!Equals [!Ref GameServerOrigin, '']]
 
 Resources:
   # The files live here. The bucket is private: nobody can read it directly, only CloudFront can.
@@ -116,6 +126,36 @@ Resources:
             OriginAccessControlId: !GetAtt SiteOriginAccessControl.Id
             S3OriginConfig:
               OriginAccessIdentity: ''
+          # The game server in Cape Town. Players' browsers speak wss:// (encrypted) to CloudFront;
+          # CloudFront speaks plain HTTP to the machine over AWS's network, and proves who it is
+          # with the secret header. The machine accepts connections from CloudFront only.
+          - !If
+            - HasGameServer
+            - Id: game-server
+              DomainName: !Ref GameServerOrigin
+              CustomOriginConfig:
+                HTTPPort: 8080
+                OriginProtocolPolicy: http-only
+                # The server pings every 25 seconds; these are comfortably above that.
+                OriginReadTimeout: 60
+                OriginKeepaliveTimeout: 60
+              OriginCustomHeaders:
+                - HeaderName: X-Origin-Secret
+                  HeaderValue: !Ref GameServerSecret
+            - !Ref AWS::NoValue
+        CacheBehaviors:
+          - !If
+            - HasGameServer
+            - PathPattern: /ws
+              TargetOriginId: game-server
+              ViewerProtocolPolicy: https-only
+              AllowedMethods: [GET, HEAD]
+              Compress: false
+              # AWS managed "CachingDisabled" and "AllViewerExceptHostHeader": nothing is cached,
+              # and the browser's own headers (Origin, the WebSocket handshake) reach the server.
+              CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+              OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+            - !Ref AWS::NoValue
         DefaultCacheBehavior:
           TargetOriginId: site-bucket
           ViewerProtocolPolicy: redirect-to-https
