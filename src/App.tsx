@@ -33,6 +33,7 @@ const LocalChessPage = lazy(() => import('@/games/chess/LocalGamePage'))
 const ComputerChessPage = lazy(() => import('@/games/chess/ComputerGamePage'))
 const ComputerLudoPage = lazy(() => import('@/games/ludo/LudoComputerPage'))
 const ComputerPoolPage = lazy(() => import('@/games/pool/PoolComputerPage'))
+const ComputerDraughtsPage = lazy(() => import('@/games/draughts/DraughtsComputerPage'))
 const WalletPage = lazy(() => import('@/core/wallet/WalletPage'))
 const ProfilePage = lazy(() => import('@/core/profile/ProfilePage'))
 const LeaderboardsPage = lazy(() => import('@/core/leaderboards/LeaderboardsPage'))
@@ -123,6 +124,7 @@ export default function App({ staticLocation }: { staticLocation?: string }) {
                   <Route path="play/chess/computer" element={<ComputerChessPage />} />
                   <Route path="play/ludo/computer" element={<ComputerLudoPage />} />
                   <Route path="play/pool/computer" element={<ComputerPoolPage />} />
+                  <Route path="play/draughts/computer" element={<ComputerDraughtsPage />} />
                   <Route path="play/:gameId/match/:matchId" element={<MatchRoute />} />
                 </Route>
               </Route>

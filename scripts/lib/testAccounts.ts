@@ -85,6 +85,8 @@ export async function resetTestAccounts() {
          a as (delete from public.chess_moves where match_id in (select match_id from gone)),
          ps as (delete from public.pool_shots where match_id in (select match_id from gone)),
          pg as (delete from public.pool_games where match_id in (select match_id from gone)),
+         dm as (delete from public.draughts_moves where match_id in (select match_id from gone)),
+         dg as (delete from public.draughts_games where match_id in (select match_id from gone)),
          lm as (delete from public.ludo_moves where match_id in (select match_id from gone)),
          lg as (delete from public.ludo_games where match_id in (select match_id from gone)),
          b as (delete from public.chess_games where match_id in (select match_id from gone)),
@@ -97,7 +99,7 @@ export async function resetTestAccounts() {
     delete from public.direct_messages where sender_id in ${theirIds} and recipient_id in ${theirIds};
     delete from public.friendships where requester_id in ${theirIds} and addressee_id in ${theirIds};
     update public.profile_private set match_chat_enabled = true where user_id in ${theirIds} and not match_chat_enabled;
-    update public.profile_private set preferences = preferences - array['ludoDice', 'ludoBoard3d', 'ludoBoard', 'ludoSides', 'ludoLay', 'poolCloth', 'poolGuide', 'poolCue'] where user_id in ${theirIds} and preferences ?| array['ludoDice', 'ludoBoard3d', 'ludoBoard', 'ludoSides', 'ludoLay', 'poolCloth', 'poolGuide', 'poolCue'];
+    update public.profile_private set preferences = preferences - array['ludoDice', 'ludoBoard3d', 'ludoBoard', 'ludoSides', 'ludoLay', 'poolCloth', 'poolGuide', 'poolCue', 'draughtsBoard', 'draughtsPieces', 'draughtsNumbers', 'draughtsHints'] where user_id in ${theirIds} and preferences ?| array['ludoDice', 'ludoBoard3d', 'ludoBoard', 'ludoSides', 'ludoLay', 'poolCloth', 'poolGuide', 'poolCue', 'draughtsBoard', 'draughtsPieces', 'draughtsNumbers', 'draughtsHints'];
     delete from public.reports where reporter_id in ${theirIds} and reported_id in ${theirIds};
     delete from public.blocks where blocker_id in ${theirIds} and blocked_id in ${theirIds};
     update public.profile_private set is_banned = false, ban_reason = null where user_id in ${theirIds} and is_banned;

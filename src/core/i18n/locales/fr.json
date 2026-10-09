@@ -87,7 +87,8 @@
       "TOURNAMENT_OVER": "Ce tournoi est terminé.",
       "NOT_JOINED": "Rejoignez d’abord le tournoi.",
       "TOURNAMENT_STARTED": "Ce tournoi a commencé. Un tournoi par rondes ne peut être rejoint qu’avant la première ronde.",
-      "TOO_FAST": "Un message à la fois. Patientez un instant."
+      "TOO_FAST": "Un message à la fois. Patientez un instant.",
+      "CORRUPT_GAME": "L’enregistrement de cette partie est abîmé. Notre équipe a été prévenue."
     }
   },
   "validation": {
@@ -1282,6 +1283,165 @@
       "placeholder": "Dites quelque chose au tournoi",
       "send": "Envoyer",
       "joinToWrite": "Rejoignez le tournoi pour écrire ici."
+    }
+  },
+  "draughts": {
+    "white": "Blancs",
+    "black": "Noirs",
+    "back": "Retour",
+    "backToLobby": "Retour au salon",
+    "notFound": "Cette partie est introuvable.",
+    "loadFailed": "Nous n’avons pas pu charger cette partie.",
+    "stake": "{{stake}} jetons",
+    "clockWhite": "Pendule des Blancs",
+    "clockBlack": "Pendule des Noirs",
+    "taken_one": "{{count}} pièce prise",
+    "taken_other": "{{count}} pièces prises",
+    "mustCapture": "Vous devez prendre. Les pièces qui le peuvent sont marquées.",
+    "moveRejected": "Ce coup n’est pas permis. Il a été annulé.",
+    "moveNotSent": "Votre coup n’a pas pu être envoyé. Vérifiez votre connexion.",
+    "lobby": {
+      "timeControl": "Cadence",
+      "timeControlHint": "Minutes pour chaque joueur. « 5 | 3 » ajoute 3 secondes après chaque coup.",
+      "timePlain": "{{minutes}} minutes chacun",
+      "timeWithIncrement": "{{minutes}} minutes chacun, plus {{increment}} secondes par coup"
+    },
+    "board": {
+      "empty": "Case {{square}}, vide",
+      "whiteMan": "Case {{square}}, pion blanc",
+      "whiteKing": "Case {{square}}, dame blanche",
+      "blackMan": "Case {{square}}, pion noir",
+      "blackKing": "Case {{square}}, dame noire"
+    },
+    "moves": {
+      "title": "Coups",
+      "none": "Aucun coup pour l’instant",
+      "previous": "Coup précédent",
+      "next": "Coup suivant",
+      "backToGame": "Revenir à la position actuelle",
+      "lastPosition": "Aller à la dernière position"
+    },
+    "actions": {
+      "draw": "Proposer nulle",
+      "drawOffered": "Nulle proposée",
+      "undo": "Reprendre",
+      "abort": "Annuler",
+      "resign": "Abandonner",
+      "flip": "Tourner le damier"
+    },
+    "abort": {
+      "title": "Annuler cette partie ?",
+      "body": "La partie n’a pas vraiment commencé : elle sera annulée, sans résultat.",
+      "confirm": "Annuler la partie"
+    },
+    "resign": {
+      "title": "Abandonner cette partie ?",
+      "body": "{{opponent}} gagne.",
+      "cancel": "Continuer",
+      "confirm": "Abandonner"
+    },
+    "drawOffer": {
+      "title": "{{name}} propose la nulle",
+      "body": "Si vous acceptez, la partie se termine par une nulle.",
+      "accept": "Accepter la nulle",
+      "decline": "Refuser"
+    },
+    "online": {
+      "yourFirstMove": "Jouez votre premier coup. Secondes restantes :",
+      "theirFirstMove": "En attente du premier coup de {{name}}. Secondes restantes :",
+      "drawSent": "Nulle proposée. En attente d’une réponse."
+    },
+    "over": {
+      "draw": "Partie nulle",
+      "whiteWins": "Les Blancs gagnent",
+      "blackWins": "Les Noirs gagnent",
+      "youWon": "Vous avez gagné",
+      "youLost": "Vous avez perdu",
+      "aborted": "Partie annulée",
+      "tokens": "Jetons",
+      "rating": "Classement",
+      "close": "Voir le damier",
+      "reason": {
+        "no_pieces": "Toutes les pièces ont été prises.",
+        "blocked": "Le joueur au trait n’avait plus de coup : toutes ses pièces étaient bloquées.",
+        "repetition": "La même position s’est présentée trois fois.",
+        "king_moves": "Chaque joueur a joué 25 coups de dame, sans aucune prise.",
+        "endgame": "Une dame seule n’a pas pu être prise dans le nombre de coups permis.",
+        "resignation": "Par abandon.",
+        "agreement": "Les deux joueurs ont convenu de la nulle.",
+        "timeout": "Au temps.",
+        "aborted": "La partie a été annulée avant que les deux joueurs aient joué. Pas de résultat.",
+        "called_off": "La partie a été annulée par notre équipe. Pas de résultat ; toute mise a été rendue en entier.",
+        "other": "La partie est terminée."
+      }
+    },
+    "settings": {
+      "title": "Réglages des dames",
+      "board": "Couleurs du damier",
+      "pieces": "Pièces",
+      "theme": {
+        "wood": "Bois brun",
+        "green": "Vert",
+        "indigo": "Bleu",
+        "grey": "Gris"
+      },
+      "pieceSet": {
+        "classic": "Pièces ivoire et noires",
+        "coral": "Pièces crème et rouges"
+      },
+      "hints": "Montrer où une pièce peut aller",
+      "hintsHint": "Des points sur les cases où la pièce choisie peut se rendre.",
+      "numbers": "Numéroter les cases",
+      "numbersHint": "Les cases sont numérotées de 1 à 50, comme dans la notation des parties.",
+      "sound": "Sons",
+      "haptics": "Vibration",
+      "done": "Terminé"
+    },
+    "rules": {
+      "title": "Comment jouer",
+      "men": "Ce sont les dames internationales, sur un damier de 10 sur 10. Les Blancs commencent. Un pion avance d’une case en diagonale.",
+      "capture": "Un pion prend en sautant par-dessus une pièce adverse voisine, vers l’avant ou vers l’arrière, jusqu’à la case vide juste derrière. S’il peut encore prendre de là, il continue.",
+      "most": "La prise est obligatoire, et il faut jouer la prise qui enlève le plus de pièces. Les pièces prises sont retirées à la fin du coup, et aucune ne peut être sautée deux fois.",
+      "kings": "Une dame se déplace d’autant de cases qu’elle veut en diagonale et prend à distance, en se posant sur n’importe quelle case vide derrière la pièce prise.",
+      "crown": "Un pion devient dame quand son coup se termine sur la dernière rangée. Un pion qui ne fait qu’y passer pendant une prise reste un pion.",
+      "win": "Vous gagnez quand votre adversaire ne peut plus jouer : plus de pièces, ou toutes bloquées. Tomber au temps fait perdre.",
+      "draw": "Nulle : la même position trois fois ; 25 coups chacun avec des dames seulement et sans prise ; ou une dame seule qui n’est pas prise en 16 coups chacun par trois pièces, ou en 5 coups chacun par une ou deux."
+    },
+    "computer": {
+      "link": "Jouer aux dames contre l’ordinateur",
+      "title": "Les dames contre l’ordinateur",
+      "intro": "Entraînement sans jetons ni classement. Reprenez un coup quand vous voulez.",
+      "level": "Niveau",
+      "levels": {
+        "easy": {
+          "name": "Facile",
+          "hint": "Apprend encore. Laisse souvent des pièces en prise."
+        },
+        "medium": {
+          "name": "Moyen",
+          "hint": "Un adversaire régulier, qui prend ce que vous laissez en prise."
+        },
+        "hard": {
+          "name": "Difficile",
+          "hint": "Prévoit plusieurs coups à l’avance et se trompe rarement."
+        },
+        "expert": {
+          "name": "Expert",
+          "hint": "Fort et patient. Voit loin."
+        }
+      },
+      "color": "Jouer avec",
+      "random": "Au hasard",
+      "whiteFirst": "Les Blancs commencent.",
+      "clock": "Jouer avec une pendule",
+      "clockHint": "Vous et l’ordinateur jouez au temps. Laissez éteint pour un entraînement tranquille.",
+      "start": "Commencer",
+      "you": "Vous",
+      "name": "Ordinateur",
+      "tableTitle": "Ordinateur · {{level}}",
+      "thinking": "L’ordinateur réfléchit…",
+      "again": "Rejouer",
+      "change": "Changer de partie"
     }
   }
 }

@@ -40,12 +40,12 @@ afterEach(async () => {
 })
 
 describe('migrations', () => {
-  it('seed the registry: chess, ludo and pool are live, other games are coming soon, real money is off everywhere', async () => {
+  it('seed the registry: chess, ludo, draughts and pool are live, the other game is coming soon, real money is off everywhere', async () => {
     const games = await db.rows(`select id, status from public.game_types order by sort_order`)
     expect(games).toEqual([
       { id: 'chess', status: 'live' },
       { id: 'ludo', status: 'live' },
-      { id: 'draughts', status: 'coming_soon' },
+      { id: 'draughts', status: 'live' },
       { id: 'pool', status: 'live' },
       { id: 'penalty', status: 'coming_soon' },
     ])
@@ -306,7 +306,7 @@ describe('row level security', () => {
 
   it('shows visitors the reference data and nothing personal', async () => {
     await db.as('anon', null, async () => {
-      expect(await db.rows(`select id from public.game_types where status = 'live' order by sort_order`)).toEqual([{ id: 'chess' }, { id: 'ludo' }, { id: 'pool' }])
+      expect(await db.rows(`select id from public.game_types where status = 'live' order by sort_order`)).toEqual([{ id: 'chess' }, { id: 'ludo' }, { id: 'draughts' }, { id: 'pool' }])
       expect(await db.rows(`select count(*)::int as n from public.countries`)).toEqual([{ n: 54 }])
       for (const table of ['profiles', 'profile_private', 'wallets', 'ledger_entries', 'matches', 'player_ratings']) {
         await expect(db.pg.query(`select * from public.${table}`), table).rejects.toThrow(/permission denied/)

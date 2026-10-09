@@ -336,6 +336,98 @@ export type Database = {
           },
         ]
       }
+      draughts_games: {
+        Row: {
+          black_time_ms: number
+          board: string
+          draw_offer_by: string | null
+          increment_ms: number
+          last_move_at: string
+          match_id: string
+          ply: number
+          turn: string
+          white_time_ms: number
+        }
+        Insert: {
+          black_time_ms: number
+          board: string
+          draw_offer_by?: string | null
+          increment_ms?: number
+          last_move_at?: string
+          match_id: string
+          ply?: number
+          turn?: string
+          white_time_ms: number
+        }
+        Update: {
+          black_time_ms?: number
+          board?: string
+          draw_offer_by?: string | null
+          increment_ms?: number
+          last_move_at?: string
+          match_id?: string
+          ply?: number
+          turn?: string
+          white_time_ms?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "draughts_games_draw_offer_by_fkey"
+            columns: ["draw_offer_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "draughts_games_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: true
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      draughts_moves: {
+        Row: {
+          board_after: string
+          captures: Json
+          created_at: string
+          match_id: string
+          notation: string
+          path: Json
+          ply: number
+          time_left_ms: number
+        }
+        Insert: {
+          board_after: string
+          captures?: Json
+          created_at?: string
+          match_id: string
+          notation: string
+          path: Json
+          ply: number
+          time_left_ms: number
+        }
+        Update: {
+          board_after?: string
+          captures?: Json
+          created_at?: string
+          match_id?: string
+          notation?: string
+          path?: Json
+          ply?: number
+          time_left_ms?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "draughts_moves_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       escrow: {
         Row: {
           amount: number
@@ -1825,6 +1917,28 @@ export type Database = {
         Returns: Json
       }
       chess_move_context: {
+        Args: { p_match_id: string; p_user_id: string }
+        Returns: Json
+      }
+      draughts_apply_move: {
+        Args: {
+          p_board_after: string
+          p_captures: Json
+          p_end_reason: string
+          p_expected_ply: number
+          p_match_id: string
+          p_notation: string
+          p_path: Json
+          p_user_id: string
+          p_winner: string
+        }
+        Returns: Json
+      }
+      draughts_game_action: {
+        Args: { p_action: string; p_match_id: string; p_user_id: string }
+        Returns: Json
+      }
+      draughts_move_context: {
         Args: { p_match_id: string; p_user_id: string }
         Returns: Json
       }

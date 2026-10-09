@@ -32,6 +32,14 @@ const preferencesSchema = z.object({
   poolGuide: z.enum(['full', 'short']),
   /** Pool: which cue the player plays with (looks only). */
   poolCue: z.enum(['maple', 'ebony', 'ocean', 'kente']),
+  /** Draughts: the colours of the board. */
+  draughtsBoard: z.enum(['wood', 'green', 'indigo', 'grey']),
+  /** Draughts: the look of the pieces. */
+  draughtsPieces: z.enum(['classic', 'coral']),
+  /** Draughts: the number of each square in its corner, as in the written record of a game. */
+  draughtsNumbers: z.boolean(),
+  /** Draughts: dots on the squares a chosen piece may go to. */
+  draughtsHints: z.boolean(),
 })
 
 export type Preferences = z.infer<typeof preferencesSchema>
@@ -53,6 +61,10 @@ const DEFAULTS: Preferences = {
   poolCloth: 'green',
   poolGuide: 'full',
   poolCue: 'maple',
+  draughtsBoard: 'wood',
+  draughtsPieces: 'classic',
+  draughtsNumbers: false,
+  draughtsHints: true,
 }
 
 type SettingsState = Preferences & {
@@ -73,9 +85,9 @@ export const useSettingsStore = create<SettingsState>()(
 )
 
 function currentPreferences(): Preferences {
-  const { soundOn, hapticsOn, dataSaver, chessBoardTheme, chessPieceSet, chessPremoves, ludoDice, ludoBoard3d, ludoBoard, ludoSides, ludoLay, poolCloth, poolGuide, poolCue } =
+  const { soundOn, hapticsOn, dataSaver, chessBoardTheme, chessPieceSet, chessPremoves, ludoDice, ludoBoard3d, ludoBoard, ludoSides, ludoLay, poolCloth, poolGuide, poolCue, draughtsBoard, draughtsPieces, draughtsNumbers, draughtsHints } =
     useSettingsStore.getState()
-  return { soundOn, hapticsOn, dataSaver, chessBoardTheme, chessPieceSet, chessPremoves, ludoDice, ludoBoard3d, ludoBoard, ludoSides, ludoLay, poolCloth, poolGuide, poolCue }
+  return { soundOn, hapticsOn, dataSaver, chessBoardTheme, chessPieceSet, chessPremoves, ludoDice, ludoBoard3d, ludoBoard, ludoSides, ludoLay, poolCloth, poolGuide, poolCue, draughtsBoard, draughtsPieces, draughtsNumbers, draughtsHints }
 }
 
 const SAVE_DELAY_MS = 800

@@ -64,6 +64,15 @@ All four board colour themes are **original** (`src/games/chess/ui/themes.ts`).
 
 No chess.com piece art, board graphics, sounds or branding is used anywhere. The only third-party artwork is the two piece sets listed above. 
 
+## Draughts
+
+| Asset | Source | License |
+| --- | --- | --- |
+| Board and pieces | Drawn in code for this project (`src/games/draughts/DraughtsBoard.tsx`, colours in `themes.ts`): the framed 10 x 10 board, and men and kings as turned discs with a crown of our own drawing. | Ours |
+| Sounds | The hub's own wood recordings and synthesised sounds, shared with chess (see above), through `src/games/draughts/sound.ts`. | As listed for chess |
+| Computer opponent | Written for this project (`src/games/draughts/computer.ts`). No third-party engine. | Ours |
+| Rules | The official rules of international draughts (World Draughts Federation, FMJD), implemented from the rule text in `supabase/functions/_shared/draughts.ts`. Rules of a game are not copyrightable; no code or wording was copied. | n/a |
+
 ## Pool
 
 | Asset | Source | License |

@@ -87,7 +87,8 @@
       "TOURNAMENT_OVER": "That tournament is over.",
       "NOT_JOINED": "Join the tournament first.",
       "TOURNAMENT_STARTED": "This tournament has started. A tournament played in rounds can only be joined before round 1.",
-      "TOO_FAST": "One message at a time. Wait a moment."
+      "TOO_FAST": "One message at a time. Wait a moment.",
+      "CORRUPT_GAME": "This game’s record is damaged. Our team has been told."
     }
   },
   "validation": {
@@ -1282,6 +1283,165 @@
       "placeholder": "Say something to the tournament",
       "send": "Send",
       "joinToWrite": "Join the tournament to write here."
+    }
+  },
+  "draughts": {
+    "white": "White",
+    "black": "Black",
+    "back": "Back",
+    "backToLobby": "Back to the lobby",
+    "notFound": "This game could not be found.",
+    "loadFailed": "We could not load this game.",
+    "stake": "{{stake}} tokens",
+    "clockWhite": "White’s clock",
+    "clockBlack": "Black’s clock",
+    "taken_one": "{{count}} piece taken",
+    "taken_other": "{{count}} pieces taken",
+    "mustCapture": "You must capture. The pieces that can are marked.",
+    "moveRejected": "That move is not allowed. It was taken back.",
+    "moveNotSent": "Your move could not be sent. Check your connection.",
+    "lobby": {
+      "timeControl": "Time control",
+      "timeControlHint": "Minutes for each player. “5 | 3” adds 3 seconds after every move.",
+      "timePlain": "{{minutes}} minutes each",
+      "timeWithIncrement": "{{minutes}} minutes each, plus {{increment}} seconds per move"
+    },
+    "board": {
+      "empty": "Square {{square}}, empty",
+      "whiteMan": "Square {{square}}, white man",
+      "whiteKing": "Square {{square}}, white king",
+      "blackMan": "Square {{square}}, black man",
+      "blackKing": "Square {{square}}, black king"
+    },
+    "moves": {
+      "title": "Moves",
+      "none": "No moves yet",
+      "previous": "Previous move",
+      "next": "Next move",
+      "backToGame": "Back to the current position",
+      "lastPosition": "Go to the last position"
+    },
+    "actions": {
+      "draw": "Offer draw",
+      "drawOffered": "Draw offered",
+      "undo": "Take back",
+      "abort": "Abort",
+      "resign": "Resign",
+      "flip": "Flip board"
+    },
+    "abort": {
+      "title": "Abort this game?",
+      "body": "The game has not really started, so it will be called off with no result.",
+      "confirm": "Abort"
+    },
+    "resign": {
+      "title": "Resign this game?",
+      "body": "{{opponent}} wins.",
+      "cancel": "Keep playing",
+      "confirm": "Resign"
+    },
+    "drawOffer": {
+      "title": "{{name}} offers a draw",
+      "body": "If you accept, the game ends as a draw.",
+      "accept": "Accept draw",
+      "decline": "Decline"
+    },
+    "online": {
+      "yourFirstMove": "Make your first move. Seconds left:",
+      "theirFirstMove": "Waiting for {{name}}’s first move. Seconds left:",
+      "drawSent": "Draw offered. Waiting for an answer."
+    },
+    "over": {
+      "draw": "Draw",
+      "whiteWins": "White wins",
+      "blackWins": "Black wins",
+      "youWon": "You won",
+      "youLost": "You lost",
+      "aborted": "Game aborted",
+      "tokens": "Tokens",
+      "rating": "Rating",
+      "close": "Look at the board",
+      "reason": {
+        "no_pieces": "Every piece was captured.",
+        "blocked": "The player to move had no move left: every piece was blocked.",
+        "repetition": "The same position came up three times.",
+        "king_moves": "Both players made 25 moves with kings only and nothing was captured.",
+        "endgame": "A lone king could not be caught in the moves the rules allow.",
+        "resignation": "By resignation.",
+        "agreement": "Both players agreed to a draw.",
+        "timeout": "On time.",
+        "aborted": "The game was called off before both players had moved. No result.",
+        "called_off": "The game was called off by our team. No result; any stake was returned in full.",
+        "other": "The game is over."
+      }
+    },
+    "settings": {
+      "title": "Draughts settings",
+      "board": "Board colours",
+      "pieces": "Pieces",
+      "theme": {
+        "wood": "Brown wood",
+        "green": "Green",
+        "indigo": "Blue",
+        "grey": "Grey"
+      },
+      "pieceSet": {
+        "classic": "Ivory and black pieces",
+        "coral": "Cream and red pieces"
+      },
+      "hints": "Show where a piece can go",
+      "hintsHint": "Dots on the squares the piece you picked may move to.",
+      "numbers": "Number the squares",
+      "numbersHint": "Squares are numbered 1 to 50, the way draughts games are written down.",
+      "sound": "Sounds",
+      "haptics": "Vibration",
+      "done": "Done"
+    },
+    "rules": {
+      "title": "How to play",
+      "men": "This is international draughts, on a board of 10 by 10. White moves first. A man moves one square diagonally forward.",
+      "capture": "A man captures by jumping an enemy piece next to it, forward or backward, onto the empty square just behind. If it can jump again from there, it goes on.",
+      "most": "Capturing is compulsory, and you must play the capture that takes the most pieces. Captured pieces are lifted when the whole move is over, and none can be jumped twice.",
+      "kings": "A king moves any distance along a diagonal and captures from a distance, landing on any empty square behind the piece it takes.",
+      "crown": "A man becomes a king when its move ends on the far row. A man that only passes that row during a capture stays a man.",
+      "win": "You win when your opponent cannot move: no pieces left, or every piece blocked. Running out of time loses.",
+      "draw": "A draw: the same position three times; 25 moves each with kings only and no capture; or a lone king that is not caught in 16 moves each by three pieces, or in 5 moves each by one or two."
+    },
+    "computer": {
+      "link": "Play draughts against the computer",
+      "title": "Draughts against the computer",
+      "intro": "Practice with no tokens and no rating. Take a move back whenever you like.",
+      "level": "Level",
+      "levels": {
+        "easy": {
+          "name": "Easy",
+          "hint": "Still learning. Often leaves pieces to be taken."
+        },
+        "medium": {
+          "name": "Medium",
+          "hint": "A steady opponent that takes what you leave hanging."
+        },
+        "hard": {
+          "name": "Hard",
+          "hint": "Plans several moves ahead and rarely slips."
+        },
+        "expert": {
+          "name": "Expert",
+          "hint": "Strong and patient. Looks far ahead."
+        }
+      },
+      "color": "Play as",
+      "random": "Random",
+      "whiteFirst": "White moves first.",
+      "clock": "Play with a clock",
+      "clockHint": "Both you and the computer are on the clock. Leave off for relaxed practice.",
+      "start": "Start game",
+      "you": "You",
+      "name": "Computer",
+      "tableTitle": "Computer · {{level}}",
+      "thinking": "The computer is thinking…",
+      "again": "Play again",
+      "change": "Change game"
     }
   }
 }

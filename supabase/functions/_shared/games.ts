@@ -20,7 +20,7 @@ type GameAdapter = {
 
 type TimeControl = { id: string; base_ms: number; increment_ms: number }
 
-function chessTimeControls(optionsSchema: unknown): TimeControl[] {
+function timeControls(optionsSchema: unknown): TimeControl[] {
   const list = (optionsSchema as { time_controls?: unknown } | null)?.time_controls
   if (!Array.isArray(list)) return []
   return list.filter(
@@ -31,7 +31,7 @@ function chessTimeControls(optionsSchema: unknown): TimeControl[] {
 
 const chess: GameAdapter = {
   queueChoice: (optionsSchema, requested) => {
-    const control = chessTimeControls(optionsSchema).find((c) => c.id === requested.time_control)
+    const control = timeControls(optionsSchema).find((c) => c.id === requested.time_control)
     if (!control) return null
     // Standard pacing, from the expected length of a 40-move game (same rule as the app).
     const seconds = (control.base_ms + 40 * control.increment_ms) / 1000
@@ -70,4 +70,12 @@ const pool: GameAdapter = {
   },
 }
 
-export const games: Record<string, GameAdapter> = { chess, ludo, pool }
+const draughts: GameAdapter = {
+  queueChoice: (optionsSchema, requested) => {
+    const control = timeControls(optionsSchema).find((c) => c.id === requested.time_control)
+    // One rating for draughts, whatever the clock.
+    return control ? { options: { time_control: control.id }, ratingPool: 'default' } : null
+  },
+}
+
+export const games: Record<string, GameAdapter> = { chess, ludo, pool, draughts }

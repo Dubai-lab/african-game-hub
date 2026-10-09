@@ -163,7 +163,7 @@ describe('tournaments', () => {
     expect(await create(host, -5)).toEqual({ status: 'error', code: 'BAD_PRIZE' })
     expect(await create(host, 0, 17)).toEqual({ status: 'error', code: 'BAD_TOURNAMENT_TIME' })
     expect(await call(`public.tournament_create($1, 'chess', 'x', $2, 'blitz', 2, now(), 'arena', 60, null, 0)`, [users[host], CHESS])).toEqual({ status: 'error', code: 'BAD_TOURNAMENT_NAME' })
-    expect(await call(`public.tournament_create($1, 'draughts', 'Not yet', '{}', 'default', 2, now(), 'arena', 60, null, 0)`, [users[host]])).toEqual({ status: 'error', code: 'GAME_NOT_AVAILABLE' })
+    expect(await call(`public.tournament_create($1, 'penalty', 'Not yet', '{}', 'default', 2, now(), 'arena', 60, null, 0)`, [users[host]])).toEqual({ status: 'error', code: 'GAME_NOT_AVAILABLE' })
     expect((await one<{ n: number }>(`select count(*)::int as n from public.tournaments`)).n).toBe(before)
     expect((await wallet(host)).bonus).toBe(700)
 

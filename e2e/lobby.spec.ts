@@ -28,12 +28,12 @@ test('lobby shows the wallet, the games registry, and remembers the player’s c
   await expect(page.getByText(/In Rwanda, tokens are for play only for now/)).toBeVisible()
   await expect(page.getByText(/1,000 tokens are worth about RWF\s?739/)).toBeVisible()
 
-  // The lobby is the list of games and nothing else: chess, ludo and pool are live and lead to
-  // their own pages; two games are coming soon and lead nowhere. No stakes or options here.
-  for (const name of ['Chess', 'Ludo', 'Pool']) await expect(page.getByRole('link', { name: new RegExp(`${name}.*Live now`) })).toBeVisible()
-  await expect(page.getByText('Coming soon')).toHaveCount(2)
-  await expect(page.getByRole('link', { name: /Draughts/ })).toHaveCount(0)
-  await expect(page.getByTestId('game-draughts')).toHaveAttribute('aria-disabled', 'true')
+  // The lobby is the list of games and nothing else: chess, ludo, draughts and pool are live and lead
+  // to their own pages; one game is coming soon and leads nowhere. No stakes or options here.
+  for (const name of ['Chess', 'Ludo', 'Draughts', 'Pool']) await expect(page.getByRole('link', { name: new RegExp(`${name}.*Live now`) })).toBeVisible()
+  await expect(page.getByText('Coming soon')).toHaveCount(1)
+  await expect(page.getByRole('link', { name: /Penalty/ })).toHaveCount(0)
+  await expect(page.getByTestId('game-penalty')).toHaveAttribute('aria-disabled', 'true')
   await expect(page.getByRole('button', { name: 'Find match' })).toHaveCount(0)
   await expect(page.getByText('Stake')).toHaveCount(0)
 
@@ -111,7 +111,7 @@ test('lobby shows the wallet, the games registry, and remembers the player’s c
   await expect(page).toHaveURL(/\/lobby$/)
 
   // A game that does not exist, or is not open yet, has no setup page.
-  await page.goto('/play/draughts')
+  await page.goto('/play/penalty')
   await expect(page.getByText('This game is not open yet.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Find match' })).toHaveCount(0)
 

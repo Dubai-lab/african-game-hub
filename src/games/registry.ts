@@ -1,4 +1,5 @@
 import { chessModule } from './chess/lobby'
+import { draughtsModule } from './draughts/lobby'
 import { ludoModule } from './ludo/lobby'
 import { poolModule } from './pool/lobby'
 import type { GameModule } from './types'
@@ -8,6 +9,7 @@ const modules: Record<string, GameModule> = {
   [chessModule.id]: chessModule,
   [ludoModule.id]: ludoModule,
   [poolModule.id]: poolModule,
+  [draughtsModule.id]: draughtsModule,
 }
 
 export function getGameModule(gameId: string): GameModule | undefined {

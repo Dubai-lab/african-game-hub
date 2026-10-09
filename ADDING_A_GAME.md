@@ -8,6 +8,8 @@ Ludo has since been added exactly this way, and is the second worked example: `s
 
 Pool (8-ball and 9-ball) is the third: `supabase/migrations/20261008150000_pool.sql`, `supabase/functions/pool-action/`, `supabase/functions/_shared/pool.ts`, `src/games/pool/`, `supabase/tests/pool.test.ts` and `e2e/pool.spec.ts`. It shows how to do a game of physics. One file, `_shared/pool.ts`, holds the table, the physics and the rules, written so that it gives the same answer everywhere (fixed time step, only + − × ÷ and square root, shots sent as whole numbers). The server function runs it to decide every shot; the player's device runs the very same file only to draw the shot it has just sent, and then takes the table the server stored. The device never tells the server where a ball ended up.
 
+Draughts (international, 10 x 10) is the fourth: `supabase/migrations/20261009130000_draughts.sql`, `supabase/functions/draughts-action/`, `supabase/functions/_shared/draughts.ts`, `src/games/draughts/`, `supabase/tests/draughts.test.ts` and `src/games/draughts/rules.test.ts`. It is the model for a board game with clocks whose rules we write ourselves. One file, `_shared/draughts.ts`, is the whole rule book; the server function replays the stored game with it to judge each move, and the app uses the same file to show the moves on offer and to run the practice opponent. The app sends only the squares a piece visits. The move generator is checked against the published move counts for the game, which is the quickest way to know a rules file is right.
+
 ## What the core does for you
 
 You do not write any of this again:
