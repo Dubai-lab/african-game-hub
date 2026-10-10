@@ -10,6 +10,7 @@
     "e2e": "playwright test",
     "db:bundle": "node scripts/bundleMigrations.ts",
     "on-dev": "node scripts/onDev.ts",
+    "email:push": "node scripts/emailTemplates.ts",
     "server-keys": "node scripts/makeServerKeys.ts",
     "backup:ledger": "node server/backup.mjs",
     "game-art": "node scripts/makeGameArt.ts",
