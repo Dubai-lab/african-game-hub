@@ -25,7 +25,7 @@ test('lobby shows the wallet, the games registry, and remembers the player’s c
   await expect(page.getByTestId('balance-bonus')).toHaveText('1,000')
   await expect(page.getByTestId('balance-cash')).toHaveText('0')
   // Real money is off in Rwanda and the lobby says so, with the local reference value.
-  await expect(page.getByText(/Free to play in Rwanda for now\. These are free-play tokens: they have no cash value/)).toBeVisible()
+  await expect(page.getByText(/Free to play for now\. These are free-play tokens: they have no cash value/)).toBeVisible()
   // No price is put on play tokens anywhere.
   await expect(page.getByText(/worth about/)).toHaveCount(0)
 

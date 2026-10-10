@@ -39,7 +39,7 @@ export function WalletSummary({ profile }: { profile: MyProfile | undefined }) {
       {country && !country.realMoneyEnabled && (
         <p className="mt-3 border-t border-primary-soft pt-3 text-sm text-primary-tint">
           {/* No price is put on these tokens: while play is free they are not worth money. */}
-          {t('lobby.playOnly', { country: format.country(country.code) })}
+          {t('lobby.playOnly')}
         </p>
       )}
     </section>
