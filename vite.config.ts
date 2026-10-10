@@ -58,7 +58,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         // Never precache the landing page's 3D scene or pictures (app users must not pay for them),
         // nor the font files for scripts we do not use.
-        globIgnores: ['**/HeroScene-*.js', 'landing/**', 'engine/**', '**/*-{math,symbols,vietnamese}-*.woff2'],
+        // (The flag font is for computers that cannot draw flags; phones must not be made to fetch it.)
+        globIgnores: ['**/HeroScene-*.js', 'landing/**', 'engine/**', 'fonts/**', '**/*-{math,symbols,vietnamese}-*.woff2'],
         // App routes open the empty shell; '/' itself is the prerendered landing page.
         navigateFallback: '/app.html',
         navigateFallbackDenylist: [/^\/$/],

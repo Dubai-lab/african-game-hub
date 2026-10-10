@@ -60,6 +60,12 @@ All four board colour themes are **original** (`src/games/chess/ui/themes.ts`).
 | `public/landing/hero-poster.webp`, `public/landing/og.jpg` | **Original.** Rendered from our own 3D scene by `npm run capture:hero`. | Ours |
 | `public/icon.svg`, `public/icon-192.png`, `public/icon-512.png`, `public/apple-touch-icon.png` | **Original.** PNGs rendered from the SVG by `npm run icons`. | Ours |
 
+## Flags on computers
+
+| Asset | Source | License |
+| --- | --- | --- |
+| `public/fonts/TwemojiCountryFlags.woff2` | The country flags of Twemoji (Twitter / X Corp.), packaged as a font by TalkJS in [country-flag-emoji-polyfill](https://github.com/talkjs/country-flag-emoji-polyfill) 0.1.10. Used only on devices whose own fonts have no flags (Windows), where a flag would otherwise show as two letters. | Graphics: CC BY 4.0 (attribution: "Twemoji by Twitter, Inc. and other contributors"). Packaging: MIT |
+
 ## Not used
 
 No chess.com piece art, board graphics, sounds or branding is used anywhere. The only third-party artwork is the two piece sets listed above. 
