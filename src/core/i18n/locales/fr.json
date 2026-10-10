@@ -669,9 +669,7 @@
       "start": "Analyser cette partie",
       "analysing": "Analyse de la partie… {{percent}} %",
       "failed": "L’analyse n’a pas pu être lancée. Vérifiez votre connexion et réessayez.",
-      "yourAccuracy": "Votre précision",
       "accuracy": "Précision",
-      "mistakes": "Erreurs",
       "balance": "Qui est mieux : {{score}}",
       "hint": "Parcourez les coups pour voir comment chacun a été jugé.",
       "waiting": "Ce coup n’a pas encore été analysé.",
@@ -1167,7 +1165,7 @@
       "spinHint": "Touchez l’endroit où la queue doit frapper la bille blanche : en haut pour le coulé, en bas pour le rétro, sur les côtés pour l’effet latéral.",
       "spinReset": "Centre"
     },
-    "rotate": "Tournez votre téléphone pour une table plus grande."
+    "rotate": "Tournez votre téléphone : la table remplit l’écran."
   },
   "share": {
     "link": "Lien à partager",

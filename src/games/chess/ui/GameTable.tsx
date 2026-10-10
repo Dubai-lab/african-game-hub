@@ -358,7 +358,7 @@ export function GameTable({
         {/* Reviewing a finished game, top to bottom: the move on the board and what the engine
             thinks of it; the moves, with Previous and Next; then the whole game in numbers. */}
         {reviewing && reviewable && (
-          <ReviewPanel part="now" review={review} played={played} shownPly={shownPly} names={{ w: players.w.name, b: players.b.name }} />
+          <ReviewPanel review={review} played={played} shownPly={shownPly} />
         )}
 
         {over && !trial && livePly > 0 && <p className="text-center text-sm text-muted">{t('chess.trial.hint')}</p>}
@@ -382,10 +382,6 @@ export function GameTable({
         )}
 
         <MoveList played={played} viewPly={trial ? trial.ply : shownPly} onView={view} grades={reviewing ? grades : undefined} />
-
-        {reviewing && reviewable && (
-          <ReviewPanel part="summary" review={review} played={played} shownPly={shownPly} names={{ w: players.w.name, b: players.b.name }} />
-        )}
 
         {/* During a review the chat folds away to leave room; one tap opens it. */}
         {chat && reviewing ? (
@@ -498,6 +494,7 @@ export function GameTable({
           rating={rating}
           ratingChange={ratingChange}
           review={reviewable ? review : undefined}
+          names={{ w: players.w.name, b: players.b.name }}
           actions={actions}
           onReview={openReview}
           onClose={() => setResultClosed(true)}

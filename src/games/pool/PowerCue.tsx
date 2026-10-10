@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useContext } from 'react'
+import { Sideways, travelDown } from './sideways'
 import { type CueId, cueGradient } from './cues'
 
 // The cue beside the table: put a finger on it, pull it back as far as the shot should be hard,
@@ -25,7 +26,9 @@ type Props = {
 
 export function PowerCue({ ready, blocked, label, onPull, onShoot, className = '', cue }: Props) {
   const track = useRef<HTMLDivElement>(null)
-  const startY = useRef<number | null>(null)
+  const start = useRef<{ x: number; y: number } | null>(null)
+  // On a screen the game has turned, pulling "down" the cue is a pull across the glass.
+  const sideways = useContext(Sideways)
   const [pull, setPull] = useState(0)
   const usable = ready && !blocked
 
@@ -33,12 +36,13 @@ export function PowerCue({ ready, blocked, label, onPull, onShoot, className = '
     setPull(power)
     onPull(power)
   }
-  const at = (clientY: number) => {
+  const at = (event: { clientX: number; clientY: number }) => {
     const height = track.current?.clientHeight ?? 1
-    return Math.min(1, Math.max(0, (clientY - (startY.current ?? clientY)) / (height * FULL_PULL)))
+    const from = start.current ?? { x: event.clientX, y: event.clientY }
+    return Math.min(1, Math.max(0, travelDown(from, event.clientX, event.clientY, sideways) / (height * FULL_PULL)))
   }
   const release = (power: number) => {
-    startY.current = null
+    start.current = null
     set(0)
     if (power >= LEAST) onShoot(power)
   }
@@ -59,16 +63,16 @@ export function PowerCue({ ready, blocked, label, onPull, onShoot, className = '
       onPointerDown={(event) => {
         if (!usable) return
         event.currentTarget.setPointerCapture(event.pointerId)
-        startY.current = event.clientY
+        start.current = { x: event.clientX, y: event.clientY }
       }}
       onPointerMove={(event) => {
-        if (startY.current !== null) set(at(event.clientY))
+        if (start.current !== null) set(at(event))
       }}
       onPointerUp={(event) => {
-        if (startY.current !== null) release(at(event.clientY))
+        if (start.current !== null) release(at(event))
       }}
       onPointerCancel={() => {
-        startY.current = null
+        start.current = null
         set(0)
       }}
       onKeyDown={(event) => {

@@ -83,6 +83,11 @@ test('a full game by tapping: hints, clocks, captures, checkmate, review and rem
   await expect(page.getByTestId('clock-w')).toHaveAttribute('data-active', 'false')
   await expect(page.getByTestId('clock-b')).toHaveAttribute('data-active', 'false')
 
+  // The result card says how the game was played, once the engine has gone through it:
+  // accuracy for both sides and every grade counted.
+  await expect(page.getByRole('dialog', { name: 'White wins' }).getByTestId('review-table')).toBeVisible({ timeout: 90_000 })
+  expect(Number(await page.getByTestId('accuracy-w').textContent())).toBeGreaterThan(Number(await page.getByTestId('accuracy-b').textContent()))
+
   // Look back through the game: the board shows earlier positions. (A finished game can be
   // played on from any of them, to try other moves: that has a test of its own below.)
   // The result card offers the review; it opens on the first move.
@@ -100,10 +105,9 @@ test('a full game by tapping: hints, clocks, captures, checkmate, review and rem
   await page.getByRole('list', { name: 'Moves' }).getByRole('button').last().click()
   await expect(pieceOn(page, 'h5')).toHaveCount(1)
 
-  // The engine has gone through the game: accuracy for both sides, every move graded, and the
-  // losing move called what it is, with the move that should have been played.
-  await expect(page.getByTestId('review-table')).toBeVisible({ timeout: 90_000 })
-  expect(Number(await page.getByTestId('accuracy-w').textContent())).toBeGreaterThan(Number(await page.getByTestId('accuracy-b').textContent()))
+  // In the review every move is graded, and the losing move is called what it is, with the
+  // move that should have been played. The whole game's table stays on the result card.
+  await expect(page.getByTestId('review-table')).toHaveCount(0)
   await page.getByRole('list', { name: 'Moves' }).getByRole('button', { name: /^g5/ }).click()
   await expect(page.getByTestId('review-note')).toContainText('2… g5 is a blunder. Best was')
   await expect(page.getByRole('list', { name: 'Moves' }).locator('[data-grade="blunder"]')).toHaveCount(1)

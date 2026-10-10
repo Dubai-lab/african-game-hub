@@ -42,26 +42,47 @@ export function ReviewProgress({ review }: { review: GameReview }) {
   )
 }
 
-/** The three numbers on the result card: what went well, and what did not. */
-export function ReviewTiles({ side }: { side: SideSummary }) {
+/**
+ * The whole game in one table, on the result card: each side's accuracy and how many of its
+ * moves earned each grade.
+ */
+export function ReviewSummary({ summary, names }: { summary: Record<Color, SideSummary>; names: Record<Color, string> }) {
   const { t } = useTranslation()
-  const tiles: { grade: Grade; label: string; count: number }[] = [
-    { grade: 'best', label: t('chess.review.grade.best'), count: side.counts.best + side.counts.brilliant },
-    { grade: 'excellent', label: t('chess.review.grade.excellent'), count: side.counts.excellent },
-    { grade: 'blunder', label: t('chess.review.mistakes'), count: side.counts.mistake + side.counts.miss + side.counts.blunder },
-  ]
   return (
-    <dl className="grid grid-cols-3 gap-2" data-testid="review-tiles">
-      {tiles.map((tile) => (
-        <div key={tile.grade} className="flex flex-col items-center border-2 border-line bg-surface px-1 py-2">
-          <dd className="flex items-center gap-1.5 font-display text-2xl font-extrabold tabular-nums" style={{ color: GRADE_STYLE[tile.grade].color }}>
-            <GradeMark grade={tile.grade} />
-            {tile.count}
-          </dd>
-          <dt className="text-xs font-semibold text-muted">{tile.label}</dt>
-        </div>
-      ))}
-    </dl>
+    <table className="w-full text-sm leading-tight tabular-nums" aria-label={t('chess.review.summary')} data-testid="review-table">
+      <thead>
+        <tr className="font-semibold">
+          <th scope="col" className="w-1/3 truncate text-start font-semibold">
+            {names.w}
+          </th>
+          <td />
+          <th scope="col" className="w-1/3 truncate text-end font-semibold">
+            {names.b}
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr className="border-b-2 border-line font-display text-xl font-extrabold">
+          <td data-testid="accuracy-w">{summary.w.accuracy.toFixed(1)}</td>
+          <th scope="row" className="text-center font-sans text-xs font-semibold text-muted">
+            {t('chess.review.accuracy')}
+          </th>
+          <td className="text-end" data-testid="accuracy-b">
+            {summary.b.accuracy.toFixed(1)}
+          </td>
+        </tr>
+        {GRADES.map((grade) => (
+          <tr key={grade} style={{ color: GRADE_STYLE[grade].color }}>
+            <td className="font-bold">{summary.w.counts[grade]}</td>
+            <th scope="row" className="py-0.5 text-center font-semibold">
+              <GradeMark grade={grade} className="me-1.5" />
+              {t(`chess.review.grade.${grade}`)}
+            </th>
+            <td className="text-end font-bold">{summary.b.counts[grade]}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   )
 }
 
@@ -70,19 +91,14 @@ type PanelProps = {
   played: readonly PlayedMove[]
   /** The ply shown on the board (0 is the starting position). */
   shownPly: number
-  names: Record<Color, string>
-  /**
-   * Which half to draw, so the screen can put the move list between them: 'now' is the
-   * position on the board (who is better, and the verdict on the move), 'summary' the whole
-   * game (accuracy and the count of each grade).
-   */
-  part: 'now' | 'summary'
 }
 
-/** Game review beside the board: who is better, accuracy, every grade counted, and a note on the move shown. */
-export function ReviewPanel({ review, played, shownPly, names, part }: PanelProps) {
+/**
+ * Game review beside the board: who is better in the position on show, and a note on the move
+ * that led to it. (The whole game's numbers are on the result card: see ReviewSummary.)
+ */
+export function ReviewPanel({ review, played, shownPly }: PanelProps) {
   const { t } = useTranslation()
-  if (part === 'summary' && !review.summary) return null
 
   if (review.status === 'idle') {
     return <Button onClick={review.start}>{t('chess.review.start')}</Button>
@@ -104,9 +120,7 @@ export function ReviewPanel({ review, played, shownPly, names, part }: PanelProp
   const whiteShare = position ? winChance(position.cp) : 50
 
   return (
-    <section aria-label={t(part === 'now' ? 'chess.review.title' : 'chess.review.summary')} className="flex shrink-0 flex-col gap-2" data-testid={`review-${part}`}>
-      {part === 'now' && (
-        <>
+    <section aria-label={t('chess.review.title')} className="flex shrink-0 flex-col gap-2" data-testid="review-now">
       {review.status === 'running' && <ReviewProgress review={review} />}
 
       {/* Who is better in the position on the board: the light part is White's share. */}
@@ -136,46 +150,6 @@ export function ReviewPanel({ review, played, shownPly, names, part }: PanelProp
           <span className="text-muted">{t('chess.review.hint')}</span>
         )}
       </p>
-
-        </>
-      )}
-
-      {part === 'summary' && review.summary && (
-        <table className="w-full text-sm leading-tight tabular-nums" data-testid="review-table">
-          <thead>
-            <tr className="font-semibold">
-              <th scope="col" className="w-1/3 truncate text-start font-semibold">
-                {names.w}
-              </th>
-              <td />
-              <th scope="col" className="w-1/3 truncate text-end font-semibold">
-                {names.b}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="border-b-2 border-line font-display text-xl font-extrabold">
-              <td data-testid="accuracy-w">{review.summary.w.accuracy.toFixed(1)}</td>
-              <th scope="row" className="text-center font-sans text-xs font-semibold text-muted">
-                {t('chess.review.accuracy')}
-              </th>
-              <td className="text-end" data-testid="accuracy-b">
-                {review.summary.b.accuracy.toFixed(1)}
-              </td>
-            </tr>
-            {GRADES.map((grade) => (
-              <tr key={grade} style={{ color: GRADE_STYLE[grade].color }}>
-                <td className="font-bold">{review.summary!.w.counts[grade]}</td>
-                <th scope="row" className="py-0.5 text-center font-semibold">
-                  <GradeMark grade={grade} className="me-1.5" />
-                  {t(`chess.review.grade.${grade}`)}
-                </th>
-                <td className="text-end font-bold">{review.summary!.b.counts[grade]}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
     </section>
   )
 }

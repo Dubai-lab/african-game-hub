@@ -1,4 +1,5 @@
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type CSSProperties, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { pointIn, Sideways } from './sideways'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { playRecorded, preloadRecorded } from '@/core/audio/recorded'
@@ -81,8 +82,10 @@ function PlayerCard({ player, seat, toShoot, clock, label, left, compact = false
   const { t } = useTranslation()
   if (compact) {
     // One line: who, what they have left to pocket, and the clock when it is their shot.
+    // What there is no room to write (their group, their wins) is still said to a screen reader.
+    const spoken = [player?.name, label, player?.wins != null ? t('pool.wins', { count: player.wins }) : ''].filter(Boolean).join(', ')
     return (
-      <div className={`flex min-w-0 flex-1 items-center gap-1.5 px-2 ${toShoot ? 'bg-panel text-ink outline-2 -outline-offset-2 outline-brand' : 'bg-white/10 text-white'}`} data-testid={`pool-player-${seat}`} data-to-shoot={toShoot}>
+      <div role="group" aria-label={spoken} className={`flex min-w-0 flex-1 items-center gap-1.5 px-2 ${toShoot ? 'bg-panel text-ink outline-2 -outline-offset-2 outline-brand' : 'bg-white/10 text-white'}`} data-testid={`pool-player-${seat}`} data-to-shoot={toShoot}>
         <span className="truncate text-sm font-bold">{player?.name ?? ''}</span>
         <span className="flex min-w-0 flex-1 items-center gap-0.5 overflow-hidden text-xs">
           {left.length === 0 && <span className="truncate opacity-80">{label}</span>}
@@ -116,10 +119,12 @@ function PlayerCard({ player, seat, toShoot, clock, label, left, compact = false
 
 /**
  * How the screen is being held:
- *  - portrait: a phone upright. The table stands on end and fills the width.
  *  - landscape: a phone on its side. The table lies flat and takes nearly the whole screen,
  *    with the cue to pull on its left, the players in a slim bar above it, and a column of
  *    round buttons (spin, cue, chat) on its right. Everything else opens over the table.
+ *  - portrait: a phone upright. The same screen as landscape, drawn turned a quarter turn by
+ *    the game itself (see sideways.ts), so the player turns the phone and the table fills it.
+ *    Pool is never played on a table stood on end.
  *  - desktop: a computer or tablet. The table lies flat beside a full panel.
  */
 type Layout = 'portrait' | 'landscape' | 'desktop'
@@ -186,7 +191,9 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
   const { t } = useTranslation()
   const settings = useSettingsStore()
   const layout = useLayout()
-  const tight = layout === 'landscape'
+  const tight = layout !== 'desktop'
+  // A phone held upright: the game turns its own screen.
+  const turned = layout === 'portrait'
   const [panel, setPanel] = useState<'spin' | 'cue' | 'chat' | 'menu' | null>(null)
 
   // What is drawn. While a shot is being played back it runs ahead of (or behind) the game; when
@@ -430,9 +437,9 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
       aria-label={t('pool.spin')}
       className={`relative shrink-0 rounded-full border-2 border-ink bg-[#f7f5ec] shadow-[inset_-6px_-8px_14px_rgba(0,0,0,0.18)] ${size}`}
       onPointerDown={(event) => {
-        const box = event.currentTarget.getBoundingClientRect()
-        const x = ((event.clientX - box.left) / box.width) * 2 - 1
-        const y = ((event.clientY - box.top) / box.height) * 2 - 1
+        const [across, down] = pointIn(event.currentTarget.getBoundingClientRect(), event.clientX, event.clientY, turned)
+        const x = across * 2 - 1
+        const y = down * 2 - 1
         const reach = Math.hypot(x, y)
         const k = reach > 0.8 ? 0.8 / reach : 1
         setSpin({ x: x * k, y: -y * k })
@@ -487,7 +494,7 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
     <div className={`min-w-0 flex-1 ${className}`} data-testid="pool-state" data-turn={game.turn} data-shot-no={game.shotNo} data-playing={playing} data-ball-in-hand={game.ballInHand} data-need-call={needCall} data-called={called ?? ''}>
       <PoolCanvas
         balls={table}
-        vertical={layout === 'portrait'}
+        vertical={false}
         aim={aim}
         power={power / 1000}
         ballInHand={myShot && game.ballInHand}
@@ -515,9 +522,18 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
   if (tight) {
     // A phone on its side: the table is the screen.
     const tool = 'flex size-11 items-center justify-center rounded-full border-2 border-[#0b0f24] bg-[#f3f1e7] text-ink shadow-[0_2px_4px_rgba(0,0,0,0.5)] disabled:opacity-40'
+    // Turned: the screen is as wide as the phone is tall and as high as the phone is wide,
+    // hung from the top right corner of the glass and swung down a quarter turn. Its left end is
+    // then at the top of the phone (where the camera is) and its right end at the bottom.
+    const frame = turned
+      ? 'fixed left-[100vw] top-0 z-20 h-[100vw] w-[100dvh] origin-top-left rotate-90 ps-[max(0.375rem,env(safe-area-inset-top))] pe-[max(0.375rem,env(safe-area-inset-bottom))]'
+      : 'h-dvh w-full ps-[max(0.375rem,env(safe-area-inset-left))] pe-[max(0.375rem,env(safe-area-inset-right))]'
     return (
+      <Sideways.Provider value={turned}>
       <div
-        className="grid h-dvh w-full grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] grid-rows-[2.25rem_minmax(0,1fr)] gap-x-1.5 gap-y-1 overflow-hidden bg-[#141a33] py-1 ps-[max(0.375rem,env(safe-area-inset-left))] pe-[max(0.375rem,env(safe-area-inset-right))]"
+        className={`grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] grid-rows-[2.25rem_minmax(0,1fr)] gap-x-1.5 gap-y-1 overflow-hidden bg-[#141a33] py-1 ${frame}`}
+        // How high the screen is, whichever way it is drawn: the table is sized from it.
+        style={{ '--pool-high': turned ? '100vw' : '100dvh' } as CSSProperties}
         data-testid="pool-screen"
         data-layout={layout}
       >
@@ -534,7 +550,7 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
 
         {powerCue('col-start-1 row-start-2 h-full w-full')}
 
-        <div className="col-start-2 row-start-2 flex min-h-0 items-center justify-center">{tableView('max-w-[calc((100dvh-3.25rem)*1.85)]')}</div>
+        <div className="col-start-2 row-start-2 flex min-h-0 items-center justify-center">{tableView('max-w-[calc((var(--pool-high)-3.25rem)*1.85)]')}</div>
 
         {/* The round buttons beside the table: spin, the cue, the chat, and a finer turn of the cue. */}
         <div className="col-start-3 row-start-2 flex min-h-0 flex-col items-center justify-center gap-1.5" data-testid={myShot ? 'pool-controls' : undefined}>
@@ -574,11 +590,6 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
           {cuePicker}
           <p className="text-xs text-muted">{t('pool.settings.cueHint')}</p>
         </Panel>
-        {children && (
-          <Panel title={t('pool.tools.chat')} open={panel === 'chat'} onClose={() => setPanel(null)}>
-            {children}
-          </Panel>
-        )}
         <Panel title={title} open={panel === 'menu'} onClose={() => setPanel(null)}>
           <div className="flex flex-wrap items-center gap-2">
             <Link to="/lobby" className="flex min-h-11 items-center font-semibold text-primary underline underline-offset-4">
@@ -590,6 +601,14 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
           {footer}
         </Panel>
       </div>
+      {/* The chat opens outside the turned screen, the way the phone's keyboard opens: a
+          message is typed with the phone held as the keyboard expects. */}
+      {children && (
+        <Panel title={t('pool.tools.chat')} open={panel === 'chat'} onClose={() => setPanel(null)}>
+          {children}
+        </Panel>
+      )}
+      </Sideways.Provider>
     )
   }
 

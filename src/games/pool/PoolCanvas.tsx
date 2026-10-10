@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useContext } from 'react'
+import { pointIn, Sideways } from './sideways'
 import { type Ball, canPlaceCue, POCKETS, TABLE } from '../../../supabase/functions/_shared/pool'
 import { type CueId, CUES } from './cues'
 
@@ -331,6 +332,10 @@ type Props = {
 /** The table and everything on it. Draws what it is given; the server decides what happens. */
 export function PoolCanvas({ balls, vertical, aim, power, ballInHand, behindHeadString, targets, onAim, onPlace, label, cloth, cue: cueId, guide, called, canCall, onCall }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  // The screen this table is on may be drawn turned (see sideways.ts).
+  const sideways = useContext(Sideways)
+  const screenTurned = useRef(sideways)
+  screenTurned.current = sideways
   const live = useRef({ balls, aim, power, ballInHand, behindHeadString, targets, onAim, onPlace, guide, called, canCall, onCall, cueId })
   live.current = { balls, aim, power, ballInHand, behindHeadString, targets, onAim, onPlace, guide, called, canCall, onCall, cueId }
 
@@ -575,8 +580,8 @@ export function PoolCanvas({ balls, vertical, aim, power, ballInHand, behindHead
     let carrying = false
     let turning: { finger: number; aim: number } | null = null
     const point = (event: PointerEvent): [number, number] => {
-      const box = canvas.getBoundingClientRect()
-      return toTable(((event.clientX - box.left) / box.width) * canvas.width, ((event.clientY - box.top) / box.height) * canvas.height)
+      const [across, down] = pointIn(canvas.getBoundingClientRect(), event.clientX, event.clientY, screenTurned.current)
+      return toTable(across * canvas.width, down * canvas.height)
     }
     const act = (event: PointerEvent) => {
       const state = live.current

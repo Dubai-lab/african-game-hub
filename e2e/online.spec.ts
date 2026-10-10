@@ -115,8 +115,8 @@ test('two players are paired and play a game to checkmate, each seeing the other
   // through the game) how the player did.
   await expect(black.getByTestId('game-over-rating')).toHaveText(/1220\s*\+20/)
   await expect(white.getByTestId('game-over-rating')).toHaveText(/1180\s*−20/)
-  await expect(black.getByTestId('review-tiles')).toBeVisible({ timeout: 90_000 })
-  await expect(black.getByText('Your accuracy')).toBeVisible()
+  await expect(black.getByRole('dialog').getByTestId('review-table')).toBeVisible({ timeout: 90_000 })
+  await expect(black.getByRole('dialog').getByRole('rowheader', { name: 'Accuracy', exact: true })).toBeVisible()
 
   // Rematch: the loser asks, the winner is told and accepts, and both are at a new board with
   // the colours the other way round. Neither went back to the lobby.

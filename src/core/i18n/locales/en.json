@@ -669,9 +669,7 @@
       "start": "Analyse this game",
       "analysing": "Analysing the game… {{percent}}%",
       "failed": "The analysis could not be run. Check your connection and try again.",
-      "yourAccuracy": "Your accuracy",
       "accuracy": "Accuracy",
-      "mistakes": "Mistakes",
       "balance": "Who is better: {{score}}",
       "hint": "Step through the moves to see how each one was judged.",
       "waiting": "This move has not been analysed yet.",
@@ -1167,7 +1165,7 @@
       "spinHint": "Touch where the cue should strike the white ball: high to follow, low to draw back, the sides for side spin.",
       "spinReset": "Centre"
     },
-    "rotate": "Turn your phone sideways for a bigger table."
+    "rotate": "Turn your phone sideways: the table fills the screen."
   },
   "share": {
     "link": "Link to share",

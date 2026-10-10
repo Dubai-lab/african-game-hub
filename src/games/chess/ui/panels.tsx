@@ -7,7 +7,7 @@ import type { Color, Outcome, PieceSymbol, PlayedMove } from '../engine/chessLog
 import { type ClockState, formatClock, LOW_TIME_MS, remainingMs, TENTHS_BELOW_MS } from '../engine/clock'
 import type { PieceSet } from '../pieces/usePieceSet'
 import type { Grade } from '../review/analysis'
-import { GRADE_STYLE, ReviewProgress, ReviewTiles } from '../review/ReviewPanel'
+import { GRADE_STYLE, ReviewProgress, ReviewSummary } from '../review/ReviewPanel'
 import type { GameReview } from '../review/useGameReview'
 
 /**
@@ -209,6 +209,8 @@ type GameOverProps = {
   tokensChange?: number
   /** The engine's review of the game; absent when there is nothing to review. */
   review?: GameReview
+  /** The players' names, over the columns of the review's table. */
+  names: Record<Color, string>
   /** What to do next: play again, rematch, new game. */
   actions: React.ReactNode
   onReview: () => void
@@ -216,7 +218,7 @@ type GameOverProps = {
 }
 
 /** The result, the moment a game ends: who won and why, what it cost or earned, how well it was played, and what next. */
-export function GameOverSheet({ outcome, perspective, rating, ratingChange, tokensChange, review, actions, onReview, onClose }: GameOverProps) {
+export function GameOverSheet({ outcome, perspective, rating, ratingChange, tokensChange, review, names, actions, onReview, onClose }: GameOverProps) {
   const { t } = useTranslation()
   const title =
     outcome.reason === 'aborted' || outcome.reason === 'called_off'
@@ -226,7 +228,6 @@ export function GameOverSheet({ outcome, perspective, rating, ratingChange, toke
       : perspective === null
         ? t(outcome.winner === 'w' ? 'chess.over.whiteWins' : 'chess.over.blackWins')
         : t(outcome.winner === perspective ? 'chess.over.youWon' : 'chess.over.youLost')
-  const mine = perspective && review?.summary ? review.summary[perspective] : null
   const called = outcome.reason === 'aborted' || outcome.reason === 'called_off'
   const tone: ResultTone = called ? 'neutral' : outcome.winner === null ? 'draw' : perspective === null || outcome.winner === perspective ? 'win' : 'loss'
 
@@ -242,14 +243,8 @@ export function GameOverSheet({ outcome, perspective, rating, ratingChange, toke
       {review && (
         <div className="flex flex-col gap-3">
           {review.status === 'running' && <ReviewProgress review={review} />}
-          {mine && (
-            <>
-              <p className="text-center text-sm font-semibold">
-                {t('chess.review.yourAccuracy')} <span className="font-display text-xl font-extrabold tabular-nums">{mine.accuracy.toFixed(1)}</span>
-              </p>
-              <ReviewTiles side={mine} />
-            </>
-          )}
+          {/* How the game was played, both sides: accuracy and every grade counted. */}
+          {review.summary && <ReviewSummary summary={review.summary} names={names} />}
           <Button onClick={onReview} className="min-h-14 text-lg">
             {t('chess.review.open')}
           </Button>

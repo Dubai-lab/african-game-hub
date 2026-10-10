@@ -39,14 +39,19 @@ async function signedIn(browser: Browser, index: number): Promise<Seat> {
 const state = (page: Page) => page.getByTestId('pool-state')
 const shotNo = async (page: Page) => Number(await state(page).getAttribute('data-shot-no'))
 const cue = (page: Page) => page.getByTestId('pool-power')
-/** Pulls the cue beside the table back by this much of its travel (0 to 1) and lets go. */
+/**
+ * Pulls the cue beside the table back by this much of its travel (0 to 1) and lets go.
+ * These phones are held upright, so the game draws its screen turned a quarter turn: the cue
+ * lies across the top of the glass, and pulling it back is a pull from right to left.
+ */
 async function pullCue(page: Page, power: number) {
+  await expect(page.getByTestId('pool-screen')).toHaveAttribute('data-layout', 'portrait')
   const box = (await cue(page).boundingBox())!
-  const x = box.x + box.width / 2
-  const y = box.y + box.height * 0.25
+  const x = box.x + box.width * 0.75
+  const y = box.y + box.height / 2
   await page.mouse.move(x, y)
   await page.mouse.down()
-  await page.mouse.move(x, y + box.height * 0.55 * power, { steps: 5 })
+  await page.mouse.move(x - box.width * 0.55 * power, y, { steps: 5 })
   await page.mouse.up()
 }
 
@@ -121,7 +126,7 @@ test('two players are paired at 9-ball, the break is played on the server, and p
   // Pool players are known by their wins, not a rating number.
   await expect(first.getByTestId('game-over-wins')).toHaveText(/9-ball games won\s*1/)
   await expect(second.getByTestId('game-over-wins')).toHaveText(/9-ball games won\s*0/)
-  await expect(first.getByTestId('pool-player-1')).toContainText('1 win')
+  await expect(first.getByTestId('pool-player-1')).toHaveAttribute('aria-label', /1 win/)
 
   const [match] = await runSql<{ status: string; end_reason: string; settled: boolean }>(`select status, end_reason, settled from public.matches where id = '${matchId}'`)
   expect(match).toMatchObject({ status: 'finished', end_reason: 'nine_ball', settled: true })
@@ -167,12 +172,13 @@ test('8-ball: the 8 is a called shot, and going down in the called pocket wins',
   await expect(first.getByText('Call the 8: touch the pocket you will put it in')).toBeVisible({ timeout: 20_000 })
   await expect(cue(first)).toHaveAttribute('aria-disabled', 'true')
   // The cards say what each player has left.
-  await expect(first.getByTestId('pool-player-1')).toContainText('Solids')
-  await expect(first.getByTestId('pool-player-2')).toContainText('Stripes')
+  await expect(first.getByTestId('pool-player-1')).toHaveAttribute('aria-label', /Solids/)
+  await expect(first.getByTestId('pool-player-2')).toHaveAttribute('aria-label', /Stripes/)
 
-  // Touch the pocket behind the 8. (On a phone the table stands upright: that pocket is top right.)
+  // Touch the pocket behind the 8. (The table is drawn turned on an upright phone: its far
+  // right corner pocket is at the bottom left of the glass.)
   const box = (await first.getByTestId('pool-table').boundingBox())!
-  await first.getByTestId('pool-table').click({ position: { x: box.width * 0.904, y: box.height * 0.053 } })
+  await first.mouse.click(box.x + box.width * 0.096, box.y + box.height * 0.947)
   await expect(state(first)).toHaveAttribute('data-called', '5')
   await expect(first.getByText('Your shot')).toBeVisible()
 
