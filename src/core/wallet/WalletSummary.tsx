@@ -38,16 +38,8 @@ export function WalletSummary({ profile }: { profile: MyProfile | undefined }) {
       )}
       {country && !country.realMoneyEnabled && (
         <p className="mt-3 border-t border-primary-soft pt-3 text-sm text-primary-tint">
+          {/* No price is put on these tokens: while play is free they are not worth money. */}
           {t('lobby.playOnly', { country: format.country(country.code) })}
-          {country.tokenRate !== null && (
-            <>
-              {' '}
-              {t('lobby.localValue', {
-                tokens: format.tokens(1000),
-                amount: format.money(1000 * country.tokenRate, country.currencyCode, country.currencyMinorUnits),
-              })}
-            </>
-          )}
         </p>
       )}
     </section>

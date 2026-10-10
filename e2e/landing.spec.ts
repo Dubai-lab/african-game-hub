@@ -27,7 +27,7 @@ test('landing page shows every section from live data, with honest copy', async 
   await expect(page.getByRole('listitem').filter({ hasText: /Rwanda$/ })).toBeVisible()
 
   // Real money is off everywhere, and the page must say so rather than imply otherwise.
-  await expect(page.getByText(/cashing out for real money is not available yet/)).toBeVisible()
+  await expect(page.getByText(/For now the hub is free to play: tokens have no cash value/)).toBeVisible()
   // Live numbers: a figure appears only once it passes its threshold (5 countries, 100 matches
   // today), and the section disappears when none do. Check the page against the real figures.
   const stats = await createClient(process.env.VITE_SUPABASE_URL!, process.env.VITE_SUPABASE_ANON_KEY!).rpc('landing_stats').single()

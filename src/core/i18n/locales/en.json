@@ -147,7 +147,7 @@
         },
         {
           "title": "Win tokens",
-          "body": "The winner takes the pot, less a {{rake}}% fee. Tokens are for play: cashing out for real money is not available yet, and will only be offered in countries where it is licensed."
+          "body": "The winner takes the pot, less a {{rake}}% fee. For now the hub is free to play: tokens have no cash value. Playing for real money, with deposits and cash-outs, is coming later and only in countries where it is licensed."
         }
       ]
     },
@@ -252,8 +252,7 @@
     "walletTitle": "Your tokens",
     "bonus": "Bonus",
     "cash": "Cash",
-    "playOnly": "In {{country}}, tokens are for play only for now. Buying tokens and cashing out are not available yet.",
-    "localValue": "For reference, {{tokens}} tokens are worth about {{amount}}.",
+    "playOnly": "Free to play in {{country}} for now. These are free-play tokens: they have no cash value. Deposits and cash-outs are coming later, where licensed.",
     "chooseGame": "Game",
     "stake": "Stake",
     "free": "Free",
@@ -308,7 +307,7 @@
         },
         {
           "h": "Tokens",
-          "p": "Tokens are the unit used in every game on the hub. Free tokens given at signup have no cash value. Real-money deposits and withdrawals are switched off and will only be offered in countries where African Game Hub is licensed to do so."
+          "p": "Tokens are the unit used in every game on the hub. For now the hub is free to play: the tokens you are given and the tokens you win are free-play tokens. They have no cash value and cannot be bought, sold, transferred for money or withdrawn. Real-money deposits and withdrawals are switched off and will only be offered in countries where African Game Hub is licensed to do so. When they are, it will be with new balances: free-play tokens will not be converted into money."
         },
         {
           "h": "Matches and stakes",
@@ -468,7 +467,7 @@
     "deposit": "Deposit",
     "withdraw": "Withdraw",
     "comingSoon": "Coming soon",
-    "moneyOff": "Buying tokens and cashing out are not available yet. They will open country by country, where licensed.",
+    "moneyOff": "Free to play for now. Deposits and withdrawals are coming later, country by country, where we are licensed. The tokens you hold today are free-play tokens: they have no cash value and cannot be bought, sold or withdrawn, now or when real-money play opens.",
     "history": "Transactions",
     "empty": "No transactions yet.",
     "historyFailed": "We could not load your transactions.",

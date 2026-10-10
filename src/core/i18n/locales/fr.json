@@ -147,7 +147,7 @@
         },
         {
           "title": "Gagnez des jetons",
-          "body": "Le vainqueur remporte le pot, moins {{rake}} % de frais. Les jetons servent à jouer : le retrait en argent réel n’est pas encore disponible et ne sera proposé que dans les pays où il est autorisé."
+          "body": "Le vainqueur remporte le pot, moins {{rake}} % de frais. Pour le moment, le jeu est gratuit : les jetons n’ont aucune valeur en argent. Le jeu en argent réel, avec dépôts et retraits, viendra plus tard et uniquement dans les pays où il est autorisé."
         }
       ]
     },
@@ -252,8 +252,7 @@
     "walletTitle": "Vos jetons",
     "bonus": "Bonus",
     "cash": "Solde",
-    "playOnly": "Dans votre pays ({{country}}), les jetons servent uniquement à jouer pour le moment. L’achat de jetons et le retrait ne sont pas encore disponibles.",
-    "localValue": "À titre indicatif, {{tokens}} jetons valent environ {{amount}}.",
+    "playOnly": "Gratuit pour le moment dans votre pays ({{country}}). Ce sont des jetons de jeu gratuit : ils n’ont aucune valeur en argent. Les dépôts et les retraits viendront plus tard, là où ils sont autorisés.",
     "chooseGame": "Jeu",
     "stake": "Mise",
     "free": "Gratuit",
@@ -308,7 +307,7 @@
         },
         {
           "h": "Jetons",
-          "p": "Les jetons sont l’unité utilisée dans tous les jeux du hub. Les jetons gratuits offerts à l’inscription n’ont aucune valeur monétaire. Les dépôts et retraits en argent réel sont désactivés et ne seront proposés que dans les pays où African Game Hub y est autorisé."
+          "p": "Les jetons sont l’unité utilisée dans tous les jeux de la plateforme. Pour le moment, le jeu est gratuit : les jetons qui vous sont donnés et ceux que vous gagnez sont des jetons de jeu gratuit. Ils n’ont aucune valeur en argent et ne peuvent être ni achetés, ni vendus, ni cédés contre de l’argent, ni retirés. Les dépôts et retraits en argent réel sont désactivés et ne seront proposés que dans les pays où African Game Hub y est autorisé. Ils le seront alors avec de nouveaux soldes : les jetons de jeu gratuit ne seront pas convertis en argent."
         },
         {
           "h": "Parties et mises",
@@ -468,7 +467,7 @@
     "deposit": "Déposer",
     "withdraw": "Retirer",
     "comingSoon": "Bientôt",
-    "moneyOff": "L’achat de jetons et le retrait ne sont pas encore disponibles. Ils ouvriront pays par pays, là où ils sont autorisés.",
+    "moneyOff": "Gratuit pour le moment. Les dépôts et les retraits viendront plus tard, pays par pays, là où nous y sommes autorisés. Les jetons que vous détenez aujourd’hui sont des jetons de jeu gratuit : ils n’ont aucune valeur en argent et ne peuvent être ni achetés, ni vendus, ni retirés, ni maintenant ni à l’ouverture du jeu en argent réel.",
     "history": "Transactions",
     "empty": "Aucune transaction pour l’instant.",
     "historyFailed": "Impossible de charger vos transactions.",
