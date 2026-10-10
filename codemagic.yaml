@@ -4,6 +4,7 @@
 #   - Android: an APK that installs straight onto a phone.
 #   - iPhone:  an unsigned IPA, to be put on a phone with Sideloadly.
 # Builds are started by hand in Codemagic, so no build minutes are spent on ordinary pushes.
+# No machine type is named: each build runs on the account's own default Mac, whatever the plan.
 
 definitions:
   shell: &shell
@@ -15,7 +16,6 @@ definitions:
 workflows:
   android-test:
     name: Android test app (APK)
-    instance_type: mac_mini_m2
     max_build_duration: 30
     environment:
       node: 22
@@ -37,7 +37,6 @@ workflows:
 
   ios-test:
     name: iPhone test app (unsigned IPA for Sideloadly)
-    instance_type: mac_mini_m2
     # A build that has not finished in half an hour is stuck: stop it and keep the minutes.
     max_build_duration: 30
     environment:
