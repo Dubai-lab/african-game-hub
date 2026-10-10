@@ -38,7 +38,8 @@ workflows:
   ios-test:
     name: iPhone test app (unsigned IPA for Sideloadly)
     instance_type: mac_mini_m2
-    max_build_duration: 45
+    # A build that has not finished in half an hour is stuck: stop it and keep the minutes.
+    max_build_duration: 30
     environment:
       node: 22
       xcode: latest
@@ -48,6 +49,18 @@ workflows:
         script: |
           cd mobile
           npx cap sync ios
+      # Its own step, so that if fetching the packages is what stalls, the build says so. The
+      # packages are fetched with the machine's own git (-scmProvider system): Xcode's built-in
+      # one is known to hang on build machines.
+      - name: Fetch the Swift packages
+        script: |
+          cd mobile/ios/App
+          xcodebuild -version
+          xcodebuild -resolvePackageDependencies \
+            -project App.xcodeproj \
+            -scheme App \
+            -scmProvider system \
+            -clonedSourcePackagesDirPath "$CM_BUILD_DIR/swift-packages"
       - name: Build the app without signing it
         script: |
           cd mobile/ios/App
@@ -58,6 +71,8 @@ workflows:
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
             -derivedDataPath "$CM_BUILD_DIR/ios-build" \
+            -scmProvider system \
+            -clonedSourcePackagesDirPath "$CM_BUILD_DIR/swift-packages" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             build
       - name: Pack it as an IPA
