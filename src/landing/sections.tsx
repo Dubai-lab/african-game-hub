@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { flagEmoji, guessCountry, useCountries } from '@/core/countries/useCountries'
+import { GameArt } from '@/core/lobby/GameArt'
 import { buttonClass } from '@/core/ui/Button'
 import { LanguageSwitcher } from '@/core/ui/LanguageSwitcher'
 import {
@@ -26,82 +27,70 @@ export function Band({ ground }: { ground?: string }) {
   return <div className="band" role="presentation" style={ground ? { ['--band-ground' as string]: ground } : undefined} />
 }
 
-// Each upcoming game is a woven strip, not a card.
-const STRIP_COLORS = ['bg-brand text-brand-ink', 'bg-hibiscus text-white', 'bg-palm text-white', 'bg-primary-soft text-white']
-
 function gameName(t: (key: string, options: { defaultValue: string }) => string, game: LandingGame) {
   return t(`games.${game.id}`, { defaultValue: game.name })
 }
 
+/**
+ * The games on the hub, each with its own picture: the ones that can be played now, then the
+ * ones on the way. The same pictures a player sees on the lobby once they are in.
+ */
 export function Games({ playHref }: { playHref: string }) {
   const { t } = useTranslation()
   const format = useNumberFormat()
   const games = useLandingGames()
   const live = games.filter((g) => g.status === 'live')
   const soon = games.filter((g) => g.status === 'coming_soon')
+  // The stakes on offer are the same for every game; said once, under the pictures.
+  const stakes = [...new Set(live.flatMap((game) => game.stakeLevels.filter((stake) => stake > 0)))]
 
   return (
     <section className={`${shell} py-14 lg:py-20`}>
       <h2 className={`${heading} text-primary`}>{t('landing.games.title')}</h2>
       <p className="mt-3 max-w-prose text-muted">{t('landing.games.sub')}</p>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[1.15fr_1fr] lg:items-stretch">
-        <div className="flex flex-col gap-6">
-          {live.map((game) => {
-            const stakes = game.stakeLevels.filter((s) => s > 0)
-            return (
-              <article key={game.id} className="relative overflow-hidden border-2 border-ink bg-panel p-6 lg:p-8">
-                {/* A corner of board, so the panel reads as chess before the words do. */}
-                <div
-                  aria-hidden="true"
-                  className="absolute -right-6 -top-6 size-28 rotate-12 border-4 border-brand"
-                  style={{
-                    background:
-                      'repeating-conic-gradient(var(--color-surface) 0 25%, var(--color-primary-soft) 0 50%) 0 0 / 50% 50%',
-                  }}
-                />
-                <p className="inline-flex items-center gap-2 bg-hibiscus px-2.5 py-1 text-sm font-bold text-white">
-                  <span className="size-2 rounded-full bg-white" aria-hidden="true" />
-                  {t('landing.games.live')}
-                </p>
-                <h3 className="mt-4 font-display text-5xl font-extrabold text-primary">{gameName(t, game)}</h3>
-                {t(`landing.games.${game.id}Blurb`, { defaultValue: '' }) && <p className="mt-3 max-w-md">{t(`landing.games.${game.id}Blurb`, { defaultValue: '' })}</p>}
-                <ul className="mt-4 flex flex-col gap-1 text-sm font-semibold text-muted">
-                  {game.minutes && (
-                    <li>{t('landing.games.times', { min: game.minutes[0], max: game.minutes[1] })}</li>
-                  )}
-                  {stakes.length > 0 && (
-                    <li>
-                      {t('landing.games.stakes', {
-                        min: format.format(Math.min(...stakes)),
-                        max: format.format(Math.max(...stakes)),
-                      })}
-                    </li>
-                  )}
-                </ul>
-                <Link to={playHref} className={buttonClass('primary', 'mt-6 w-full sm:w-auto')}>
-                  {t('landing.games.play')}
-                </Link>
-              </article>
-            )
-          })}
-        </div>
-
-        {soon.length > 0 && (
-          <ul className="flex min-h-64 gap-2">
-            {soon.map((game, index) => (
-              <li
-                key={game.id}
-                className={`flex min-w-0 flex-1 flex-col justify-between px-2 py-4 ${STRIP_COLORS[index % STRIP_COLORS.length]}`}
-              >
-                <span className="font-display text-2xl font-extrabold leading-none [writing-mode:vertical-rl]">
-                  {gameName(t, game)}
+      <ul className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 lg:gap-4">
+        {live.map((game) => {
+          const blurb = t(`landing.games.${game.id}Blurb`, { defaultValue: '' })
+          return (
+            <li key={game.id} className="flex">
+              <Link to={playHref} className="flex w-full flex-col overflow-hidden border-2 border-ink bg-panel text-ink outline-offset-2 hover:bg-brand focus-visible:outline-2 focus-visible:outline-primary active:bg-brand">
+                <GameArt gameId={game.id} className="block aspect-[6/5] w-full" />
+                <span className="flex flex-1 flex-col items-start gap-1.5 p-3">
+                  <h3 className="max-w-full font-display text-2xl font-extrabold leading-none text-primary">{gameName(t, game)}</h3>
+                  <span className="flex items-center gap-2 bg-hibiscus px-2 py-0.5 text-xs font-bold text-white">
+                    <span className="size-1.5 rounded-full bg-white" aria-hidden="true" />
+                    {t('landing.games.live')}
+                  </span>
+                  {/* On a phone the picture and the name say enough; the sentence is for wider screens. */}
+                  {blurb && <span className="mt-1 hidden text-sm leading-snug text-muted sm:block">{blurb}</span>}
                 </span>
-                <span className="text-xs font-bold leading-tight">{t('landing.games.soon')}</span>
-              </li>
-            ))}
-          </ul>
+              </Link>
+            </li>
+          )
+        })}
+        {soon.map((game) => (
+          <li key={game.id} className="flex">
+            <div className="flex w-full flex-col overflow-hidden border-2 border-line bg-panel text-muted">
+              <GameArt gameId={game.id} className="block aspect-[6/5] w-full opacity-45 grayscale" />
+              <span className="flex flex-1 flex-col items-start gap-1.5 p-3">
+                <h3 className="max-w-full font-display text-2xl font-extrabold leading-none">{gameName(t, game)}</h3>
+                <span className="bg-ink px-2 py-0.5 text-xs font-bold text-surface">{t('landing.games.soon')}</span>
+              </span>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        {stakes.length > 0 && (
+          <p className="font-semibold text-muted">
+            {t('landing.games.stakes', { min: format.format(Math.min(...stakes)), max: format.format(Math.max(...stakes)) })}
+          </p>
         )}
+        <Link to={playHref} className={buttonClass('primary', 'w-full sm:w-auto')}>
+          {t('landing.games.play')}
+        </Link>
       </div>
     </section>
   )

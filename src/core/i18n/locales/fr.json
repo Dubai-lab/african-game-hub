@@ -127,7 +127,8 @@
       "times": "Parties de {{min}} à {{max}} minutes",
       "stakes": "Jouez gratuitement, ou misez de {{min}} à {{max}} jetons",
       "ludoBlurb": "La course classique vers la maison, à un contre un. Les dés sont lancés par le serveur : impossible de les truquer.",
-      "poolBlurb": "Jeu de la 8 et jeu de la 9 sur une vraie table. Chaque coup est calculé par le serveur : la table que vous voyez est celle qui compte."
+      "poolBlurb": "Jeu de la 8 et jeu de la 9 sur une vraie table. Chaque coup est calculé par le serveur : la table que vous voyez est celle qui compte.",
+      "draughtsBlurb": "Les dames internationales sur un damier de 10 sur 10. La prise est obligatoire, et chaque coup est vérifié par le serveur."
     },
     "how": {
       "title": "Comment ça marche",

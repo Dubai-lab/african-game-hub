@@ -127,7 +127,8 @@
       "times": "Games from {{min}} to {{max}} minutes",
       "stakes": "Play free, or stake {{min}} to {{max}} tokens",
       "ludoBlurb": "The classic race home, one against one. The dice are thrown by the server, so nobody can load them.",
-      "poolBlurb": "8-ball and 9-ball on a full table. Every shot is played out on the server, so the table you see is the table that counts."
+      "poolBlurb": "8-ball and 9-ball on a full table. Every shot is played out on the server, so the table you see is the table that counts.",
+      "draughtsBlurb": "International draughts on a 10 by 10 board. Capturing is compulsory, and every move is checked by the server."
     },
     "how": {
       "title": "How it works",
