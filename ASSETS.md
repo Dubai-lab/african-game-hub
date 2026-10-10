@@ -60,6 +60,13 @@ All four board colour themes are **original** (`src/games/chess/ui/themes.ts`).
 | `public/landing/hero-poster.webp`, `public/landing/og.jpg` | **Original.** Rendered from our own 3D scene by `npm run capture:hero`. | Ours |
 | `public/icon.svg`, `public/icon-192.png`, `public/icon-512.png`, `public/apple-touch-icon.png` | **Original.** PNGs rendered from the SVG by `npm run icons`. | Ours |
 
+## Game pictures (lobby cards)
+
+| Asset | Source | License |
+| --- | --- | --- |
+| `public/games/*.webp`, `public/games/light/*.webp` (chess, draughts, ludo, pool, penalty) | **Original.** Illustrations made for African Game Hub on 10 October 2026 with Claude (Anthropic's AI), to the owner's brief: drawn from scratch, in the hub's six colours and with its zigzag band. No third-party artwork, stock image, font or text. The full-size originals and the maker's note are kept by the owner (`art-src/games/`, not in the repository); the files here are small copies made by `npm run game-art`. | Ours, under Anthropic's terms, which give the person who asked for AI output the rights to it. Note: pictures made by AI may not be protected by copyright in every country, so others might be free to copy them there. |
+| The drawn pictures in `src/core/lobby/GameArt.tsx` | **Original.** Drawn in code; shown only when an illustration cannot be loaded. | Ours |
+
 ## Flags on computers
 
 | Asset | Source | License |

@@ -1,5 +1,10 @@
-// A picture for each game on the hub, drawn here in code (no image files, nothing borrowed).
-// A game without a picture of its own gets a plain token.
+// A picture for each game on the hub.
+//
+// The games' own pictures are illustrations made for African Game Hub (see ASSETS.md), served
+// small from public/games/. Underneath each is a simpler picture drawn here in code: it is what
+// shows when the illustration cannot be fetched (offline, a failed download) and for a game that
+// has no illustration yet. A game with neither gets a plain token.
+import { useState } from 'react'
 
 const BALL = [
   ['#f6c400', 60, 34],
@@ -118,8 +123,16 @@ function Token() {
 
 const ART: Record<string, () => React.JSX.Element> = { chess: Chess, ludo: Ludo, pool: Pool, draughts: Draughts, penalty: Penalty, penalty_shootout: Penalty }
 
+/** Games that have an illustration in public/games/. (Made by `npm run game-art`.) */
+const ILLUSTRATED = new Set(['chess', 'draughts', 'ludo', 'pool', 'penalty', 'penalty_shootout'])
+const fileFor = (gameId: string) => (gameId === 'penalty_shootout' ? 'penalty' : gameId)
+
 /** The picture for a game, by its id in the games registry. Decoration only: the name is written beside it. */
 export function GameArt({ gameId, className = '' }: { gameId: string; className?: string }) {
+  const [failed, setFailed] = useState(false)
+  if (ILLUSTRATED.has(gameId) && !failed) {
+    return <img src={`/games/${fileFor(gameId)}.webp`} alt="" width={720} height={600} loading="lazy" decoding="async" onError={() => setFailed(true)} className={`object-cover ${className}`} />
+  }
   const Picture = ART[gameId] ?? Token
   return (
     <svg viewBox="0 0 120 100" preserveAspectRatio="xMidYMid slice" className={className} aria-hidden="true">
