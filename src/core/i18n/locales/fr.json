@@ -90,7 +90,9 @@
       "TOURNAMENT_STARTED": "Ce tournoi a commencé. Un tournoi par rondes ne peut être rejoint qu’avant la première ronde.",
       "TOO_FAST": "Un message à la fois. Patientez un instant.",
       "CORRUPT_GAME": "L’enregistrement de cette partie est abîmé. Notre équipe a été prévenue."
-    }
+    },
+    "samePassword": "C’est votre mot de passe actuel. Choisissez-en un autre.",
+    "captchaFailed": "La vérification de sécurité a échoué. Rechargez la page et réessayez."
   },
   "validation": {
     "emailInvalid": "Saisissez une adresse e-mail valide.",
@@ -100,7 +102,8 @@
     "usernameChars": "Utilisez uniquement des lettres, des chiffres et des tirets bas.",
     "ageRequired": "Vous devez avoir 18 ans ou plus pour jouer.",
     "countryRequired": "Sélectionnez votre pays.",
-    "usernameTaken": "Ce nom d'utilisateur est déjà pris. Essayez-en un autre."
+    "usernameTaken": "Ce nom d'utilisateur est déjà pris. Essayez-en un autre.",
+    "passwordsDiffer": "Les deux mots de passe ne sont pas identiques."
   },
   "landing": {
     "login": "Se connecter",
@@ -217,7 +220,28 @@
     "consent": "En créant un compte, vous acceptez les <terms>Conditions d’utilisation</terms> et confirmez avoir lu la <privacy>Politique de confidentialité</privacy>.",
     "captchaWait": "Un instant : nous vérifions que vous êtes une personne. Réessayez dans une seconde.",
     "captchaUnavailable": "La vérification de sécurité n’a pas pu se charger. Vérifiez votre connexion, ou désactivez tout bloqueur pour ce site.",
-    "idleSignedOut": "Vous avez été déconnecté car ce téléphone n’avait pas ouvert l’application depuis 30 jours. Reconnectez-vous pour continuer."
+    "idleSignedOut": "Vous avez été déconnecté car ce téléphone n’avait pas ouvert l’application depuis 30 jours. Reconnectez-vous pour continuer.",
+    "forgot": {
+      "link": "Mot de passe oublié ?",
+      "title": "Mot de passe oublié ?",
+      "intro": "Saisissez l’e-mail de votre inscription. Nous vous enverrons un lien pour choisir un nouveau mot de passe.",
+      "send": "Envoyez-moi le lien",
+      "sentTitle": "Consultez vos e-mails",
+      "sentBody": "Si {{email}} a un compte, un lien pour choisir un nouveau mot de passe est en route.",
+      "sentHint": "Rien après quelques minutes ? Regardez dans vos courriers indésirables. Le lien ne sert qu’une fois et pour une durée limitée.",
+      "again": "Essayer un autre e-mail"
+    },
+    "reset": {
+      "title": "Choisissez un nouveau mot de passe",
+      "intro": "Utilisez au moins 8 caractères, et quelque chose que vous n’utilisez nulle part ailleurs.",
+      "newPassword": "Nouveau mot de passe",
+      "confirm": "Nouveau mot de passe, à nouveau",
+      "save": "Enregistrer le nouveau mot de passe",
+      "done": "Votre mot de passe a été changé.",
+      "opening": "Ouverture de votre lien…",
+      "badLink": "Ce lien a déjà été utilisé ou est trop ancien. Demandez-en un nouveau.",
+      "askAgain": "Envoyez-moi un nouveau lien"
+    }
   },
   "lobby": {
     "title": "Salon",

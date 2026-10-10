@@ -13,6 +13,15 @@ export const initialAuthUrlError: string | null = (() => {
   return hash.get('error_code') ?? query.get('error_code')
 })()
 
+/**
+ * True when the page was opened from a "reset your password" email. Read before the client
+ * starts, for the same reason. It is what allows the new-password page to be used.
+ */
+export const arrivedByRecoveryLink: boolean = (() => {
+  if (typeof window === 'undefined') return false
+  return new URLSearchParams(window.location.hash.replace(/^#/, '')).get('type') === 'recovery'
+})()
+
 // The one Supabase client for the whole app. Only the anon key ever reaches the browser.
 export const supabase = createClient<Database>(
   env?.VITE_SUPABASE_URL ?? 'http://localhost',

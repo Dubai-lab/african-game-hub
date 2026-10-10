@@ -90,7 +90,9 @@
       "TOURNAMENT_STARTED": "This tournament has started. A tournament played in rounds can only be joined before round 1.",
       "TOO_FAST": "One message at a time. Wait a moment.",
       "CORRUPT_GAME": "This game’s record is damaged. Our team has been told."
-    }
+    },
+    "samePassword": "That is your current password. Choose a different one.",
+    "captchaFailed": "The security check did not pass. Reload the page and try again."
   },
   "validation": {
     "emailInvalid": "Enter a valid email address.",
@@ -100,7 +102,8 @@
     "usernameChars": "Use only letters, numbers and underscores.",
     "ageRequired": "You must be 18 or older to play.",
     "countryRequired": "Select your country.",
-    "usernameTaken": "This username is taken. Try another one."
+    "usernameTaken": "This username is taken. Try another one.",
+    "passwordsDiffer": "The two passwords are not the same."
   },
   "landing": {
     "login": "Log in",
@@ -217,7 +220,28 @@
     "consent": "By creating an account you agree to the <terms>Terms of use</terms> and confirm you have read the <privacy>Privacy policy</privacy>.",
     "captchaWait": "One moment: we are checking that you are a person. Try again in a second.",
     "captchaUnavailable": "The security check could not be loaded. Check your connection, or switch off any blocker for this site.",
-    "idleSignedOut": "You were signed out because this phone had not opened the app for 30 days. Log in again to continue."
+    "idleSignedOut": "You were signed out because this phone had not opened the app for 30 days. Log in again to continue.",
+    "forgot": {
+      "link": "Forgot your password?",
+      "title": "Forgot your password?",
+      "intro": "Enter the email you signed up with. We will send you a link to choose a new password.",
+      "send": "Send me the link",
+      "sentTitle": "Check your email",
+      "sentBody": "If {{email}} has an account, a link to choose a new password is on its way.",
+      "sentHint": "Nothing after a few minutes? Look in your spam folder. The link works once and for a limited time.",
+      "again": "Try another email"
+    },
+    "reset": {
+      "title": "Choose a new password",
+      "intro": "Use at least 8 characters, and something you do not use anywhere else.",
+      "newPassword": "New password",
+      "confirm": "New password again",
+      "save": "Save new password",
+      "done": "Your password has been changed.",
+      "opening": "Opening your link…",
+      "badLink": "This link has been used already or is too old. Ask for a new one.",
+      "askAgain": "Send me a new link"
+    }
   },
   "lobby": {
     "title": "Lobby",

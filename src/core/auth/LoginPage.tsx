@@ -70,6 +70,11 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           error={errors.password && t(errors.password)}
         />
+        <p className="-mt-1 text-end text-sm">
+          <Link to="/forgot-password" className="font-semibold text-primary underline">
+            {t('auth.forgot.link')}
+          </Link>
+        </p>
         <Captcha ref={captcha} onToken={setCaptchaToken} onUnavailable={() => toast.error(t('auth.captchaUnavailable'))} language={i18n.resolvedLanguage} />
         <Button type="submit" disabled={busy} className="mt-2">
           {busy ? t('auth.working') : t('auth.loginButton')}

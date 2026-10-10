@@ -19,6 +19,8 @@ import LandingPage from '@/landing/LandingPage'
 const LoginPage = lazy(() => import('@/core/auth/LoginPage'))
 const SignupPage = lazy(() => import('@/core/auth/SignupPage'))
 const CheckEmailPage = lazy(() => import('@/core/auth/CheckEmailPage'))
+const ForgotPasswordPage = lazy(() => import('@/core/auth/ForgotPasswordPage'))
+const ResetPasswordPage = lazy(() => import('@/core/auth/ResetPasswordPage'))
 const AuthCallbackPage = lazy(() => import('@/core/auth/AuthCallbackPage'))
 const LobbyPage = lazy(() => import('@/core/lobby/LobbyPage'))
 const GamePage = lazy(() => import('@/core/lobby/GamePage'))
@@ -92,10 +94,13 @@ export default function App({ staticLocation }: { staticLocation?: string }) {
                 <Route path="refunds" element={<LegalPage doc="refunds" />} />
                 <Route path="responsible-gaming" element={<LegalPage doc="responsible" />} />
                 <Route path="auth/callback" element={<AuthCallbackPage />} />
+                {/* Reached from the reset email, which signs the player in: so not a signed-out-only page. */}
+                <Route path="auth/reset" element={<ResetPasswordPage />} />
                 <Route element={<PublicOnlyRoute />}>
                   <Route path="login" element={<LoginPage />} />
                   <Route path="signup" element={<SignupPage />} />
                   <Route path="auth/check-email" element={<CheckEmailPage />} />
+                  <Route path="forgot-password" element={<ForgotPasswordPage />} />
                 </Route>
                 <Route path="*" element={<NotFoundPage />} />
               </Route>

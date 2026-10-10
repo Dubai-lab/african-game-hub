@@ -20,7 +20,7 @@ async function problems(page: Page): Promise<string[]> {
 
 test.beforeAll(ensureTestAccounts)
 
-const PUBLIC = ['/', '/login', '/signup', '/terms', '/privacy', '/cookies', '/refunds', '/responsible-gaming']
+const PUBLIC = ['/', '/login', '/signup', '/forgot-password', '/terms', '/privacy', '/cookies', '/refunds', '/responsible-gaming']
 const SIGNED_IN = ['/lobby', '/play/chess', '/play/chess/new', '/play/chess/friend', '/play/chess/tournaments', '/play/chess/settings', '/play/ludo', '/play/ludo/new', '/play/pool', '/play/pool/new', '/play/draughts', '/play/draughts/new', '/play/draughts/settings', '/play/draughts/computer', '/wallet', '/leaderboards', '/friends', '/profile', '/settings', '/play/pool/computer', '/play/chess/computer', '/play/ludo/computer']
 
 for (const width of [393, 1366]) {

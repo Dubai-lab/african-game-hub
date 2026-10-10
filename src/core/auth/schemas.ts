@@ -23,6 +23,15 @@ export const signupSchema = z.object({
   isAdult: z.literal(true, 'validation.ageRequired'),
 })
 
+export const forgotSchema = z.object({ email })
+
+export const resetSchema = z
+  .object({
+    password: z.string().check(z.minLength(8, 'validation.passwordTooShort'), z.maxLength(72, 'validation.passwordTooShort')),
+    confirm: z.string(),
+  })
+  .check(z.refine((value) => value.password === value.confirm, { message: 'validation.passwordsDiffer', path: ['confirm'] }))
+
 export type LoginInput = z.infer<typeof loginSchema>
 export type SignupInput = z.infer<typeof signupSchema>
 

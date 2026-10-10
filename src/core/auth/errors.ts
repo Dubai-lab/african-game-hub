@@ -11,6 +11,8 @@ const byCode: Record<string, string> = {
   signup_disabled: 'errors.signupDisabled',
   otp_expired: 'errors.linkExpired',
   access_denied: 'errors.linkExpired',
+  same_password: 'errors.samePassword',
+  captcha_failed: 'errors.captchaFailed',
 }
 
 /** Maps a Supabase auth error (or a URL error code) to an i18n key. Raw server text is never shown. */
