@@ -338,7 +338,7 @@
         },
         {
           "h": "Qui traite les données pour nous",
-          "p": "Les données de votre compte et de vos parties sont hébergées par notre fournisseur de base de données (Supabase), et nos pages sont servies par notre hébergeur (Amazon Web Services), qui voit votre adresse internet comme tout hébergeur. Les e-mails de connexion passent par notre fournisseur de messagerie. Ils n’agissent que sur nos instructions."
+          "p": "Les données de votre compte et de vos parties sont hébergées par notre fournisseur de base de données (Supabase), et nos pages sont servies par notre hébergeur (Amazon Web Services), qui voit votre adresse internet comme tout hébergeur. Les e-mails de connexion passent par notre fournisseur de messagerie. Ils n’agissent que sur nos instructions. Lors de l’inscription ou de la connexion, une vérification de sécurité fournie par Cloudflare (Turnstile) distingue les personnes des programmes automatiques. Pour cela, Cloudflare voit votre adresse internet et quelques informations sur votre navigateur, et ne les utilise que pour cette vérification."
         },
         {
           "h": "Combien de temps",
@@ -392,7 +392,7 @@
       "sections": [
         {
           "h": "En bref",
-          "p": "Nous ne déposons aucun cookie publicitaire ou de suivi, et aucune autre entreprise n’en dépose par nos pages. C’est pourquoi aucun bandeau de cookies ne vous est présenté : il n’y a rien de facultatif à accepter ou refuser."
+          "p": "Nous ne déposons aucun cookie publicitaire ou de suivi, et aucune autre entreprise n’en dépose par nos pages. C’est pourquoi aucun bandeau de cookies ne vous est présenté : il n’y a rien de facultatif à accepter ou refuser. La vérification de sécurité des pages d’inscription et de connexion est fournie par Cloudflare. Elle ne dépose aucun cookie publicitaire ni de suivi."
         },
         {
           "h": "Ce que l’application enregistre dans votre navigateur",

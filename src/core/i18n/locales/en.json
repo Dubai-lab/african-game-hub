@@ -338,7 +338,7 @@
         },
         {
           "h": "Who handles the data for us",
-          "p": "Your account and game data are held by our database provider (Supabase), and our pages are delivered by our web host (Amazon Web Services), which sees your internet address as any web host does. Sign-in emails are sent through our email provider. They act only on our instructions."
+          "p": "Your account and game data are held by our database provider (Supabase), and our pages are delivered by our web host (Amazon Web Services), which sees your internet address as any web host does. Sign-in emails are sent through our email provider. They act only on our instructions. When you sign up or log in, a security check provided by Cloudflare (Turnstile) tells people from automated programs. For that, Cloudflare sees your internet address and some details of your browser, and uses them only for this check."
         },
         {
           "h": "How long we keep it",
@@ -392,7 +392,7 @@
       "sections": [
         {
           "h": "The short version",
-          "p": "We set no advertising or tracking cookies, and no other company sets any through our pages. That is why you are not shown a cookie banner: there is nothing optional to accept or refuse."
+          "p": "We set no advertising or tracking cookies, and no other company sets any through our pages. That is why you are not shown a cookie banner: there is nothing optional to accept or refuse. The security check on the sign-up and log-in pages is provided by Cloudflare. It sets no advertising or tracking cookies."
         },
         {
           "h": "What the app saves in your browser",

@@ -50,6 +50,16 @@ Resources:
                 Effect: Allow
                 Action: [logs:CreateLogStream, logs:PutLogEvents, logs:DescribeLogStreams]
                 Resource: !Sub ${ServerLogs.Arn}
+              # The nightly copy of the books: read its own key, and add files to its bucket.
+              # It can only add: not read, list or delete what is already there.
+              - Sid: ReadBackupKey
+                Effect: Allow
+                Action: ssm:GetParameter
+                Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/agh/ledger-backup/*
+              - Sid: StoreBackups
+                Effect: Allow
+                Action: s3:PutObject
+                Resource: !Sub ${BackupBucket.Arn}/ledger/*
               - Sid: ReportHealth
                 Effect: Allow
                 Action: cloudwatch:PutMetricData
@@ -75,6 +85,54 @@ Resources:
           SourcePrefixListId: !Ref CloudFrontPrefixList
           Description: CloudFront to the game server
 
+  # Where the nightly copy of the books is kept (see server/README.md and
+  # infra/game-server/agh-backup.sh). Private, encrypted, and versioned so a file can never be
+  # silently replaced. Copies are kept for a year; the bucket itself survives the stack.
+  BackupBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: keep-one-year
+            Status: Enabled
+            ExpirationInDays: 365
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 90
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 2
+
+  BackupBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref BackupBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: EncryptedConnectionsOnly
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: [!GetAtt BackupBucket.Arn, !Sub '${BackupBucket.Arn}/*']
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
   ServerLogs:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -95,6 +153,10 @@ Resources:
           Ebs: { VolumeSize: 10, VolumeType: gp3, Encrypted: true }
       Tags:
         - { Key: Name, Value: agh-game-server }
+      # Do not edit the text below on a running stack: any change to it makes CloudFormation stop
+      # and start the machine, and it only ever runs on a machine's first boot anyway. The
+      # machine's programs are kept in infra/game-server/ and are put in place by every
+      # "npm run deploy:server", which replaces the first version of agh-deploy written here.
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
@@ -299,6 +361,39 @@ Resources:
       TreatMissingData: notBreaching
       AlarmActions: [!Ref Alerts]
 
+  # ---- The nightly copy of the books ----
+  BackupFailedAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: agh-ledger-backup-failed
+      AlarmDescription: The nightly copy of the books ended with an error. Exit code 2 means a wallet does not equal its ledger entries - treat that as an incident. Read the output with "journalctl -u agh-backup" on the machine.
+      Namespace: AGH/GameServer
+      MetricName: LedgerBackupFailed
+      Statistic: Maximum
+      Period: 3600
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Alerts]
+
+  BackupMissingAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: agh-ledger-backup-missing
+      AlarmDescription: No new copy of the books has reached the bucket in 26 hours.
+      Namespace: AGH/GameServer
+      MetricName: LedgerBackupUploaded
+      Statistic: Sum
+      Period: 3600
+      EvaluationPeriods: 26
+      DatapointsToAlarm: 26
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: breaching
+      AlarmActions: [!Ref Alerts]
+      OKActions: [!Ref Alerts]
+
   # The hardware under the machine has failed: AWS moves it to healthy hardware, same address.
   HardwareAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -344,5 +439,8 @@ Outputs:
   PublicIp:
     Description: Its fixed public address
     Value: !Ref ServerAddress
+  BackupBucket:
+    Description: Where the nightly copy of the books is kept
+    Value: !Ref BackupBucket
   PrivateIp:
     Value: !GetAtt Server.PrivateIp

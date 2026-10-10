@@ -1,0 +1,7 @@
+[Unit]
+Description=Nightly copy of the books to S3
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/agh-backup

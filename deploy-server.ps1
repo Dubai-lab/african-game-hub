@@ -31,11 +31,33 @@ if ($Commit -notmatch '^[0-9a-f]{7,40}$') { throw "Not a commit id: $Commit" }
 Step 'Finding the machine'
 $instance = aws cloudformation describe-stacks --stack-name agh-game-server --profile $Profile --region $Region --query "Stacks[0].Outputs[?OutputKey=='InstanceId'].OutputValue" --output text
 Check 'Reading the stack'
+$bucket = aws cloudformation describe-stacks --stack-name agh-game-server --profile $Profile --region $Region --query "Stacks[0].Outputs[?OutputKey=='BackupBucket'].OutputValue" --output text
+Check 'Reading the stack'
 Write-Host "$instance, commit $Commit"
 
 Step 'Building and starting it on the machine (two to four minutes)'
-# Waits for the machine's first-boot setup if it is brand new, then runs the deploy program on it.
-$commands = '{"commands":["cloud-init status --wait >/dev/null 2>&1 || true","/usr/local/bin/agh-deploy ' + $Commit + '"],"executionTimeout":["900"]}'
+# The machine's own programs are kept in infra/game-server/ and put in place on every deploy,
+# so changing one of them needs nothing more than this command.
+$lines = @('cloud-init status --wait >/dev/null 2>&1 || true')
+$programs = [ordered]@{
+  'agh-deploy.sh'      = '/usr/local/bin/agh-deploy'
+  'agh-backup.sh'      = '/usr/local/bin/agh-backup'
+  'agh-backup.service' = '/etc/systemd/system/agh-backup.service'
+  'agh-backup.timer'   = '/etc/systemd/system/agh-backup.timer'
+}
+foreach ($name in $programs.Keys) {
+  $text = [IO.File]::ReadAllText((Join-Path $PSScriptRoot "infra\game-server\$name")).Replace("`r`n", "`n")
+  $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($text))
+  $lines += "echo $encoded | base64 -d > $($programs[$name])"
+}
+$lines += 'chmod 755 /usr/local/bin/agh-deploy /usr/local/bin/agh-backup'
+# The nightly copy of the books: where it goes, and the timer that starts it.
+if ($bucket -and $bucket -ne 'None') {
+  $lines += "mkdir -p /etc/agh && echo $bucket > /etc/agh/backup-bucket"
+  $lines += 'systemctl daemon-reload && systemctl enable --now agh-backup.timer >/dev/null 2>&1'
+}
+$lines += "/usr/local/bin/agh-deploy $Commit"
+$commands = @{ commands = $lines; executionTimeout = @('900') } | ConvertTo-Json -Compress
 $parameterFile = Join-Path ([IO.Path]::GetTempPath()) "agh-deploy-$PID.json"
 [IO.File]::WriteAllText($parameterFile, $commands)
 try {

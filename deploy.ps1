@@ -53,7 +53,7 @@ Step 'Checking the build for secrets'
 $secrets = @{}
 $envFile = Join-Path $root '.env.local'
 if (Test-Path $envFile) {
-  Get-Content $envFile | Where-Object { $_ -match '^\s*(SUPABASE_SERVICE_ROLE_KEY|SUPABASE_ACCESS_TOKEN|SMTP_PASS)\s*=\s*(.+)$' } | ForEach-Object {
+  Get-Content $envFile | Where-Object { $_ -match '^\s*(SUPABASE_SERVICE_ROLE_KEY|SUPABASE_ACCESS_TOKEN|SMTP_PASS|GAME_SERVER_KEY|LEDGER_BACKUP_KEY)\s*=\s*(.+)$' } | ForEach-Object {
     $value = $Matches[2].Trim().Trim('"').Trim("'")
     if ($value.Length -ge 8) { $secrets[$Matches[1]] = $value }
   }
@@ -68,7 +68,8 @@ foreach ($file in $textFiles) {
   foreach ($m in [regex]::Matches($text, 'eyJ[A-Za-z0-9_-]{10,}\.(eyJ[A-Za-z0-9_-]{10,})\.[A-Za-z0-9_-]{10,}')) {
     $b64 = $m.Groups[1].Value.Replace('-', '+').Replace('_', '/'); while ($b64.Length % 4) { $b64 += '=' }
     try { $payload = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($b64)) } catch { $payload = '' }
-    if ($payload -match '"role"\s*:\s*"service_role"') { throw "STOP: a service_role key is inside $($file.FullName). Nothing was uploaded." }
+    # The only key a website may carry is the public one. Any other role is a server's key.
+    if ($payload -match '"role"\s*:\s*"(service_role|game_server|ledger_backup)"') { throw "STOP: a $($Matches[1]) key is inside $($file.FullName). Nothing was uploaded." }
   }
 }
 Write-Host "$($textFiles.Count) files checked, no secrets found"
