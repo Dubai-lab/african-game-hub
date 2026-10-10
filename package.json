@@ -10,6 +10,7 @@
     "e2e": "playwright test",
     "db:bundle": "node scripts/bundleMigrations.ts",
     "on-dev": "node scripts/onDev.ts",
+    "game-art": "node scripts/makeGameArt.ts",
     "server:build": "node server/build.mjs",
     "server:dev": "node server/build.mjs && node --enable-source-maps server/dist/server.cjs",
     "db:push": "node scripts/dbPush.ts",

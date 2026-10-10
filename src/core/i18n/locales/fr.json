@@ -669,6 +669,12 @@
       },
       "summary": "Toute la partie",
       "showChat": "Discuter avec votre adversaire"
+    },
+    "trial": {
+      "title": "Vous essayez vos propres coups",
+      "takeBack": "Reprendre",
+      "back": "Revenir à la partie",
+      "hint": "Déplacez une pièce pour essayer une autre suite. La vraie partie est conservée."
     }
   },
   "ratingPools": {

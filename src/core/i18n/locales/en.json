@@ -669,6 +669,12 @@
       },
       "summary": "The whole game",
       "showChat": "Chat with your opponent"
+    },
+    "trial": {
+      "title": "Trying your own moves",
+      "takeBack": "Take back",
+      "back": "Back to the game",
+      "hint": "Move any piece to try another line. The real game is kept."
     }
   },
   "ratingPools": {

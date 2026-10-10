@@ -1,13 +1,14 @@
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { useSettingsStore } from '@/core/settings/settingsStore'
 import { Button } from '@/core/ui/Button'
-import { type Color, kingSquare, legalTargets, material, replay, type Square, START_FEN } from '../engine/chessLogic'
+import { type Color, kingSquare, legalTargets, material, needsPromotion, type Promotion, replay, sanFor, type Square, START_FEN } from '../engine/chessLogic'
 import { usePieceSet } from '../pieces/usePieceSet'
 import { GRADE_STYLE, ReviewPanel } from '../review/ReviewPanel'
 import { useGameReview } from '../review/useGameReview'
-import type { ChessGameController } from '../useLocalChessGame'
+import { feedback } from '../sound/sounds'
+import type { ChessGameController, MoveResult } from '../useLocalChessGame'
 import { ChessBoard } from './ChessBoard'
 import { GameOverSheet, MoveList, PlayerCard, Sheet } from './panels'
 import { SettingsSheet } from './SettingsSheet'
@@ -111,26 +112,55 @@ export function GameTable({
   const [reviewing, setReviewing] = useState(false)
   // The result can be put aside to look at the board, and brought back.
   const [resultClosed, setResultClosed] = useState(false)
+  // Once a game is over, the player may try moves of their own from any position in it: "what
+  // if I had played this instead?". `ply` is where they left the real game, `sans` what they
+  // have tried since. Nothing here touches the game itself, which is finished and recorded.
+  const [trial, setTrial] = useState<{ ply: number; sans: string[] } | null>(null)
 
   const { chess, played, turn, outcome } = game
   const livePly = played.length
   const shownPly = Math.min(viewPly ?? livePly, livePly)
   const atLive = shownPly === livePly
 
+  // The line being tried, played through from the start of the real game (so that repetition
+  // and castling rights are right), or null when the player is looking at the game itself.
+  const tried = useMemo(() => {
+    if (!trial) return null
+    try {
+      return replay([...played.slice(0, trial.ply).map((move) => move.san), ...trial.sans])
+    } catch {
+      return null
+    }
+  }, [trial, played])
+
   const shown = useMemo(() => {
+    if (tried) {
+      const last = tried.played.at(-1) ?? null
+      const fen = tried.chess.fen()
+      return {
+        fen,
+        position: tried.chess,
+        turn: tried.chess.turn(),
+        lastMove: last && { from: last.from, to: last.to },
+        checkSquare: tried.chess.isCheck() ? kingSquare(tried.chess, tried.chess.turn()) : null,
+        material: material(fen),
+      }
+    }
     const fen = shownPly === 0 ? START_FEN : played[shownPly - 1]!.fenAfter
-    const position = atLive ? chess : replay([], fen).chess
+    // The position with its history, which is what makes the list of legal moves exact.
+    const position = atLive ? chess : replay(played.slice(0, shownPly).map((move) => move.san)).chess
     const last = shownPly > 0 ? played[shownPly - 1]! : null
     return {
       fen,
+      position,
       turn: position.turn(),
       lastMove: last && { from: last.from, to: last.to },
       checkSquare: position.isCheck() ? kingSquare(position, position.turn()) : null,
       material: material(fen),
     }
-  }, [shownPly, played, chess, atLive])
+  }, [shownPly, played, chess, atLive, tried])
 
-  const targetsFor = useCallback((square: Square) => legalTargets(chess, square), [chess])
+  const targetsFor = useCallback((square: Square) => legalTargets(shown.position, square), [shown.position])
 
   // Game review. The engine is only ever started for a game that is over, and by itself only
   // when the player has not asked to save data (it is a download the first time).
@@ -145,7 +175,43 @@ export function GameTable({
     if (reviewable && !settings.dataSaver) startReview()
   }, [reviewable, settings.dataSaver, startReview])
   const grades = useMemo(() => review.moves.map((move) => move.grade), [review.moves])
-  const shownReview = reviewing && shownPly > 0 ? review.moves[shownPly - 1] : undefined
+  // While the player is trying their own moves, the notes on the real game step aside.
+  const shownReview = reviewing && !trial && shownPly > 0 ? review.moves[shownPly - 1] : undefined
+
+  /** A move of the player's own on a finished game: it starts, or adds to, the line being tried. */
+  const tryOwnMove = useCallback(
+    (from: Square, to: Square, promotion?: Promotion): MoveResult => {
+      const position = shown.position
+      if (!promotion && needsPromotion(position, from, to)) return 'promotion'
+      const san = sanFor(position, from, to, promotion)
+      if (!san) return 'illegal'
+      const line = trial ? { ply: trial.ply, sans: [...trial.sans, san] } : { ply: shownPly, sans: [san] }
+      setTrial(line)
+      const move = replay([...played.slice(0, line.ply).map((m) => m.san), ...line.sans]).played.at(-1)!
+      feedback(move.check ? 'check' : move.kind)
+      return 'ok'
+    },
+    [shown.position, trial, shownPly, played],
+  )
+  const takeBackTried = () => setTrial((line) => (line && line.sans.length > 1 ? { ...line, sans: line.sans.slice(0, -1) } : null))
+  // A new game on the same screen starts clean.
+  useEffect(() => {
+    if (!over) setTrial(null)
+  }, [over])
+
+  // Stepping through a finished game is heard as well as seen: each move makes the sound it
+  // made when it was played. (During the game itself, moves sound as they happen.)
+  const heardPly = useRef(shownPly)
+  useEffect(() => {
+    const before = heardPly.current
+    heardPly.current = shownPly
+    if (!over || trial || before === shownPly) return
+    // One step forward: the move just arrived at. One step back: the move just taken off the
+    // board. A jump: the move the board now shows.
+    const step = Math.abs(shownPly - before) === 1
+    const move = played[(step && shownPly < before ? before : shownPly) - 1]
+    if (move) feedback(shownPly > before && move.check ? 'check' : move.kind)
+  }, [shownPly, over, trial, played])
 
   const home: Color = perspective ?? 'w'
   const away: Color = home === 'w' ? 'b' : 'w'
@@ -177,7 +243,11 @@ export function GameTable({
     setResultClosed(false)
     onRematch()
   }
-  const view = (ply: number) => setViewPly(ply >= livePly ? null : Math.max(0, ply))
+  // Choosing a move of the real game (or Previous / Next) leaves the line being tried.
+  const view = (ply: number) => {
+    setTrial(null)
+    setViewPly(ply >= livePly ? null : Math.max(0, ply))
+  }
   // Review starts from the first move, the way a game is gone over.
   const openReview = () => {
     setReviewing(true)
@@ -202,6 +272,9 @@ export function GameTable({
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement) return
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+      // In a line of the player's own, the arrows first lead back to the real game.
+      setTrial(null)
       if (event.key === 'ArrowLeft') setViewPly((current) => Math.max(0, (current ?? livePly) - 1))
       if (event.key === 'ArrowRight') setViewPly((current) => (current === null || current + 1 >= livePly ? null : current + 1))
     }
@@ -251,17 +324,17 @@ export function GameTable({
             <ChessBoard
               fen={shown.fen}
               orientation={bottom === 'w' ? 'white' : 'black'}
-              interactive={atLive && !outcome}
+              interactive={over ? true : atLive}
               turn={shown.turn}
-              movable={movable}
+              movable={over ? 'both' : movable}
               lastMove={shown.lastMove}
               checkSquare={shown.checkSquare}
               targetsFor={targetsFor}
-              onMove={game.tryMove}
+              onMove={over ? tryOwnMove : game.tryMove}
               theme={BOARD_THEMES[settings.chessBoardTheme]}
               pieceSet={pieceSet}
               animate={!settings.dataSaver}
-              premoves={settings.chessPremoves && !passAndPlay}
+              premoves={settings.chessPremoves && !passAndPlay && !over}
               tint={shownReview && shown.lastMove ? { square: shown.lastMove.to, color: GRADE_STYLE[shownReview.grade].color } : null}
               arrows={shownReview?.better ? [{ from: shownReview.better.from, to: shownReview.better.to, color: GRADE_STYLE.best.color }] : undefined}
             />
@@ -287,7 +360,27 @@ export function GameTable({
           <ReviewPanel part="now" review={review} played={played} shownPly={shownPly} names={{ w: players.w.name, b: players.b.name }} />
         )}
 
-        <MoveList played={played} viewPly={shownPly} onView={view} grades={reviewing ? grades : undefined} />
+        {over && !trial && livePly > 0 && <p className="text-center text-sm text-muted">{t('chess.trial.hint')}</p>}
+
+        {/* The player's own line, when they are trying one: what they have played, and the way back. */}
+        {trial && tried && (
+          <div className="flex flex-col gap-2 border-2 border-brand bg-brand/15 p-3" data-testid="trial" role="status">
+            <p className="text-sm font-bold">{t('chess.trial.title')}</p>
+            <p className="font-semibold tabular-nums" data-testid="trial-line">
+              {tried.played.slice(trial.ply).map((move) => `${move.color === 'w' ? `${(move.ply + 1) / 2}. ` : move.ply === trial.ply + 1 ? `${move.ply / 2}… ` : ''}${move.san}`).join(' ')}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="ghost" onClick={takeBackTried}>
+                {t('chess.trial.takeBack')}
+              </Button>
+              <Button onClick={() => setTrial(null)} data-testid="trial-back">
+                {t('chess.trial.back')}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        <MoveList played={played} viewPly={trial ? trial.ply : shownPly} onView={view} grades={reviewing ? grades : undefined} />
 
         {reviewing && reviewable && (
           <ReviewPanel part="summary" review={review} played={played} shownPly={shownPly} names={{ w: players.w.name, b: players.b.name }} />

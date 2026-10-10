@@ -83,7 +83,8 @@ test('a full game by tapping: hints, clocks, captures, checkmate, review and rem
   await expect(page.getByTestId('clock-w')).toHaveAttribute('data-active', 'false')
   await expect(page.getByTestId('clock-b')).toHaveAttribute('data-active', 'false')
 
-  // Look back through the game: the board shows earlier positions and cannot be played on.
+  // Look back through the game: the board shows earlier positions. (A finished game can be
+  // played on from any of them, to try other moves: that has a test of its own below.)
   // The result card offers the review; it opens on the first move.
   await page.getByRole('button', { name: 'Game Review' }).click()
   await expect(pieceOn(page, 'e4')).toHaveCount(1)
@@ -94,7 +95,8 @@ test('a full game by tapping: hints, clocks, captures, checkmate, review and rem
   await page.getByRole('button', { name: 'Previous move' }).click()
   await expect(pieceOn(page, 'e2')).toHaveCount(1)
   await square(page, 'e2').click()
-  await expect(hintLayer(page, 'e4')).not.toHaveCSS('background-image', /radial-gradient/)
+  await expect(hintLayer(page, 'e4')).toHaveCSS('background-image', /radial-gradient/)
+  await square(page, 'e2').click()
   await page.getByRole('list', { name: 'Moves' }).getByRole('button').last().click()
   await expect(pieceOn(page, 'h5')).toHaveCount(1)
 
@@ -237,4 +239,61 @@ test('a pawn reaching the last rank asks which piece to promote to', async ({ pa
   await expect(pieceOn(page, 'h8')).toHaveAttribute('data-piece', 'wN')
   // A bishop, a rook and two pawns taken by White; the promotion counts toward the lead as well.
   await expect(page.getByTestId('captured-w').locator('img')).toHaveCount(4)
+})
+
+test('after a game, a player can try moves of their own from any position, then go back to the real game', async ({ page }) => {
+  await openLocalGame(page)
+  // Fool's mate: 1.f3 e5 2.g4 Qh4#
+  await tapMove(page, 'f2', 'f3')
+  await tapMove(page, 'e7', 'e5')
+  await tapMove(page, 'g2', 'g4')
+  await tapMove(page, 'd8', 'h4')
+  await expect(page.getByRole('dialog', { name: 'Black wins' })).toBeVisible()
+  await page.getByRole('button', { name: 'Look at the board' }).click()
+  const moves = page.getByRole('list', { name: 'Moves' }).getByRole('button')
+  await expect(moves).toHaveText(['f3', 'e5', 'g4', 'Qh4#'])
+  await expect(page.getByText('Move any piece to try another line.')).toBeVisible()
+
+  // Back to the position after 1...e5, where White went wrong.
+  await page.getByRole('button', { name: 'e5', exact: true }).click()
+  await expect(pieceOn(page, 'g2')).toHaveCount(1)
+  await expect(page.getByTestId('trial')).toHaveCount(0)
+
+  // Try something better than 2.g4: the pawn one square only. Legal-move hints are shown.
+  await square(page, 'g2').click()
+  await expect(hintLayer(page, 'g3')).toHaveCSS('background-image', /radial-gradient/)
+  await square(page, 'g3').click()
+  await expect(pieceOn(page, 'g3')).toHaveCount(1)
+  await expect(page.getByTestId('trial')).toBeVisible()
+  await expect(page.getByTestId('trial-line')).toHaveText('2. g3')
+
+  // The other side can be moved too, and an illegal move is still refused.
+  await tapMove(page, 'd8', 'h4')
+  await expect(page.getByTestId('trial-line')).toHaveText('2. g3 Qh4')
+  await tapMove(page, 'e1', 'e3')
+  await expect(page.getByTestId('trial-line')).toHaveText('2. g3 Qh4')
+  // White can now simply take the queen: the line goes on as long as the player likes.
+  await tapMove(page, 'g3', 'h4')
+  await expect(page.getByTestId('trial-line')).toHaveText('2. g3 Qh4 3. gxh4')
+
+  // Take one back.
+  await page.getByTestId('trial').getByRole('button', { name: 'Take back' }).click()
+  await expect(page.getByTestId('trial-line')).toHaveText('2. g3 Qh4')
+  await expect(pieceOn(page, 'h4')).toHaveCount(1)
+
+  // Back to the game: the real position at that move, and the real record untouched.
+  await page.getByTestId('trial-back').click()
+  await expect(page.getByTestId('trial')).toHaveCount(0)
+  await expect(pieceOn(page, 'g2')).toHaveCount(1)
+  await expect(pieceOn(page, 'g3')).toHaveCount(0)
+  await expect(pieceOn(page, 'd8')).toHaveCount(1)
+  await expect(moves).toHaveText(['f3', 'e5', 'g4', 'Qh4#'])
+
+  // Stepping on through the real game also leaves a line being tried.
+  await tapMove(page, 'b1', 'c3')
+  await expect(page.getByTestId('trial-line')).toHaveText('2. Nc3')
+  await page.getByRole('button', { name: 'Next move' }).click()
+  await expect(page.getByTestId('trial')).toHaveCount(0)
+  await expect(pieceOn(page, 'g4')).toHaveCount(1)
+  await expect(pieceOn(page, 'b1')).toHaveCount(1)
 })
