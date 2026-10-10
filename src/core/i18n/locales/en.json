@@ -214,7 +214,10 @@
     "countryHint": "Shown as a flag next to your name. It cannot be changed later.",
     "countryLoading": "Loading countries…",
     "countryLoadFailed": "We could not load the list of countries.",
-    "consent": "By creating an account you agree to the <terms>Terms of use</terms> and confirm you have read the <privacy>Privacy policy</privacy>."
+    "consent": "By creating an account you agree to the <terms>Terms of use</terms> and confirm you have read the <privacy>Privacy policy</privacy>.",
+    "captchaWait": "One moment: we are checking that you are a person. Try again in a second.",
+    "captchaUnavailable": "The security check could not be loaded. Check your connection, or switch off any blocker for this site.",
+    "idleSignedOut": "You were signed out because this phone had not opened the app for 30 days. Log in again to continue."
   },
   "lobby": {
     "title": "Lobby",

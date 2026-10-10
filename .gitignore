@@ -14,3 +14,4 @@ supabase/.temp
 supabase/.branches
 # Full-size originals of pictures (see scripts/makeGameArt.ts). The site serves the small copies.
 art-src
+backups

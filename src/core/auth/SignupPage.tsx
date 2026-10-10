@@ -1,4 +1,4 @@
-import { type FormEvent, useId, useState } from 'react'
+import { type FormEvent, useId, useState, useRef } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { guessCountry, useCountries } from '@/core/countries/useCountries'
@@ -7,6 +7,7 @@ import { Button } from '@/core/ui/Button'
 import { TextField } from '@/core/ui/TextField'
 import { toast } from '@/core/ui/toast'
 import { AuthLayout } from './AuthLayout'
+import { Captcha, type CaptchaHandle, captchaRequired } from './Captcha'
 import { authErrorKey } from './errors'
 import { fieldErrors, signupSchema } from './schemas'
 
@@ -26,12 +27,16 @@ export default function SignupPage() {
   const [chosenCountry, setChosenCountry] = useState<string | null>(null)
   const countryCode = chosenCountry ?? guessCountry(countries)
 
+  const captcha = useRef<CaptchaHandle>(null)
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
     if (busy) return
     const parsed = signupSchema.safeParse({ username, countryCode, email, password, isAdult })
     if (!parsed.success) return setErrors(fieldErrors(parsed.error))
     setErrors({})
+    if (captchaRequired && !captchaToken) return toast.error(t('auth.captchaWait'))
     setBusy(true)
     try {
       const available = await supabase.rpc('is_username_available', { p_username: parsed.data.username })
@@ -43,6 +48,7 @@ export default function SignupPage() {
         password: parsed.data.password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
+          ...(captchaToken ? { captchaToken } : {}),
           // Read by the signup trigger to create the profile. The player controls this
           // metadata, so the trigger re-validates every field and never trusts it for money.
           data: {
@@ -53,7 +59,11 @@ export default function SignupPage() {
           },
         },
       })
-      if (error) return toast.error(t(authErrorKey(error)))
+      if (error) {
+        // An answer to the check is good for one attempt.
+        captcha.current?.reset()
+        return toast.error(t(authErrorKey(error)))
+      }
       // With email confirmation on there is no session yet; the player must open the link.
       if (!data.session) navigate('/auth/check-email', { state: { email: parsed.data.email } })
     } catch (err) {
@@ -153,6 +163,7 @@ export default function SignupPage() {
             }}
           />
         </p>
+        <Captcha ref={captcha} onToken={setCaptchaToken} onUnavailable={() => toast.error(t('auth.captchaUnavailable'))} language={i18n.resolvedLanguage} />
         <Button type="submit" disabled={busy} className="mt-2">
           {busy ? t('auth.working') : t('auth.signupButton')}
         </Button>

@@ -214,7 +214,10 @@
     "countryHint": "Affiché sous forme de drapeau à côté de votre nom. Il ne pourra pas être modifié ensuite.",
     "countryLoading": "Chargement des pays…",
     "countryLoadFailed": "Impossible de charger la liste des pays.",
-    "consent": "En créant un compte, vous acceptez les <terms>Conditions d’utilisation</terms> et confirmez avoir lu la <privacy>Politique de confidentialité</privacy>."
+    "consent": "En créant un compte, vous acceptez les <terms>Conditions d’utilisation</terms> et confirmez avoir lu la <privacy>Politique de confidentialité</privacy>.",
+    "captchaWait": "Un instant : nous vérifions que vous êtes une personne. Réessayez dans une seconde.",
+    "captchaUnavailable": "La vérification de sécurité n’a pas pu se charger. Vérifiez votre connexion, ou désactivez tout bloqueur pour ce site.",
+    "idleSignedOut": "Vous avez été déconnecté car ce téléphone n’avait pas ouvert l’application depuis 30 jours. Reconnectez-vous pour continuer."
   },
   "lobby": {
     "title": "Salon",

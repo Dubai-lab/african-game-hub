@@ -34,10 +34,29 @@ Without Docker: `npm ci && node build.mjs && node dist/server.cjs` inside `serve
 | Variable | Required | What it is |
 | --- | --- | --- |
 | `SUPABASE_URL` | yes | The project's address, `https://<ref>.supabase.co` |
-| `SUPABASE_SERVICE_ROLE_KEY` | yes | The server-side key. A secret: keep it in the secret store, never in the image or the repository |
+| `SUPABASE_ANON_KEY` | yes | The project's public key (the one the app uses). Used only to ask the auth server who a session token belongs to |
+| `GAME_SERVER_KEY` | yes | This server's own key. A secret: keep it in the secret store. It is a token for the `game_server` database role, which can read a game as a player sees it and record a move through the game's own function, and nothing else: no table, no wallet, no personal details. Made by `npm run server-keys`, which saves it in `.env.local` |
+| `SUPABASE_SERVICE_ROLE_KEY` | no | **Do not set this.** It is the key that can do anything, and it does not belong on a machine on the internet. It is still accepted when `GAME_SERVER_KEY` is missing, so an older setup keeps running, and the server logs a warning (`full_access_key`) every time it starts that way |
 | `APP_ORIGINS` | yes in production | The player site's address(es), comma-separated. A browser on any other site is refused |
 | `ORIGIN_SECRET` | yes in production | When set, every request must carry it in an `X-Origin-Secret` header (the proxy in front adds it). `/health` from the machine itself is exempt |
 | `PORT` | no | Where to listen. Default 8080 |
+
+## What it will not put up with
+
+- **Who a player is** is checked with the auth server when they connect, and again every five minutes while they play. A banned account, a signed-out session or an expired token is turned away; the app reconnects with a fresh token if it has one.
+- **One address** may hold at most 120 connections, at most 15 that have not yet said who they are, and may open at most 60 in ten seconds. Above that the answer is `429`. (Phone networks put many players behind one address, hence the generous numbers.) The whole server takes at most 4,000 connections.
+- The address believed is the **last** entry of `X-Forwarded-For`, the one the proxy added. Earlier entries are written by the caller.
+- `/health` reports `refused`: how many connections have been turned away since the server started.
+
+## The nightly copy of the books
+
+`server/backup.mjs` is a separate small script (Node 22, no packages) that copies the money tables into one compressed file and checks that every wallet equals its ledger entries. It uses its own key, `LEDGER_BACKUP_KEY`, which can read those tables and nothing else. It is meant to be run once a night by whatever schedules jobs on the host, and the file kept somewhere private that is not the database:
+
+```
+SUPABASE_URL=... SUPABASE_ANON_KEY=... LEDGER_BACKUP_KEY=... node backup.mjs /some/folder
+```
+
+It prints one JSON line with the file name and the row counts. It exits with code 2 if the copy does not agree with itself, and with code 1 if it could not be taken: either should raise an alarm.
 
 ## What it answers
 

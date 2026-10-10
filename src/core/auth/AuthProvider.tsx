@@ -8,6 +8,27 @@ import { AuthContext, type AuthStatus, type AuthValue } from './AuthContext'
 
 const RESTORE_RETRY_MS = 3000
 
+// A phone that has not opened the app for this long is signed out the next time it does, and
+// that session is ended on the server. It limits what a lost or sold phone gives away. (The
+// stricter, server-side version of this is a setting on Supabase's paid plan.)
+const IDLE_LIMIT_MS = 30 * 24 * 60 * 60 * 1000
+const SEEN_KEY = 'agh.lastSeen'
+function idleTooLong(): boolean {
+  try {
+    const seen = Number(localStorage.getItem(SEEN_KEY))
+    return Number.isFinite(seen) && seen > 0 && Date.now() - seen > IDLE_LIMIT_MS
+  } catch {
+    return false
+  }
+}
+function markSeen() {
+  try {
+    localStorage.setItem(SEEN_KEY, String(Date.now()))
+  } catch {
+    // Private browsing: nothing is remembered, so nobody is signed out for absence.
+  }
+}
+
 /** The session as last stored by the Supabase client, even if its token has since expired. */
 function savedSession(): Session | null {
   try {
@@ -42,6 +63,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const { data, error } = await supabase.auth.getSession()
         if (!active) return
+        if (!error && data.session) {
+          if (idleTooLong()) {
+            markSeen()
+            await supabase.auth.signOut()
+            if (active) toast.info(i18n.t('auth.idleSignedOut'))
+            return apply(null)
+          }
+          markSeen()
+        }
         if (!error) return apply(data.session)
         if (!isAuthRetryableFetchError(error)) return apply(null)
       } catch (err) {

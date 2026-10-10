@@ -96,14 +96,13 @@ describe('Ludo on the game server', () => {
   function fakeDb() {
     const state = { turn_no: 3, refuse: null as string | null, asked: [] as unknown[] }
     const db: LudoDb = {
-      seated: async (_match, userId) => userId !== 'stranger',
+      table: async (_match, userId) => (userId === 'stranger' ? null : { turn_no: state.turn_no, turn: 'red', phase: 'move' }),
       action: async (_match, userId, request) => {
         state.asked.push({ userId, ...request })
         if (state.refuse) return { ok: false, code: state.refuse }
         state.turn_no++
         return { ok: true }
       },
-      row: async () => ({ turn_no: state.turn_no, turn: 'red', phase: 'move' }),
     }
     return { db, state }
   }

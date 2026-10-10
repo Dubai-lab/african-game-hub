@@ -43,10 +43,13 @@ try {
   // it, but some older browsers do not count a wss: address as 'self', so it is named.)
   const gameServerUrl = loadEnv('production', root, 'VITE_').VITE_GAME_SERVER_URL
   const gameServer = gameServerUrl ? ` ${new URL(gameServerUrl).origin}` : ''
+  // The sign-up check (Cloudflare Turnstile), when this build has one: its script, and the
+  // frame it draws itself in. Nothing of Cloudflare's is allowed otherwise.
+  const turnstile = loadEnv('production', root, 'VITE_').VITE_TURNSTILE_SITE_KEY ? ' https://challenges.cloudflare.com' : ''
   const policy = [
     "default-src 'self'",
     // 'wasm-unsafe-eval' lets the chess engine (WebAssembly) start; it does not allow eval().
-    `script-src 'self' 'sha256-${guardHash}' 'wasm-unsafe-eval'`,
+    `script-src 'self' 'sha256-${guardHash}' 'wasm-unsafe-eval'${turnstile}`,
     "worker-src 'self' blob:",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
@@ -54,6 +57,7 @@ try {
     "media-src 'self' blob:",
     `connect-src 'self' https://*.supabase.co wss://*.supabase.co${gameServer}`,
     "manifest-src 'self'",
+    ...(turnstile ? [`frame-src${turnstile}`] : []),
     "object-src 'none'",
     "base-uri 'none'",
     "form-action 'self'",

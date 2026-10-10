@@ -12,11 +12,9 @@ export type LudoRequest = { action: 'roll' | 'move'; piece: number | null; die: 
 
 /** The few things the game server asks of the database for Ludo. */
 export type LudoDb = {
-  /** Whether this player sits at this table. */
-  seated: (matchId: string, userId: string) => Promise<boolean>
+  /** The game as one of its players sees it, in the database's own column names; null when they are not at the table. */
+  table: (matchId: string, userId: string) => Promise<Record<string, unknown> | null>
   action: (matchId: string, userId: string, request: LudoRequest) => Promise<{ ok: boolean; code?: string }>
-  /** The game as stored, in the database's own column names; null when there is none. */
-  row: (matchId: string) => Promise<Record<string, unknown> | null>
 }
 
 const COLORS = ['red', 'green', 'yellow', 'blue']
@@ -54,9 +52,8 @@ export class LudoTables {
   }
 
   async join(member: Member, matchId: string): Promise<{ ok: true; ply: number } | { ok: false; code: string }> {
-    if (!(await this.db.seated(matchId, member.userId))) return { ok: false, code: 'NOT_A_PLAYER' }
-    const row = await this.db.row(matchId)
-    if (!row) return { ok: false, code: 'GAME_NOT_FOUND' }
+    const row = await this.db.table(matchId, member.userId)
+    if (!row) return { ok: false, code: 'NOT_A_PLAYER' }
     let table = this.tables.get(matchId)
     if (!table) this.tables.set(matchId, (table = new Set()))
     table.add(member)
@@ -87,7 +84,7 @@ export class LudoTables {
     // hears of the change from the database itself a moment later.
     let row: Record<string, unknown> | null = null
     try {
-      row = await this.db.row(matchId)
+      row = await this.db.table(matchId, member.userId)
     } catch {
       row = null
     }
