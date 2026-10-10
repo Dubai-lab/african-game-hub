@@ -38,6 +38,7 @@ export type OnlinePlayer = {
   color: Color
   name: string
   countryCode: string | null
+  avatarUrl: string | null
   rating: number | null
   /** Set once the match has been settled. */
   ratingAfter: number | null
@@ -97,7 +98,7 @@ export function useOnlineChessGame(matchId: string) {
         supabase
           .from('matches')
           .select(
-            'status, result, winner_id, end_reason, options, stake_amount, match_players (user_id, seat, rating_before, rating_after, tokens_change, profiles (username, display_name, country_code))',
+            'status, result, winner_id, end_reason, options, stake_amount, match_players (user_id, seat, rating_before, rating_after, tokens_change, profiles (username, display_name, country_code, avatar_url))',
           )
           .eq('id', matchId)
           .maybeSingle(),
@@ -122,6 +123,7 @@ export function useOnlineChessGame(matchId: string) {
         color: p.seat === 'white' ? 'w' : 'b',
         name: p.profiles?.display_name ?? p.profiles?.username ?? '?',
         countryCode: p.profiles?.country_code ?? null,
+        avatarUrl: p.profiles?.avatar_url ?? null,
         rating: p.rating_before,
         ratingAfter: p.rating_after,
         tokensChange: p.tokens_change,

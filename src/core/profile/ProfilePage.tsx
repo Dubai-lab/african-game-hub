@@ -1,11 +1,12 @@
 import { ShareLink } from '@/core/lobby/challenges'
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 import { useAuth } from '@/core/auth/AuthContext'
 import { flagEmoji } from '@/core/countries/useCountries'
 import { supabase } from '@/core/lib/supabase'
+import { Avatar } from '@/core/ui/Avatar'
 import { Button } from '@/core/ui/Button'
 import { Skeleton } from '@/core/ui/Skeleton'
 import { toast } from '@/core/ui/toast'
@@ -13,12 +14,13 @@ import { useFormat } from '@/core/ui/useFormat'
 import { SafetyActions } from '@/core/social/SafetyActions'
 import { useBlocking, useContacts, useFriendActions } from '@/core/social/social'
 import { buttonClass } from '@/core/ui/Button'
+import { removeAvatar, saveAvatar } from './avatar'
 import { myProfileKey } from './useMyProfile'
 
 const PAGE_SIZE = 15
 const sectionTitle = 'font-display text-xl font-semibold'
 
-type PublicProfile = { id: string; username: string; displayName: string | null; countryCode: string | null; createdAt: string }
+type PublicProfile = { id: string; username: string; displayName: string | null; avatarUrl: string | null; countryCode: string | null; createdAt: string }
 
 /** Public profile fields of the signed-in player, or of the player with this username. */
 function usePublicProfile(username: string | undefined) {
@@ -28,13 +30,14 @@ function usePublicProfile(username: string | undefined) {
     enabled: Boolean(username ?? user?.id),
     meta: { errorKey: 'profile.loadFailed' },
     queryFn: async (): Promise<PublicProfile | null> => {
-      const query = supabase.from('profiles').select('id, username, display_name, country_code, created_at')
+      const query = supabase.from('profiles').select('id, username, display_name, avatar_url, country_code, created_at')
       const { data, error } = await (username ? query.eq('username', username) : query.eq('id', user!.id)).maybeSingle()
       if (error) throw error
       return data && {
         id: data.id,
         username: data.username,
         displayName: data.display_name,
+        avatarUrl: data.avatar_url,
         countryCode: data.country_code,
         createdAt: data.created_at,
       }
@@ -99,6 +102,59 @@ function useMatchHistory(userId: string | undefined) {
     },
     getNextPageParam: (page) => (page.length === PAGE_SIZE ? page[page.length - 1]!.finishedAt : undefined),
   })
+}
+
+/** The player's own photo: choose one from the phone's gallery or the computer, or take it off. */
+function PhotoEditor({ profile }: { profile: PublicProfile }) {
+  const { t } = useTranslation()
+  const queryClient = useQueryClient()
+  const picker = useRef<HTMLInputElement>(null)
+  const [busy, setBusy] = useState(false)
+  const link = 'min-h-11 font-semibold text-primary underline underline-offset-4 disabled:opacity-60'
+
+  async function chosen(file: File | undefined) {
+    if (!file || busy) return
+    setBusy(true)
+    try {
+      const result = await saveAvatar(profile.id, file)
+      if ('failure' in result) return toast.error(t(`profile.photo.failed.${result.failure}`))
+      await queryClient.invalidateQueries({ queryKey: ['profile'] })
+      toast.success(t('profile.photo.saved'))
+    } catch {
+      toast.error(t('profile.photo.failed.upload'))
+    } finally {
+      setBusy(false)
+      // So that choosing the same picture again still counts as a choice.
+      if (picker.current) picker.current.value = ''
+    }
+  }
+  async function remove() {
+    if (busy) return
+    setBusy(true)
+    try {
+      if (!(await removeAvatar(profile.id))) return toast.error(t('profile.photo.failed.upload'))
+      await queryClient.invalidateQueries({ queryKey: ['profile'] })
+    } catch {
+      toast.error(t('profile.photo.failed.upload'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-5">
+      {/* The phone offers its gallery and its camera; a computer offers its files. */}
+      <input ref={picker} type="file" accept="image/*" className="sr-only" tabIndex={-1} aria-label={t('profile.photo.choose')} data-testid="photo-input" onChange={(event) => void chosen(event.target.files?.[0])} />
+      <button type="button" className={link} disabled={busy} onClick={() => picker.current?.click()}>
+        {busy ? t('profile.photo.working') : t(profile.avatarUrl ? 'profile.photo.change' : 'profile.photo.add')}
+      </button>
+      {profile.avatarUrl && !busy && (
+        <button type="button" className={link} onClick={() => void remove()}>
+          {t('profile.photo.remove')}
+        </button>
+      )}
+    </div>
+  )
 }
 
 /** The player's own display name, editable in place. The username itself never changes. */
@@ -251,12 +307,7 @@ export default function ProfilePage() {
     <div className="flex flex-col gap-7 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-x-10">
       <div className="flex flex-col gap-7">
       <header className="flex items-start gap-4">
-        <div
-          aria-hidden="true"
-          className="flex size-16 shrink-0 items-center justify-center border-2 border-ink bg-primary font-display text-3xl font-extrabold text-surface"
-        >
-          {(target.displayName ?? target.username).slice(0, 1).toUpperCase()}
-        </div>
+        <Avatar url={target.avatarUrl} name={target.displayName ?? target.username} className="size-20 border-2 border-ink text-4xl" />
         <div className="min-w-0 flex-1">
           <h1 className="truncate font-display text-3xl font-extrabold text-primary">{target.displayName ?? target.username}</h1>
           <p className="text-muted">
@@ -270,7 +321,10 @@ export default function ProfilePage() {
           </p>
           <p className="text-sm text-muted">{t('profile.joined', { date: format.date(target.createdAt) })}</p>
           {isMe ? (
-            <DisplayNameEditor profile={target} />
+            <>
+              <PhotoEditor profile={target} />
+              <DisplayNameEditor profile={target} />
+            </>
           ) : (
             <>
               <FriendActions profile={target} />

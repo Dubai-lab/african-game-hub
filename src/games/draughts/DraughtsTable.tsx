@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { useSettingsStore } from '@/core/settings/settingsStore'
+import { Avatar } from '@/core/ui/Avatar'
 import { Button } from '@/core/ui/Button'
 import { ResultDialog, ResultStat, ResultStats, type ResultTone } from '@/core/ui/ResultDialog'
 import { Toggle } from '@/core/ui/Toggle'
@@ -63,18 +64,15 @@ function Clock({ clock, color }: { clock: ClockState; color: Color }) {
   )
 }
 
-export type TablePlayer = { name: string; flag?: string; rating?: number; /** How the rating moved, once the game is settled. */ ratingChange?: number }
+export type TablePlayer = { name: string; flag?: string; avatarUrl?: string; rating?: number; /** How the rating moved, once the game is settled. */ ratingChange?: number }
 
 function PlayerCard({ player, color, taken, lead, clock, toMove, disc }: { player: TablePlayer; color: Color; taken: number; lead: number; clock?: ClockState; toMove: boolean; disc: { top: string; edge: string } }) {
   const { t } = useTranslation()
   return (
     <div className="flex items-center gap-3" data-testid={`player-${color}`}>
-      <div
-        aria-hidden="true"
-        className="flex size-11 shrink-0 items-center justify-center rounded-full border-4 font-display text-lg font-extrabold"
-        style={{ background: disc.top, borderColor: disc.edge, color: color === 'w' ? '#1b1919' : '#ffffff' }}
-      >
-        {player.name.slice(0, 1).toUpperCase()}
+      {/* The ring is the colour of the player's pieces, photo or no photo. */}
+      <div className="shrink-0 rounded-full border-4" style={{ borderColor: disc.edge, background: disc.top, color: color === 'w' ? '#1b1919' : '#ffffff' }}>
+        <Avatar url={player.avatarUrl} name={player.name} className="size-9 rounded-full text-lg" tileClassName="" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="flex items-baseline gap-2 truncate font-bold">

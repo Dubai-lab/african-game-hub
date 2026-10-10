@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Avatar } from '@/core/ui/Avatar'
 import { Button } from '@/core/ui/Button'
 import { ResultDialog, ResultStat, ResultStats, type ResultTone } from '@/core/ui/ResultDialog'
 import type { Color, Outcome, PieceSymbol, PlayedMove } from '../engine/chessLogic'
@@ -60,6 +61,7 @@ type PlayerCardProps = {
   flag?: string
   rating?: number
   ratingChange?: number
+  avatarUrl?: string
   /** Pieces this player has taken (they belong to the other colour). */
   captured: PieceSymbol[]
   lead: number
@@ -69,19 +71,12 @@ type PlayerCardProps = {
   pieceSet: PieceSet
 }
 
-export function PlayerCard({ name, color, flag, rating, ratingChange, captured, lead, clock, toMove, pieceSet }: PlayerCardProps) {
+export function PlayerCard({ name, color, flag, rating, ratingChange, avatarUrl, captured, lead, clock, toMove, pieceSet }: PlayerCardProps) {
   const theirs = color === 'w' ? 'b' : 'w'
   const sorted = [...captured].sort((a, b) => VALUE_ORDER.indexOf(a) - VALUE_ORDER.indexOf(b))
   return (
     <div className="flex items-center gap-3" data-testid={`player-${color}`}>
-      <div
-        aria-hidden="true"
-        className={`flex size-11 shrink-0 items-center justify-center border-2 font-display text-lg font-extrabold ${
-          color === 'w' ? 'border-ink bg-panel text-ink' : 'border-ink bg-ink text-surface'
-        }`}
-      >
-        {name.slice(0, 1).toUpperCase()}
-      </div>
+      <Avatar url={avatarUrl} name={name} className="size-11 border-2 border-ink text-lg" tileClassName={color === 'w' ? 'bg-panel text-ink' : 'bg-ink text-surface'} />
       <div className="min-w-0 flex-1">
         <p className="flex items-baseline gap-2 truncate font-bold">
           {flag && <span aria-hidden="true">{flag}</span>}

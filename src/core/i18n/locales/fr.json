@@ -102,7 +102,7 @@
     "usernameChars": "Utilisez uniquement des lettres, des chiffres et des tirets bas.",
     "ageRequired": "Vous devez avoir 18 ans ou plus pour jouer.",
     "countryRequired": "Sélectionnez votre pays.",
-    "usernameTaken": "Ce nom d'utilisateur est déjà pris. Essayez-en un autre.",
+    "usernameTaken": "Ce nom d’utilisateur est pris. Choisissez-en un autre.",
     "passwordsDiffer": "Les deux mots de passe ne sont pas identiques."
   },
   "landing": {
@@ -241,7 +241,9 @@
       "opening": "Ouverture de votre lien…",
       "badLink": "Ce lien a déjà été utilisé ou est trop ancien. Demandez-en un nouveau.",
       "askAgain": "Envoyez-moi un nouveau lien"
-    }
+    },
+    "usernameChecking": "Nous vérifions si ce nom est libre…",
+    "usernameFree": "@{{username}} est libre."
   },
   "lobby": {
     "title": "Salon",
@@ -769,7 +771,21 @@
     "winsFor": "Parties gagnées : {{game}}",
     "share": "Partager le profil",
     "shareHint": "Envoyez votre profil à vos amis pour qu’ils vous trouvent et vous ajoutent.",
-    "shareText": "Retrouvez-moi sur African Game Hub :"
+    "shareText": "Retrouvez-moi sur African Game Hub :",
+    "photo": {
+      "add": "Ajouter une photo",
+      "change": "Changer la photo",
+      "remove": "Retirer la photo",
+      "choose": "Choisir une photo de profil",
+      "working": "Enregistrement de votre photo…",
+      "saved": "Votre photo a été enregistrée.",
+      "failed": {
+        "not_image": "Ce fichier n’est pas une image. Choisissez une photo.",
+        "too_large": "Cette image est trop grande. Choisissez-en une plus petite.",
+        "unreadable": "Nous n’avons pas pu lire cette image. Essayez-en une autre.",
+        "upload": "Votre photo n’a pas pu être enregistrée. Vérifiez votre connexion et réessayez."
+      }
+    }
   },
   "friends": {
     "title": "Amis",

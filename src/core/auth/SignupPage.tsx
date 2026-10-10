@@ -1,4 +1,4 @@
-import { type FormEvent, useId, useState, useRef } from 'react'
+import { type FormEvent, useId, useState, useRef, useEffect } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { guessCountry, useCountries } from '@/core/countries/useCountries'
@@ -27,6 +27,43 @@ export default function SignupPage() {
   const [chosenCountry, setChosenCountry] = useState<string | null>(null)
   const countryCode = chosenCountry ?? guessCountry(countries)
 
+  // Is the name free? Asked a moment after the player stops typing, so they know before they
+  // have filled in the rest of the form. (The database has the last word either way: two
+  // accounts can never hold the same name, whatever the capitals.)
+  const [nameState, setNameState] = useState<'idle' | 'checking' | 'free' | 'taken'>('idle')
+  useEffect(() => {
+    const name = username.trim()
+    if (!/^[A-Za-z0-9_]{3,20}$/.test(name)) return setNameState('idle')
+    setNameState('checking')
+    let stale = false
+    const timer = setTimeout(async () => {
+      try {
+        const { data, error } = await supabase.rpc('is_username_available', { p_username: name })
+        if (!stale) setNameState(error ? 'idle' : data ? 'free' : 'taken')
+      } catch {
+        if (!stale) setNameState('idle')
+      }
+    }, 450)
+    return () => {
+      stale = true
+      clearTimeout(timer)
+    }
+  }, [username])
+
+  // What is wrong is said three ways, so it cannot be missed on a small screen: under the
+  // field, in a message at the top, and by taking the player to the field.
+  const form = useRef<HTMLFormElement>(null)
+  function refuse(found: Record<string, string>) {
+    setErrors(found)
+    const first = Object.values(found)[0]
+    if (first) toast.error(t(first))
+    requestAnimationFrame(() => {
+      const field = form.current?.querySelector<HTMLElement>('[aria-invalid="true"]')
+      field?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      field?.focus({ preventScroll: true })
+    })
+  }
+
   const captcha = useRef<CaptchaHandle>(null)
   const [captchaToken, setCaptchaToken] = useState<string | null>(null)
 
@@ -34,14 +71,18 @@ export default function SignupPage() {
     event.preventDefault()
     if (busy) return
     const parsed = signupSchema.safeParse({ username, countryCode, email, password, isAdult })
-    if (!parsed.success) return setErrors(fieldErrors(parsed.error))
+    if (!parsed.success) return refuse(fieldErrors(parsed.error))
+    if (nameState === 'taken') return refuse({ username: 'validation.usernameTaken' })
     setErrors({})
     if (captchaRequired && !captchaToken) return toast.error(t('auth.captchaWait'))
     setBusy(true)
     try {
       const available = await supabase.rpc('is_username_available', { p_username: parsed.data.username })
       if (available.error) return toast.error(t('errors.network'))
-      if (!available.data) return setErrors({ username: 'validation.usernameTaken' })
+      if (!available.data) {
+        setNameState('taken')
+        return refuse({ username: 'validation.usernameTaken' })
+      }
 
       const { data, error } = await supabase.auth.signUp({
         email: parsed.data.email,
@@ -75,7 +116,7 @@ export default function SignupPage() {
 
   return (
     <AuthLayout title={t('auth.signupTitle')}>
-      <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
+      <form ref={form} onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
         <TextField
           label={t('auth.username')}
           name="username"
@@ -84,9 +125,14 @@ export default function SignupPage() {
           spellCheck={false}
           maxLength={20}
           value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          hint={t('auth.usernameHint')}
-          error={errors.username && t(errors.username)}
+          onChange={(e) => {
+            setUsername(e.target.value)
+            // What was wrong with the old name says nothing about the new one.
+            setErrors(({ username: _gone, ...rest }) => rest)
+          }}
+          hint={nameState === 'checking' ? t('auth.usernameChecking') : t('auth.usernameHint')}
+          success={nameState === 'free' ? t('auth.usernameFree', { username: username.trim() }) : undefined}
+          error={errors.username ? t(errors.username) : nameState === 'taken' ? t('validation.usernameTaken') : undefined}
         />
         <div>
           <label htmlFor={countryFieldId} className="block text-sm font-medium">

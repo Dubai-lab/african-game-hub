@@ -102,7 +102,7 @@
     "usernameChars": "Use only letters, numbers and underscores.",
     "ageRequired": "You must be 18 or older to play.",
     "countryRequired": "Select your country.",
-    "usernameTaken": "This username is taken. Try another one.",
+    "usernameTaken": "This username is taken. Choose another one.",
     "passwordsDiffer": "The two passwords are not the same."
   },
   "landing": {
@@ -241,7 +241,9 @@
       "opening": "Opening your link…",
       "badLink": "This link has been used already or is too old. Ask for a new one.",
       "askAgain": "Send me a new link"
-    }
+    },
+    "usernameChecking": "Checking whether this name is free…",
+    "usernameFree": "@{{username}} is free."
   },
   "lobby": {
     "title": "Lobby",
@@ -769,7 +771,21 @@
     "winsFor": "{{game}} games won",
     "share": "Share profile",
     "shareHint": "Send your profile to friends so they can find you and add you.",
-    "shareText": "Find me on African Game Hub:"
+    "shareText": "Find me on African Game Hub:",
+    "photo": {
+      "add": "Add a photo",
+      "change": "Change photo",
+      "remove": "Remove photo",
+      "choose": "Choose a profile photo",
+      "working": "Saving your photo…",
+      "saved": "Your photo has been saved.",
+      "failed": {
+        "not_image": "That file is not a picture. Choose a photo.",
+        "too_large": "That picture is too large. Choose a smaller one.",
+        "unreadable": "We could not read that picture. Try another one.",
+        "upload": "Your photo could not be saved. Check your connection and try again."
+      }
+    }
   },
   "friends": {
     "title": "Friends",

@@ -20,7 +20,7 @@ test('landing shows instantly and leads to signup, with validation and French', 
   await expect(country.locator('option[value="RW"]')).toHaveText(/Rwanda/)
 
   await page.getByRole('button', { name: 'Create account' }).click()
-  await expect(page.getByText('Use 3 to 20 characters.')).toBeVisible()
+  await expect(page.getByText('Use 3 to 20 characters.').first()).toBeVisible()
   await expect(page.getByText('Select your country.')).toBeVisible()
   await expect(page.getByText('Enter a valid email address.')).toBeVisible()
   await expect(page.getByText('You must be 18 or older to play.')).toBeVisible()
@@ -38,7 +38,7 @@ test('signup refuses a username that is already taken, without creating an accou
   await page.getByLabel('Password').fill('long-enough-password')
   await page.getByRole('checkbox').check()
   await page.getByRole('button', { name: 'Create account' }).click()
-  await expect(page.getByText('This username is taken. Try another one.')).toBeVisible()
+  await expect(page.getByText('This username is taken. Choose another one.').first()).toBeVisible()
   await expect(page).toHaveURL(/\/signup$/)
 })
 

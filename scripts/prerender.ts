@@ -52,7 +52,8 @@ try {
     `script-src 'self' 'sha256-${guardHash}' 'wasm-unsafe-eval'${turnstile}`,
     "worker-src 'self' blob:",
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
+    // Players' profile photos are served from the project's storage.
+    "img-src 'self' data: blob: https://*.supabase.co",
     "font-src 'self' data:",
     "media-src 'self' blob:",
     `connect-src 'self' https://*.supabase.co wss://*.supabase.co${gameServer}`,

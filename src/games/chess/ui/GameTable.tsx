@@ -38,7 +38,7 @@ function GearIcon() {
   )
 }
 
-export type TablePlayer = { name: string; flag?: string; rating?: number; /** How the rating moved, once the game is settled. */ ratingChange?: number }
+export type TablePlayer = { name: string; flag?: string; avatarUrl?: string; rating?: number; /** How the rating moved, once the game is settled. */ ratingChange?: number }
 
 type Props = {
   title: string
@@ -227,6 +227,7 @@ export function GameTable({
         name={players[color].name}
         flag={players[color].flag}
         rating={players[color].rating}
+        avatarUrl={players[color].avatarUrl}
         ratingChange={outcome ? players[color].ratingChange : undefined}
         color={color}
         captured={shown.material.captured[color]}

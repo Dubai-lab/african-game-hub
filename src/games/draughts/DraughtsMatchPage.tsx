@@ -78,6 +78,7 @@ export default function DraughtsMatchPage({ matchId }: { matchId: string }) {
       name: player?.name ?? t(color === 'w' ? 'draughts.white' : 'draughts.black'),
       flag: player?.countryCode ? flagEmoji(player.countryCode) : undefined,
       rating: player?.rating ?? undefined,
+      avatarUrl: player?.avatarUrl ?? undefined,
       ratingChange: player && player.ratingAfter !== null && player.rating !== null ? player.ratingAfter - player.rating : undefined,
     }
   }
