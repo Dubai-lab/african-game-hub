@@ -9,6 +9,7 @@ import { env } from '@/core/lib/env'
 import { queryClient } from '@/core/lib/queryClient'
 import { AppShell } from '@/core/ui/AppShell'
 import { ErrorBoundary, RouteErrorBoundary } from '@/core/ui/ErrorBoundary'
+import { PageMeta } from '@/core/ui/PageMeta'
 import { LoadingScreen } from '@/core/ui/LoadingScreen'
 import { Toaster } from '@/core/ui/Toaster'
 // The landing page is the front door and is prerendered, so it is not a lazy chunk:
@@ -85,6 +86,7 @@ export default function App({ staticLocation }: { staticLocation?: string }) {
           <Router staticLocation={staticLocation}>
             {/* In a tournament: "I am here", wherever the player is in the app. */}
             {!staticLocation && <TournamentPresence />}
+            <PageMeta />
             <Routes>
               <Route element={<PublicFrame />}>
                 <Route index element={<LandingPage />} />

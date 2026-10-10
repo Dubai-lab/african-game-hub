@@ -110,7 +110,7 @@
     "goToLobby": "Go to the lobby",
     "hero": {
       "headline": "Your move.",
-      "sub": "Chess against real players across Africa. Start with {{tokens}} free tokens.",
+      "sub": "Chess, ludo, draughts and pool against real players across Africa. Start with {{tokens}} free tokens.",
       "cta": "Play chess free",
       "haveAccount": "I already have an account",
       "posterAlt": "A chess board in the middle of a game. The opponent’s knight has just moved and it is your turn.",
@@ -118,8 +118,8 @@
       "opponent": "Opponent"
     },
     "games": {
-      "title": "The games",
-      "sub": "One account and one wallet for every game on the hub.",
+      "title": "Games to play online",
+      "sub": "Chess, ludo, draughts and pool, with more on the way. One account and one wallet for every game on the hub.",
       "live": "Live now",
       "soon": "Coming soon",
       "play": "Play now",
@@ -175,7 +175,7 @@
       ]
     },
     "countries": {
-      "title": "Across the continent",
+      "title": "Online games across Africa",
       "sub": "Players from {{count}} countries can sign up today.",
       "languages": "The hub speaks English and French. Portuguese, Swahili, Arabic and Kinyarwanda are on the way."
     },
@@ -1507,5 +1507,11 @@
     "body": "The game goes on without you, and your clock keeps running. If your time runs out, you lose.",
     "stay": "Stay",
     "leave": "Leave"
+  },
+  "seo": {
+    "homeTitle": "Play Chess, Ludo, Draughts & Pool Online Free | African Game Hub",
+    "homeDescription": "Play chess, ludo, draughts (checkers) and 8-ball pool online against real players across Africa. Free to play: one account, free tokens to start, fair games checked by the server.",
+    "signupDescription": "Create a free African Game Hub account and play chess, ludo, draughts and pool online against real players across Africa. It takes a minute. 18 or older.",
+    "loginDescription": "Log in to African Game Hub to play chess, ludo, draughts and pool online against real players across Africa."
   }
 }

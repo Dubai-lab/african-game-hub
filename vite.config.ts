@@ -23,7 +23,15 @@ function appShell(): Plugin {
       const splash =
         '<div id="root"><div style="min-height:100dvh;display:flex;align-items:center;justify-content:center;' +
         'background:#eef0fa;color:#1f2a7a;font:800 1.4rem system-ui,sans-serif">African Game Hub</div></div>'
-      const source = String(index.source).replace('<div id="root"></div>', splash)
+      // This file answers for many addresses (/login, /terms, /lobby...), so it carries none of
+      // the landing page's claims about itself: the app writes each page's own once it starts
+      // (src/core/ui/PageMeta.tsx).
+      const source = String(index.source)
+        .replace('<div id="root"></div>', splash)
+        .replace(/\s*<link rel="canonical"[^>]*>/, '')
+        .replace(/\s*<meta name="robots"[^>]*>/, '')
+        .replace(/\s*<meta property="og:url"[^>]*>/, '')
+        .replace(/\s*<!-- For search engines[\s\S]*?<\/script>/, '')
       this.emitFile({ type: 'asset', fileName: 'app.html', source })
     },
   }
@@ -40,7 +48,9 @@ export default defineConfig({
       manifest: {
         name: 'African Game Hub',
         short_name: 'Game Hub',
-        description: 'Play skill games against real opponents across Africa.',
+        description: 'Play chess, ludo, draughts and pool online against real players across Africa.',
+        categories: ['games', 'entertainment'],
+        lang: 'en',
         start_url: '/lobby',
         display: 'standalone',
         orientation: 'portrait',

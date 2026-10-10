@@ -110,7 +110,7 @@
     "goToLobby": "Aller au salon",
     "hero": {
       "headline": "À vous de jouer.",
-      "sub": "Des parties d’échecs contre de vrais joueurs partout en Afrique. Commencez avec {{tokens}} jetons gratuits.",
+      "sub": "Échecs, ludo, dames et billard contre de vrais joueurs partout en Afrique. Commencez avec {{tokens}} jetons gratuits.",
       "cta": "Jouer aux échecs gratuitement",
       "haveAccount": "J’ai déjà un compte",
       "posterAlt": "Un échiquier en pleine partie. Le cavalier adverse vient de jouer et c’est à vous.",
@@ -118,8 +118,8 @@
       "opponent": "Adversaire"
     },
     "games": {
-      "title": "Les jeux",
-      "sub": "Un seul compte et un seul portefeuille pour tous les jeux.",
+      "title": "Des jeux à jouer en ligne",
+      "sub": "Échecs, ludo, dames et billard, et d’autres jeux à venir. Un seul compte et un seul portefeuille pour tous les jeux de la plateforme.",
       "live": "Disponible",
       "soon": "Bientôt",
       "play": "Jouer",
@@ -175,7 +175,7 @@
       ]
     },
     "countries": {
-      "title": "Sur tout le continent",
+      "title": "Des jeux en ligne partout en Afrique",
       "sub": "Les joueurs de {{count}} pays peuvent s’inscrire dès aujourd’hui.",
       "languages": "Le hub parle anglais et français. Le portugais, le swahili, l’arabe et le kinyarwanda arrivent."
     },
@@ -1507,5 +1507,11 @@
     "body": "La partie continue sans vous et votre pendule tourne toujours. Si votre temps s’écoule, vous perdez.",
     "stay": "Rester",
     "leave": "Quitter"
+  },
+  "seo": {
+    "homeTitle": "Jouez aux échecs, au ludo, aux dames et au billard en ligne | African Game Hub",
+    "homeDescription": "Jouez gratuitement en ligne aux échecs, au ludo, aux dames et au billard contre de vrais joueurs partout en Afrique. Un seul compte, des jetons gratuits pour commencer, des parties vérifiées par le serveur.",
+    "signupDescription": "Créez un compte African Game Hub gratuit et jouez en ligne aux échecs, au ludo, aux dames et au billard contre de vrais joueurs partout en Afrique. Une minute suffit. 18 ans ou plus.",
+    "loginDescription": "Connectez-vous à African Game Hub pour jouer en ligne aux échecs, au ludo, aux dames et au billard contre de vrais joueurs partout en Afrique."
   }
 }

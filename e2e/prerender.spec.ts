@@ -27,7 +27,7 @@ test('the landing page is readable with JavaScript switched off', async ({ brows
   const page = await context.newPage()
   await page.goto(origin)
   await expect(page.locator('h1')).toHaveText('Your move.')
-  await expect(page.locator('h2')).toHaveText(['The games', 'How it works', 'Fair play', 'Across the continent'])
+  await expect(page.locator('h2')).toHaveText(['Games to play online', 'How it works', 'Fair play', 'Online games across Africa'])
   await expect(page.getByRole('link', { name: 'Play chess free' })).toBeVisible()
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /\/landing\/og\.jpg$/)
   await context.close()
@@ -165,4 +165,49 @@ test('the security policy is in both entry pages and the app works under it, che
   await page.waitForTimeout(1000)
   expect(blocked).toEqual([])
   await context.close()
+})
+
+test('search engines are told what each page is, and which pages are not for them', async ({ page, request }) => {
+  // The landing page says what it is before any JavaScript runs.
+  const html = await (await request.get(origin)).text()
+  expect(html).toContain('<title>Play Chess, Ludo, Draughts &amp; Pool Online Free | African Game Hub</title>')
+  expect(html).toMatch(/<meta\s+name="description"\s+content="Play chess, ludo, draughts \(checkers\) and 8-ball pool online/)
+  const data = JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)![1]!)
+  expect(data['@graph'].map((entry: { '@type': string }) => entry['@type'])).toEqual(['Organization', 'WebSite', 'WebApplication'])
+
+  // The file every other page starts from makes none of the landing page's claims.
+  const shell = await (await request.get(`${origin}/app.html`)).text()
+  expect(shell).not.toContain('rel="canonical"')
+  expect(shell).not.toContain('application/ld+json')
+
+  // A public page: its own title and address, and it may be listed.
+  await page.goto(`${origin}/terms`)
+  await expect(page).toHaveTitle('Terms of use | African Game Hub')
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/terms$/)
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /^index/)
+  await page.goto(`${origin}/signup`)
+  await expect(page).toHaveTitle('Create your account | African Game Hub')
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /^Create a free African Game Hub account/)
+
+  // An address that is not a page, and the pages behind the log-in, are not for listing.
+  await page.goto(`${origin}/no-such-page`)
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex')
+  await expect(page.locator('link[rel="canonical"]')).toHaveCount(0)
+
+  // Back on the landing page (moving inside the app), its tags return.
+  await page.goto(origin)
+  await expect(page).toHaveTitle('Play Chess, Ludo, Draughts & Pool Online Free | African Game Hub')
+  await expect(page.locator('link[rel="canonical"]')).toHaveCount(1)
+
+  const robots = await (await request.get(`${origin}/robots.txt`)).text()
+  expect(robots).toMatch(/^User-agent: \*\n/)
+  // Only a build for the hub's real address has a sitemap; any other tells search engines to stay away.
+  if (robots.includes('Sitemap:')) {
+    expect(robots).toContain('Disallow: /lobby\n')
+    const sitemap = await (await request.get(`${origin}/sitemap.xml`)).text()
+    expect(sitemap.match(/<loc>/g)).toHaveLength(8)
+    expect(sitemap).toMatch(/<loc>https:\/\/[^<]+\/responsible-gaming<\/loc>/)
+  } else {
+    expect(robots).toBe('User-agent: *\nDisallow: /\n')
+  }
 })
