@@ -1,0 +1,71 @@
+# Builds the Android and iPhone apps (see mobile/README.md).
+#
+# Both are test builds: nothing here needs a Google or Apple developer account.
+#   - Android: an APK that installs straight onto a phone.
+#   - iPhone:  an unsigned IPA, to be put on a phone with Sideloadly.
+# Builds are started by hand in Codemagic, so no build minutes are spent on ordinary pushes.
+
+definitions:
+  shell: &shell
+    name: Install the app shell
+    script: |
+      cd mobile
+      npm ci
+
+workflows:
+  android-test:
+    name: Android test app (APK)
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      node: 22
+      java: 21
+    scripts:
+      - *shell
+      - name: Copy the settings into the Android project
+        script: |
+          cd mobile
+          npx cap sync android
+      - name: Build the APK
+        script: |
+          cd mobile/android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk "$CM_BUILD_DIR/AfricanGameHub-test.apk"
+    artifacts:
+      - AfricanGameHub-test.apk
+
+  ios-test:
+    name: iPhone test app (unsigned IPA for Sideloadly)
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    environment:
+      node: 22
+      xcode: latest
+    scripts:
+      - *shell
+      - name: Copy the settings into the iPhone project
+        script: |
+          cd mobile
+          npx cap sync ios
+      - name: Build the app without signing it
+        script: |
+          cd mobile/ios/App
+          xcodebuild \
+            -project App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$CM_BUILD_DIR/ios-build" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build
+      - name: Pack it as an IPA
+        script: |
+          cd "$CM_BUILD_DIR"
+          rm -rf Payload
+          mkdir Payload
+          cp -R ios-build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -qry AfricanGameHub-unsigned.ipa Payload
+    artifacts:
+      - AfricanGameHub-unsigned.ipa

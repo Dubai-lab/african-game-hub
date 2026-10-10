@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">African Game Hub</string>
+    <string name="title_activity_main">African Game Hub</string>
+    <string name="package_name">com.africangamehub.app</string>
+    <string name="custom_url_scheme">com.africangamehub.app</string>
+</resources>

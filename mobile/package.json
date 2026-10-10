@@ -1,0 +1,22 @@
+{
+  "name": "african-game-hub-mobile",
+  "private": true,
+  "version": "1.0.0",
+  "description": "The Android and iPhone apps: a native shell around the African Game Hub site.",
+  "scripts": {
+    "sync": "cap sync",
+    "icons": "node make-icons.mjs && capacitor-assets generate --ios --android --iconBackgroundColor \"#1f2a7a\" --iconBackgroundColorDark \"#1f2a7a\" --splashBackgroundColor \"#1f2a7a\" --splashBackgroundColorDark \"#1f2a7a\" && node make-icons.mjs --android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/ios": "^8.5.3",
+    "@capacitor/splash-screen": "^8.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.5.3",
+    "typescript": "^5.9.0"
+  }
+}

@@ -4,12 +4,15 @@ import '@fontsource-variable/ojuju/wght.css'
 import '@fontsource-variable/atkinson-hyperlegible-next/wght.css'
 import { applyDetectedLanguage } from '@/core/i18n'
 import { leaveOldHome } from '@/core/lib/movedHome'
+import { startNativeApp } from '@/core/lib/nativeApp'
 import { applyOwnFlags } from '@/core/ui/flagFont'
 import './index.css'
 import App from './App'
 
 // Before anything is drawn: flags for computers that have none of their own.
 applyOwnFlags()
+// Inside the Android app: what the phone's Back button does.
+startNativeApp()
 
 const container = document.getElementById('root')!
 const app = (
