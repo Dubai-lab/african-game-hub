@@ -51,6 +51,11 @@ export default function LudoMatchPage({ matchId }: { matchId: string }) {
 
   const [confirmResign, setConfirmResign] = useState(false)
   const [resultClosed, setResultClosed] = useState(false)
+  // The chat: whether the opponent has left the finished game, how often they have spoken, and
+  // how often this player has sent a quick message.
+  const [chatClosed, setChatClosed] = useState(false)
+  const [chatHeard, setChatHeard] = useState(0)
+  const [chatSent, setChatSent] = useState(0)
 
   if (ludo.status === 'loading') return <LoadingScreen />
   if (ludo.status === 'not_found') return <Message title={t('ludo.notFound')} />
@@ -108,7 +113,10 @@ export default function LudoMatchPage({ matchId }: { matchId: string }) {
       notice={tableOpen && (!online || !ludo.connected) ? t('app.reconnecting') : undefined}
       onRoll={ludo.roll}
       onMove={ludo.move}
-      chat={mySeat ? <MatchChat matchId={matchId} names={Object.fromEntries(players.map((p) => [p.userId, p.name]))} /> : undefined}
+      chat={mySeat ? <MatchChat matchId={matchId} gameId="ludo" names={Object.fromEntries(players.map((p) => [p.userId, p.name]))} ended={decided} onClosed={setChatClosed} onHeard={() => setChatHeard((n) => n + 1)} onQuickSent={() => setChatSent((n) => n + 1)} /> : undefined}
+      chatClosed={chatClosed}
+      chatHeard={chatHeard}
+      chatSent={chatSent}
       footer={
         <div className="flex flex-col gap-2">
           {decided && resultClosed && (

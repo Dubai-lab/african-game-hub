@@ -814,12 +814,39 @@
     "newMessage": "New message from {{name}}",
     "matchTitle": "Chat with your opponent",
     "matchWrite": "Say something",
-    "emoji": "Quick reactions",
+    "emoji": "Reactions",
     "turnOff": "Turn chat off",
     "turnOn": "Turn chat on",
     "offYou": "Live chat is off. You are not sending or receiving anything.",
     "offOpponent": "Your opponent has turned live chat off.",
-    "left": "{{name}} has left the game. The chat is closed."
+    "left": "{{name}} has left the game. The chat is closed.",
+    "title": "Chat",
+    "tab": {
+      "chat": "Chat",
+      "quick": "Quick"
+    },
+    "matchEmpty": "Nothing said yet.",
+    "quickMessages": "Quick messages",
+    "quick": {
+      "hello": "Hello",
+      "good_luck": "Good luck",
+      "good_game": "Good game",
+      "well_played": "Well played",
+      "thanks": "Thanks",
+      "sorry": "Sorry",
+      "oops": "Oops",
+      "gotta_go": "Got to go",
+      "rematch": "Rematch?",
+      "good_move": "Good move",
+      "close_game": "Close game",
+      "nice_capture": "Nice capture",
+      "nice_roll": "Nice roll",
+      "lucky": "Lucky!",
+      "so_close": "So close",
+      "nice_shot": "Nice shot",
+      "great_break": "Great break",
+      "unlucky": "Unlucky"
+    }
   },
   "safety": {
     "report": "Report",

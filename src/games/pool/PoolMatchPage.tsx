@@ -43,6 +43,11 @@ export default function PoolMatchPage({ matchId }: { matchId: string }) {
   })
   const [confirmResign, setConfirmResign] = useState(false)
   const [resultClosed, setResultClosed] = useState(false)
+  // The chat: whether the opponent has left the finished game, how often they have spoken, and
+  // how often this player has sent a quick message.
+  const [chatClosed, setChatClosed] = useState(false)
+  const [chatHeard, setChatHeard] = useState(0)
+  const [chatSent, setChatSent] = useState(0)
 
   if (pool.status === 'loading') return <LoadingScreen />
   if (pool.status === 'not_found') return <Message title={t('pool.notFound')} />
@@ -87,6 +92,9 @@ export default function PoolMatchPage({ matchId }: { matchId: string }) {
         deadline={pool.deadline}
         onShoot={pool.shoot}
         onPlaying={setPlaying}
+        chatClosed={chatClosed}
+        chatHeard={chatHeard}
+        chatSent={chatSent}
         footer={
           decided ? (
             <div className="flex flex-col gap-2">
@@ -104,7 +112,7 @@ export default function PoolMatchPage({ matchId }: { matchId: string }) {
           ) : null
         }
       >
-        {mySeat && <MatchChat matchId={matchId} names={Object.fromEntries(players.map((p) => [p.userId, p.name]))} />}
+        {mySeat && <MatchChat matchId={matchId} gameId="pool" names={Object.fromEntries(players.map((p) => [p.userId, p.name]))} ended={decided} onClosed={setChatClosed} onHeard={() => setChatHeard((n) => n + 1)} onQuickSent={() => setChatSent((n) => n + 1)} />}
       </PoolTable>
 
       {confirmResign && !decided && (

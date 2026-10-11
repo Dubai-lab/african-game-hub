@@ -46,9 +46,11 @@ export default function OnlineGamePage({ matchId }: { matchId: string }) {
   const games = useGameTypes()
   const game = useOnlineChessGame(matchId)
   const { controller, myColor, players, firstMove } = game
-  // The chat: whether the opponent has left the finished game, and how often they have spoken.
+  // The chat: whether the opponent has left the finished game, how often they have spoken, and
+  // how often this player has sent a quick message.
   const [chatClosed, setChatClosed] = useState(false)
   const [chatHeard, setChatHeard] = useState(0)
+  const [chatSent, setChatSent] = useState(0)
 
   // The start chime, once, when a player arrives at a game that has not begun.
   const fresh = game.status === 'ready' && myColor !== null && controller.played.length === 0 && !controller.outcome
@@ -132,11 +134,12 @@ export default function OnlineGamePage({ matchId }: { matchId: string }) {
       ratingChange={ratingChange}
       chat={
         myColor ? (
-          <MatchChat matchId={matchId} names={Object.fromEntries(players.map((p) => [p.userId, p.name]))} ended={over} onClosed={setChatClosed} onHeard={() => setChatHeard((n) => n + 1)} />
+          <MatchChat matchId={matchId} gameId="chess" names={Object.fromEntries(players.map((p) => [p.userId, p.name]))} ended={over} onClosed={setChatClosed} onHeard={() => setChatHeard((n) => n + 1)} onQuickSent={() => setChatSent((n) => n + 1)} />
         ) : undefined
       }
       chatClosed={chatClosed}
       chatHeard={chatHeard}
+      chatSent={chatSent}
       overActions={
         myColor ? (
           <AfterMatchActions state={after} opponent={opponent?.name ?? ''} newGameLabel={t('afterMatch.newGame', { pace })} />

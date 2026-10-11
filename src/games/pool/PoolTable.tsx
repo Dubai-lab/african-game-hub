@@ -184,11 +184,17 @@ type Props = {
   waitingText?: string
   /** Below the controls (the chat). */
   children?: ReactNode
+  /** The chat is over: the opponent has left the finished game. The chat button says so. */
+  chatClosed?: boolean
+  /** Goes up by one each time the opponent says something: the chat button shows there is news. */
+  chatHeard?: number
+  /** Goes up by one each time this player sends a quick message: the chat is put away. */
+  chatSent?: number
   /** At the foot of the panel (resign, or what to do next). */
   footer?: ReactNode
 }
 
-export function PoolTable({ title, game, players, mySeat, decided, busy = false, connected = true, deadline = null, onShoot, onPlaying, waitingText, children, footer }: Props) {
+export function PoolTable({ title, game, players, mySeat, decided, busy = false, connected = true, deadline = null, onShoot, onPlaying, waitingText, children, footer, chatClosed = false, chatHeard = 0, chatSent = 0 }: Props) {
   const { t } = useTranslation()
   const settings = useSettingsStore()
   const layout = useLayout()
@@ -197,6 +203,21 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
   // A phone held upright: the game turns its own screen.
   const turned = layout === 'portrait'
   const [panel, setPanel] = useState<'spin' | 'cue' | 'chat' | 'menu' | null>(null)
+  // The chat button: a dot when the opponent has said something that has not been looked at.
+  const [chatNews, setChatNews] = useState(false)
+  const heardBefore = useRef(chatHeard)
+  useEffect(() => {
+    if (chatHeard === heardBefore.current) return
+    heardBefore.current = chatHeard
+    if (panel !== 'chat') setChatNews(true)
+  }, [chatHeard, panel])
+  // A quick message has been sent: the chat is put away, back to the table.
+  const sentBefore = useRef(chatSent)
+  useEffect(() => {
+    if (chatSent === sentBefore.current) return
+    sentBefore.current = chatSent
+    setPanel((open) => (open === 'chat' ? null : open))
+  }, [chatSent])
 
   // What is drawn. While a shot is being played back it runs ahead of (or behind) the game; when
   // the balls stop it is the game again. `seen` is the game as the cards and the status line
@@ -568,10 +589,23 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
             <span className="block h-1.5 w-8 -rotate-45 rounded-full" style={{ background: cueGradient(settings.poolCue, 'to right') }} aria-hidden="true" />
           </button>
           {children && (
-            <button type="button" aria-label={t('pool.tools.chat')} onClick={() => setPanel('chat')} className={tool}>
-              <svg viewBox="0 0 24 24" className="size-6" fill="currentColor" aria-hidden="true">
-                <path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H10l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
+            <button
+              type="button"
+              aria-label={t(chatClosed ? 'gameMenu.chatClosed' : chatNews ? 'gameMenu.chatNew' : 'gameMenu.chat')}
+              onClick={() => {
+                setChatNews(false)
+                setPanel('chat')
+              }}
+              className={`${tool} relative`}
+              data-testid="game-chat"
+              data-closed={chatClosed}
+              data-news={chatNews}
+            >
+              <svg viewBox="0 0 24 24" className="size-6" aria-hidden="true">
+                <path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H10l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="currentColor" opacity={chatClosed ? 0.4 : 1} />
+                {chatClosed && <path d="M8.5 7l7 7M15.5 7l-7 7" stroke="#f3f1e7" strokeWidth="2.4" strokeLinecap="round" fill="none" />}
               </svg>
+              {chatNews && !chatClosed && <span className="absolute end-0.5 top-0.5 size-3 rounded-full border-2 border-[#f3f1e7] bg-hibiscus" aria-hidden="true" />}
             </button>
           )}
           <button type="button" aria-label={t('pool.aimLeft')} onClick={() => nudge(-0.25)} disabled={!myShot} className={`${tool} text-xl font-extrabold`}>

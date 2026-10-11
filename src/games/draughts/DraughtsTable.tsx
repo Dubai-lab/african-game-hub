@@ -150,6 +150,8 @@ type Props = {
   chatClosed?: boolean
   /** Goes up by one each time the opponent says something: the chat button shows there is news. */
   chatHeard?: number
+  /** Goes up by one each time this player sends a quick message: the chat is put away. */
+  chatSent?: number
   /** Shown above the board, for example "Reconnecting". */
   notice?: ReactNode
   /** What the player can do once the game is over. */
@@ -166,14 +168,14 @@ type Props = {
 }
 
 /** The whole draughts screen: both player cards, the board, the moves and the controls. */
-export function DraughtsTable({ title, game, players, movable, perspective, timed, onlineDraws, canAbort, chat, chatClosed = false, chatHeard = 0, notice, overActions, tokensChange, rating, ratingChange, onUndo, canUndo, status }: Props) {
+export function DraughtsTable({ title, game, players, movable, perspective, timed, onlineDraws, canAbort, chat, chatClosed = false, chatHeard = 0, chatSent = 0, notice, overActions, tokensChange, rating, ratingChange, onUndo, canUndo, status }: Props) {
   const { t } = useTranslation()
   const settings = useSettingsStore()
   const [flipped, setFlipped] = useState(false)
   // Null means "follow the game"; a number means the player is looking back at that move.
   const [viewPly, setViewPly] = useState<number | null>(null)
   const [dialog, setDialog] = useState<'resign' | 'settings' | 'rules' | 'menu' | null>(null)
-  const chatFold = useChatFold(chatHeard)
+  const chatFold = useChatFold(chatHeard, chatSent)
   useLockedScreen()
   const [resultClosed, setResultClosed] = useState(false)
 

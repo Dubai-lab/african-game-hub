@@ -150,6 +150,10 @@ describe('chat during a match', () => {
     expect(await as('chika', `public.send_match_message($1, 'text', 'Good luck!')`, [matchId])).toMatchObject({ ok: true })
     expect(await as('stranger', `public.send_match_message($1, 'emoji', '😂')`, [matchId])).toMatchObject({ ok: true })
 
+    // A ready-made message is sent by its name; only the names on the list are taken.
+    expect(await as('stranger', `public.send_match_message($1, 'quick', 'good_luck')`, [matchId])).toMatchObject({ ok: true })
+    expect(await as('chika', `public.send_match_message($1, 'quick', 'you are bad')`, [matchId])).toEqual({ ok: false, code: 'BAD_MESSAGE' })
+
     // An "emoji" that is really a sentence, an unknown kind, an empty or oversized text.
     expect(await as('chika', `public.send_match_message($1, 'emoji', 'you are bad')`, [matchId])).toEqual({ ok: false, code: 'BAD_MESSAGE' })
     expect(await as('chika', `public.send_match_message($1, 'image', 'x')`, [matchId])).toEqual({ ok: false, code: 'BAD_MESSAGE' })
@@ -160,6 +164,8 @@ describe('chat during a match', () => {
     expect((await read('stranger', `select kind, body from public.match_messages where match_id = $1 order by id`, [matchId]))).toEqual([
       { kind: 'text', body: 'Good luck!' },
       { kind: 'emoji', body: '😂' },
+      // Stored by its name, so each player reads it in their own language.
+      { kind: 'quick', body: 'good_luck' },
     ])
     expect(await as('amina', `public.send_match_message($1, 'text', 'let me in')`, [matchId])).toEqual({ ok: false, code: 'NOT_A_PLAYER' })
     expect(await as('amina', `public.match_chat_status($1)`, [matchId])).toBeNull()

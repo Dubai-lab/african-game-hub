@@ -202,15 +202,19 @@ export function ChatFold({ open, onClose, children }: { open: boolean; onClose: 
       role="presentation"
     >
       <div
-        className={open ? 'max-lg:w-full max-lg:max-w-md max-lg:border-t-4 max-lg:border-brand max-lg:bg-panel max-lg:px-5 max-lg:pb-[max(1.25rem,var(--safe-bottom))] max-lg:pt-3' : ''}
+        // Open, on a phone: most of the screen, so the conversation has room.
+        className={open ? 'max-lg:flex max-lg:h-[82dvh] max-lg:w-full max-lg:max-w-md max-lg:flex-col max-lg:border-t-4 max-lg:border-brand max-lg:bg-panel max-lg:px-4 max-lg:pb-[max(0.75rem,var(--safe-bottom))] max-lg:pt-2' : ''}
         onClick={(event) => event.stopPropagation()}
         data-testid="chat-sheet"
         data-open={open}
       >
         {open && (
-          <button type="button" onClick={onClose} className="mb-1 ms-auto flex min-h-10 items-center text-sm font-semibold text-primary underline underline-offset-4 lg:hidden">
-            {t('common.close')}
-          </button>
+          <div className="mb-1 grid shrink-0 grid-cols-[2.75rem_1fr_2.75rem] items-center lg:hidden">
+            <button type="button" onClick={onClose} aria-label={t('common.close')} className="flex size-11 items-center justify-center text-2xl font-bold leading-none" data-testid="chat-close">
+              <span aria-hidden="true">×</span>
+            </button>
+            <p className="text-center font-display text-lg font-extrabold text-primary">{t('chat.title')}</p>
+          </div>
         )}
         {children}
       </div>
@@ -222,10 +226,17 @@ export function ChatFold({ open, onClose, children }: { open: boolean; onClose: 
  * What the chat button needs to know: whether the chat is open, and whether the opponent has
  * said something since it was last looked at. The number given goes up by one each time they speak.
  */
-export function useChatFold(heard: number) {
+export function useChatFold(heard: number, sent = 0) {
   const [open, setOpen] = useState(false)
   const [news, setNews] = useState(false)
   const before = useRef(heard)
+  // A quick message has been sent: the chat is put away, back to the game.
+  const sentBefore = useRef(sent)
+  useEffect(() => {
+    if (sent === sentBefore.current) return
+    sentBefore.current = sent
+    setOpen(false)
+  }, [sent])
   useEffect(() => {
     if (heard === before.current) return
     before.current = heard

@@ -814,12 +814,39 @@
     "newMessage": "Nouveau message de {{name}}",
     "matchTitle": "Discuter avec votre adversaire",
     "matchWrite": "Dites quelque chose",
-    "emoji": "Réactions rapides",
+    "emoji": "Réactions",
     "turnOff": "Désactiver la discussion",
     "turnOn": "Activer la discussion",
     "offYou": "La discussion en direct est désactivée. Vous n’envoyez et ne recevez rien.",
     "offOpponent": "Votre adversaire a désactivé la discussion en direct.",
-    "left": "{{name}} a quitté la partie. La discussion est fermée."
+    "left": "{{name}} a quitté la partie. La discussion est fermée.",
+    "title": "Discussion",
+    "tab": {
+      "chat": "Discussion",
+      "quick": "Rapide"
+    },
+    "matchEmpty": "Rien n’a encore été dit.",
+    "quickMessages": "Messages rapides",
+    "quick": {
+      "hello": "Bonjour",
+      "good_luck": "Bonne chance",
+      "good_game": "Belle partie",
+      "well_played": "Bien joué",
+      "thanks": "Merci",
+      "sorry": "Désolé",
+      "oops": "Oups",
+      "gotta_go": "Je dois y aller",
+      "rematch": "Revanche ?",
+      "good_move": "Beau coup",
+      "close_game": "Partie serrée",
+      "nice_capture": "Belle prise",
+      "nice_roll": "Beau lancer",
+      "lucky": "Quelle chance !",
+      "so_close": "Presque",
+      "nice_shot": "Beau tir",
+      "great_break": "Belle casse",
+      "unlucky": "Pas de chance"
+    }
   },
   "safety": {
     "report": "Signaler",

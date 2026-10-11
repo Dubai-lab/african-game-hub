@@ -113,6 +113,8 @@ type Props = {
   chatClosed?: boolean
   /** Goes up by one each time another player says something: the chat button shows there is news. */
   chatHeard?: number
+  /** Goes up by one each time this player sends a quick message: the chat is put away. */
+  chatSent?: number
   /** Under everything: Resign while playing, what to do next afterwards. */
   footer?: ReactNode
   /** Dialogs. */
@@ -120,9 +122,9 @@ type Props = {
 }
 
 /** The whole Ludo screen for two to four players: cards, board, dice. Shows a table; decides nothing. */
-export function LudoTable({ title, state, players, mySeat, deadline, busy, notice, onRoll, onMove, chat, chatClosed = false, chatHeard = 0, footer, children }: Props) {
+export function LudoTable({ title, state, players, mySeat, deadline, busy, notice, onRoll, onMove, chat, chatClosed = false, chatHeard = 0, chatSent = 0, footer, children }: Props) {
   const [menu, setMenu] = useState(false)
-  const chatFold = useChatFold(chatHeard)
+  const chatFold = useChatFold(chatHeard, chatSent)
   useLockedScreen()
   const { t } = useTranslation()
   const settings = useSettingsStore()

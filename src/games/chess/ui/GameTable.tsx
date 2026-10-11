@@ -37,6 +37,8 @@ type Props = {
   chatClosed?: boolean
   /** Goes up by one each time the opponent says something: the chat button shows there is news. */
   chatHeard?: number
+  /** Goes up by one each time this player sends a quick message: the chat is put away. */
+  chatSent?: number
   /** Shown above the board, for example "Reconnecting". */
   notice?: ReactNode
   /**
@@ -72,6 +74,7 @@ export function GameTable({
   chat,
   chatClosed = false,
   chatHeard = 0,
+  chatSent = 0,
   overActions,
   tokensChange,
   rating,
@@ -92,7 +95,7 @@ export function GameTable({
   const [viewPly, setViewPly] = useState<number | null>(null)
   const [dialog, setDialog] = useState<'resign' | 'settings' | 'menu' | null>(null)
   // The chat opens over the board on a phone; on a computer it is always in the panel.
-  const chatFold = useChatFold(chatHeard)
+  const chatFold = useChatFold(chatHeard, chatSent)
   useLockedScreen()
   const [reviewing, setReviewing] = useState(false)
   // The result can be put aside to look at the board, and brought back.

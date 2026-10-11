@@ -117,25 +117,39 @@ test('during a match: emoji and text between opponents, the off switch, and a pr
   // On a phone the chat is behind the chat button; what the opponent says still pops up over
   // the board, and the button shows there is something new.
   await expect(white.getByTestId('match-chat')).toHaveAttribute('data-open', 'true')
-  await expect(white.getByRole('group', { name: 'Quick reactions' })).toBeHidden()
+  await expect(white.getByRole('tab', { name: 'Quick' })).toBeHidden()
   await white.getByTestId('game-chat').click()
-  await white.getByRole('group', { name: 'Quick reactions' }).getByRole('button', { name: '😂' }).click()
+  // The chat has two tabs: the conversation, and what can be sent with one touch.
+  await expect(white.getByRole('tab', { name: 'Chat' })).toHaveAttribute('aria-selected', 'true')
+  await white.getByRole('tab', { name: 'Quick' }).click()
+  await white.getByRole('group', { name: 'Reactions' }).getByRole('button', { name: '😂' }).click()
+  // Sent with one touch: the chat is put away, back to the game.
+  await expect(white.getByTestId('chat-sheet')).toHaveAttribute('data-open', 'false', { timeout: 15_000 })
   await expect(black.getByTestId('chat-pop')).toContainText('😂', { timeout: 20_000 })
   await expect(black.getByTestId('game-chat')).toHaveAttribute('data-news', 'true')
+  // A ready-made message: chess has "Good move" among its own.
+  await white.getByTestId('game-chat').click()
+  await white.getByRole('tab', { name: 'Quick' }).click()
+  await expect(white.getByRole('group', { name: 'Quick messages' }).getByRole('button', { name: 'Nice shot' })).toHaveCount(0)
+  await white.getByRole('group', { name: 'Quick messages' }).getByRole('button', { name: 'Good move' }).click()
+  await expect(black.getByTestId('chat-pop')).toContainText('Good move', { timeout: 20_000 })
   await black.getByTestId('game-chat').click()
   await expect(black.getByTestId('game-chat')).toHaveAttribute('data-news', 'false')
+  await expect(black.getByTestId('match-chat').getByRole('log')).toContainText('Good move')
   await black.getByPlaceholder('Say something').fill('Nice opening!')
   await black.getByTestId('match-chat').getByRole('button', { name: 'Send' }).click()
   await expect(white.getByTestId('chat-pop')).toContainText('Nice opening!', { timeout: 20_000 })
+  await white.getByTestId('game-chat').click()
   await expect(white.getByTestId('match-chat').getByRole('log')).toContainText('Nice opening!')
 
   // Black has had enough and turns live chat off: nothing can be sent either way.
   await black.getByRole('button', { name: 'Turn chat off' }).click()
   await expect(black.getByText('Live chat is off. You are not sending or receiving anything.')).toBeVisible()
-  await expect(black.getByRole('group', { name: 'Quick reactions' })).toHaveCount(0)
+  await expect(black.getByRole('tab', { name: 'Quick' })).toHaveCount(0)
   // White's app re-reads the chat state every 20 seconds, so it may already know. If it does
   // not, trying to send is refused by the server and tells it. Either way nothing gets through.
-  await white.getByRole('group', { name: 'Quick reactions' }).getByRole('button', { name: '😡' }).click({ timeout: 5_000 }).catch(() => undefined)
+  await white.getByRole('tab', { name: 'Quick' }).click({ timeout: 5_000 }).catch(() => undefined)
+  await white.getByRole('group', { name: 'Reactions' }).getByRole('button', { name: '😡' }).click({ timeout: 5_000 }).catch(() => undefined)
   await expect(white.getByTestId('match-chat')).toContainText('Your opponent has turned live chat off.', { timeout: 25_000 })
   await expect(black.getByTestId('chat-pop')).toHaveCount(0)
 

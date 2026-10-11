@@ -78,6 +78,22 @@ test('two players are paired, take turns with the server’s dice, and a win pay
   expect(one.page.url()).toBe(two.page.url())
   const matchId = one.page.url().split('/').pop()!
 
+  // The chat: a ready-made message of this game's own, sent with one touch. The other player
+  // sees it pop up over the game, and their chat button shows there is something new.
+  await expect(two.page.getByTestId('game-chat')).toHaveAttribute('data-news', 'false')
+  await one.page.getByTestId('game-chat').click()
+  await one.page.getByRole('tab', { name: 'Quick' }).click()
+  await expect(one.page.getByRole('group', { name: 'Quick messages' }).getByRole('button', { name: 'Nice shot' })).toHaveCount(0)
+  await one.page.getByRole('group', { name: 'Quick messages' }).getByRole('button', { name: 'Nice roll' }).click()
+  // Sent: the chat is put away by itself.
+  await expect(one.page.getByRole('tab', { name: 'Quick' })).toBeHidden({ timeout: 15_000 })
+  await expect(two.page.getByTestId('chat-pop')).toContainText('Nice roll', { timeout: 20_000 })
+  await expect(two.page.getByTestId('game-chat')).toHaveAttribute('data-news', 'true')
+  await two.page.getByTestId('game-chat').click()
+  await expect(two.page.getByTestId('game-chat')).toHaveAttribute('data-news', 'false')
+  await expect(two.page.getByTestId('match-chat').getByRole('log')).toContainText('Nice roll')
+  await two.page.getByRole('button', { name: 'Close' }).first().click()
+
   // Red moves first. Exactly one of the two is offered the die.
   await expect(turn(one.page)).toHaveAttribute('data-turn', 'red')
   const oneIsRed = (await one.page.getByRole('button', { name: 'Roll' }).count()) > 0
