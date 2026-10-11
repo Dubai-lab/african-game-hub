@@ -86,6 +86,14 @@ No chess.com piece art, board graphics, sounds or branding is used anywhere. The
 | Computer opponent | Written for this project (`src/games/draughts/computer.ts`). No third-party engine. | Ours |
 | Rules | The official rules of international draughts (World Draughts Federation, FMJD), implemented from the rule text in `supabase/functions/_shared/draughts.ts`. Rules of a game are not copyrightable; no code or wording was copied. | n/a |
 
+## Check Up
+
+| Asset | Source | License |
+| --- | --- | --- |
+| The cards (`src/games/checkup/cards.tsx`): faces, backs and the five shapes | **Original.** Drawn in code for African Game Hub, in the hub's own colours. Not taken from any printed pack: the game's rules are traditional and belong to nobody, but its best-known printed design and the name "Whot" belong to others and are not used. | Ours |
+| The lobby picture (`CheckUp` in `src/core/lobby/GameArt.tsx`) | **Original.** Drawn in code. | Ours |
+| Sounds | The hub's own recordings, shared with chess (see "Recorded sounds"). | As listed there |
+
 ## Pool
 
 | Asset | Source | License |

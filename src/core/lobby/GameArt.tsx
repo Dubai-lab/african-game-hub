@@ -111,6 +111,26 @@ function Penalty() {
   )
 }
 
+/** Check Up: three cards in a fan, a circle, a star and a triangle. */
+function CheckUp() {
+  const card = (x: number, turn: number, mark: React.JSX.Element) => (
+    <g transform={`rotate(${turn} 60 96)`}>
+      <rect x={x} y="24" width="34" height="48" rx="4" fill="#fffdf6" stroke="#0b0f24" strokeWidth="2.5" />
+      {mark}
+    </g>
+  )
+  return (
+    <>
+      <rect width="120" height="100" fill="#1f2a7a" />
+      <circle cx="60" cy="52" r="40" fill="#28348f" />
+      {card(21, -16, <circle cx="38" cy="48" r="9" fill="#d1264f" />)}
+      {card(43, 0, <polygon points="60,37 63.2,44.6 71.4,45.3 65.2,50.7 67.1,58.7 60,54.4 52.9,58.7 54.8,50.7 48.6,45.3 56.8,44.6" fill="#6b2fa0" />)}
+      {card(65, 16, <path d="M82 39 L92 57 L72 57 Z" fill="#0b7a55" />)}
+      <path d="M14 88 l6 -6 l6 6 l6 -6 l6 6 l6 -6 l6 6 l6 -6 l6 6 l6 -6 l6 6 l6 -6 l6 6 l6 -6 l6 6 l6 -6" fill="none" stroke="#f5b700" strokeWidth="3" />
+    </>
+  )
+}
+
 function Token() {
   return (
     <>
@@ -121,7 +141,7 @@ function Token() {
   )
 }
 
-const ART: Record<string, () => React.JSX.Element> = { chess: Chess, ludo: Ludo, pool: Pool, draughts: Draughts, penalty: Penalty, penalty_shootout: Penalty }
+const ART: Record<string, () => React.JSX.Element> = { chess: Chess, ludo: Ludo, pool: Pool, draughts: Draughts, checkup: CheckUp, penalty: Penalty, penalty_shootout: Penalty }
 
 /** Games that have an illustration in public/games/. (Made by `npm run game-art`.) */
 const ILLUSTRATED = new Set(['chess', 'draughts', 'ludo', 'pool', 'penalty', 'penalty_shootout'])

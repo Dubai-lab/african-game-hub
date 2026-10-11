@@ -145,6 +145,130 @@ export type Database = {
           },
         ]
       }
+      checkup_games: {
+        Row: {
+          called: string | null
+          counts: Json
+          deadline: string
+          last_event: Json | null
+          market_count: number
+          match_id: string
+          missed: Json
+          move_no: number
+          out_seats: string[]
+          pending_count: number
+          pending_number: number | null
+          phase: string
+          result: Json | null
+          seats: string[]
+          top: string
+          turn: string
+        }
+        Insert: {
+          called?: string | null
+          counts: Json
+          deadline: string
+          last_event?: Json | null
+          market_count: number
+          match_id: string
+          missed?: Json
+          move_no?: number
+          out_seats?: string[]
+          pending_count?: number
+          pending_number?: number | null
+          phase?: string
+          result?: Json | null
+          seats: string[]
+          top: string
+          turn: string
+        }
+        Update: {
+          called?: string | null
+          counts?: Json
+          deadline?: string
+          last_event?: Json | null
+          market_count?: number
+          match_id?: string
+          missed?: Json
+          move_no?: number
+          out_seats?: string[]
+          pending_count?: number
+          pending_number?: number | null
+          phase?: string
+          result?: Json | null
+          seats?: string[]
+          top?: string
+          turn?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkup_games_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: true
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checkup_hands: {
+        Row: {
+          cards: string[]
+          match_id: string
+          seat: string
+          user_id: string
+        }
+        Insert: {
+          cards?: string[]
+          match_id: string
+          seat: string
+          user_id: string
+        }
+        Update: {
+          cards?: string[]
+          match_id?: string
+          seat?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkup_hands_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkup_hands_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checkup_markets: {
+        Row: {
+          cards: string[]
+          match_id: string
+        }
+        Insert: {
+          cards?: string[]
+          match_id: string
+        }
+        Update: {
+          cards?: string[]
+          match_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkup_markets_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: true
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chess_games: {
         Row: {
           black_time_ms: number
@@ -1882,6 +2006,10 @@ export type Database = {
         Returns: Json
       }
       assert_ledger_integrity: { Args: never; Returns: undefined }
+      backup_export: {
+        Args: { p_after?: number; p_limit?: number; p_table: string }
+        Returns: Json
+      }
       block_player: { Args: { p_user_id: string }; Returns: Json }
       challenge_create: {
         Args: {
@@ -1897,6 +2025,19 @@ export type Database = {
       }
       challenge_respond: {
         Args: { p_action: string; p_challenge_id: string; p_user_id: string }
+        Returns: Json
+      }
+      checkup_context: {
+        Args: { p_match_id: string; p_user_id: string }
+        Returns: Json
+      }
+      checkup_store: {
+        Args: {
+          p_event: Json
+          p_expected_move: number
+          p_match_id: string
+          p_state: Json
+        }
         Returns: Json
       }
       chess_apply_move: {
@@ -1942,6 +2083,7 @@ export type Database = {
         Args: { p_match_id: string; p_user_id: string }
         Returns: Json
       }
+      game_server_admits: { Args: { p_user_id: string }; Returns: boolean }
       is_username_available: { Args: { p_username: string }; Returns: boolean }
       join_match_queue: {
         Args: {
@@ -1976,6 +2118,10 @@ export type Database = {
         }
         Returns: Json
       }
+      ludo_table_context: {
+        Args: { p_match_id: string; p_user_id: string }
+        Returns: Json
+      }
       mark_messages_read: { Args: { p_from: string }; Returns: undefined }
       match_chat_status: { Args: { p_match_id: string }; Returns: Json }
       pool_apply_shot: {
@@ -1991,6 +2137,10 @@ export type Database = {
       }
       pool_game_action: {
         Args: { p_action: string; p_match_id: string; p_user_id: string }
+        Returns: Json
+      }
+      pool_shot_context: {
+        Args: { p_match_id: string; p_user_id: string }
         Returns: Json
       }
       rematch: {

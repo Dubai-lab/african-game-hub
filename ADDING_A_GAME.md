@@ -10,6 +10,14 @@ Pool (8-ball and 9-ball) is the third: `supabase/migrations/20261008150000_pool.
 
 Draughts (international, 10 x 10) is the fourth: `supabase/migrations/20261009130000_draughts.sql`, `supabase/functions/draughts-action/`, `supabase/functions/_shared/draughts.ts`, `src/games/draughts/`, `supabase/tests/draughts.test.ts` and `src/games/draughts/rules.test.ts`. It is the model for a board game with clocks whose rules we write ourselves. One file, `_shared/draughts.ts`, is the whole rule book; the server function replays the stored game with it to judge each move, and the app uses the same file to show the moves on offer and to run the practice opponent. The app sends only the squares a piece visits. The move generator is checked against the published move counts for the game, which is the quickest way to know a rules file is right.
 
+Check Up (the shape-matching card game played across Nigeria) is the fifth: `supabase/migrations/20261011120000_checkup.sql`, `supabase/functions/checkup-action/`, `supabase/functions/_shared/checkup.ts`, `src/games/checkup/`, `supabase/tests/checkup.test.ts`, `src/games/checkup/rules.test.ts` and `e2e/checkup.spec.ts`. It is the model for a game with something to hide. Three things are worth copying:
+
+- **Split what is stored by who may see it.** The table everyone sees (`checkup_games`: the card on top, whose turn, how many cards each player holds) is one table; each player's cards are a row of their own in another (`checkup_hands`, readable by its owner only); the cards still to be drawn are in a third that no player can read at all (`checkup_markets`). The access rules, not the app, are what keep a hand private: the app is simply never sent anyone else's.
+- **Deal in the database.** The pack is shuffled and dealt in `checkup_init_match`, from the database's own source of chance, in the transaction that creates the match. No app and no function chooses a card.
+- **Judge with one rule book, record on top of what was judged.** The server function reads the whole game (`checkup_context`), applies `_shared/checkup.ts`, and hands the new position to `checkup_store`, which records it only if the game has not moved since, and refuses a position that holds a card twice or a card that is not in the pack. The app uses the same file for practice and to light up the cards that may be played.
+
+Its turn clock shows one more pattern: the app of any player at the table asks for a turn that has run out to be dealt with (the rules then go to market for the late player), and the background sweep is only the net under that, for a table nobody is at.
+
 ## What the core does for you
 
 You do not write any of this again:

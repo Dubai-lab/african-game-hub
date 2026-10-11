@@ -89,7 +89,11 @@
       "NOT_JOINED": "Join the tournament first.",
       "TOURNAMENT_STARTED": "This tournament has started. A tournament played in rounds can only be joined before round 1.",
       "TOO_FAST": "One message at a time. Wait a moment.",
-      "CORRUPT_GAME": "This game’s record is damaged. Our team has been told."
+      "CORRUPT_GAME": "This game’s record is damaged. Our team has been told.",
+      "CARD_NOT_ALLOWED": "That card cannot be played now. Play the same shape or the same number, or go to market.",
+      "NOT_YOUR_CARD": "That card is not in your hand.",
+      "CALL_A_SHAPE": "Choose the shape to call.",
+      "NOT_YET": "That turn has not run out yet."
     },
     "samePassword": "That is your current password. Choose a different one.",
     "captchaFailed": "The security check did not pass. Reload the page and try again."
@@ -128,7 +132,8 @@
       "stakes": "Play free, or stake {{min}} to {{max}} tokens",
       "ludoBlurb": "The classic race home, one against one. The dice are thrown by the server, so nobody can load them.",
       "poolBlurb": "8-ball and 9-ball on a full table. Every shot is played out on the server, so the table you see is the table that counts.",
-      "draughtsBlurb": "International draughts on a 10 by 10 board. Capturing is compulsory, and every move is checked by the server."
+      "draughtsBlurb": "International draughts on a 10 by 10 board. Capturing is compulsory, and every move is checked by the server.",
+      "checkupBlurb": "The shape-matching card game played across Nigeria, for two to four players. The cards are dealt on the server and your hand is never sent to anyone else."
     },
     "how": {
       "title": "How it works",
@@ -294,7 +299,8 @@
     "ludo": "Ludo",
     "draughts": "Draughts",
     "pool": "Pool",
-    "penalty": "Penalty Shootout"
+    "penalty": "Penalty Shootout",
+    "checkup": "Check Up"
   },
   "legal": {
     "draft": "Draft. This text has not yet been reviewed by a lawyer.",
@@ -1553,5 +1559,124 @@
     "chatNew": "Chat with your opponent: new message",
     "chatClosed": "Chat is closed: your opponent has left",
     "leave": "Leave the game"
+  },
+  "checkup": {
+    "you": "You",
+    "back": "Back",
+    "backToLobby": "Back to the lobby",
+    "notFound": "This game does not exist.",
+    "loadFailed": "We could not load this game.",
+    "stake": "{{stake}} tokens",
+    "newGame": "New game",
+    "playersCount_one": "{{count}} player",
+    "playersCount_other": "{{count}} players",
+    "cards_one": "{{count}} card",
+    "cards_other": "{{count}} cards",
+    "out": "Out of the game",
+    "lastCard": "Last card",
+    "clockLabel": "Seconds left for this turn",
+    "handLabel": "Your cards",
+    "noCards": "You have no cards.",
+    "market_one": "Market: {{count}} card",
+    "market_other": "Market: {{count}} cards",
+    "marketLabel_one": "Go to market: draw a card. {{count}} card left.",
+    "marketLabel_other": "Go to market: draw a card. {{count}} cards left.",
+    "pickLabel": "Go to market: draw {{count}} cards.",
+    "goToMarket": "Go to market",
+    "pick": "Pick {{count}}",
+    "called": "Called:",
+    "callTitle": "Call a shape",
+    "callBody": "The next player must play the shape you call.",
+    "callHint": "The number under each shape is how many of it you hold.",
+    "shape": {
+      "c": "Circle",
+      "t": "Triangle",
+      "x": "Cross",
+      "s": "Square",
+      "r": "Star"
+    },
+    "card": {
+      "plain": "{{shape}} {{number}}",
+      "wild": "20 (call a shape)"
+    },
+    "status": {
+      "yourTurn": "Your turn",
+      "pick": "Pick {{count}}: play a {{number}} or go to market",
+      "waiting": "Waiting for {{name}}",
+      "turnOf": "{{name}} to play",
+      "over": "Game over"
+    },
+    "event": {
+      "play": "{{name}} played {{card}}.",
+      "call": "Called {{shape}}.",
+      "skipped": "{{name}} misses a turn.",
+      "generalMarket": "General market: everyone else draws one.",
+      "draw_one": "{{name}} went to market.",
+      "draw_other": "{{name}} went to market for {{count}} cards.",
+      "timeout_one": "{{name}} ran out of time and went to market.",
+      "timeout_other": "{{name}} ran out of time and went to market for {{count}} cards.",
+      "out": "{{name}} is out of the game."
+    },
+    "lobby": {
+      "players": "Players",
+      "playersHint": "Two players is the quickest to find. A table of three or four waits until it is full."
+    },
+    "leave": {
+      "button": "Leave the game",
+      "title": "Leave this game?",
+      "body": "{{opponent}} will win.",
+      "bodyTable": "You will be out of the game and the others will play on.",
+      "bodyTableStaked": "You will be out of the game and lose your stake: it stays in the pot for the winner.",
+      "cancel": "Keep playing",
+      "confirm": "Leave"
+    },
+    "over": {
+      "youWon": "You won",
+      "youLost": "You lost",
+      "winner": "{{name}} won",
+      "draw": "Draw",
+      "calledOff": "Game called off",
+      "tokens": "Tokens",
+      "close": "Look at the table",
+      "showResult": "Show result"
+    },
+    "reason": {
+      "finished": "Check up! Every card played.",
+      "market": "The market finished. The cards were counted: the lowest count wins.",
+      "last_standing": "Everyone else left the game.",
+      "admin_abort": "The game was called off by our team. No result; any stake was returned in full.",
+      "no_show": "A player did not take their first turn in time, and loses the game.",
+      "other": "The game is over."
+    },
+    "computer": {
+      "link": "Play the computer",
+      "practice": "Practice",
+      "heading": "Check Up against the computer",
+      "intro": "Practice with no tokens and no standing. You play first. It works without a connection.",
+      "opponents": "Computer players",
+      "opponentsCount_one": "{{count}} computer",
+      "opponentsCount_other": "{{count}} computers",
+      "start": "Start game",
+      "name": "Computer",
+      "numbered": "Computer {{number}}",
+      "thinking": "{{name}} is thinking",
+      "again": "Play again",
+      "change": "Change setup",
+      "leave": "Leave this game"
+    },
+    "rules": {
+      "title": "How to play",
+      "lines": [
+        "Play a card of the same shape or the same number as the card on top. If you cannot, go to market: draw one card.",
+        "1, Hold on: you play again.",
+        "2, Pick two: the next player draws two, unless they play a 2 and pass it on.",
+        "5, Pick three: the next player draws three, unless they play a 5 and pass it on.",
+        "8, Suspension: the next player misses a turn.",
+        "14, General market: everyone else draws one, and you play again.",
+        "20: goes on any card. You call the shape the next player must play.",
+        "The first to play every card wins. If the market finishes first, the cards are counted and the lowest count wins. A star counts double; a 20 counts 20.",
+        "Let your turn run out and the game goes to market for you. Do it twice in a row and you are out."
+      ]
+    }
   }
 }

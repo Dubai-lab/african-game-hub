@@ -89,7 +89,11 @@
       "NOT_JOINED": "Rejoignez d’abord le tournoi.",
       "TOURNAMENT_STARTED": "Ce tournoi a commencé. Un tournoi par rondes ne peut être rejoint qu’avant la première ronde.",
       "TOO_FAST": "Un message à la fois. Patientez un instant.",
-      "CORRUPT_GAME": "L’enregistrement de cette partie est abîmé. Notre équipe a été prévenue."
+      "CORRUPT_GAME": "L’enregistrement de cette partie est abîmé. Notre équipe a été prévenue.",
+      "CARD_NOT_ALLOWED": "Cette carte ne peut pas être jouée maintenant. Jouez la même forme ou le même numéro, ou allez au marché.",
+      "NOT_YOUR_CARD": "Cette carte n’est pas dans votre main.",
+      "CALL_A_SHAPE": "Choisissez la forme à annoncer.",
+      "NOT_YET": "Ce tour n’est pas encore écoulé."
     },
     "samePassword": "C’est votre mot de passe actuel. Choisissez-en un autre.",
     "captchaFailed": "La vérification de sécurité a échoué. Rechargez la page et réessayez."
@@ -128,7 +132,8 @@
       "stakes": "Jouez gratuitement, ou misez de {{min}} à {{max}} jetons",
       "ludoBlurb": "La course classique vers la maison, à un contre un. Les dés sont lancés par le serveur : impossible de les truquer.",
       "poolBlurb": "Jeu de la 8 et jeu de la 9 sur une vraie table. Chaque coup est calculé par le serveur : la table que vous voyez est celle qui compte.",
-      "draughtsBlurb": "Les dames internationales sur un damier de 10 sur 10. La prise est obligatoire, et chaque coup est vérifié par le serveur."
+      "draughtsBlurb": "Les dames internationales sur un damier de 10 sur 10. La prise est obligatoire, et chaque coup est vérifié par le serveur.",
+      "checkupBlurb": "Le jeu de cartes à formes joué dans tout le Nigeria, pour deux à quatre joueurs. Les cartes sont distribuées par le serveur et votre main n’est jamais envoyée à personne d’autre."
     },
     "how": {
       "title": "Comment ça marche",
@@ -294,7 +299,8 @@
     "ludo": "Ludo",
     "draughts": "Dames",
     "pool": "Billard",
-    "penalty": "Tirs au but"
+    "penalty": "Tirs au but",
+    "checkup": "Check Up"
   },
   "legal": {
     "draft": "Brouillon. Ce texte n’a pas encore été relu par un juriste.",
@@ -1553,5 +1559,124 @@
     "chatNew": "Discuter avec votre adversaire : nouveau message",
     "chatClosed": "Discussion fermée : votre adversaire est parti",
     "leave": "Quitter la partie"
+  },
+  "checkup": {
+    "you": "Vous",
+    "back": "Retour",
+    "backToLobby": "Retour à l’accueil",
+    "notFound": "Cette partie n’existe pas.",
+    "loadFailed": "Impossible de charger cette partie.",
+    "stake": "{{stake}} jetons",
+    "newGame": "Nouvelle partie",
+    "playersCount_one": "{{count}} joueur",
+    "playersCount_other": "{{count}} joueurs",
+    "cards_one": "{{count}} carte",
+    "cards_other": "{{count}} cartes",
+    "out": "Hors de la partie",
+    "lastCard": "Dernière carte",
+    "clockLabel": "Secondes restantes pour ce tour",
+    "handLabel": "Vos cartes",
+    "noCards": "Vous n’avez pas de cartes.",
+    "market_one": "Marché : {{count}} carte",
+    "market_other": "Marché : {{count}} cartes",
+    "marketLabel_one": "Aller au marché : piocher une carte. Il reste {{count}} carte.",
+    "marketLabel_other": "Aller au marché : piocher une carte. Il reste {{count}} cartes.",
+    "pickLabel": "Aller au marché : piocher {{count}} cartes.",
+    "goToMarket": "Aller au marché",
+    "pick": "Piocher {{count}}",
+    "called": "Annoncé :",
+    "callTitle": "Annoncer une forme",
+    "callBody": "Le joueur suivant doit jouer la forme que vous annoncez.",
+    "callHint": "Le chiffre sous chaque forme indique combien vous en avez.",
+    "shape": {
+      "c": "Cercle",
+      "t": "Triangle",
+      "x": "Croix",
+      "s": "Carré",
+      "r": "Étoile"
+    },
+    "card": {
+      "plain": "{{shape}} {{number}}",
+      "wild": "20 (annoncer une forme)"
+    },
+    "status": {
+      "yourTurn": "À vous de jouer",
+      "pick": "Piochez {{count}} : jouez un {{number}} ou allez au marché",
+      "waiting": "En attente de {{name}}",
+      "turnOf": "À {{name}} de jouer",
+      "over": "Partie terminée"
+    },
+    "event": {
+      "play": "{{name}} a joué {{card}}.",
+      "call": "Forme annoncée : {{shape}}.",
+      "skipped": "{{name}} passe son tour.",
+      "generalMarket": "Marché général : tous les autres piochent une carte.",
+      "draw_one": "{{name}} est allé au marché.",
+      "draw_other": "{{name}} est allé au marché pour {{count}} cartes.",
+      "timeout_one": "{{name}} n’a pas joué à temps et est allé au marché.",
+      "timeout_other": "{{name}} n’a pas joué à temps et est allé au marché pour {{count}} cartes.",
+      "out": "{{name}} est hors de la partie."
+    },
+    "lobby": {
+      "players": "Joueurs",
+      "playersHint": "À deux, on trouve un adversaire plus vite. Une table de trois ou quatre attend d’être complète."
+    },
+    "leave": {
+      "button": "Quitter la partie",
+      "title": "Quitter cette partie ?",
+      "body": "{{opponent}} gagnera.",
+      "bodyTable": "Vous serez hors de la partie et les autres continueront.",
+      "bodyTableStaked": "Vous serez hors de la partie et perdrez votre mise : elle reste dans le pot pour le vainqueur.",
+      "cancel": "Continuer à jouer",
+      "confirm": "Quitter"
+    },
+    "over": {
+      "youWon": "Vous avez gagné",
+      "youLost": "Vous avez perdu",
+      "winner": "{{name}} a gagné",
+      "draw": "Égalité",
+      "calledOff": "Partie annulée",
+      "tokens": "Jetons",
+      "close": "Voir la table",
+      "showResult": "Afficher le résultat"
+    },
+    "reason": {
+      "finished": "Check up ! Toutes les cartes sont jouées.",
+      "market": "Le marché est épuisé. Les cartes ont été comptées : le plus petit total gagne.",
+      "last_standing": "Tous les autres ont quitté la partie.",
+      "admin_abort": "La partie a été annulée par notre équipe. Pas de résultat ; toute mise a été rendue en entier.",
+      "no_show": "Un joueur n’a pas joué son premier tour à temps et perd la partie.",
+      "other": "La partie est terminée."
+    },
+    "computer": {
+      "link": "Jouer contre l’ordinateur",
+      "practice": "Entraînement",
+      "heading": "Check Up contre l’ordinateur",
+      "intro": "Entraînement sans jetons ni classement. Vous jouez en premier. Fonctionne sans connexion.",
+      "opponents": "Joueurs ordinateur",
+      "opponentsCount_one": "{{count}} ordinateur",
+      "opponentsCount_other": "{{count}} ordinateurs",
+      "start": "Commencer",
+      "name": "Ordinateur",
+      "numbered": "Ordinateur {{number}}",
+      "thinking": "{{name}} réfléchit",
+      "again": "Rejouer",
+      "change": "Changer les réglages",
+      "leave": "Quitter cette partie"
+    },
+    "rules": {
+      "title": "Comment jouer",
+      "lines": [
+        "Jouez une carte de la même forme ou du même numéro que la carte du dessus. Sinon, allez au marché : piochez une carte.",
+        "1, Hold on : vous rejouez.",
+        "2, Pick two : le joueur suivant pioche deux cartes, sauf s’il joue un 2 et les fait passer.",
+        "5, Pick three : le joueur suivant pioche trois cartes, sauf s’il joue un 5 et les fait passer.",
+        "8, Suspension : le joueur suivant passe son tour.",
+        "14, Marché général : tous les autres piochent une carte, et vous rejouez.",
+        "20 : se joue sur n’importe quelle carte. Vous annoncez la forme que le joueur suivant doit jouer.",
+        "Le premier à jouer toutes ses cartes gagne. Si le marché est épuisé avant, les cartes sont comptées et le plus petit total gagne. Une étoile compte double ; un 20 compte 20.",
+        "Si votre tour s’écoule, le jeu va au marché pour vous. Deux fois de suite, et vous êtes hors de la partie."
+      ]
+    }
   }
 }

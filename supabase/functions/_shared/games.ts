@@ -78,4 +78,15 @@ const draughts: GameAdapter = {
   },
 }
 
-export const games: Record<string, GameAdapter> = { chess, ludo, pool, draughts }
+const checkup: GameAdapter = {
+  queueChoice: (optionsSchema, requested) => {
+    const sizes = (optionsSchema as { players?: unknown } | null)?.players
+    // One against one unless the player asked for a bigger table.
+    const players = requested.players === undefined ? 2 : requested.players
+    if (!Array.isArray(sizes) || !sizes.includes(players)) return null
+    // One standing for Check Up, whatever the size of the table.
+    return { options: { players }, ratingPool: 'default', players: players as number }
+  },
+}
+
+export const games: Record<string, GameAdapter> = { chess, ludo, pool, draughts, checkup }
