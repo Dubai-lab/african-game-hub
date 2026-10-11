@@ -120,7 +120,7 @@ function Setup({ onStart }: { onStart: (choices: Choices, control: TimeControl |
       </div>
 
       <Button
-        className="sticky bottom-4 mt-auto min-h-14 text-lg lg:static lg:mt-2"
+        className="mt-auto min-h-14 shrink-0 text-lg lg:mt-2"
         disabled={choices.clock && !control}
         onClick={() => {
           const final = { ...choices, timeControl: control?.id ?? choices.timeControl }

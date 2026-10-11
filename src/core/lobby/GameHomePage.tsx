@@ -8,6 +8,7 @@ import { supabase } from '@/core/lib/supabase'
 import { useActiveMatch } from '@/core/matchmaking/useMatchmaking'
 import { useContacts } from '@/core/social/social'
 import { buttonClass } from '@/core/ui/Button'
+import { PageDock } from '@/core/ui/PageDock'
 import { Skeleton } from '@/core/ui/Skeleton'
 import { useFormat } from '@/core/ui/useFormat'
 import { GameHeader, GameNotOpen, useMatchSetup } from './setup'
@@ -215,8 +216,9 @@ export default function GameHomePage() {
         </section>
       </div>
 
-      {/* Stays within thumb reach at the bottom of a phone screen. */}
-      <div className="sticky bottom-[calc(3.5rem+var(--safe-bottom))] -mx-5 bg-surface/95 px-5 pb-3 pt-3 backdrop-blur-sm lg:bottom-0 lg:mx-0 lg:px-0">{play}</div>
+      {/* Within thumb reach on a phone: in the bar above the tabs, which the page scrolls
+          behind and never under. On a computer, at the foot of the page. */}
+      <PageDock className="sticky bottom-0 bg-surface/95 pb-3 pt-3 backdrop-blur-sm">{play}</PageDock>
     </div>
   )
 }

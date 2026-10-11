@@ -7,6 +7,7 @@ import { useMyProfile } from '@/core/profile/useMyProfile'
 import { useSocialBadge } from '@/core/social/social'
 import { RouteErrorBoundary } from './ErrorBoundary'
 import { OfflineBanner } from './OfflineBanner'
+import { PAGE_DOCK_ID } from './PageDock'
 
 const TABS = ['lobby', 'wallet', 'leaderboards', 'friends', 'profile', 'settings'] as const
 
@@ -14,7 +15,9 @@ const TABS = ['lobby', 'wallet', 'leaderboards', 'friends', 'profile', 'settings
  * Frame for signed-in pages, in two shapes:
  *  - phone: the name on top, the tabs within thumb reach at the bottom, and one column of
  *    content between them. The top bar and the tabs never move: the page scrolls between them,
- *    under the line that closes the top bar, as in an app and not as on a website.
+ *    under the line that closes the top bar, as in an app and not as on a website. A page with
+ *    one thing to do above all (Play, on a game's page) puts it in a bar of its own just above
+ *    the tabs (see PageDock): also fixed, also closed by a line, never laid over the page.
  *  - computer: a sidebar on the left, and the pages use the width (each lays out its own columns).
  */
 export function AppShell() {
@@ -84,7 +87,7 @@ export function AppShell() {
             </p>
           </div>
         </header>
-        <main ref={page} className="no-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-24 pt-4 lg:overflow-visible lg:px-10 lg:pb-12 lg:pt-10" data-testid="page-scroll">
+        <main ref={page} className="no-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6 pt-4 lg:overflow-visible lg:px-10 lg:pb-12 lg:pt-10" data-testid="page-scroll">
           <div className="mx-auto w-full max-w-md lg:mx-0 lg:max-w-6xl">
             <RouteErrorBoundary>
               <Suspense fallback={<div className="h-40 animate-pulse rounded-lg bg-line/60" aria-hidden="true" />}>
@@ -93,31 +96,33 @@ export function AppShell() {
             </RouteErrorBoundary>
           </div>
         </main>
+        {/* The page's own bar (see PageDock): empty, and so not there, on most pages. */}
+        <div id={PAGE_DOCK_ID} className="shrink-0 border-t-2 border-line bg-surface px-5 py-2.5 empty:hidden lg:hidden" data-testid="page-dock" />
+        <nav
+          aria-label={t('nav.label')}
+          className="shrink-0 border-t-2 border-ink bg-panel pb-[var(--safe-bottom)] lg:hidden"
+        >
+          <ul className="mx-auto grid h-14 max-w-md grid-cols-6">
+            {TABS.map((tab) => (
+              <li key={tab}>
+                <NavLink
+                  to={`/${tab}`}
+                  className={({ isActive }) =>
+                    `flex h-full items-center justify-center px-0.5 text-center font-display text-[0.7rem] font-extrabold leading-tight ${isActive || (tab === 'lobby' && inGame) ? 'bg-primary text-surface' : 'text-primary'}`
+                  }
+                >
+                  {t(`nav.${tab}`)}
+                  {badge(tab)}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </div>
 
       {/* A friend's invitation to a game pops up wherever the player is in the app. */}
       <ChallengeInbox />
 
-      <nav
-        aria-label={t('nav.label')}
-        className="fixed inset-x-0 bottom-0 z-30 border-t-2 border-ink bg-panel pb-[var(--safe-bottom)] lg:hidden"
-      >
-        <ul className="mx-auto grid h-14 max-w-md grid-cols-6">
-          {TABS.map((tab) => (
-            <li key={tab}>
-              <NavLink
-                to={`/${tab}`}
-                className={({ isActive }) =>
-                  `flex h-full items-center justify-center px-0.5 text-center font-display text-[0.7rem] font-extrabold leading-tight ${isActive || (tab === 'lobby' && inGame) ? 'bg-primary text-surface' : 'text-primary'}`
-                }
-              >
-                {t(`nav.${tab}`)}
-                {badge(tab)}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
-      </nav>
     </div>
   )
 }
