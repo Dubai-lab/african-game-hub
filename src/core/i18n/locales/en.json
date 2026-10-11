@@ -723,7 +723,7 @@
     "account": "Account",
     "about": "About",
     "dataSaver": "Data saver",
-    "dataSaverHint": "Uses less mobile data: no 3D on the home page and no piece animations.",
+    "dataSaverHint": "Uses less mobile data: no profile photos, no 3D on the home page, simpler sounds, and the chess review starts only when you ask for it. Games play the same.",
     "matchChat": "Live chat during games",
     "matchChatHint": "When this is off, you cannot send or receive text or emoji during a match."
   },

@@ -278,7 +278,8 @@ export function DraughtsTable({ title, game, players, movable, perspective, time
             }}
             theme={DRAUGHTS_BOARDS[settings.draughtsBoard]}
             pieces={pieces}
-            animate={!settings.dataSaver}
+            // Pieces slide whatever the data-saver setting: it costs no data.
+            animate
             showNumbers={settings.draughtsNumbers}
             showHints={settings.draughtsHints}
           />

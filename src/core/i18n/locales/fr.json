@@ -723,7 +723,7 @@
     "account": "Compte",
     "about": "À propos",
     "dataSaver": "Économie de données",
-    "dataSaverHint": "Consomme moins de données mobiles : pas de 3D sur la page d’accueil ni d’animation des pièces.",
+    "dataSaverHint": "Consomme moins de données mobiles : pas de photos de profil, pas de 3D sur la page d’accueil, des sons plus simples, et l’analyse aux échecs ne démarre que si vous la demandez. Les parties se jouent de la même façon.",
     "matchChat": "Discussion en direct pendant les parties",
     "matchChatHint": "Si cette option est désactivée, vous ne pouvez ni envoyer ni recevoir de texte ou d’emoji pendant une partie."
   },

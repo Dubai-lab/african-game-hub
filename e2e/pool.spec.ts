@@ -298,3 +298,37 @@ test('practice against the computer, with the cloth chosen in Settings', async (
   expect(errors).toEqual([])
   await context.close()
 })
+
+test('with data saver on, a shot is still played out: the balls roll, they do not jump', async ({ browser }) => {
+  const { context, page } = await signedIn(browser, 2)
+  const dataSaver = async (on: boolean) => {
+    await page.goto('/settings')
+    const box = page.getByRole('checkbox', { name: /Data saver/ })
+    await expect(box).toBeVisible({ timeout: 20_000 })
+    if ((await box.isChecked()) !== on) await box.click()
+    await expect(box).toBeChecked({ checked: on })
+  }
+  await dataSaver(true)
+  try {
+    await page.goto('/play/pool/computer')
+    await page.getByRole('button', { name: 'Start' }).click()
+    await expect(page.getByTestId('pool-table')).toBeVisible()
+    // Watch the table while the break is played: it must pass through "balls moving".
+    await page.evaluate(() => {
+      const table = document.querySelector<HTMLElement>('[data-testid="pool-state"]')!
+      const seen = { rolled: false }
+      ;(window as unknown as { poolSeen: typeof seen }).poolSeen = seen
+      new MutationObserver(() => {
+        if (table.dataset.playing === 'true') seen.rolled = true
+      }).observe(table, { attributes: true })
+    })
+    const before = await shotNo(page)
+    await pullCue(page, 1)
+    await expect.poll(() => shotNo(page), { timeout: 20_000 }).toBeGreaterThan(before)
+    await expect(state(page)).toHaveAttribute('data-playing', 'false', { timeout: 30_000 })
+    expect(await page.evaluate(() => (window as unknown as { poolSeen: { rolled: boolean } }).poolSeen.rolled)).toBe(true)
+  } finally {
+    await dataSaver(false)
+    await context.close()
+  }
+})

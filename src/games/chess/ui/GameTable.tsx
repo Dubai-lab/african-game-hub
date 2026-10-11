@@ -315,7 +315,8 @@ export function GameTable({
               onMove={over ? tryOwnMove : game.tryMove}
               theme={BOARD_THEMES[settings.chessBoardTheme]}
               pieceSet={pieceSet}
-              animate={!settings.dataSaver}
+              // Pieces slide whatever the data-saver setting: it costs no data.
+              animate
               premoves={settings.chessPremoves && !passAndPlay && !over}
               tint={shownReview && shown.lastMove ? { square: shown.lastMove.to, color: GRADE_STYLE[shownReview.grade].color } : null}
               arrows={shownReview?.better ? [{ from: shownReview.better.from, to: shownReview.better.to, color: GRADE_STYLE.best.color }] : undefined}

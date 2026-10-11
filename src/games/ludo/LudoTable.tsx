@@ -142,7 +142,9 @@ export function LudoTable({ title, state, players, mySeat, deadline, busy, notic
   useEffect(() => {
     const before = shownRef.current
     const thrown = state.turnNo > before.turnNo && before.phase === 'roll' && state.lastEvent?.dice !== undefined
-    if (!thrown || settings.dataSaver) {
+    // (Shown whatever the data-saver setting: the throw and the walk cost no data, and without
+    // them the pieces simply jump and the game cannot be followed.)
+    if (!thrown) {
       setRolling(false)
       return setShown(state)
     }
@@ -153,12 +155,12 @@ export function LudoTable({ title, state, players, mySeat, deadline, busy, notic
       setShown(state)
     }, ROLL_MS)
     return () => clearTimeout(id)
-  }, [state, settings.dataSaver])
+  }, [state])
 
   useEffect(preloadLudoSounds, [])
 
   const target = useMemo(() => shown.positions, [shown])
-  const positions = useWalkingPieces(target, !settings.dataSaver, () => ludoFeedback('step'))
+  const positions = useWalkingPieces(target, true, () => ludoFeedback('step'))
 
   const open = shown.phase !== 'over'
   const stillIn = (seat: Seat) => !shown.places.includes(seat) && !shown.gone.includes(seat)
