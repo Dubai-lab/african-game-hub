@@ -72,7 +72,10 @@ test('profile shows ratings per pace and the match history, and a past game can 
   await expect(page.locator('[data-square="e7"] [data-piece]')).toHaveCount(1)
 
   // The display name can be changed; the username cannot.
-  await page.getByRole('link', { name: 'Lobby' }).click()
+  // A finished game has an arrow back to the game's own page.
+  await page.getByTestId('game-back').click()
+  await expect(page).toHaveURL(/\/play\/chess$/)
+  await page.goto('/lobby')
   await page.getByRole('link', { name: 'Profile' }).click()
   await page.getByRole('button', { name: 'Edit profile' }).click()
   await page.getByLabel('Display name').fill('Amina of Kigali')

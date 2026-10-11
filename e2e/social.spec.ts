@@ -114,9 +114,16 @@ test('during a match: emoji and text between opponents, the off switch, and a pr
   await expect(black.getByRole('list', { name: 'Moves' }).getByRole('button')).toHaveText(['e4', 'e5'])
 
   // The two are not friends, and can still react and talk during the game.
+  // On a phone the chat is behind the chat button; what the opponent says still pops up over
+  // the board, and the button shows there is something new.
   await expect(white.getByTestId('match-chat')).toHaveAttribute('data-open', 'true')
+  await expect(white.getByRole('group', { name: 'Quick reactions' })).toBeHidden()
+  await white.getByTestId('game-chat').click()
   await white.getByRole('group', { name: 'Quick reactions' }).getByRole('button', { name: '😂' }).click()
   await expect(black.getByTestId('chat-pop')).toContainText('😂', { timeout: 20_000 })
+  await expect(black.getByTestId('game-chat')).toHaveAttribute('data-news', 'true')
+  await black.getByTestId('game-chat').click()
+  await expect(black.getByTestId('game-chat')).toHaveAttribute('data-news', 'false')
   await black.getByPlaceholder('Say something').fill('Nice opening!')
   await black.getByTestId('match-chat').getByRole('button', { name: 'Send' }).click()
   await expect(white.getByTestId('chat-pop')).toContainText('Nice opening!', { timeout: 20_000 })
@@ -133,7 +140,7 @@ test('during a match: emoji and text between opponents, the off switch, and a pr
   await expect(black.getByTestId('chat-pop')).toHaveCount(0)
 
   // The same switch is in Settings, and it is remembered on the account.
-  await black.getByRole('link', { name: 'Lobby' }).click()
+  await black.goto('/lobby')
   await black.getByRole('link', { name: 'Settings' }).click()
   await expect(black.getByRole('checkbox', { name: /Live chat during games/ })).not.toBeChecked()
   await black.getByRole('checkbox', { name: /Live chat during games/ }).check()

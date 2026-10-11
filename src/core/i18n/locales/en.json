@@ -521,16 +521,14 @@
       "title": "Two players, one phone",
       "intro": "Pass the phone after each move. Pick how much time each player gets.",
       "start": "Start game",
-      "back": "Lobby"
+      "back": "Back"
     },
     "moves": {
       "title": "Moves",
       "none": "No moves yet",
       "previous": "Previous move",
       "next": "Next move",
-      "backToGame": "Back to the current position",
-      "previousShort": "Previous",
-      "nextShort": "Next"
+      "backToGame": "Back to the current position"
     },
     "actions": {
       "draw": "Offer draw",
@@ -694,14 +692,26 @@
         "miss": "misses a chance your opponent gave you.",
         "blunder": "is a blunder."
       },
-      "summary": "The whole game",
-      "showChat": "Chat with your opponent"
+      "summary": "The whole game"
     },
     "trial": {
       "title": "Trying your own moves",
       "takeBack": "Take back",
       "back": "Back to the game",
       "hint": "Move any piece to try another line. The real game is kept."
+    },
+    "menu": {
+      "bar": "Game controls",
+      "open": "Menu",
+      "title": "Game menu",
+      "settings": "Settings",
+      "soundOff": "Turn sounds off",
+      "soundOn": "Turn sounds on",
+      "cancel": "Cancel",
+      "back": "Back to chess",
+      "chat": "Chat with your opponent",
+      "chatNew": "Chat with your opponent: new message",
+      "chatClosed": "Chat is closed: your opponent has left"
     }
   },
   "ratingPools": {
@@ -821,7 +831,8 @@
     "turnOff": "Turn chat off",
     "turnOn": "Turn chat on",
     "offYou": "Live chat is off. You are not sending or receiving anything.",
-    "offOpponent": "Your opponent has turned live chat off."
+    "offOpponent": "Your opponent has turned live chat off.",
+    "left": "{{name}} has left the game. The chat is closed."
   },
   "safety": {
     "report": "Report",

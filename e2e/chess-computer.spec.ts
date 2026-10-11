@@ -76,6 +76,8 @@ test('playing White: the computer answers, and a move can be taken back', async 
   await expect(square(page, 'f6').locator(':scope > div')).not.toHaveCSS('background-image', /radial-gradient/)
 
   // Take back: both the reply and the player's own move are undone.
+  // (Everything that is not a move is in the menu.)
+  await page.getByTestId('game-menu').click()
   await page.getByRole('button', { name: 'Take back' }).click()
   await expect(page.getByText('No moves yet')).toBeVisible()
   await expect(square(page, 'e2').locator('[data-piece]')).toHaveCount(1)
@@ -84,6 +86,7 @@ test('playing White: the computer answers, and a move can be taken back', async 
   await square(page, 'd2').click()
   await square(page, 'd4').click()
   await expect(moves(page)).toHaveCount(2, { timeout: 30_000 })
+  await page.getByTestId('game-menu').click()
   await page.getByRole('button', { name: 'Resign' }).click()
   await expect(page.getByRole('dialog', { name: 'Resign this game?' })).toBeVisible()
   await page.getByRole('dialog').getByRole('button', { name: 'Resign' }).click()
@@ -113,14 +116,18 @@ test('playing Black: the computer opens and the board faces the player', async (
   await square(page, 'e5').click()
   await expect(moves(page)).toHaveCount(3, { timeout: 30_000 })
 
-  // Leaving for the lobby does not lose the game: coming back, it is still on the board.
-  await page.getByRole('link', { name: 'Lobby' }).click()
+  // Leaving does not lose the game: coming back, it is still on the board. (There is no way
+  // out on the game screen while a game is on; the player leaves with the phone's own Back.)
+  await expect(page.getByRole('link', { name: 'Lobby' })).toHaveCount(0)
+  await expect(page.getByTestId('game-back')).toHaveCount(0)
+  await page.goto('/lobby')
   await page.getByTestId('game-chess').click()
   await page.getByTestId('game-play').click()
   await page.getByRole('link', { name: 'Play the computer' }).click()
   await expect.poll(() => moves(page).count(), { timeout: 30_000 }).toBeGreaterThanOrEqual(3)
   // Ending it (here by resigning) leads back to the setup, where the chosen level and colour
   // are remembered for next time.
+  await page.getByTestId('game-menu').click()
   await page.getByRole('button', { name: 'Resign' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Resign' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'New game' }).click()

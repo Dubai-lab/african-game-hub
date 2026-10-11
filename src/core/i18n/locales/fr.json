@@ -521,16 +521,14 @@
       "title": "Deux joueurs, un téléphone",
       "intro": "Passez le téléphone après chaque coup. Choisissez le temps de chaque joueur.",
       "start": "Commencer la partie",
-      "back": "Salon"
+      "back": "Retour"
     },
     "moves": {
       "title": "Coups",
       "none": "Aucun coup pour l’instant",
       "previous": "Coup précédent",
       "next": "Coup suivant",
-      "backToGame": "Revenir à la position actuelle",
-      "previousShort": "Précédent",
-      "nextShort": "Suivant"
+      "backToGame": "Revenir à la position actuelle"
     },
     "actions": {
       "draw": "Proposer nulle",
@@ -694,14 +692,26 @@
         "miss": "manque une occasion offerte par votre adversaire.",
         "blunder": "est une gaffe."
       },
-      "summary": "Toute la partie",
-      "showChat": "Discuter avec votre adversaire"
+      "summary": "Toute la partie"
     },
     "trial": {
       "title": "Vous essayez vos propres coups",
       "takeBack": "Reprendre",
       "back": "Revenir à la partie",
       "hint": "Déplacez une pièce pour essayer une autre suite. La vraie partie est conservée."
+    },
+    "menu": {
+      "bar": "Commandes de la partie",
+      "open": "Menu",
+      "title": "Menu de la partie",
+      "settings": "Réglages",
+      "soundOff": "Couper les sons",
+      "soundOn": "Activer les sons",
+      "cancel": "Annuler",
+      "back": "Retour aux échecs",
+      "chat": "Discuter avec votre adversaire",
+      "chatNew": "Discuter avec votre adversaire : nouveau message",
+      "chatClosed": "Discussion fermée : votre adversaire est parti"
     }
   },
   "ratingPools": {
@@ -821,7 +831,8 @@
     "turnOff": "Désactiver la discussion",
     "turnOn": "Activer la discussion",
     "offYou": "La discussion en direct est désactivée. Vous n’envoyez et ne recevez rien.",
-    "offOpponent": "Votre adversaire a désactivé la discussion en direct."
+    "offOpponent": "Votre adversaire a désactivé la discussion en direct.",
+    "left": "{{name}} a quitté la partie. La discussion est fermée."
   },
   "safety": {
     "report": "Signaler",

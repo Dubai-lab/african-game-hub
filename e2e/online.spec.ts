@@ -138,6 +138,7 @@ test('two players are paired and play a game to checkmate, each seeing the other
 
   // This one is called off before it starts. From the result, a declined rematch and a search
   // for someone new, again without leaving the screen.
+  await black.getByTestId('game-menu').click()
   await black.getByRole('button', { name: 'Abort' }).click()
   await black.getByRole('dialog').getByRole('button', { name: 'Abort', exact: true }).click()
   await expect(white.getByRole('dialog', { name: 'Game aborted' })).toBeVisible({ timeout: 20_000 })
@@ -192,8 +193,11 @@ test('a game survives a refresh, a dropped connection and leaving the screen; dr
   await expect(moves(black)).toHaveText(['e4', 'e5', 'Nf3'], { timeout: 30_000 })
   await expect(pieceOn(black, 'f3')).toHaveCount(1)
 
-  // White wanders off to the lobby and is offered the way back.
-  await white.getByRole('link', { name: 'Lobby' }).click()
+  // White wanders off to the lobby and is offered the way back. (The game screen itself
+  // offers no way out while the game is on.)
+  await expect(white.getByRole('link', { name: 'Lobby' })).toHaveCount(0)
+  await expect(white.getByTestId('game-back')).toHaveCount(0)
+  await white.goto('/lobby')
   await expect(white.getByText('You have a game in progress.')).toBeVisible()
   await white.getByRole('link', { name: 'Return to game' }).click()
   await expect(moves(white)).toHaveCount(3)
@@ -201,19 +205,25 @@ test('a game survives a refresh, a dropped connection and leaving the screen; dr
   // Black replies, then White offers a draw. Only Black is asked.
   await tapMove(black, 'b8', 'c6')
   await expect(moves(white)).toHaveCount(4, { timeout: 15_000 })
+  await white.getByTestId('game-menu').click()
   await white.getByRole('button', { name: 'Offer draw' }).click()
   await expect(black.getByRole('dialog', { name: /offers a draw/ })).toBeVisible({ timeout: 15_000 })
   await expect(white.getByRole('dialog')).toHaveCount(0)
   await expect(white.getByText('Draw offered. Waiting for an answer.')).toBeVisible()
   await black.getByRole('button', { name: 'Decline' }).click()
+  await white.getByTestId('game-menu').click()
   await expect(white.getByRole('button', { name: 'Offer draw' })).toBeEnabled({ timeout: 15_000 })
+  await white.getByRole('button', { name: 'Cancel' }).click()
 
   // Black offers in turn and White accepts.
+  await black.getByTestId('game-menu').click()
   await black.getByRole('button', { name: 'Offer draw' }).click()
   await white.getByRole('button', { name: 'Accept draw' }).click({ timeout: 15_000 })
   for (const page of [white, black]) {
     await expect(page.getByRole('dialog', { name: 'Draw' })).toBeVisible({ timeout: 15_000 })
     await expect(page.getByTestId('game-over-reason')).toHaveText('Both players agreed to a draw.')
+    // Now that the game is over, the arrow back to chess is there.
+    await expect(page.getByTestId('game-back')).toHaveAttribute('href', '/play/chess')
   }
 
   await whiteSeat.context.close()
@@ -234,6 +244,7 @@ test('searching can be cancelled, and a game abandoned before it starts is calle
     .toBe(0)
 
   const [white, black] = await startGame(one, two)
+  await white.getByTestId('game-menu').click()
   await white.getByRole('button', { name: 'Abort' }).click()
   await white.getByRole('dialog', { name: 'Abort this game?' }).getByRole('button', { name: 'Abort' }).click()
   for (const page of [white, black]) {

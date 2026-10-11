@@ -115,6 +115,7 @@ type MoveListProps = {
   grades?: (Grade | undefined)[]
 }
 
+/** The moves of the game. Stepping back and forward is done from the bar under it (see GameTable). */
 /** Moves in standard notation, with buttons to step back and forward through the game. */
 export function MoveList({ played, viewPly, onView, grades }: MoveListProps) {
   const { t } = useTranslation()
@@ -123,23 +124,13 @@ export function MoveList({ played, viewPly, onView, grades }: MoveListProps) {
     current.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   }, [viewPly, played.length])
 
-  const step = 'flex size-11 shrink-0 items-center justify-center border-2 border-line bg-panel text-xl font-bold disabled:opacity-40'
   return (
-    // Phone: one scrolling line with a step button at each end.
-    // Computer: a two-column list (White, Black) that fills the panel, with the step buttons under it.
+    // Phone: one scrolling line.
+    // Computer: a two-column list (White, Black) that fills the panel.
     // (On a computer the list always keeps room for a few rows, however much else the panel holds.)
-    <div className="flex shrink-0 items-center gap-2 lg:grid lg:min-h-48 lg:flex-1 lg:grid-cols-2 lg:grid-rows-[minmax(0,1fr)_auto] lg:items-stretch">
-      <button
-        type="button"
-        className={`${step} lg:col-start-1 lg:row-start-2 lg:w-full`}
-        disabled={viewPly === 0}
-        onClick={() => onView(viewPly - 1)}
-        aria-label={t('chess.moves.previous')}
-      >
-        ‹<span className="ms-2 hidden text-sm lg:inline">{t('chess.moves.previousShort')}</span>
-      </button>
+    <div className="flex shrink-0 items-center lg:min-h-48 lg:flex-1 lg:items-stretch">
       <ol
-        className="flex min-h-11 flex-1 items-center gap-x-1 overflow-x-auto whitespace-nowrap border-2 border-line bg-panel px-2 lg:col-span-2 lg:row-start-1 lg:grid lg:min-h-0 lg:grid-cols-2 lg:content-start lg:items-stretch lg:gap-x-3 lg:gap-y-0.5 lg:overflow-y-auto lg:overflow-x-hidden lg:bg-surface lg:p-2"
+        className="flex min-h-11 flex-1 items-center gap-x-1 overflow-x-auto whitespace-nowrap border-2 border-line bg-panel px-2 lg:grid lg:min-h-0 lg:grid-cols-2 lg:content-start lg:items-stretch lg:gap-x-3 lg:gap-y-0.5 lg:overflow-y-auto lg:overflow-x-hidden lg:bg-surface lg:p-2"
         aria-label={t('chess.moves.title')}
       >
         {played.length === 0 && <li className="text-sm text-muted lg:col-span-2">{t('chess.moves.none')}</li>}
@@ -167,15 +158,6 @@ export function MoveList({ played, viewPly, onView, grades }: MoveListProps) {
           </li>
         ))}
       </ol>
-      <button
-        type="button"
-        className={`${step} lg:col-start-2 lg:row-start-2 lg:w-full`}
-        disabled={viewPly >= played.length}
-        onClick={() => onView(viewPly + 1)}
-        aria-label={t('chess.moves.next')}
-      >
-        <span className="me-2 hidden text-sm lg:inline">{t('chess.moves.nextShort')}</span>›
-      </button>
     </div>
   )
 }

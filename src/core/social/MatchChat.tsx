@@ -20,7 +20,21 @@ type Status = { mine: boolean; others: boolean }
 
 let channelSeq = 0
 
-export function MatchChat({ matchId, names }: { matchId: string; names: Record<string, string> }) {
+type Props = {
+  matchId: string
+  names: Record<string, string>
+  /** The game is over. From then on the chat closes when the opponent leaves the game. */
+  ended?: boolean
+  /** Told whenever the chat closes or opens again for that reason. */
+  onClosed?: (closed: boolean) => void
+  /** Told each time the opponent says something. */
+  onHeard?: () => void
+}
+
+/** How long an opponent may be gone (a refresh, a dropped connection) before they count as having left. */
+const GONE_AFTER_MS = 6000
+
+export function MatchChat({ matchId, names, ended = false, onClosed, onHeard }: Props) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const me = user?.id
@@ -31,6 +45,12 @@ export function MatchChat({ matchId, names }: { matchId: string; names: Record<s
   const [reporting, setReporting] = useState<string | null>(null)
   const opponentIds = Object.keys(names).filter((id) => id !== me)
   const log = useRef<HTMLUListElement>(null)
+  const [opponentGone, setOpponentGone] = useState(false)
+  // The latest of what the page asked to be told, without re-subscribing when it changes.
+  const heard = useRef(onHeard)
+  heard.current = onHeard
+  const closedTold = useRef(onClosed)
+  closedTold.current = onClosed
 
   const statusKey = ['match-chat-status', matchId, me]
   const linesKey = ['match-chat', matchId]
@@ -75,7 +95,10 @@ export function MatchChat({ matchId, names }: { matchId: string; names: Record<s
         const line: Line = { id: row.id, senderId: row.sender_id, kind: row.kind, body: row.body }
         queryClient.setQueryData<Line[]>(linesKey, (previous = []) => (previous.some((l) => l.id === line.id) ? previous : [...previous, line]))
         // What the opponent says pops up over the game, so it is seen without scrolling.
-        if (line.senderId !== me) setPop(line)
+        if (line.senderId !== me) {
+          setPop(line)
+          heard.current?.()
+        }
       })
       .subscribe((state) => {
         if (state === 'SUBSCRIBED') void queryClient.invalidateQueries({ queryKey: linesKey })
@@ -85,6 +108,35 @@ export function MatchChat({ matchId, names }: { matchId: string; names: Record<s
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchId, me, queryClient])
+
+  // Who is at the game. Each player's screen says "I am here" for as long as it is open on this
+  // match; when the game is over and the opponent's screen has gone, there is nobody to talk to.
+  // (Nothing is decided from this but whether the chat is offered: it is not proof of anything.)
+  useEffect(() => {
+    if (!me) return
+    const channel = supabase.channel(`match-here:${matchId}`, { config: { presence: { key: me } } })
+    let gone: ReturnType<typeof setTimeout> | undefined
+    const look = () => {
+      const here = Object.keys(channel.presenceState())
+      const present = opponentIds.length === 0 || opponentIds.some((id) => here.includes(id))
+      clearTimeout(gone)
+      if (present) setOpponentGone(false)
+      else gone = setTimeout(() => setOpponentGone(true), GONE_AFTER_MS)
+    }
+    channel.on('presence', { event: 'sync' }, look).subscribe((state) => {
+      if (state === 'SUBSCRIBED') void channel.track({ at: Date.now() })
+    })
+    return () => {
+      clearTimeout(gone)
+      void supabase.removeChannel(channel)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchId, me])
+
+  const left = ended && opponentGone
+  useEffect(() => {
+    closedTold.current?.(left)
+  }, [left])
 
   useEffect(() => {
     if (!pop) return
@@ -126,7 +178,7 @@ export function MatchChat({ matchId, names }: { matchId: string; names: Record<s
   const open = mine && others
 
   return (
-    <section aria-label={t('chat.matchTitle')} className="flex flex-col gap-2" data-testid="match-chat" data-open={open}>
+    <section aria-label={t('chat.matchTitle')} className="flex flex-col gap-2" data-testid="match-chat" data-open={open && !left}>
       {pop && (
         <div
           role="status"
@@ -159,7 +211,11 @@ export function MatchChat({ matchId, names }: { matchId: string; names: Record<s
       </div>
       {reporting && <ReportDialog target={{ userId: reporting, name: names[reporting] ?? '' }} matchId={matchId} onClose={() => setReporting(null)} />}
 
-      {!mine ? (
+      {left ? (
+        <p className="text-sm text-muted" data-testid="chat-left">
+          {t('chat.left', { name: opponentIds.map((id) => names[id] ?? '').filter(Boolean).join(', ') })}
+        </p>
+      ) : !mine ? (
         <p className="text-sm text-muted">{t('chat.offYou')}</p>
       ) : !others ? (
         <p className="text-sm text-muted">{t('chat.offOpponent')}</p>

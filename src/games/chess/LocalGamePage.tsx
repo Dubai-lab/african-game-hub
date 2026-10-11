@@ -28,7 +28,7 @@ function Setup({ onStart }: { onStart: (control: TimeControl) => void }) {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-5 pb-8 pt-4 lg:max-w-2xl lg:justify-center lg:py-12">
       <header className="flex items-center justify-between">
-        <Link to="/lobby" className="flex min-h-11 items-center font-semibold text-primary underline underline-offset-4">
+        <Link to="/play/chess" className="flex min-h-11 items-center font-semibold text-primary underline underline-offset-4">
           {t('chess.local.back')}
         </Link>
       </header>

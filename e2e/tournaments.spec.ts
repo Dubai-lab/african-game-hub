@@ -152,7 +152,11 @@ test('a tournament: created with a prize, joined from its link, players paired, 
   await expect(host.page).toHaveURL(two.page.url())
   await expect(host.page.getByTestId('chess-board')).toBeVisible({ timeout: 20_000 })
   // Watching only: no resign or draw buttons for someone who is not playing.
+  await host.page.getByTestId('game-menu').click()
+  await expect(host.page.getByRole('button', { name: 'Flip board' })).toBeVisible()
   await expect(host.page.getByRole('button', { name: 'Resign' })).toHaveCount(0)
+  await expect(host.page.getByRole('button', { name: 'Offer draw' })).toHaveCount(0)
+  await host.page.getByRole('button', { name: 'Cancel' }).click()
   // A move played by a player is seen by the watcher as it happens.
   const mover = (await runSql<{ white: boolean }>(`select (select user_id from public.match_players where match_id = '${matchId0()}' and seat = 'white') = ${idOf(1)} as white`))[0]!.white ? two.page : three.page
   await mover.locator('[data-square="e2"]').click()

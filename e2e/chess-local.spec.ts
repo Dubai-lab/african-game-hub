@@ -149,16 +149,19 @@ test('resigning asks first, and a draw needs the other player to accept', async 
   await tapMove(page, 'e2', 'e4')
   await tapMove(page, 'e7', 'e5')
 
+  await page.getByTestId('game-menu').click()
   await page.getByRole('button', { name: 'Offer draw' }).click()
   await expect(page.getByRole('dialog', { name: 'White offers a draw' })).toBeVisible()
   await page.getByRole('button', { name: 'Decline' }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
 
+  await page.getByTestId('game-menu').click()
   await page.getByRole('button', { name: 'Resign' }).click()
   await expect(page.getByRole('dialog', { name: 'White resigns?' })).toBeVisible()
   await page.getByRole('button', { name: 'Keep playing' }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
 
+  await page.getByTestId('game-menu').click()
   await page.getByRole('button', { name: 'Resign' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Resign' }).click()
   await expect(page.getByRole('dialog', { name: 'Black wins' })).toBeVisible()
@@ -194,7 +197,8 @@ test('board theme, piece set and sound choices are saved to the account', async 
       { timeout: 20_000 },
     )
 
-  await page.getByRole('button', { name: 'Board settings' }).click()
+  await page.getByTestId('game-menu').click()
+  await page.getByRole('dialog', { name: 'Game menu' }).getByRole('button', { name: 'Settings' }).click()
   let saved = savedWith('rhosgfx')
   await page.getByRole('radio', { name: 'Green' }).click()
   await page.getByRole('radio', { name: 'Rounded pieces' }).click()
@@ -210,7 +214,8 @@ test('board theme, piece set and sound choices are saved to the account', async 
   await expect(square(page, 'a1')).toHaveCSS('background-color', 'rgb(111, 154, 82)')
 
   // Put the defaults back for the next run.
-  await page.getByRole('button', { name: 'Board settings' }).click()
+  await page.getByTestId('game-menu').click()
+  await page.getByRole('dialog', { name: 'Game menu' }).getByRole('button', { name: 'Settings' }).click()
   saved = savedWith('chessnut')
   await page.getByRole('radio', { name: 'Blue' }).click()
   await page.getByRole('radio', { name: 'Classic pieces' }).click()

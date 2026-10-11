@@ -103,7 +103,7 @@ test('offline: the installed app still opens, shows the saved wallet and profile
 
   // Back online: the banner goes away by itself.
   await context.setOffline(false)
-  await page.getByRole('link', { name: 'Lobby' }).click()
+  await page.goto(`${origin}/lobby`)
   await expect(page.getByText('You are offline. Online play needs a connection.')).toHaveCount(0)
   await context.close()
 })
