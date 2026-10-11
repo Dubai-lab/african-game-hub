@@ -15,10 +15,10 @@ test('landing page shows every section from live data, with honest copy', async 
   await expect(page.getByText('Start with 1,000 free tokens.')).toBeVisible()
   await expect(page.getByRole('img', { name: /chess board in the middle of a game/ })).toBeAttached()
 
-  // Games registry: chess, ludo, draughts, pool and Check Up live, one coming soon.
+  // Games registry: chess, ludo, draughts, pool and Check Up live; nothing is promised that is not built.
   await expect(page.getByRole('heading', { name: 'Chess', level: 3 })).toBeVisible()
   await expect(page.getByText('Live now')).toHaveCount(5)
-  await expect(page.getByText('Coming soon')).toHaveCount(1)
+  await expect(page.getByText('Coming soon')).toHaveCount(0)
   await expect(page.getByText('Play free, or stake 50 to 1,000 tokens').first()).toBeVisible()
 
   await expect(page.getByRole('heading', { name: 'How it works' })).toBeVisible()

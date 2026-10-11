@@ -40,7 +40,7 @@ afterEach(async () => {
 })
 
 describe('migrations', () => {
-  it('seed the registry: chess, ludo, draughts, pool and Check Up are live, the other game is coming soon, real money is off everywhere', async () => {
+  it('seed the registry: chess, ludo, draughts, pool and Check Up are live, the game that was dropped is switched off, real money is off everywhere', async () => {
     const games = await db.rows(`select id, status from public.game_types order by sort_order`)
     expect(games).toEqual([
       { id: 'chess', status: 'live' },
@@ -48,7 +48,7 @@ describe('migrations', () => {
       { id: 'draughts', status: 'live' },
       { id: 'pool', status: 'live' },
       { id: 'checkup', status: 'live' },
-      { id: 'penalty', status: 'coming_soon' },
+      { id: 'penalty', status: 'disabled' },
     ])
     const [countries] = await db.rows<{ total: number; real_money: number }>(
       `select count(*)::int as total, count(*) filter (where real_money_enabled)::int as real_money from public.countries`,
