@@ -18,6 +18,12 @@ Check Up (the shape-matching card game played across Nigeria) is the fifth: `sup
 
 Its turn clock shows one more pattern: the app of any player at the table asks for a turn that has run out to be dealt with (the rules then go to market for the late player), and the background sweep is only the net under that, for a table nobody is at.
 
+Word Battle (the crossword board game with letter tiles, for two to four players) is the sixth: `supabase/migrations/20261012100000_words.sql`, `supabase/functions/words-action/`, `supabase/functions/_shared/words.ts`, `src/games/words/`, `supabase/tests/words.test.ts`, `src/games/words/rules.test.ts` and `e2e/words.spec.ts`. It is built the way Check Up is (the board everyone sees in `words_games`, each rack in `words_racks` for its owner only, the bag in `words_bags` for nobody), and adds one thing: a game that needs a large piece of reference data.
+
+- **The word list lives on the server.** `_shared/wordlist.en.ts` (made by `scripts/makeWordList.ts`) is bundled into the `words-action` function, which is the only judge of whether a word is a word in a staked game. The app works out what a turn would score, to show it before it is played, but never decides that a word is valid.
+- **The app fetches its own copy only for practice.** `public/words/en.txt` is not part of the app's download and is not precached: it is fetched the first time someone plays the computer, then kept on the phone (a `CacheFirst` rule in `vite.config.ts`). It is read in a Web Worker (`computer.worker.ts`), which also does the computer's thinking.
+- **Another language is another list.** Add `wordlist.<lang>.ts` and `public/words/<lang>.txt`, a tile set for that language in the rule book, and an option in `options_schema` so players are seated with others who chose the same list.
+
 ## What the core does for you
 
 You do not write any of this again:

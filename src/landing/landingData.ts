@@ -21,6 +21,7 @@ const FALLBACK_GAMES: LandingGame[] = [
   { id: 'draughts', name: 'Draughts', status: 'live', stakeLevels: STAKES, minutes: [3, 15] },
   { id: 'pool', name: 'Pool', status: 'live', stakeLevels: STAKES, minutes: null },
   { id: 'checkup', name: 'Check Up', status: 'live', stakeLevels: STAKES, minutes: null },
+  { id: 'words', name: 'Word Battle', status: 'live', stakeLevels: STAKES, minutes: null },
 ]
 
 export const FALLBACK_COUNTRY_CODES =

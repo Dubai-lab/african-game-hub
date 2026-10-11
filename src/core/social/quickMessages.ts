@@ -15,6 +15,7 @@ export const QUICK_BY_GAME: Record<string, readonly string[]> = {
   ludo: ['nice_roll', 'lucky', 'so_close'],
   pool: ['nice_shot', 'great_break', 'unlucky', 'so_close'],
   checkup: ['good_move', 'lucky', 'so_close'],
+  words: ['good_move', 'close_game', 'so_close'],
 }
 
 /** Every name the server accepts. */

@@ -42,7 +42,7 @@ const [counts] = await runSql<Record<string, number>>(`
 console.log('      ', JSON.stringify(counts))
 report(counts!.countries === 54 && counts!.real_money_countries === 0, '54 countries, real money off everywhere')
 report(counts!.countries_without_rate === 0, 'every country has a token rate')
-report(counts!.games === 6 && counts!.live_games === 5, 'games registry: chess, ludo, draughts, pool and Check Up live, one switched off')
+report(counts!.games === 7 && counts!.live_games === 6, 'games registry: chess, ludo, draughts, pool, Check Up and Word Battle live, one switched off')
 report(counts!.settings_rows === 1, 'exactly one platform settings row')
 report(counts!.users === counts!.profiles && counts!.users === counts!.wallets, 'every account has a profile and a wallet')
 
@@ -135,7 +135,7 @@ const me = signIn.data.user.id
 
 {
   const games = await visitor.from('game_types').select('id, status')
-  report(!games.error && games.data.length === 5, 'visitor can read the games registry (the live games; a switched-off game is not shown)', games.error ?? games.data)
+  report(!games.error && games.data.length === 6, 'visitor can read the games registry (the live games; a switched-off game is not shown)', games.error ?? games.data)
   const countries = await visitor.from('countries').select('country_code')
   report(!countries.error && countries.data.length === 54, 'visitor can read the countries', countries.error)
   for (const table of ['wallets', 'ledger_entries', 'profiles', 'profile_private', 'matches', 'platform_revenue', 'admins']) {

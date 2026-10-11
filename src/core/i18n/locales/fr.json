@@ -93,7 +93,10 @@
       "CARD_NOT_ALLOWED": "Cette carte ne peut pas être jouée maintenant. Jouez la même forme ou le même numéro, ou allez au marché.",
       "NOT_YOUR_CARD": "Cette carte n’est pas dans votre main.",
       "CALL_A_SHAPE": "Choisissez la forme à annoncer.",
-      "NOT_YET": "Ce tour n’est pas encore écoulé."
+      "NOT_YET": "Ce tour n’est pas encore écoulé.",
+      "NOT_A_WORD": "Ce n’est pas dans la liste de mots.",
+      "NOT_YOUR_TILE": "Vous n’avez pas cette lettre.",
+      "BAG_TOO_LOW": "Il reste trop peu de lettres dans le sac pour échanger."
     },
     "samePassword": "C’est votre mot de passe actuel. Choisissez-en un autre.",
     "captchaFailed": "La vérification de sécurité a échoué. Rechargez la page et réessayez."
@@ -133,7 +136,8 @@
       "ludoBlurb": "La course classique vers la maison, à un contre un. Les dés sont lancés par le serveur : impossible de les truquer.",
       "poolBlurb": "Jeu de la 8 et jeu de la 9 sur une vraie table. Chaque coup est calculé par le serveur : la table que vous voyez est celle qui compte.",
       "draughtsBlurb": "Les dames internationales sur un damier de 10 sur 10. La prise est obligatoire, et chaque coup est vérifié par le serveur.",
-      "checkupBlurb": "Le jeu de cartes à formes joué dans tout le Nigeria, pour deux à quatre joueurs. Les cartes sont distribuées par le serveur et votre main n’est jamais envoyée à personne d’autre."
+      "checkupBlurb": "Le jeu de cartes à formes joué dans tout le Nigeria, pour deux à quatre joueurs. Les cartes sont distribuées par le serveur et votre main n’est jamais envoyée à personne d’autre.",
+      "wordsBlurb": "Le jeu de lettres sur plateau pour deux à quatre joueurs : formez des mots avec vos lettres et marquez plus que la table. Les mots sont jugés par le serveur et vos lettres ne sont jamais envoyées à personne d’autre. Mots anglais pour l’instant."
     },
     "how": {
       "title": "Comment ça marche",
@@ -300,7 +304,8 @@
     "draughts": "Dames",
     "pool": "Billard",
     "penalty": "Tirs au but",
-    "checkup": "Check Up"
+    "checkup": "Check Up",
+    "words": "Word Battle"
   },
   "legal": {
     "draft": "Brouillon. Ce texte n’a pas encore été relu par un juriste.",
@@ -1676,6 +1681,134 @@
         "20 : se joue sur n’importe quelle carte. Vous annoncez la forme que le joueur suivant doit jouer.",
         "Le premier à jouer toutes ses cartes gagne. Si le marché est épuisé avant, les cartes sont comptées et le plus petit total gagne. Une étoile compte double ; un 20 compte 20.",
         "Si votre tour s’écoule, le jeu va au marché pour vous. Deux fois de suite, et vous êtes hors de la partie."
+      ]
+    }
+  },
+  "words": {
+    "you": "Vous",
+    "back": "Retour",
+    "backToLobby": "Retour au salon",
+    "notFound": "Cette partie n’existe pas.",
+    "loadFailed": "Impossible de charger cette partie.",
+    "stake": "{{stake}} jetons",
+    "newGame": "Nouvelle partie",
+    "playersCount_one": "{{count}} joueur",
+    "playersCount_other": "{{count}} joueurs",
+    "tiles_one": "{{count}} lettre",
+    "tiles_other": "{{count}} lettres",
+    "out": "Hors du jeu",
+    "clockLabel": "Secondes restantes pour ce tour",
+    "boardLabel": "Le plateau",
+    "rackLabel": "Vos lettres",
+    "square": "Ligne {{row}}, colonne {{col}}",
+    "squareTile": "Ligne {{row}}, colonne {{col}} : {{letter}}",
+    "tile_one": "{{letter}}, {{count}} point",
+    "tile_other": "{{letter}}, {{count}} points",
+    "blankTile": "Lettre blanche : n’importe quelle lettre, aucun point",
+    "bag_one": "{{count}} lettre dans le sac",
+    "bag_other": "{{count}} lettres dans le sac",
+    "shuffle": "Mélanger",
+    "swap": "Échanger",
+    "recall": "Reprendre",
+    "pass": "Passer",
+    "play": "Jouer",
+    "playFor_one": "Jouer pour {{count}}",
+    "playFor_other": "Jouer pour {{count}}",
+    "preview_one": "{{words}} : {{count}} point",
+    "preview_other": "{{words}} : {{count}} points",
+    "notAWord_one": "{{words}} n’est pas dans la liste de mots.",
+    "notAWord_other": "Pas dans la liste de mots : {{words}}.",
+    "blankTitle": "Choisissez une lettre",
+    "blankBody": "Une lettre blanche remplace n’importe quelle lettre. Elle ne rapporte rien.",
+    "swapTitle": "Échanger des lettres",
+    "swapBody": "Choisissez les lettres à remettre dans le sac. Vous en tirez de nouvelles et votre tour est terminé.",
+    "swapConfirm_one": "Échanger {{count}} lettre",
+    "swapConfirm_other": "Échanger {{count}} lettres",
+    "refusal": {
+      "NO_TILES": "Posez au moins une lettre.",
+      "OFF_BOARD": "C’est hors du plateau.",
+      "SQUARE_TAKEN": "Cette case a déjà une lettre.",
+      "NOT_IN_LINE": "Vos lettres doivent toutes être sur une même ligne ou une même colonne.",
+      "GAP": "Vos lettres doivent former un seul mot, sans trou.",
+      "FIRST_ON_CENTRE": "Le premier mot doit couvrir l’étoile au centre.",
+      "NOT_JOINED": "Votre mot doit toucher les lettres déjà posées.",
+      "ONE_LETTER": "Un mot a au moins deux lettres."
+    },
+    "status": {
+      "yourTurn": "À vous de jouer",
+      "waiting": "En attente de {{name}}",
+      "turnOf": "Au tour de {{name}}",
+      "over": "Partie terminée"
+    },
+    "event": {
+      "place_one": "{{name}} a joué {{words}} pour {{count}} point.",
+      "place_other": "{{name}} a joué {{words}} pour {{count}} points.",
+      "swap_one": "{{name}} a échangé {{count}} lettre.",
+      "swap_other": "{{name}} a échangé {{count}} lettres.",
+      "pass": "{{name}} a passé.",
+      "timeout": "{{name}} n’a pas joué à temps : le tour est passé.",
+      "out": "{{name}} est hors du jeu."
+    },
+    "lobby": {
+      "players": "Joueurs",
+      "playersHint": "À deux, on trouve une partie plus vite. Une table de trois ou quatre attend d’être complète."
+    },
+    "leave": {
+      "button": "Quitter la partie",
+      "title": "Quitter cette partie ?",
+      "body": "{{opponent}} gagnera.",
+      "bodyTable": "Vous serez hors du jeu et les autres continueront.",
+      "bodyTableStaked": "Vous serez hors du jeu et perdrez votre mise : elle reste dans le pot pour le gagnant.",
+      "cancel": "Continuer à jouer",
+      "confirm": "Quitter"
+    },
+    "over": {
+      "youWon": "Vous avez gagné",
+      "youLost": "Vous avez perdu",
+      "winner": "{{name}} a gagné",
+      "draw": "Match nul",
+      "calledOff": "Partie annulée",
+      "tokens": "Jetons",
+      "close": "Voir le plateau",
+      "showResult": "Voir le résultat"
+    },
+    "reason": {
+      "finished": "Toutes les lettres ont été jouées. Les lettres restantes des autres joueurs ont été comptées contre eux.",
+      "stalled": "Personne n’a marqué pendant deux tours de table. Les lettres restantes de chaque joueur ont été comptées contre lui.",
+      "last_standing": "Tous les autres ont quitté la partie.",
+      "admin_abort": "La partie a été annulée par notre équipe. Aucun résultat ; toute mise a été rendue en entier.",
+      "no_show": "Un joueur n’a pas joué son premier tour à temps et perd la partie.",
+      "other": "La partie est terminée."
+    },
+    "computer": {
+      "link": "Jouer contre l’ordinateur",
+      "practice": "Entraînement",
+      "heading": "Word Battle contre l’ordinateur",
+      "intro": "Entraînement sans jetons ni classement. Vous jouez en premier. La liste de mots est téléchargée la première fois (environ un demi-mégaoctet), puis gardée sur votre téléphone.",
+      "opponents": "Joueurs ordinateur",
+      "opponentsCount_one": "{{count}} ordinateur",
+      "opponentsCount_other": "{{count}} ordinateurs",
+      "start": "Commencer",
+      "name": "Ordinateur",
+      "numbered": "Ordinateur {{number}}",
+      "thinking": "{{name}} réfléchit",
+      "again": "Rejouer",
+      "change": "Changer les réglages",
+      "leave": "Quitter cette partie",
+      "loading": "Téléchargement de la liste de mots…",
+      "listFailed": "La liste de mots n’a pas pu être téléchargée. Touchez pour réessayer."
+    },
+    "rules": {
+      "title": "Comment jouer",
+      "lines": [
+        "Formez des mots sur le plateau avec vos sept lettres. Touchez une lettre, puis la case où elle va. Touchez une lettre posée pour la reprendre.",
+        "Le premier mot doit couvrir l’étoile au centre. Chaque mot suivant doit toucher les lettres déjà posées, et tous les mots formés, en ligne et en colonne, doivent être de vrais mots.",
+        "Chaque lettre rapporte le nombre inscrit dessus. 2L et 3L doublent ou triplent la lettre posée dessus ; 2W et 3W doublent ou triplent le mot entier. Une case bonus ne compte que le tour où elle est couverte.",
+        "Posez vos sept lettres en un tour pour 50 points de plus.",
+        "Une lettre blanche remplace n’importe quelle lettre et ne rapporte rien.",
+        "Au lieu de jouer, vous pouvez échanger des lettres (tant que le sac en contient au moins sept) ou passer.",
+        "La partie se termine quand un joueur n’a plus de lettres et que le sac est vide, ou quand personne n’a marqué pendant deux tours de table. Les lettres restantes sont retirées du score de leur joueur. Le plus haut score gagne.",
+        "Pour l’instant, les mots sont jugés avec une liste de mots anglais. Si votre temps s’écoule, votre tour est passé ; deux fois de suite, et vous êtes hors du jeu."
       ]
     }
   }

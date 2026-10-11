@@ -31,7 +31,7 @@ test('lobby shows the wallet, the games registry, and remembers the player’s c
 
   // The lobby is the list of games and nothing else: every game on it is live and leads to its
   // own page. A game that has been switched off is not listed. No stakes or options here.
-  for (const name of ['Chess', 'Ludo', 'Draughts', 'Pool', 'Check Up']) await expect(page.getByRole('link', { name: new RegExp(`${name}.*Live now`) })).toBeVisible()
+  for (const name of ['Chess', 'Ludo', 'Draughts', 'Pool', 'Check Up', 'Word Battle']) await expect(page.getByRole('link', { name: new RegExp(`${name}.*Live now`) })).toBeVisible()
   await expect(page.getByText('Coming soon')).toHaveCount(0)
   await expect(page.getByTestId('game-penalty')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Find match' })).toHaveCount(0)

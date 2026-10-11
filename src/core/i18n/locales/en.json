@@ -93,7 +93,10 @@
       "CARD_NOT_ALLOWED": "That card cannot be played now. Play the same shape or the same number, or go to market.",
       "NOT_YOUR_CARD": "That card is not in your hand.",
       "CALL_A_SHAPE": "Choose the shape to call.",
-      "NOT_YET": "That turn has not run out yet."
+      "NOT_YET": "That turn has not run out yet.",
+      "NOT_A_WORD": "That is not in the word list.",
+      "NOT_YOUR_TILE": "You do not hold that tile.",
+      "BAG_TOO_LOW": "There are too few tiles left in the bag to swap."
     },
     "samePassword": "That is your current password. Choose a different one.",
     "captchaFailed": "The security check did not pass. Reload the page and try again."
@@ -133,7 +136,8 @@
       "ludoBlurb": "The classic race home, one against one. The dice are thrown by the server, so nobody can load them.",
       "poolBlurb": "8-ball and 9-ball on a full table. Every shot is played out on the server, so the table you see is the table that counts.",
       "draughtsBlurb": "International draughts on a 10 by 10 board. Capturing is compulsory, and every move is checked by the server.",
-      "checkupBlurb": "The shape-matching card game played across Nigeria, for two to four players. The cards are dealt on the server and your hand is never sent to anyone else."
+      "checkupBlurb": "The shape-matching card game played across Nigeria, for two to four players. The cards are dealt on the server and your hand is never sent to anyone else.",
+      "wordsBlurb": "The crossword board game for two to four players: make words with your tiles and outscore the table. Words are judged on the server and your tiles are never sent to anyone else."
     },
     "how": {
       "title": "How it works",
@@ -300,7 +304,8 @@
     "draughts": "Draughts",
     "pool": "Pool",
     "penalty": "Penalty Shootout",
-    "checkup": "Check Up"
+    "checkup": "Check Up",
+    "words": "Word Battle"
   },
   "legal": {
     "draft": "Draft. This text has not yet been reviewed by a lawyer.",
@@ -1676,6 +1681,134 @@
         "20: goes on any card. You call the shape the next player must play.",
         "The first to play every card wins. If the market finishes first, the cards are counted and the lowest count wins. A star counts double; a 20 counts 20.",
         "Let your turn run out and the game goes to market for you. Do it twice in a row and you are out."
+      ]
+    }
+  },
+  "words": {
+    "you": "You",
+    "back": "Back",
+    "backToLobby": "Back to the lobby",
+    "notFound": "This game does not exist.",
+    "loadFailed": "We could not load this game.",
+    "stake": "{{stake}} tokens",
+    "newGame": "New game",
+    "playersCount_one": "{{count}} player",
+    "playersCount_other": "{{count}} players",
+    "tiles_one": "{{count}} tile",
+    "tiles_other": "{{count}} tiles",
+    "out": "Out of the game",
+    "clockLabel": "Seconds left for this turn",
+    "boardLabel": "The board",
+    "rackLabel": "Your tiles",
+    "square": "Row {{row}}, column {{col}}",
+    "squareTile": "Row {{row}}, column {{col}}: {{letter}}",
+    "tile_one": "{{letter}}, {{count}} point",
+    "tile_other": "{{letter}}, {{count}} points",
+    "blankTile": "Blank tile: any letter, no points",
+    "bag_one": "{{count}} tile in the bag",
+    "bag_other": "{{count}} tiles in the bag",
+    "shuffle": "Shuffle",
+    "swap": "Swap",
+    "recall": "Take back",
+    "pass": "Pass",
+    "play": "Play",
+    "playFor_one": "Play for {{count}}",
+    "playFor_other": "Play for {{count}}",
+    "preview_one": "{{words}}: {{count}} point",
+    "preview_other": "{{words}}: {{count}} points",
+    "notAWord_one": "{{words}} is not in the word list.",
+    "notAWord_other": "Not in the word list: {{words}}.",
+    "blankTitle": "Choose a letter",
+    "blankBody": "A blank tile stands for any letter. It scores nothing.",
+    "swapTitle": "Swap tiles",
+    "swapBody": "Choose the tiles to put back in the bag. You draw new ones, and your turn is over.",
+    "swapConfirm_one": "Swap {{count}} tile",
+    "swapConfirm_other": "Swap {{count}} tiles",
+    "refusal": {
+      "NO_TILES": "Lay at least one tile.",
+      "OFF_BOARD": "That is off the board.",
+      "SQUARE_TAKEN": "That square already has a tile.",
+      "NOT_IN_LINE": "Your tiles must all be in one row or one column.",
+      "GAP": "Your tiles must make one word, with no gaps.",
+      "FIRST_ON_CENTRE": "The first word must cover the star in the middle.",
+      "NOT_JOINED": "Your word must join the tiles already on the board.",
+      "ONE_LETTER": "A word needs at least two letters."
+    },
+    "status": {
+      "yourTurn": "Your turn",
+      "waiting": "Waiting for {{name}}",
+      "turnOf": "{{name}} to play",
+      "over": "Game over"
+    },
+    "event": {
+      "place_one": "{{name}} played {{words}} for {{count}} point.",
+      "place_other": "{{name}} played {{words}} for {{count}} points.",
+      "swap_one": "{{name}} swapped {{count}} tile.",
+      "swap_other": "{{name}} swapped {{count}} tiles.",
+      "pass": "{{name}} passed.",
+      "timeout": "{{name}} ran out of time: the turn is passed.",
+      "out": "{{name}} is out of the game."
+    },
+    "lobby": {
+      "players": "Players",
+      "playersHint": "Two players is the quickest to find. A table of three or four waits until it is full."
+    },
+    "leave": {
+      "button": "Leave the game",
+      "title": "Leave this game?",
+      "body": "{{opponent}} will win.",
+      "bodyTable": "You will be out of the game and the others will play on.",
+      "bodyTableStaked": "You will be out of the game and lose your stake: it stays in the pot for the winner.",
+      "cancel": "Keep playing",
+      "confirm": "Leave"
+    },
+    "over": {
+      "youWon": "You won",
+      "youLost": "You lost",
+      "winner": "{{name}} won",
+      "draw": "Draw",
+      "calledOff": "Game called off",
+      "tokens": "Tokens",
+      "close": "Look at the board",
+      "showResult": "Show result"
+    },
+    "reason": {
+      "finished": "Every tile was played. The tiles left on the other racks were counted against them.",
+      "stalled": "Nobody scored for two rounds. The tiles left on each rack were counted against it.",
+      "last_standing": "Everyone else left the game.",
+      "admin_abort": "The game was called off by our team. No result; any stake was returned in full.",
+      "no_show": "A player did not take their first turn in time, and loses the game.",
+      "other": "The game is over."
+    },
+    "computer": {
+      "link": "Play the computer",
+      "practice": "Practice",
+      "heading": "Word Battle against the computer",
+      "intro": "Practice with no tokens and no standing. You play first. The word list is fetched the first time (about half a megabyte), then kept on your phone.",
+      "opponents": "Computer players",
+      "opponentsCount_one": "{{count}} computer",
+      "opponentsCount_other": "{{count}} computers",
+      "start": "Start game",
+      "name": "Computer",
+      "numbered": "Computer {{number}}",
+      "thinking": "{{name}} is thinking",
+      "again": "Play again",
+      "change": "Change setup",
+      "leave": "Leave this game",
+      "loading": "Fetching the word list…",
+      "listFailed": "The word list could not be fetched. Touch to try again."
+    },
+    "rules": {
+      "title": "How to play",
+      "lines": [
+        "Make words on the board with your seven tiles. Touch a tile, then the square it goes on. Touch a tile you have laid to take it back.",
+        "The first word must cover the star in the middle. Every word after it must join the tiles already down, and every word it makes, across and down, must be a real word.",
+        "Each tile scores the number on it. 2L and 3L double or triple the letter laid on them; 2W and 3W double or triple the whole word. A bonus square counts only on the turn it is covered.",
+        "Use all seven tiles in one turn for 50 extra points.",
+        "A blank tile stands for any letter and scores nothing.",
+        "Instead of playing you may swap tiles (while the bag holds at least seven) or pass.",
+        "The game ends when a player has no tiles left and the bag is empty, or when nobody has scored for two rounds. Tiles left on a rack are taken off that player’s score. The highest score wins.",
+        "Words are judged by an English word list. Let your turn run out and it is passed; do it twice in a row and you are out."
       ]
     }
   }

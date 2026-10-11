@@ -1947,6 +1947,127 @@ export type Database = {
           },
         ]
       }
+      words_bags: {
+        Row: {
+          match_id: string
+          tiles: string[]
+        }
+        Insert: {
+          match_id: string
+          tiles?: string[]
+        }
+        Update: {
+          match_id?: string
+          tiles?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "words_bags_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: true
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      words_games: {
+        Row: {
+          bag_count: number
+          board: string
+          counts: Json
+          deadline: string
+          last_event: Json | null
+          match_id: string
+          missed: Json
+          move_no: number
+          out_seats: string[]
+          phase: string
+          result: Json | null
+          scoreless: number
+          scores: Json
+          seats: string[]
+          turn: string
+        }
+        Insert: {
+          bag_count: number
+          board: string
+          counts: Json
+          deadline: string
+          last_event?: Json | null
+          match_id: string
+          missed?: Json
+          move_no?: number
+          out_seats?: string[]
+          phase?: string
+          result?: Json | null
+          scoreless?: number
+          scores: Json
+          seats: string[]
+          turn: string
+        }
+        Update: {
+          bag_count?: number
+          board?: string
+          counts?: Json
+          deadline?: string
+          last_event?: Json | null
+          match_id?: string
+          missed?: Json
+          move_no?: number
+          out_seats?: string[]
+          phase?: string
+          result?: Json | null
+          scoreless?: number
+          scores?: Json
+          seats?: string[]
+          turn?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "words_games_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: true
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      words_racks: {
+        Row: {
+          match_id: string
+          seat: string
+          tiles: string[]
+          user_id: string
+        }
+        Insert: {
+          match_id: string
+          seat: string
+          tiles?: string[]
+          user_id: string
+        }
+        Update: {
+          match_id?: string
+          seat?: string
+          tiles?: string[]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "words_racks_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "words_racks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -2212,6 +2333,19 @@ export type Database = {
           detail: string
           user_id: string
         }[]
+      }
+      words_context: {
+        Args: { p_match_id: string; p_user_id: string }
+        Returns: Json
+      }
+      words_store: {
+        Args: {
+          p_event: Json
+          p_expected_move: number
+          p_match_id: string
+          p_state: Json
+        }
+        Returns: Json
       }
     }
     Enums: {

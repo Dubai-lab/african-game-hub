@@ -131,6 +131,34 @@ function CheckUp() {
   )
 }
 
+/** Word Battle: letter tiles crossing on a board, one on a bonus square. */
+function Words() {
+  const tile = (x: number, y: number, letter: string) => (
+    <g key={`${x}-${y}`}>
+      <rect x={x} y={y} width="20" height="20" rx="3" fill="#f6e3b4" stroke="#0b0f24" strokeWidth="2" />
+      <text x={x + 10} y={y + 15} textAnchor="middle" fontSize="13" fontWeight="800" fontFamily="system-ui, sans-serif" fill="#22180a">
+        {letter}
+      </text>
+    </g>
+  )
+  return (
+    <>
+      <rect width="120" height="100" fill="#0b7a55" />
+      <rect x="8" y="6" width="104" height="88" fill="#e9ecf7" stroke="#0b0f24" strokeWidth="2" />
+      <rect x="10" y="8" width="20" height="20" fill="#d1264f" />
+      <rect x="90" y="72" width="20" height="20" fill="#d1264f" />
+      <rect x="90" y="8" width="20" height="20" fill="#3d55c4" />
+      <rect x="10" y="72" width="20" height="20" fill="#f7d77a" />
+      {tile(18, 40, 'W')}
+      {tile(39, 40, 'O')}
+      {tile(60, 40, 'R')}
+      {tile(81, 40, 'D')}
+      {tile(39, 19, 'G')}
+      {tile(39, 61, 'T')}
+    </>
+  )
+}
+
 function Token() {
   return (
     <>
@@ -141,7 +169,7 @@ function Token() {
   )
 }
 
-const ART: Record<string, () => React.JSX.Element> = { chess: Chess, ludo: Ludo, pool: Pool, draughts: Draughts, checkup: CheckUp, penalty: Penalty, penalty_shootout: Penalty }
+const ART: Record<string, () => React.JSX.Element> = { chess: Chess, ludo: Ludo, pool: Pool, draughts: Draughts, checkup: CheckUp, words: Words, penalty: Penalty, penalty_shootout: Penalty }
 
 /** Games that have an illustration in public/games/. (Made by `npm run game-art`.) */
 const ILLUSTRATED = new Set(['chess', 'draughts', 'ludo', 'pool', 'penalty', 'penalty_shootout'])

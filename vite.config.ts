@@ -69,7 +69,7 @@ export default defineConfig({
         // Never precache the landing page's 3D scene or pictures (app users must not pay for them),
         // nor the font files for scripts we do not use.
         // (The flag font is for computers that cannot draw flags; phones must not be made to fetch it.)
-        globIgnores: ['**/HeroScene-*.js', 'landing/**', 'engine/**', 'fonts/**', '**/*-{math,symbols,vietnamese}-*.woff2'],
+        globIgnores: ['**/HeroScene-*.js', 'landing/**', 'engine/**', 'words/**', 'fonts/**', '**/*-{math,symbols,vietnamese}-*.woff2'],
         // App routes open the empty shell; '/' itself is the prerendered landing page.
         navigateFallback: '/app.html',
         navigateFallbackDenylist: [/^\/$/],
@@ -81,6 +81,12 @@ export default defineConfig({
             urlPattern: ({ url }) => url.pathname.startsWith('/sounds/'),
             handler: 'CacheFirst',
             options: { cacheName: 'sounds', expiration: { maxEntries: 40 } },
+          },
+          // The word list for Word Battle practice: fetched the first time, then kept on the phone.
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/words/'),
+            handler: 'CacheFirst',
+            options: { cacheName: 'word-lists', expiration: { maxEntries: 4 } },
           },
           {
             urlPattern: ({ url }) => url.pathname.startsWith('/engine/'),

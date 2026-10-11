@@ -86,6 +86,16 @@ No chess.com piece art, board graphics, sounds or branding is used anywhere. The
 | Computer opponent | Written for this project (`src/games/draughts/computer.ts`). No third-party engine. | Ours |
 | Rules | The official rules of international draughts (World Draughts Federation, FMJD), implemented from the rule text in `supabase/functions/_shared/draughts.ts`. Rules of a game are not copyrightable; no code or wording was copied. | n/a |
 
+## Word Battle
+
+| Asset | Source | License |
+| --- | --- | --- |
+| The word list (`public/words/en.txt`, `supabase/functions/_shared/wordlist.en.ts`) | ENABLE ("Enhanced North American Benchmark Lexicon", `enable1.txt`) by Alan Beale and M. Cooper, words of 2 to 15 letters, converted by `scripts/makeWordList.ts`. | Public domain |
+| The board, its bonus squares and the tiles (`src/games/words/WordsTable.tsx`) | **Original.** Drawn in code for African Game Hub, in the hub's own colours, with our own arrangement of bonus squares. The name, board design and artwork of "Scrabble" are not used. | Ours |
+| The lobby picture (`Words` in `src/core/lobby/GameArt.tsx`) | **Original.** Drawn in code. | Ours |
+| Computer opponent | Written for this project (`src/games/words/computer.ts`). | Ours |
+| Sounds | The recorded card sounds listed under "Recorded sounds" (a tile laid, tiles drawn), with the hub's synthesised sounds underneath. | CC0, as listed there |
+
 ## Check Up
 
 | Asset | Source | License |
