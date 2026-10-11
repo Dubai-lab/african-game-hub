@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { flagEmoji } from '@/core/countries/useCountries'
 import { useGameTypes } from '@/core/games/useGameTypes'
-import { AfterMatchActions, useAfterMatch } from '@/core/matchmaking/afterMatch'
+import { AfterMatchActions, needsAnswer, useAfterMatch } from '@/core/matchmaking/afterMatch'
 import { LeaveGuard } from '@/core/matchmaking/LeaveGuard'
 import { MatchChat } from '@/core/social/MatchChat'
 import { Button, buttonClass } from '@/core/ui/Button'
@@ -134,6 +134,7 @@ export default function DraughtsMatchPage({ matchId }: { matchId: string }) {
       chatClosed={chatClosed}
       chatHeard={chatHeard}
       chatSent={chatSent}
+      overActionsPinned={needsAnswer(after)}
       overActions={
         myColor ? (
           <AfterMatchActions state={after} opponent={opponent?.name ?? ''} newGameLabel={t('afterMatch.newGame', { pace })} />

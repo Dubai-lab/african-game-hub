@@ -115,6 +115,8 @@ type Props = {
   chatHeard?: number
   /** Goes up by one each time this player sends a quick message: the chat is put away. */
   chatSent?: number
+  /** Show the footer under the board as well as in the menu: something in it is waiting for an answer. */
+  footerPinned?: boolean
   /** Under everything: Resign while playing, what to do next afterwards. */
   footer?: ReactNode
   /** Dialogs. */
@@ -122,7 +124,7 @@ type Props = {
 }
 
 /** The whole Ludo screen for two to four players: cards, board, dice. Shows a table; decides nothing. */
-export function LudoTable({ title, state, players, mySeat, deadline, busy, notice, onRoll, onMove, chat, chatClosed = false, chatHeard = 0, chatSent = 0, footer, children }: Props) {
+export function LudoTable({ title, state, players, mySeat, deadline, busy, notice, onRoll, onMove, chat, chatClosed = false, chatHeard = 0, chatSent = 0, footerPinned = false, footer, children }: Props) {
   const [menu, setMenu] = useState(false)
   const chatFold = useChatFold(chatHeard, chatSent)
   useLockedScreen()
@@ -388,16 +390,16 @@ export function LudoTable({ title, state, players, mySeat, deadline, busy, notic
           </ChatFold>
         )}
 
-        {/* Once the game is over, what to do next is on the screen; while it is on, what a
-            player can do besides play (resign) is in the menu. */}
-        {!open && <div className="mt-auto">{footer}</div>}
+        {/* What a player can do besides play (resign, or what to do next once it is over) is in
+            the menu. It is here too only while something in it is waiting for an answer. */}
+        {footerPinned && <div className="mt-auto">{footer}</div>}
       </aside>
 
       <GameBar className="lg:col-start-2 lg:row-start-3" onMenu={() => setMenu(true)} chat={chat ? { closed: chatClosed, news: chatFold.news, onOpen: chatFold.show } : null} />
 
       {menu && (
         // A choice made in the menu closes it.
-        <GameMenu onClose={() => setMenu(false)}>{open && footer && <div onClick={() => setMenu(false)}>{footer}</div>}</GameMenu>
+        <GameMenu onClose={() => setMenu(false)}>{footer && <div onClick={() => setMenu(false)}>{footer}</div>}</GameMenu>
       )}
 
       {children}

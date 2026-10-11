@@ -152,6 +152,12 @@ type Props = {
   chatHeard?: number
   /** Goes up by one each time this player sends a quick message: the chat is put away. */
   chatSent?: number
+  /**
+   * What to do once the game is over is on the result card and in the menu. It is also shown
+   * under the board only while this is true: something is waiting for an answer (a rematch
+   * asked for, a search for a new opponent).
+   */
+  overActionsPinned?: boolean
   /** Shown above the board, for example "Reconnecting". */
   notice?: ReactNode
   /** What the player can do once the game is over. */
@@ -168,7 +174,7 @@ type Props = {
 }
 
 /** The whole draughts screen: both player cards, the board, the moves and the controls. */
-export function DraughtsTable({ title, game, players, movable, perspective, timed, onlineDraws, canAbort, chat, chatClosed = false, chatHeard = 0, chatSent = 0, notice, overActions, tokensChange, rating, ratingChange, onUndo, canUndo, status }: Props) {
+export function DraughtsTable({ title, game, players, movable, perspective, timed, onlineDraws, canAbort, chat, chatClosed = false, chatHeard = 0, chatSent = 0, overActionsPinned = false, notice, overActions, tokensChange, rating, ratingChange, onUndo, canUndo, status }: Props) {
   const { t } = useTranslation()
   const settings = useSettingsStore()
   const [flipped, setFlipped] = useState(false)
@@ -294,7 +300,7 @@ export function DraughtsTable({ title, game, players, movable, perspective, time
           </ChatFold>
         )}
 
-        {outcome ? overActions : !atLive && <Button onClick={() => setViewPly(null)}>{t('draughts.moves.backToGame')}</Button>}
+        {outcome ? overActionsPinned && overActions : !atLive && <Button onClick={() => setViewPly(null)}>{t('draughts.moves.backToGame')}</Button>}
       </aside>
 
       <GameBar
@@ -313,6 +319,8 @@ export function DraughtsTable({ title, game, players, movable, perspective, time
 
       {dialog === 'menu' && (
         <GameMenu onClose={() => setDialog(null)}>
+          {/* Once the game is over: what to do next. A choice made here closes the menu. */}
+          {outcome && <div onClick={() => setDialog(null)}>{overActions}</div>}
           {!outcome && atLive && onlineDraws && perspective && (
             <Button
               variant="ghost"

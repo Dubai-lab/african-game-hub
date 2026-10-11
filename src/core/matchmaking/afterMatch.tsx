@@ -15,9 +15,18 @@ import { useMatchmaking } from './useMatchmaking'
 //   * play someone new on the same terms (same game, stake and options), or
 //   * ask the same opponent for a rematch, which the opponent accepts or declines.
 // Shared by every game. The server decides everything; this asks, listens and shows.
+//
+// A game looked at again later (from the match history, to review it) is another matter: the
+// opponent is long gone, so there is no rematch to ask for, and a tournament game has no
+// tournament to go back to. Someone new on the same terms is still on offer.
+//
+// Where these are shown: on the result card, and in the game's menu. Beside the board they are
+// shown only while something is waiting for an answer (see needsAnswer).
 
 /** Must match the two minutes the server allows an offer to stand (see *_rematch.sql). */
 const OFFER_LIVES_MS = 120_000
+/** A match that ended longer ago than this is one being looked back at, not one just played. */
+const JUST_PLAYED_MS = 10 * 60_000
 
 type Offer = { offeredBy: string; status: 'pending' | 'accepted' | 'declined' | 'cancelled'; newMatchId: string | null; createdAt: number }
 type RematchReply = { status: 'pending' | 'matched' | 'declined' | 'cancelled'; match_id: string | null }
@@ -55,12 +64,15 @@ export function useAfterMatch({ matchId, gameId, stake, options, enabled }: Conf
     queryKey: ['match-tournament', matchId],
     staleTime: Infinity,
     meta: { silent: true },
-    queryFn: async (): Promise<string | null> => {
-      const { data, error } = await supabase.from('matches').select('tournament_id').eq('id', matchId).maybeSingle()
+    queryFn: async (): Promise<{ tournamentId: string | null; past: boolean }> => {
+      const { data, error } = await supabase.from('matches').select('tournament_id, finished_at').eq('id', matchId).maybeSingle()
       if (error) throw error
-      return data?.tournament_id ?? null
+      // Read once, when the page opens: a game still being played has no end yet, and is not past.
+      const ended = data?.finished_at ? Date.parse(data.finished_at) : null
+      return { tournamentId: data?.tournament_id ?? null, past: ended !== null && Date.now() - ended > JUST_PLAYED_MS }
     },
   })
+  const past = tournament.data?.past ?? false
 
   // --- Someone new, same terms -----------------------------------------------------------------
   const matchmaking = useMatchmaking(open)
@@ -77,7 +89,7 @@ export function useAfterMatch({ matchId, gameId, stake, options, enabled }: Conf
 
   const offer = useQuery({
     queryKey: ['rematch', matchId],
-    enabled: enabled && Boolean(me),
+    enabled: enabled && Boolean(me) && !past,
     staleTime: 0,
     // Realtime tells us at once; this is the net under it.
     refetchInterval: stillOpen ? 5000 : false,
@@ -164,6 +176,10 @@ export function useAfterMatch({ matchId, gameId, stake, options, enabled }: Conf
 
   return {
     enabled,
+    /** The match is one being looked back at: nothing that needs the opponent is offered. */
+    past,
+    /** A rematch may still be asked for: just played, and the minutes for it have not run out. */
+    canRematch: enabled && !past && stillOpen,
     busy,
     rematch,
     offerRematch: () => void act('offer'),
@@ -176,11 +192,19 @@ export function useAfterMatch({ matchId, gameId, stake, options, enabled }: Conf
       if (options) void matchmaking.start({ gameId, stake, options })
     },
     cancelSearch: matchmaking.cancel,
-    tournamentId: tournament.data ?? null,
+    tournamentId: tournament.data?.tournamentId ?? null,
   }
 }
 
 export type AfterMatch = ReturnType<typeof useAfterMatch>
+
+/**
+ * Something is waiting for an answer: a search for a new opponent is on, or a rematch has been
+ * asked for (either way). Only then are the buttons shown beside the board as well as in the menu.
+ */
+export function needsAnswer(state: AfterMatch): boolean {
+  return state.searching || state.rematch === 'incoming' || state.rematch === 'sent'
+}
 
 /**
  * The buttons themselves. Drawn from the state above and holding none of their own, so the same
@@ -190,6 +214,8 @@ export function AfterMatchActions({ state, opponent, newGameLabel }: { state: Af
   const { t } = useTranslation()
 
   if (state.tournamentId) {
+    // A tournament game looked at again later: its tournament is over, there is nowhere to go back to.
+    if (state.past) return null
     return (
       <div className="flex flex-col gap-2" data-testid="after-match">
         <Link to={`/tournaments/${state.tournamentId}`} className={buttonClass('primary', 'w-full')}>
@@ -246,11 +272,11 @@ export function AfterMatchActions({ state, opponent, newGameLabel }: { state: Af
           {t('afterMatch.declined', { name: opponent })}
         </p>
       )}
-      <div className={`grid gap-2 *:px-2 ${state.enabled ? 'grid-cols-2' : ''}`}>
+      <div className={`grid gap-2 *:px-2 ${state.canRematch ? 'grid-cols-2' : ''}`}>
         <Button variant="ghost" onClick={state.findNew} disabled={state.starting}>
           {newGameLabel}
         </Button>
-        {!state.enabled ? null : state.rematch === 'sent' ? (
+        {!state.canRematch ? null : state.rematch === 'sent' ? (
           <Button variant="ghost" onClick={state.cancelRematch} disabled={state.busy}>
             {t('afterMatch.cancelOffer')}
           </Button>

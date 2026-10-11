@@ -1,5 +1,6 @@
 // Profile, leaderboards and settings, on top of one real finished game.
 import { expect, type Page, test } from '@playwright/test'
+import { runSql } from '../scripts/lib/managementApi.ts'
 import { resetTestAccounts, TEST_ACCOUNTS, TEST_PASSWORD } from '../scripts/lib/testAccounts.ts'
 import { move, signInPlayers, startGame } from '../supabase/tests-live/live.ts'
 
@@ -60,16 +61,33 @@ test('profile shows ratings per pace and the match history, and a past game can 
   await expect(games.first()).toContainText(firstPlayerWon ? '+20' : '-20')
   await expect(games.first()).toContainText(firstPlayerWon ? '+80 tokens' : '-100 tokens')
 
+  // The game was played a while ago: it is being looked back at, not just finished.
+  // (Its real time is put back afterwards: the tests after this one go by which game is newest.)
+  const played = (await games.first().getByRole('link').getAttribute('href'))!.split('/').pop()!
+  const playedAt = (await runSql<{ finished_at: string }>(`select finished_at from public.matches where id = '${played}'`))[0]!.finished_at
+  await runSql(`update public.matches set finished_at = now() - interval '2 hours' where id = '${played}'`)
+
   // Tap the game: it opens for replay with every move.
   await games.first().getByRole('link').click()
   await expect(page).toHaveURL(/\/play\/chess\/match\/[0-9a-f-]{36}$/)
   await expect(page.getByRole('dialog', { name: firstPlayerWon ? 'You won' : 'You lost' })).toBeVisible()
+  // The opponent is long gone: a new game on the same terms is offered, a rematch is not.
+  await expect(page.getByRole('dialog').getByRole('button', { name: /^New / })).toBeVisible()
+  await expect(page.getByRole('dialog').getByRole('button', { name: 'Rematch' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Game Review' }).click()
   // (Once the review has run, a doubtful move carries its mark, as in "g4??".)
   await expect(page.getByRole('list', { name: 'Moves' }).getByRole('button')).toHaveText([/^f3/, /^e5/, /^g4/, /^Qh4#/])
   await page.getByRole('list', { name: 'Moves' }).getByRole('button', { name: /^f3/ }).click()
   await expect(page.locator('[data-square="f3"] [data-piece]')).toHaveCount(1)
   await expect(page.locator('[data-square="e7"] [data-piece]')).toHaveCount(1)
+  // Under the board there is only the game. What to do next is in the menu, and it is one
+  // thing: a new game.
+  await expect(page.getByTestId('after-match')).toHaveCount(0)
+  await page.getByTestId('game-menu').click()
+  await expect(page.getByTestId('game-menu-list').getByRole('button', { name: /^New / })).toBeVisible()
+  await expect(page.getByTestId('game-menu-list').getByRole('button', { name: 'Rematch' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Cancel' }).click()
+  await runSql(`update public.matches set finished_at = '${playedAt}' where id = '${played}'`)
 
   // The display name can be changed; the username cannot.
   // A finished game has an arrow back to the game's own page.

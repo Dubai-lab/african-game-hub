@@ -2,6 +2,8 @@ import { ChallengeInbox } from '@/core/lobby/ChallengePage'
 import { Suspense, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
+import { flagEmoji } from '@/core/countries/useCountries'
+import { useMyProfile } from '@/core/profile/useMyProfile'
 import { useSocialBadge } from '@/core/social/social'
 import { RouteErrorBoundary } from './ErrorBoundary'
 import { OfflineBanner } from './OfflineBanner'
@@ -18,6 +20,7 @@ const TABS = ['lobby', 'wallet', 'leaderboards', 'friends', 'profile', 'settings
 export function AppShell() {
   const { t } = useTranslation()
   const waiting = useSocialBadge()
+  const profile = useMyProfile()
   // Shown on the Friends tab: unread messages plus friend requests to answer.
   const badge = (tab: string) =>
     tab === 'friends' && waiting > 0 ? (
@@ -65,10 +68,20 @@ export function AppShell() {
         <OfflineBanner />
         {/* The top bar: fixed, closed by a line the page scrolls under. */}
         <header className="shrink-0 border-b-2 border-line bg-surface lg:hidden" data-testid="top-bar">
-          <div className="mx-auto flex w-full max-w-md items-center justify-between gap-3 px-5 py-3">
-            <Link to="/lobby" className="text-base font-display font-extrabold text-primary">
+          <div className="mx-auto flex w-full max-w-md flex-col gap-1 px-5 pb-2 pt-2">
+            {/* The hub's name, in the middle. */}
+            <Link to="/lobby" className="self-center text-base font-display font-extrabold text-primary">
               {t('app.name')}
             </Link>
+            {/* Who is signed in: part of the bar, so it stays in place on every page. */}
+            <p className="min-h-7 truncate text-lg font-bold" data-testid="top-bar-player">
+              {profile.data && (
+                <>
+                  {profile.data.country && <span aria-hidden="true">{flagEmoji(profile.data.country.code)} </span>}
+                  {profile.data.displayName ?? profile.data.username}
+                </>
+              )}
+            </p>
           </div>
         </header>
         <main ref={page} className="no-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-24 pt-4 lg:overflow-visible lg:px-10 lg:pb-12 lg:pt-10" data-testid="page-scroll">

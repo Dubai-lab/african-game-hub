@@ -116,12 +116,12 @@ export default function LobbyPage() {
       <h1 className="sr-only">{t('lobby.title')}</h1>
       <div className="flex flex-col gap-6">
         {profile.data ? (
-          <p className="text-lg font-bold">
+          <p className="hidden text-lg font-bold lg:block">
             {profile.data.country && <span aria-hidden="true">{flagEmoji(profile.data.country.code)} </span>}
             {profile.data.displayName ?? profile.data.username}
           </p>
         ) : (
-          <Skeleton className="h-7 w-48" />
+          <Skeleton className="hidden h-7 w-48 lg:block" />
         )}
         <WalletSummary profile={profile.data} />
         {profile.data && !profile.data.country && <CountryPrompt />}

@@ -2,7 +2,7 @@ import { type ReactNode, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { flagEmoji } from '@/core/countries/useCountries'
-import { AfterMatchActions, useAfterMatch } from '@/core/matchmaking/afterMatch'
+import { AfterMatchActions, needsAnswer, useAfterMatch } from '@/core/matchmaking/afterMatch'
 import { LeaveGuard } from '@/core/matchmaking/LeaveGuard'
 import { MatchChat } from '@/core/social/MatchChat'
 import { Button, buttonClass } from '@/core/ui/Button'
@@ -117,6 +117,7 @@ export default function LudoMatchPage({ matchId }: { matchId: string }) {
       chatClosed={chatClosed}
       chatHeard={chatHeard}
       chatSent={chatSent}
+      footerPinned={decided && needsAnswer(after)}
       footer={
         <div className="flex flex-col gap-2">
           {decided && resultClosed && (

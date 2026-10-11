@@ -113,7 +113,9 @@ test('a full game by tapping: hints, clocks, captures, checkmate, review and rem
   await expect(page.getByRole('list', { name: 'Moves' }).locator('[data-grade="blunder"]')).toHaveCount(1)
   await expect(page.getByTestId('review-eval')).toHaveText('M1')
 
-  // Rematch: a fresh board and fresh clocks.
+  // Rematch: a fresh board and fresh clocks. (What to do next is in the menu, not under the board.)
+  await expect(page.getByRole('button', { name: 'Rematch' })).toHaveCount(0)
+  await page.getByTestId('game-menu').click()
   await page.getByRole('button', { name: 'Rematch' }).click()
   await expect(pieceOn(page, 'e2')).toHaveCount(1)
   await expect(page.getByText('No moves yet')).toBeVisible()

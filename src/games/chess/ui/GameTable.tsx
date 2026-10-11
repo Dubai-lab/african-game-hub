@@ -39,6 +39,12 @@ type Props = {
   chatHeard?: number
   /** Goes up by one each time this player sends a quick message: the chat is put away. */
   chatSent?: number
+  /**
+   * What to do once the game is over is on the result card and in the menu. It is also shown
+   * under the board only while this is true: something is waiting for an answer (a rematch
+   * asked for, a search for a new opponent).
+   */
+  overActionsPinned?: boolean
   /** Shown above the board, for example "Reconnecting". */
   notice?: ReactNode
   /**
@@ -75,6 +81,7 @@ export function GameTable({
   chatClosed = false,
   chatHeard = 0,
   chatSent = 0,
+  overActionsPinned = false,
   overActions,
   tokensChange,
   rating,
@@ -363,11 +370,7 @@ export function GameTable({
           </ChatFold>
         )}
 
-        {outcome ? (
-          actions
-        ) : (
-          !atLive && <Button onClick={() => setViewPly(null)}>{t('chess.moves.backToGame')}</Button>
-        )}
+        {outcome ? overActionsPinned && actions : !atLive && <Button onClick={() => setViewPly(null)}>{t('chess.moves.backToGame')}</Button>}
       </aside>
 
       <GameBar
@@ -388,6 +391,8 @@ export function GameTable({
 
       {dialog === 'menu' && (
         <GameMenu onClose={() => setDialog(null)}>
+          {/* Once the game is over: what to do next. A choice made here closes the menu. */}
+          {outcome && <div onClick={() => setDialog(null)}>{actions}</div>}
           {!outcome && atLive && (passAndPlay || onlineDraws) && (
             <Button
               variant="ghost"
