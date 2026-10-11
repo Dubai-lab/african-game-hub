@@ -218,7 +218,9 @@ export function useCheckUpGame(matchId: string) {
   if (snapshot && view && early && me && early.moveNo === view.moveNo) {
     const at = hand.indexOf(early.card)
     if (at >= 0) hand = [...hand.slice(0, at), ...hand.slice(at + 1)]
-    view = { ...view, top: early.card, called: early.call, counts: { ...view.counts, [me.seat]: hand.length } }
+    // Half a move ahead: the table shows (and flies) the card now; the server's own move, when
+    // it arrives, is the whole number after it.
+    view = { ...view, top: early.card, called: early.call, counts: { ...view.counts, [me.seat]: hand.length }, moveNo: view.moveNo + 0.5, lastEvent: { seat: me.seat, kind: 'play', card: early.card, ...(early.call ? { call: early.call } : {}) } }
   }
 
   /** The turn deadline on this device's clock, while the game is on. */

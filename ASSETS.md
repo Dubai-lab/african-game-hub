@@ -92,7 +92,8 @@ No chess.com piece art, board graphics, sounds or branding is used anywhere. The
 | --- | --- | --- |
 | The cards (`src/games/checkup/cards.tsx`): faces, backs and the five shapes | **Original.** Drawn in code for African Game Hub, in the hub's own colours. Not taken from any printed pack: the game's rules are traditional and belong to nobody, but its best-known printed design and the name "Whot" belong to others and are not used. | Ours |
 | The lobby picture (`CheckUp` in `src/core/lobby/GameArt.tsx`) | **Original.** Drawn in code. | Ours |
-| Sounds | The hub's own recordings, shared with chess (see "Recorded sounds"). | As listed there |
+| The hand that carries each card (`src/games/checkup/Flight.tsx`) | **Original.** Drawn in code. | Ours |
+| Sounds | Recorded card sounds from Kenney's Casino Audio (see "Recorded sounds"), with the hub's synthesised sounds underneath. | CC0, as listed there |
 
 ## Pool
 
@@ -118,6 +119,7 @@ All from asset packs by Kenney (www.kenney.nl), released under Creative Commons 
 | `glass-light-*` | Impact Sounds 1.0 (impactGlass_light) | Ludo: the dice touching the glass board |
 | `dice-throw-*`, `die-throw-*` | Casino Audio (dice-throw, die-throw) | Ludo: the throw |
 | `chime-*` | Interface Sounds (confirmation_001 to 003) | Game start, promotion, a piece home, end of game |
+| `card-place-*`, `card-slide-*`, `card-shuffle`, `card-fan-1` | Casino Audio 1.1 (card-place, card-slide, card-shuffle, card-fan). Downloaded from kenney.nl on 11 October 2026; the pack's own `License.txt` states CC0 and commercial use. | Check Up: a card laid on the pile, a card drawn from the market, the shuffle as a game starts, the cards laid down at the end |
 
 Not used, and not to be added: the sounds and piece artwork of chess.com (proprietary), and the sound sets shipped with Lichess (its code is AGPL and its sound and piece sets carry their own licences, mostly copyleft or non-commercial, which do not fit a closed commercial app).
 

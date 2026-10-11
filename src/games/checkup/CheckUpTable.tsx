@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { flagEmoji } from '@/core/countries/useCountries'
 import { Avatar } from '@/core/ui/Avatar'
@@ -6,6 +6,7 @@ import { Button } from '@/core/ui/Button'
 import { ChatFold, GameBar, GameHeader, GameMenu, useChatFold, useLockedScreen } from '@/core/ui/gameScreen'
 import { canPlay, type Card, handTotal, isWhot, numberOf, SHAPES, type Seat, type Shape, shapeOf } from '../../../supabase/functions/_shared/checkup'
 import { CardBack, CardFace, SHAPE_COLOR, ShapeMark } from './cards'
+import { centreOf, Flight, FLIGHT_SECONDS, type FlightPlan, wantsLessMotion } from './Flight'
 import { feedback, preloadSounds } from './sound'
 import type { TableView } from './useCheckUpGame'
 
@@ -89,15 +90,74 @@ export function CheckUpTable({ title, backTo, view, hand, players, mySeat, deadl
   const shapeName = (shape: Shape) => t(`checkup.shape.${shape}`)
   const cardName = (card: Card) => (isWhot(card) ? t('checkup.card.wild') : t('checkup.card.plain', { shape: shapeName(shapeOf(card)!), number: numberOf(card) }))
 
-  // What is heard as the game goes on: each thing that happens, once.
-  const heard = useRef(view.moveNo)
+  // What is seen and heard as the game goes on, each thing once: a hand carries the card from
+  // the player to the pile, or from the market to the player, and the card is heard landing.
+  const tableRef = useRef<HTMLDivElement>(null)
+  const [flights, setFlights] = useState<FlightPlan[]>([])
+  const flightSeq = useRef(0)
+  const landed = useCallback((id: number) => setFlights((list) => list.filter((flight) => flight.id !== id)), [])
+  /** While a played card is still in the air, the pile shows the card it will land on. */
+  const [pileShows, setPileShows] = useState<{ card: Card; called: Shape | null } | null>(null)
+  const seen = useRef({ moveNo: view.moveNo, top: view.top, called: view.called })
+  /** This player's own card, flown the moment it was pressed: not flown again when the server confirms it. */
+  const flownEarly = useRef<string | null>(null)
+  useLayoutEffect(() => {
+    const before = seen.current
+    if (view.moveNo === before.moveNo) return
+    seen.current = { moveNo: view.moveNo, top: view.top, called: view.called }
+    const happened = view.lastEvent
+    // Going back (the server refused the card this player pressed) shows nothing new.
+    if (!happened || view.moveNo < before.moveNo) {
+      flownEarly.current = null
+      return
+    }
+    const early = !Number.isInteger(view.moveNo)
+    const key = `${happened.seat}:${happened.card ?? ''}`
+    const repeat = happened.kind === 'play' && !early && flownEarly.current === key
+    flownEarly.current = early ? key : null
+
+    const root = tableRef.current
+    const still = wantsLessMotion() || !root
+    const place = (seat: Seat) => centreOf(seat === mySeat ? root?.querySelector('[data-testid="checkup-hand"]') : root?.querySelector(`[data-testid="checkup-player-${seat}"]`))
+    const market = centreOf(root?.querySelector('[data-testid="checkup-market"]'))
+    const pile = centreOf(root?.querySelector('[data-testid="checkup-pile"]'))
+    const plans: FlightPlan[] = []
+    const fly = (seat: Seat, card: Card | null, from: ReturnType<typeof centreOf>, to: ReturnType<typeof centreOf>, delay: number) => {
+      if (!still && from && to) plans.push({ id: ++flightSeq.current, card, from, to, delay, seatIndex: Math.max(0, view.seats.indexOf(seat)), fromTop: seat !== mySeat })
+    }
+
+    let after = 0
+    if (happened.kind === 'play' && happened.card && !repeat) {
+      fly(happened.seat, happened.card, place(happened.seat), pile, 0)
+      feedback('card', still ? 0 : FLIGHT_SECONDS * 0.85)
+      if (!still && pile) {
+        setPileShows({ card: before.top, called: before.called })
+        setTimeout(() => setPileShows(null), FLIGHT_SECONDS * 900)
+      }
+      after = FLIGHT_SECONDS * 0.7
+    }
+    // General market: everyone else draws one, one after the other.
+    for (const seat of happened.market ?? []) {
+      fly(seat, null, market, place(seat), after)
+      feedback('market', after + 0.05)
+      after += 0.16
+    }
+    if (happened.kind === 'draw' || happened.kind === 'timeout') {
+      // Up to three cards are shown going, however many were picked: the count is in words.
+      for (let i = 0; i < Math.min(happened.drew ?? 0, 3); i++) {
+        fly(happened.seat, null, market, place(happened.seat), i * 0.14)
+        feedback('market', i * 0.14 + 0.05)
+      }
+    }
+    if (view.over) feedback('gameEnd', after + (still ? 0 : FLIGHT_SECONDS))
+    if (plans.length > 0) setFlights((list) => [...list, ...plans])
+  }, [view, mySeat])
+  // The pack is heard being shuffled as a game begins.
   useEffect(() => {
-    if (view.moveNo === heard.current) return
-    heard.current = view.moveNo
-    if (view.over) feedback('gameEnd')
-    else if (view.lastEvent?.kind === 'play') feedback('card')
-    else if (view.lastEvent) feedback('market')
-  }, [view.moveNo, view.over, view.lastEvent])
+    if (view.moveNo === 0 && !view.over) feedback('shuffle')
+    // Once, when the table is first shown.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const warned = useRef(false)
   useEffect(() => {
     if (!myTurn || deadline === null) return
@@ -172,11 +232,16 @@ export function CheckUpTable({ title, backTo, view, hand, players, mySeat, deadl
   // stand a little higher than the rest.
   const sorted = [...hand].sort((a, b) => (isWhot(a) ? 1 : 0) - (isWhot(b) ? 1 : 0) || SHAPES.indexOf(shapeOf(a) ?? 'c') - SHAPES.indexOf(shapeOf(b) ?? 'c') || numberOf(a) - numberOf(b))
   const leading = view.called ?? shapeOf(view.top)
+  // The card shown on the pile: the one a card in the air is about to land on, until it lands.
+  const pile = pileShows ?? { card: view.top, called: view.called }
 
   return (
     // The screen is fixed: exactly as high as the phone, and it never scrolls. If the hand grows
     // too long for its row, the row scrolls sideways and nothing else moves.
-    <div className="mx-auto flex h-(--app-h) w-full max-w-xl flex-col gap-2 overflow-hidden px-3 pb-[max(0.5rem,var(--safe-bottom))] pt-1 lg:max-w-3xl" data-testid="checkup-screen">
+    <div ref={tableRef} className="mx-auto flex h-(--app-h) w-full max-w-xl flex-col gap-2 overflow-hidden px-3 pb-[max(0.5rem,var(--safe-bottom))] pt-1 lg:max-w-3xl" data-testid="checkup-screen">
+      {flights.map((plan) => (
+        <Flight key={plan.id} plan={plan} onDone={landed} />
+      ))}
       <GameHeader title={title} over={over} backTo={backTo} />
       {notice && (
         <div role="status" className="shrink-0 bg-ink px-3 py-1.5 text-center text-sm font-semibold text-surface">
@@ -205,15 +270,17 @@ export function CheckUpTable({ title, backTo, view, hand, players, mySeat, deadl
             <span className="text-xs font-bold">{t('checkup.market', { count: view.marketCount })}</span>
           </button>
           <div className="flex flex-col items-center gap-1">
-            <CardFace card={view.top} className="block w-[5.5rem] drop-shadow-md" />
+            <span data-testid="checkup-pile">
+              <CardFace card={pile.card} className="block w-[5.5rem] drop-shadow-md" />
+            </span>
             <span className="flex min-h-5 items-center gap-1 text-xs font-bold" data-testid="checkup-leading">
-              {view.called ? (
+              {pile.called ? (
                 <>
                   {t('checkup.called')}
                   <svg viewBox="0 0 20 20" className="size-4" aria-hidden="true">
-                    <ShapeMark shape={view.called} cx={10} cy={10} size={15} />
+                    <ShapeMark shape={pile.called} cx={10} cy={10} size={15} />
                   </svg>
-                  <span style={{ color: SHAPE_COLOR[view.called] }}>{shapeName(view.called)}</span>
+                  <span style={{ color: SHAPE_COLOR[pile.called] }}>{shapeName(pile.called)}</span>
                 </>
               ) : (
                 <span className="sr-only">{cardName(view.top)}</span>
