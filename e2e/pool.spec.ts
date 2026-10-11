@@ -4,6 +4,7 @@
 import { type Browser, type BrowserContext, expect, type Page, test } from '@playwright/test'
 import { runSql } from '../scripts/lib/managementApi.ts'
 import { ensureTestAccounts, resetTestAccounts, TEST_ACCOUNTS, TEST_PASSWORD } from '../scripts/lib/testAccounts.ts'
+import { HEAD_SPOT, TABLE } from '../supabase/functions/_shared/pool.ts'
 
 test.setTimeout(180_000)
 test.beforeAll(ensureTestAccounts)
@@ -52,6 +53,31 @@ async function pullCue(page: Page, power: number) {
   await page.mouse.move(x, y)
   await page.mouse.down()
   await page.mouse.move(x - box.width * 0.55 * power, y, { steps: 5 })
+  await page.mouse.up()
+}
+
+/** The width of the wooden rail round the cloth, in the table's own measure (see PoolCanvas). */
+const RAIL = 112
+/**
+ * Where a point of the table is on the glass. The screen is drawn turned on these upright
+ * phones: the table's length runs down the glass, and its width from right to left.
+ */
+async function onGlass(page: Page, x: number, y: number) {
+  const box = (await page.getByTestId('pool-table').boundingBox())!
+  return { x: box.x + box.width * (1 - (y + RAIL) / (TABLE.h + RAIL * 2)), y: box.y + box.height * ((x + RAIL) / (TABLE.w + RAIL * 2)) }
+}
+/**
+ * Takes hold of the cue lying on the table (behind the cue ball on the head spot, aimed down the
+ * table for the break), pulls it straight back and lets go.
+ */
+async function pullTableCue(page: Page, back: number) {
+  const hold = await onGlass(page, HEAD_SPOT.x - TABLE.r * 6, HEAD_SPOT.y)
+  const drawn = await onGlass(page, HEAD_SPOT.x - TABLE.r * 6 - back, HEAD_SPOT.y)
+  await page.mouse.move(hold.x, hold.y)
+  await page.mouse.down()
+  await page.mouse.move(drawn.x, drawn.y, { steps: 6 })
+  // The cue beside the table shows the same pull.
+  await expect.poll(async () => Number(await cue(page).getAttribute('aria-valuenow'))).toBeGreaterThan(40)
   await page.mouse.up()
 }
 
@@ -239,7 +265,10 @@ test('practice against the computer, with the cloth chosen in Settings', async (
   let computerPlayed = false
   for (let i = 0; i < 8 && !computerPlayed; i++) {
     const before = await shotNo(page)
-    await pullCue(page, i === 0 ? 1 : 0.3)
+    // The break is played by pulling the cue that lies on the table; later shots with the cue
+    // beside it. Either way shoots.
+    if (i === 0) await pullTableCue(page, 560)
+    else await pullCue(page, 0.3)
     await expect.poll(() => shotNo(page), { timeout: 20_000 }).toBeGreaterThan(before)
     await expect(state(page)).toHaveAttribute('data-playing', 'false', { timeout: 30_000 })
     if ((await page.getByRole('dialog').count()) > 0) break

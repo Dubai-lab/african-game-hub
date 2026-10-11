@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
 import { useSettingsStore } from '@/core/settings/settingsStore'
+import { ChatFold, GameBar, GameHeader, GameMenu, useChatFold, useLockedScreen } from '@/core/ui/gameScreen'
 import { HOME, type Seat, SEATS } from './board'
 import { BOARDS, type DieView, LudoBoard, useWalkingPieces } from './LudoBoard'
 import { fullCountPieces, type LudoEvent, type LudoState, plays } from './rules'
@@ -21,7 +21,7 @@ export function Sheet({ title, children, onClose }: { title: string; children: R
         aria-modal="true"
         aria-label={title}
         onClick={(event) => event.stopPropagation()}
-        className="w-full max-w-md border-t-4 border-brand bg-panel px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:border-4"
+        className="w-full max-w-md border-t-4 border-brand bg-panel px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:border-4"
       >
         <h2 className="font-display text-2xl font-extrabold text-primary">{title}</h2>
         {children}
@@ -109,6 +109,10 @@ type Props = {
   onMove: (move: TableMove) => void
   /** Chat with the other players (online games). */
   chat?: ReactNode
+  /** The chat is over: the others have left the finished game. The chat button says so. */
+  chatClosed?: boolean
+  /** Goes up by one each time another player says something: the chat button shows there is news. */
+  chatHeard?: number
   /** Under everything: Resign while playing, what to do next afterwards. */
   footer?: ReactNode
   /** Dialogs. */
@@ -116,7 +120,10 @@ type Props = {
 }
 
 /** The whole Ludo screen for two to four players: cards, board, dice. Shows a table; decides nothing. */
-export function LudoTable({ title, state, players, mySeat, deadline, busy, notice, onRoll, onMove, chat, footer, children }: Props) {
+export function LudoTable({ title, state, players, mySeat, deadline, busy, notice, onRoll, onMove, chat, chatClosed = false, chatHeard = 0, footer, children }: Props) {
+  const [menu, setMenu] = useState(false)
+  const chatFold = useChatFold(chatHeard)
+  useLockedScreen()
   const { t } = useTranslation()
   const settings = useSettingsStore()
   const theme = BOARDS[settings.ludoBoard]
@@ -293,26 +300,15 @@ export function LudoTable({ title, state, players, mySeat, deadline, busy, notic
   }
 
   return (
-    // Phone: one column. Computer: the board takes the height of the window, with the record
-    // of the game, the chat and the buttons in a panel beside it.
-    <div className="mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-2 px-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 lg:grid lg:h-dvh lg:max-w-none lg:grid-cols-[min(calc(100dvh-13rem),calc(100vw-30rem))_24rem] lg:grid-rows-[auto_minmax(0,1fr)] lg:justify-center lg:gap-x-8 lg:gap-y-3 lg:px-8 lg:py-4">
-      <header className="flex items-center justify-between gap-2 lg:col-start-2 lg:row-start-1">
-        <Link to="/lobby" className="flex min-h-11 items-center font-semibold text-primary underline underline-offset-4">
-          {t('ludo.back')}
-        </Link>
-        <p className="truncate font-display text-lg font-extrabold text-primary">{title}</p>
-        <button
-          type="button"
-          className="flex min-h-11 items-center border-2 border-line bg-panel px-3 text-sm font-semibold"
-          aria-pressed={settings.soundOn}
-          onClick={() => settings.set({ soundOn: !settings.soundOn })}
-        >
-          {t(settings.soundOn ? 'ludo.soundOn' : 'ludo.soundOff')}
-        </button>
-      </header>
+    // The screen is fixed: exactly as high as the phone, and it never scrolls. Phone: one
+    // column (title, board, dice, the record of the game, bar); if the part under the board
+    // holds more than fits, that part alone scrolls. Computer: the board takes the height of the
+    // window, with the record of the game, the chat and the buttons in a panel beside it.
+    <div className="mx-auto flex h-dvh w-full max-w-xl flex-col gap-2 overflow-hidden px-1.5 pb-[max(0.5rem,var(--safe-bottom))] pt-1 lg:grid lg:max-w-none lg:grid-cols-[min(calc(100dvh-13rem),calc(100vw-30rem))_24rem] lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:justify-center lg:gap-x-8 lg:gap-y-3 lg:px-8 lg:py-4">
+      <GameHeader title={title} over={!open} backTo="/play/ludo" className="lg:col-start-2 lg:row-start-1" />
 
-      <div className="flex flex-col lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:justify-center">
-        <div className="mx-auto flex w-full max-w-[min(100%,calc(100dvh-19rem))] flex-col gap-1.5 lg:max-w-full">
+      <div className="flex shrink-0 flex-col lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:justify-center">
+        <div className="mx-auto flex w-full max-w-[min(100%,calc(100dvh-21rem))] flex-col gap-1.5 lg:max-w-full">
           {notice && (
             <div role="status" className="bg-ink px-3 py-1.5 text-center text-sm font-semibold text-surface">
               {notice}
@@ -371,7 +367,8 @@ export function LudoTable({ title, state, players, mySeat, deadline, busy, notic
         </div>
       </div>
 
-      <aside className="flex flex-col gap-3 lg:col-start-2 lg:row-start-2 lg:min-h-0 lg:border-2 lg:border-line lg:bg-panel lg:p-4">
+      {/* What is under the board. If it holds more than fits, it scrolls by itself. */}
+      <aside className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto lg:col-start-2 lg:row-start-2 lg:border-2 lg:border-line lg:bg-panel lg:p-4">
         {/* The game so far, newest first: every throw and what it did. */}
         <section aria-label={t('ludo.logTitle')} className="flex min-h-0 flex-col lg:flex-1">
           <h2 className="text-sm font-semibold text-muted">{t('ludo.logTitle')}</h2>
@@ -383,10 +380,23 @@ export function LudoTable({ title, state, players, mySeat, deadline, busy, notic
           </p>
         </section>
 
-        {chat}
+        {chat && (
+          <ChatFold open={chatFold.open} onClose={chatFold.hide}>
+            {chat}
+          </ChatFold>
+        )}
 
-        <div className="mt-auto">{footer}</div>
+        {/* Once the game is over, what to do next is on the screen; while it is on, what a
+            player can do besides play (resign) is in the menu. */}
+        {!open && <div className="mt-auto">{footer}</div>}
       </aside>
+
+      <GameBar className="lg:col-start-2 lg:row-start-3" onMenu={() => setMenu(true)} chat={chat ? { closed: chatClosed, news: chatFold.news, onOpen: chatFold.show } : null} />
+
+      {menu && (
+        // A choice made in the menu closes it.
+        <GameMenu onClose={() => setMenu(false)}>{open && footer && <div onClick={() => setMenu(false)}>{footer}</div>}</GameMenu>
+      )}
 
       {children}
     </div>

@@ -305,6 +305,7 @@ test('against the computer: three computer players take their turns and the game
   await expect(page.getByTestId('ludo-die')).toHaveCount(2)
 
   // Leaving goes back to the setup, which remembers the choice.
+  await page.getByTestId('game-menu').click()
   await page.getByRole('button', { name: 'Leave this game' }).click()
   await expect(page.getByRole('radio', { name: '3 computers' })).toBeChecked()
   await expect(page.getByRole('radio', { name: '2 dice' })).toBeChecked()

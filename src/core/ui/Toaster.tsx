@@ -14,7 +14,7 @@ export function Toaster() {
 
   return (
     <div
-      className="pointer-events-none fixed inset-x-0 top-0 z-50 flex flex-col items-center gap-2 px-4 pt-[max(0.75rem,env(safe-area-inset-top))]"
+      className="pointer-events-none fixed inset-x-0 top-0 z-50 flex flex-col items-center gap-2 px-4 pt-[max(0.75rem,var(--safe-top))]"
       aria-live="polite"
     >
       {toasts.map((item) => (

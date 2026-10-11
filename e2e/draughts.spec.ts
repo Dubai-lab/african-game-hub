@@ -104,6 +104,7 @@ test('two players play draughts: moves cross, capturing is compulsory, a refresh
   // White plays on after the refresh, then Black resigns.
   await play(white, 33, 28)
   await expect(sq(black, 28)).toHaveAttribute('data-piece', 'w', { timeout: 15_000 })
+  await black.getByTestId('game-menu').click()
   await black.getByRole('button', { name: 'Resign' }).click()
   await black.getByRole('dialog').getByRole('button', { name: 'Resign' }).click()
   await expect(black.getByRole('heading', { name: 'You lost' })).toBeVisible({ timeout: 15_000 })
@@ -127,6 +128,7 @@ test('a staked game of draughts pays the winner the pot less the commission', as
   await expect(sq(black, 28)).toHaveAttribute('data-piece', 'w', { timeout: 15_000 })
   await play(black, 19, 23)
   await expect(sq(white, 23)).toHaveAttribute('data-piece', 'b', { timeout: 15_000 })
+  await white.getByTestId('game-menu').click()
   await white.getByRole('button', { name: 'Resign' }).click()
   await white.getByRole('dialog').getByRole('button', { name: 'Resign' }).click()
 
@@ -171,6 +173,7 @@ test('the Back button does not walk a player out of a live game without asking',
   await expect(black.getByTestId('draughts-board')).toBeVisible()
 
   // Once a game is over there is nothing to ask: Back simply leaves.
+  await black.getByTestId('game-menu').click()
   await black.getByRole('button', { name: 'Resign' }).click()
   await black.getByRole('dialog').getByRole('button', { name: 'Resign' }).click()
   await expect(black.getByRole('heading', { name: 'You lost' })).toBeVisible({ timeout: 15_000 })

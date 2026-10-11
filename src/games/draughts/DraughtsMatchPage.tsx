@@ -46,6 +46,9 @@ export default function DraughtsMatchPage({ matchId }: { matchId: string }) {
   const games = useGameTypes()
   const game = useDraughtsGame(matchId)
   const { controller, myColor, players, firstMove } = game
+  // The chat: whether the opponent has left the finished game, and how often they have spoken.
+  const [chatClosed, setChatClosed] = useState(false)
+  const [chatHeard, setChatHeard] = useState(0)
 
   // The start chime, once, when a player arrives at a game that has not begun.
   const fresh = game.status === 'ready' && myColor !== null && controller.played.length === 0 && !controller.outcome
@@ -121,7 +124,13 @@ export default function DraughtsMatchPage({ matchId }: { matchId: string }) {
       tokensChange={tokensChange}
       rating={mine?.ratingAfter ?? undefined}
       ratingChange={ratingChange}
-      chat={myColor ? <MatchChat matchId={matchId} names={Object.fromEntries(players.map((p) => [p.userId, p.name]))} /> : undefined}
+      chat={
+        myColor ? (
+          <MatchChat matchId={matchId} names={Object.fromEntries(players.map((p) => [p.userId, p.name]))} ended={over} onClosed={setChatClosed} onHeard={() => setChatHeard((n) => n + 1)} />
+        ) : undefined
+      }
+      chatClosed={chatClosed}
+      chatHeard={chatHeard}
       overActions={
         myColor ? (
           <AfterMatchActions state={after} opponent={opponent?.name ?? ''} newGameLabel={t('afterMatch.newGame', { pace })} />

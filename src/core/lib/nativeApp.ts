@@ -36,6 +36,8 @@ export function backAction(pathname: string, canGoBack: boolean): 'back' | 'leav
  */
 export function startNativeApp() {
   if (!isNativeApp()) return
+  // The app keeps the page clear of the notch and the home bar itself (see index.css).
+  document.documentElement.classList.add('in-app')
   const app = (window as NativeWindow).Capacitor?.Plugins?.App
   if (!app) return
   try {

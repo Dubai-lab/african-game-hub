@@ -117,7 +117,7 @@ export function ChallengeInbox() {
 
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center bg-ink/55 sm:items-center" role="presentation" onClick={later}>
-      <div role="dialog" aria-modal="true" aria-label={t('challenge.incomingTitle', { name: challenge.fromName })} onClick={(event) => event.stopPropagation()} className="w-full max-w-md border-t-4 border-brand bg-panel px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:border-4">
+      <div role="dialog" aria-modal="true" aria-label={t('challenge.incomingTitle', { name: challenge.fromName })} onClick={(event) => event.stopPropagation()} className="w-full max-w-md border-t-4 border-brand bg-panel px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:border-4">
         <Invitation challenge={challenge} onDone={later} />
         <button type="button" onClick={later} className="mt-2 min-h-11 w-full font-semibold text-primary underline underline-offset-4">
           {t('challenge.later')}

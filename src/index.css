@@ -30,6 +30,33 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* How much room the phone's notch, status bar and home bar need on each side. In a browser
+     the phone says. Inside the Android and iPhone apps the app itself already keeps the page
+     clear of them (see mobile/), so the page must not leave the room a second time. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+
+html.in-app {
+  --safe-top: 0px;
+  --safe-right: 0px;
+  --safe-bottom: 0px;
+  --safe-left: 0px;
+}
+
+/* A playing screen is fixed in place: the page does not scroll and does not bounce. What does
+   not fit scrolls inside its own part of the screen. (See useLockedScreen.) */
+html.screen-locked,
+html.screen-locked body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+html.screen-locked body {
+  position: fixed;
+  inset: 0;
 }
 
 body {

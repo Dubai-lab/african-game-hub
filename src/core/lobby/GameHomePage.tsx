@@ -216,7 +216,7 @@ export default function GameHomePage() {
       </div>
 
       {/* Stays within thumb reach at the bottom of a phone screen. */}
-      <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] -mx-5 bg-surface/95 px-5 pb-3 pt-3 backdrop-blur-sm lg:bottom-0 lg:mx-0 lg:px-0">{play}</div>
+      <div className="sticky bottom-[calc(3.5rem+var(--safe-bottom))] -mx-5 bg-surface/95 px-5 pb-3 pt-3 backdrop-blur-sm lg:bottom-0 lg:mx-0 lg:px-0">{play}</div>
     </div>
   )
 }

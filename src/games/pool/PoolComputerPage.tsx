@@ -102,7 +102,7 @@ export default function PoolComputerPage() {
   if (!game) {
     return (
       <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-4 py-6">
-        <Link to="/lobby" className="font-semibold text-primary underline underline-offset-4">
+        <Link to="/play/pool" className="font-semibold text-primary underline underline-offset-4">
           {t('pool.back')}
         </Link>
         <div>

@@ -74,7 +74,7 @@ export function ResultDialog({ title, tone, reason, children, onClose, closeLabe
           </p>
         </div>
         <div className="band shrink-0" aria-hidden="true" />
-        <div className="flex flex-col gap-4 overflow-y-auto px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
+        <div className="flex flex-col gap-4 overflow-y-auto px-5 pb-[max(1rem,var(--safe-bottom))] pt-4">
           {children}
           <button type="button" onClick={onClose} className="-mt-1 min-h-11 w-full font-semibold text-primary underline underline-offset-4">
             {closeLabel}

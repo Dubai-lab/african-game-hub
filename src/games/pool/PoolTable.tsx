@@ -1,11 +1,12 @@
 import { type CSSProperties, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { pointIn, Sideways } from './sideways'
+import { Sideways, touchIn, TURNED_SCREEN } from './sideways'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { playRecorded, preloadRecorded } from '@/core/audio/recorded'
 import { flagEmoji } from '@/core/countries/useCountries'
 import { useSettingsStore } from '@/core/settings/settingsStore'
 import { Button } from '@/core/ui/Button'
+import { useLockedScreen } from '@/core/ui/gameScreen'
 import { type Ball, canPlaceCue, groupFor, groupOf, HEAD_SPOT, type PoolState, type Seat, type Shot, type ShotResult, type SimEvent, simulate, targets as targetsOf } from '../../../supabase/functions/_shared/pool'
 import { CUE_IDS, cueGradient } from './cues'
 import { type Aim, PoolCanvas } from './PoolCanvas'
@@ -41,7 +42,7 @@ export function Sheet({ title, children, onClose }: { title: string; children: R
         aria-modal="true"
         aria-label={title}
         onClick={(event) => event.stopPropagation()}
-        className="w-full max-w-md border-t-4 border-brand bg-panel px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:border-4"
+        className="w-full max-w-md border-t-4 border-brand bg-panel px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:border-4"
       >
         <h2 className="font-display text-2xl font-extrabold text-primary">{title}</h2>
         {children}
@@ -191,6 +192,7 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
   const { t } = useTranslation()
   const settings = useSettingsStore()
   const layout = useLayout()
+  useLockedScreen()
   const tight = layout !== 'desktop'
   // A phone held upright: the game turns its own screen.
   const turned = layout === 'portrait'
@@ -437,7 +439,7 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
       aria-label={t('pool.spin')}
       className={`relative shrink-0 rounded-full border-2 border-ink bg-[#f7f5ec] shadow-[inset_-6px_-8px_14px_rgba(0,0,0,0.18)] ${size}`}
       onPointerDown={(event) => {
-        const [across, down] = pointIn(event.currentTarget.getBoundingClientRect(), event.clientX, event.clientY, turned)
+        const [across, down] = touchIn(event.currentTarget, event.clientX, event.clientY, turned)
         const x = across * 2 - 1
         const y = down * 2 - 1
         const reach = Math.hypot(x, y)
@@ -445,7 +447,7 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
         setSpin({ x: x * k, y: -y * k })
       }}
     >
-      <span className="absolute size-[18%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-hibiscus" style={{ left: `${50 + spin.x * 50}%`, top: `${50 - spin.y * 50}%` }} />
+      <span className="pointer-events-none absolute size-[18%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-hibiscus" style={{ left: `${50 + spin.x * 50}%`, top: `${50 - spin.y * 50}%` }} />
     </button>
   )
   const nudges = (
@@ -488,6 +490,7 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
       onShoot={(pulled) => shoot(Math.max(1, Math.round(pulled * 1000)))}
       className={className}
       cue={settings.poolCue}
+      drawn={power / 1000}
     />
   )
   const tableView = (className: string) => (
@@ -510,6 +513,9 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
         called={myShot ? (needCall ? called : null) : playingPocket}
         canCall={needCall}
         onCall={setCalled}
+        canShoot={myShot && !(needCall && called === null)}
+        onPull={(pulled) => setPower(pulled * 1000)}
+        onShoot={(pulled) => shoot(Math.max(1, Math.round(pulled * 1000)))}
       />
     </div>
   )
@@ -526,14 +532,15 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
     // hung from the top right corner of the glass and swung down a quarter turn. Its left end is
     // then at the top of the phone (where the camera is) and its right end at the bottom.
     const frame = turned
-      ? 'fixed left-[100vw] top-0 z-20 h-[100vw] w-[100dvh] origin-top-left rotate-90 ps-[max(0.375rem,env(safe-area-inset-top))] pe-[max(0.375rem,env(safe-area-inset-bottom))]'
-      : 'h-dvh w-full ps-[max(0.375rem,env(safe-area-inset-left))] pe-[max(0.375rem,env(safe-area-inset-right))]'
+      ? 'fixed left-[100vw] top-0 z-20 h-[100vw] w-[100dvh] origin-top-left rotate-90 ps-[max(0.375rem,var(--safe-top))] pe-[max(0.375rem,var(--safe-bottom))]'
+      : 'h-dvh w-full ps-[max(0.375rem,var(--safe-left))] pe-[max(0.375rem,var(--safe-right))]'
     return (
       <Sideways.Provider value={turned}>
       <div
         className={`grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] grid-rows-[2.25rem_minmax(0,1fr)] gap-x-1.5 gap-y-1 overflow-hidden bg-[#141a33] py-1 ${frame}`}
         // How high the screen is, whichever way it is drawn: the table is sized from it.
         style={{ '--pool-high': turned ? '100vw' : '100dvh' } as CSSProperties}
+        {...(turned ? { [TURNED_SCREEN]: '' } : {})}
         data-testid="pool-screen"
         data-layout={layout}
       >
@@ -592,9 +599,12 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
         </Panel>
         <Panel title={title} open={panel === 'menu'} onClose={() => setPanel(null)}>
           <div className="flex flex-wrap items-center gap-2">
-            <Link to="/lobby" className="flex min-h-11 items-center font-semibold text-primary underline underline-offset-4">
-              {t('pool.backToLobby')}
-            </Link>
+            {/* While the game is on there is no way out but through it (resign, below). */}
+            {decided && (
+              <Link to="/play/pool" className="flex min-h-11 items-center font-semibold text-primary underline underline-offset-4" data-testid="game-back">
+                {t('pool.backToPool')}
+              </Link>
+            )}
             {soundButton('ms-auto min-h-11 px-3 text-sm')}
           </div>
           <p className="text-xs text-muted">{t('pool.howTo')}</p>
@@ -615,14 +625,18 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
   const desktop = layout === 'desktop'
   return (
     <div
-      className={desktop ? 'grid h-dvh w-full grid-cols-[minmax(0,1fr)_23rem] grid-rows-[auto_minmax(0,1fr)] gap-x-6 gap-y-3 px-6 py-4' : 'mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-2 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2'}
+      className={desktop ? 'grid h-dvh w-full grid-cols-[minmax(0,1fr)_23rem] grid-rows-[auto_minmax(0,1fr)] gap-x-6 gap-y-3 px-6 py-4' : 'mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-2 px-3 pb-[max(0.75rem,var(--safe-bottom))] pt-2'}
       data-testid="pool-screen"
       data-layout={layout}
     >
       <header className={`flex items-center justify-between gap-2 ${desktop ? 'col-start-2 row-start-1' : ''}`}>
-        <Link to="/lobby" className="flex min-h-11 items-center font-semibold text-primary underline underline-offset-4">
-          {t('pool.back')}
-        </Link>
+        {decided ? (
+          <Link to="/play/pool" className="flex min-h-11 items-center font-semibold text-primary underline underline-offset-4" data-testid="game-back">
+            {t('pool.backToPool')}
+          </Link>
+        ) : (
+          <span aria-hidden="true" />
+        )}
         <p className="truncate font-display text-lg font-extrabold text-primary">{title}</p>
         {soundButton('min-h-11 px-3 text-sm')}
       </header>

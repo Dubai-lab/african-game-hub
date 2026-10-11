@@ -220,7 +220,7 @@ export function DraughtsBoard({ board, orientation, moves, lastMove, onMove, the
   const uid = useRef(`dp${nextId++}`).current
 
   return (
-    <div className="p-1.5 sm:p-2" style={{ background: theme.frame }}>
+    <div className="p-0.5 sm:p-2" style={{ background: theme.frame }}>
       <div
         ref={frame}
         className="relative aspect-square w-full touch-none select-none"

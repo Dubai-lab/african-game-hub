@@ -1,8 +1,8 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
 import { useSettingsStore } from '@/core/settings/settingsStore'
 import { Button } from '@/core/ui/Button'
+import { ChatFold, GameBar, GameHeader, GameMenu, GearIcon, useChatFold, useLockedScreen } from '@/core/ui/gameScreen'
 import { type Color, kingSquare, legalTargets, material, needsPromotion, type Promotion, replay, sanFor, type Square, START_FEN } from '../engine/chessLogic'
 import { usePieceSet } from '../pieces/usePieceSet'
 import { GRADE_STYLE, ReviewPanel } from '../review/ReviewPanel'
@@ -13,52 +13,6 @@ import { ChessBoard } from './ChessBoard'
 import { GameOverSheet, MoveList, PlayerCard, Sheet } from './panels'
 import { SettingsSheet } from './SettingsSheet'
 import { BOARD_THEMES } from './themes'
-
-const iconButton =
-  'flex size-11 items-center justify-center border-2 border-line bg-panel text-ink focus-visible:outline-2 focus-visible:outline-primary'
-
-function SoundIcon({ on }: { on: boolean }) {
-  return (
-    <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" stroke="none" />
-      {on ? <path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" strokeLinecap="round" /> : <path d="M16 9l5 6M21 9l-5 6" strokeLinecap="round" />}
-    </svg>
-  )
-}
-
-/** Three lines: the menu. */
-function MenuIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
-      <path d="M4 6h16M4 12h16M4 18h16" />
-    </svg>
-  )
-}
-
-/** A speech bubble; crossed out when there is nobody left to talk to. */
-function ChatIcon({ closed }: { closed: boolean }) {
-  return (
-    <svg viewBox="0 0 24 24" className="size-6" aria-hidden="true">
-      <path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H10l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="currentColor" opacity={closed ? 0.45 : 1} />
-      {closed && <path d="M8.5 7l7 7M15.5 7l-7 7" stroke="var(--color-panel, #fff)" strokeWidth="2.4" strokeLinecap="round" fill="none" />}
-    </svg>
-  )
-}
-
-const barButton =
-  'flex h-12 w-full items-center justify-center border-2 border-line bg-panel text-ink disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-primary'
-
-function GearIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <circle cx="12" cy="12" r="3.2" />
-      <path
-        d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M18.5 5.5l-2.1 2.1M7.6 16.4l-2.1 2.1"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
 
 export type TablePlayer = { name: string; flag?: string; avatarUrl?: string; rating?: number; /** How the rating moved, once the game is settled. */ ratingChange?: number }
 
@@ -138,14 +92,8 @@ export function GameTable({
   const [viewPly, setViewPly] = useState<number | null>(null)
   const [dialog, setDialog] = useState<'resign' | 'settings' | 'menu' | null>(null)
   // The chat opens over the board on a phone; on a computer it is always in the panel.
-  const [chatOpen, setChatOpen] = useState(false)
-  const [chatNews, setChatNews] = useState(false)
-  const heardBefore = useRef(chatHeard)
-  useEffect(() => {
-    if (chatHeard === heardBefore.current) return
-    heardBefore.current = chatHeard
-    if (!chatOpen) setChatNews(true)
-  }, [chatHeard, chatOpen])
+  const chatFold = useChatFold(chatHeard)
+  useLockedScreen()
   const [reviewing, setReviewing] = useState(false)
   // The result can be put aside to look at the board, and brought back.
   const [resultClosed, setResultClosed] = useState(false)
@@ -320,29 +268,22 @@ export function GameTable({
     return () => window.removeEventListener('keydown', onKey)
   }, [livePly])
 
-  return (
-    // Phone: one column (bar, board, moves, buttons). Computer: the board takes the full height
-    // of the window (or the width left beside the panel, whichever is smaller), the moves and
-    // controls sit in a panel right next to it, and the pair is centred.
-    <div className="mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-2 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 lg:grid lg:h-dvh lg:max-w-none lg:grid-cols-[min(calc(100dvh-10.5rem),calc(100vw-30rem))_24rem] lg:grid-rows-[auto_minmax(0,1fr)] lg:justify-center lg:gap-x-8 lg:gap-y-3 lg:px-8 lg:py-4">
-      {/* While a game is on there is no way out of it up here: leaving is a decision, taken
-          from the menu (resign). Once it is over, an arrow leads back to the game's own page. */}
-      <header className="flex items-center gap-2 lg:col-start-2 lg:row-start-1">
-        {over ? (
-          <Link to="/play/chess" className={iconButton} aria-label={t('chess.menu.back')} data-testid="game-back">
-            <span aria-hidden="true" className="text-2xl font-bold leading-none">‹</span>
-          </Link>
-        ) : (
-          <span className="size-11 shrink-0" aria-hidden="true" />
-        )}
-        <p className="min-w-0 flex-1 truncate text-center font-display text-lg font-extrabold tabular-nums text-primary">{title}</p>
-        <span className="size-11 shrink-0" aria-hidden="true" />
-      </header>
+  // The move the arrows in the bar step from: in a line of the player's own, where it left the game.
+  const stepPly = trial ? trial.ply : shownPly
 
-      <div className="flex flex-col lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:justify-center">
-        {/* The board is as large as the window allows: limited by the width on a phone, by the
-            height on a computer. The player cards line up with its edges. */}
-        <div className="mx-auto flex w-full max-w-[min(100%,calc(100dvh-19.5rem))] flex-col gap-2 lg:max-w-full">
+  return (
+    // The screen is fixed: it is exactly as high as the phone and never scrolls. Phone: one
+    // column (title, board, moves, bar); if the part under the board holds more than fits, that
+    // part alone scrolls. Computer: the board takes the full height of the window (or the width
+    // left beside the panel, whichever is smaller), with the panel right next to it.
+    <div className="mx-auto flex h-dvh w-full max-w-xl flex-col gap-2 overflow-hidden px-3 pb-[max(0.5rem,var(--safe-bottom))] pt-1 lg:grid lg:max-w-none lg:grid-cols-[min(calc(100dvh-10.5rem),calc(100vw-30rem))_24rem] lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:justify-center lg:gap-x-8 lg:gap-y-3 lg:px-8 lg:py-4">
+      <GameHeader title={title} over={over} backTo="/play/chess" className="lg:col-start-2 lg:row-start-1" />
+
+      <div className="flex shrink-0 flex-col lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:justify-center">
+        {/* The board is as large as the screen allows: as wide as the phone, unless the phone
+            is too short to show it whole with the moves and the bar under it; on a computer,
+            as high as the window. The player cards line up with its edges. */}
+        <div className="mx-auto flex w-full max-w-[min(100%,calc(100dvh-16.5rem))] flex-col gap-1.5 lg:max-w-full lg:gap-2">
           {notice && (
             <div role="status" className="bg-ink px-3 py-1.5 text-center text-sm font-semibold text-surface">
               {notice}
@@ -377,8 +318,8 @@ export function GameTable({
         </div>
       </div>
 
-      {/* On a computer the panel scrolls by itself if a short window cannot hold everything. */}
-      <aside className="flex flex-col gap-2 lg:col-start-2 lg:row-start-2 lg:min-h-0 lg:overflow-y-auto lg:border-2 lg:border-line lg:bg-panel lg:p-4">
+      {/* What is under the board. If it holds more than fits, it scrolls by itself. */}
+      <aside className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto lg:col-start-2 lg:row-start-2 lg:border-2 lg:border-line lg:bg-panel lg:p-4">
         {status && (
           <div className="min-h-6 text-center text-sm font-semibold text-muted" role="status">
             {status}
@@ -413,29 +354,10 @@ export function GameTable({
 
         <MoveList played={played} viewPly={trial ? trial.ply : shownPly} onView={view} grades={reviewing ? grades : undefined} />
 
-        {/* The chat. On a computer it sits in the panel. On a phone it is folded away until the
-            chat button is pressed, then opens over the board; what the opponent says still
-            pops up over the game while it is folded. */}
         {chat && (
-          <div
-            className={chatOpen ? 'max-lg:fixed max-lg:inset-0 max-lg:z-40 max-lg:flex max-lg:items-end max-lg:justify-center max-lg:bg-ink/55' : 'max-lg:[&_section>*:not([data-testid=chat-pop])]:hidden'}
-            onClick={() => setChatOpen(false)}
-            role="presentation"
-          >
-            <div
-              className={chatOpen ? 'max-lg:w-full max-lg:max-w-md max-lg:border-t-4 max-lg:border-brand max-lg:bg-panel max-lg:px-5 max-lg:pb-[max(1.25rem,env(safe-area-inset-bottom))] max-lg:pt-3' : ''}
-              onClick={(event) => event.stopPropagation()}
-              data-testid="chat-sheet"
-              data-open={chatOpen}
-            >
-              {chatOpen && (
-                <button type="button" onClick={() => setChatOpen(false)} className="mb-1 ms-auto flex min-h-10 items-center text-sm font-semibold text-primary underline underline-offset-4 lg:hidden">
-                  {t('common.close')}
-                </button>
-              )}
-              {chat}
-            </div>
-          </div>
+          <ChatFold open={chatFold.open} onClose={chatFold.hide}>
+            {chat}
+          </ChatFold>
         )}
 
         {outcome ? (
@@ -443,122 +365,86 @@ export function GameTable({
         ) : (
           !atLive && <Button onClick={() => setViewPly(null)}>{t('chess.moves.backToGame')}</Button>
         )}
-
-        {/* The bar: the menu, the chat, the review once the game is over, and the two arrows
-            that step through the moves. Everything else a player can do is in the menu. */}
-        <nav className="mt-auto grid grid-cols-5 items-center gap-2" aria-label={t('chess.menu.bar')}>
-          <button type="button" className={barButton} aria-label={t('chess.menu.open')} aria-haspopup="dialog" onClick={() => setDialog('menu')} data-testid="game-menu">
-            <MenuIcon />
-          </button>
-          {chat ? (
-            <button
-              type="button"
-              className={`${barButton} relative lg:invisible`}
-              aria-label={t(chatClosed ? 'chess.menu.chatClosed' : chatNews ? 'chess.menu.chatNew' : 'chess.menu.chat')}
-              onClick={() => {
-                setChatNews(false)
-                setChatOpen(true)
-              }}
-              data-testid="game-chat"
-              data-closed={chatClosed}
-              data-news={chatNews}
-            >
-              <ChatIcon closed={chatClosed} />
-              {chatNews && !chatClosed && <span className="absolute end-1.5 top-1.5 size-2.5 rounded-full bg-hibiscus" aria-hidden="true" />}
-            </button>
-          ) : (
-            <span aria-hidden="true" />
-          )}
-          {over && reviewable && !reviewing && resultClosed ? (
-            <button type="button" className="flex h-12 w-full items-center justify-center border-2 border-ink bg-brand text-brand-ink focus-visible:outline-2 focus-visible:outline-primary" aria-label={t('chess.review.open')} onClick={openReview} data-testid="open-review">
-              <span aria-hidden="true" className="text-2xl leading-none">★</span>
-            </button>
-          ) : (
-            <span aria-hidden="true" />
-          )}
-          <button type="button" className={barButton} disabled={(trial ? trial.ply : shownPly) === 0} onClick={() => view((trial ? trial.ply : shownPly) - 1)} aria-label={t('chess.moves.previous')}>
-            <span aria-hidden="true" className="text-2xl font-bold leading-none">‹</span>
-          </button>
-          <button type="button" className={barButton} disabled={(trial ? trial.ply : shownPly) >= livePly} onClick={() => view((trial ? trial.ply : shownPly) + 1)} aria-label={t('chess.moves.next')}>
-            <span aria-hidden="true" className="text-2xl font-bold leading-none">›</span>
-          </button>
-        </nav>
       </aside>
 
-      {/* The menu: everything a player can do in the game that is not a move. */}
+      <GameBar
+        className="lg:col-start-2 lg:row-start-3"
+        onMenu={() => setDialog('menu')}
+        chat={chat ? { closed: chatClosed, news: chatFold.news, onOpen: chatFold.show } : null}
+        // While the result is on show it offers the review itself.
+        review={over && reviewable && !reviewing && resultClosed ? { label: t('chess.review.open'), onOpen: openReview } : null}
+        steps={{
+          atStart: stepPly === 0,
+          atEnd: stepPly >= livePly,
+          onPrevious: () => view(stepPly - 1),
+          onNext: () => view(stepPly + 1),
+          previousLabel: t('chess.moves.previous'),
+          nextLabel: t('chess.moves.next'),
+        }}
+      />
+
       {dialog === 'menu' && (
-        <Sheet title={t('chess.menu.title')} onClose={() => setDialog(null)}>
-          <div className="mt-3 flex flex-col gap-2" data-testid="game-menu-list">
-            {!outcome && atLive && (passAndPlay || onlineDraws) && (
-              <Button
-                variant="ghost"
-                disabled={livePly < 2 || game.drawOfferBy !== null}
-                onClick={() => {
-                  setDialog(null)
-                  game.offerDraw(perspective ?? turn)
-                }}
-              >
-                {onlineDraws && perspective && game.drawOfferBy === perspective ? t('chess.actions.drawOffered') : t('chess.actions.draw')}
-              </Button>
-            )}
-            {!outcome && atLive && onUndo && (
-              <Button
-                variant="ghost"
-                disabled={!canUndo}
-                onClick={() => {
-                  setDialog(null)
-                  onUndo()
-                }}
-              >
-                {t('chess.actions.undo')}
-              </Button>
-            )}
-            {/* Someone only watching the game has nothing to resign. */}
-            {!outcome && movable !== 'none' && (
-              <Button variant="ghost" onClick={() => setDialog('resign')}>
-                {canAbort ? t('chess.actions.abort') : t('chess.actions.resign')}
-              </Button>
-            )}
-            {outcome && resultClosed && (
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setDialog(null)
-                  setReviewing(false)
-                  setResultClosed(false)
-                }}
-                data-testid="show-result"
-              >
-                {t('chess.over.showResult')}
-              </Button>
-            )}
-            <Button variant="ghost" onClick={() => setDialog('settings')}>
-              <span className="me-2 inline-flex align-middle">
-                <GearIcon />
-              </span>
-              {t('chess.menu.settings')}
-            </Button>
+        <GameMenu onClose={() => setDialog(null)}>
+          {!outcome && atLive && (passAndPlay || onlineDraws) && (
             <Button
               variant="ghost"
-              disabled={passAndPlay && autoFlip}
+              disabled={livePly < 2 || game.drawOfferBy !== null}
               onClick={() => {
                 setDialog(null)
-                setFlipped((f) => !f)
+                game.offerDraw(perspective ?? turn)
               }}
             >
-              {t('chess.actions.flip')}
+              {onlineDraws && perspective && game.drawOfferBy === perspective ? t('chess.actions.drawOffered') : t('chess.actions.draw')}
             </Button>
-            <Button variant="ghost" aria-pressed={settings.soundOn} onClick={() => settings.set({ soundOn: !settings.soundOn })} data-testid="menu-sound">
-              <span className="me-2 inline-flex align-middle">
-                <SoundIcon on={settings.soundOn} />
-              </span>
-              {t(settings.soundOn ? 'chess.menu.soundOff' : 'chess.menu.soundOn')}
+          )}
+          {!outcome && atLive && onUndo && (
+            <Button
+              variant="ghost"
+              disabled={!canUndo}
+              onClick={() => {
+                setDialog(null)
+                onUndo()
+              }}
+            >
+              {t('chess.actions.undo')}
             </Button>
-            <Button onClick={() => setDialog(null)} className="mt-2">
-              {t('chess.menu.cancel')}
+          )}
+          {/* Someone only watching the game has nothing to resign. */}
+          {!outcome && movable !== 'none' && (
+            <Button variant="ghost" onClick={() => setDialog('resign')}>
+              {canAbort ? t('chess.actions.abort') : t('chess.actions.resign')}
             </Button>
-          </div>
-        </Sheet>
+          )}
+          {outcome && resultClosed && (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setDialog(null)
+                setReviewing(false)
+                setResultClosed(false)
+              }}
+              data-testid="show-result"
+            >
+              {t('chess.over.showResult')}
+            </Button>
+          )}
+          <Button variant="ghost" onClick={() => setDialog('settings')}>
+            <span className="me-2 inline-flex align-middle">
+              <GearIcon />
+            </span>
+            {t('gameMenu.settings')}
+          </Button>
+          <Button
+            variant="ghost"
+            disabled={passAndPlay && autoFlip}
+            onClick={() => {
+              setDialog(null)
+              setFlipped((f) => !f)
+            }}
+          >
+            {t('chess.actions.flip')}
+          </Button>
+        </GameMenu>
       )}
 
       {dialog === 'resign' && !outcome && (

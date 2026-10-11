@@ -38,7 +38,7 @@ export function ReportDialog({ target, matchId, onClose }: { target: Target; mat
         aria-label={t('safety.reportTitle', { name: target.name })}
         onClick={(event) => event.stopPropagation()}
         onSubmit={submit}
-        className="flex w-full max-w-md flex-col gap-4 border-t-4 border-brand bg-panel px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:border-4"
+        className="flex w-full max-w-md flex-col gap-4 border-t-4 border-brand bg-panel px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:border-4"
       >
         <h2 className="font-display text-2xl font-extrabold text-primary">{t('safety.reportTitle', { name: target.name })}</h2>
         <p className="text-sm text-muted">{t(matchId ? 'safety.explainMatch' : 'safety.explain')}</p>

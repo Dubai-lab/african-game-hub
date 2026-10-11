@@ -171,7 +171,7 @@ export function Sheet({ title, children, onClose }: { title: string; children: R
         aria-modal="true"
         aria-label={title}
         onClick={(event) => event.stopPropagation()}
-        className="w-full max-w-md border-t-4 border-brand bg-panel px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:border-4"
+        className="w-full max-w-md border-t-4 border-brand bg-panel px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:border-4"
       >
         <h2 className="font-display text-2xl font-extrabold text-primary">{title}</h2>
         {children}

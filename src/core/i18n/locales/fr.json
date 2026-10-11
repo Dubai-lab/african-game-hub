@@ -699,19 +699,6 @@
       "takeBack": "Reprendre",
       "back": "Revenir à la partie",
       "hint": "Déplacez une pièce pour essayer une autre suite. La vraie partie est conservée."
-    },
-    "menu": {
-      "bar": "Commandes de la partie",
-      "open": "Menu",
-      "title": "Menu de la partie",
-      "settings": "Réglages",
-      "soundOff": "Couper les sons",
-      "soundOn": "Activer les sons",
-      "cancel": "Annuler",
-      "back": "Retour aux échecs",
-      "chat": "Discuter avec votre adversaire",
-      "chatNew": "Discuter avec votre adversaire : nouveau message",
-      "chatClosed": "Discussion fermée : votre adversaire est parti"
     }
   },
   "ratingPools": {
@@ -963,7 +950,7 @@
       "other": "La partie est terminée.",
       "no_show": "Un joueur n’a pas joué son premier tour à temps et perd la partie."
     },
-    "back": "Salon",
+    "back": "Retour",
     "playersCount_one": "{{count}} joueur",
     "playersCount_other": "{{count}} joueurs",
     "place": {
@@ -1059,7 +1046,7 @@
     "tableLabel": "Table de billard",
     "clockLabel": "Secondes restantes pour ce coup",
     "stake": "{{stake}} jetons",
-    "back": "Salon",
+    "back": "Retour",
     "backToLobby": "Retour au salon",
     "notFound": "Cette partie est introuvable.",
     "loadFailed": "Impossible de charger cette partie.",
@@ -1072,7 +1059,7 @@
     "aimRight": "Viser un peu à droite",
     "aimLeftMore": "Viser plus à gauche",
     "aimRightMore": "Viser plus à droite",
-    "howTo": "Faites glisser sur la table pour tourner la queue, puis tirez en arrière la queue à côté de la table et relâchez : plus vous tirez, plus le coup est fort. Les flèches affinent la visée ; la bille blanche ajoute de l’effet.",
+    "howTo": "Faites glisser le doigt sur la table pour tourner la queue. Pour tirer, saisissez la queue elle-même, tirez-la en arrière et relâchez : plus vous tirez, plus le coup est fort. La queue sur le côté de la table fait la même chose. Les flèches affinent la visée ; la bille blanche ajoute de l’effet.",
     "status": {
       "yourShot": "À vous de jouer",
       "ballInHand": "Bille en main : placez la blanche, puis tirez la queue",
@@ -1176,7 +1163,8 @@
       "spinHint": "Touchez l’endroit où la queue doit frapper la bille blanche : en haut pour le coulé, en bas pour le rétro, sur les côtés pour l’effet latéral.",
       "spinReset": "Centre"
     },
-    "rotate": "Tournez votre téléphone : la table remplit l’écran."
+    "rotate": "Tournez votre téléphone : la table remplit l’écran.",
+    "backToPool": "Retour au billard"
   },
   "share": {
     "link": "Lien à partager",
@@ -1522,5 +1510,20 @@
     "homeDescription": "Jouez gratuitement en ligne aux échecs, au ludo, aux dames et au billard contre de vrais joueurs partout en Afrique. Un seul compte, des jetons gratuits pour commencer, des parties vérifiées par le serveur.",
     "signupDescription": "Créez un compte African Game Hub gratuit et jouez en ligne aux échecs, au ludo, aux dames et au billard contre de vrais joueurs partout en Afrique. Une minute suffit. 18 ans ou plus.",
     "loginDescription": "Connectez-vous à African Game Hub pour jouer en ligne aux échecs, au ludo, aux dames et au billard contre de vrais joueurs partout en Afrique."
+  },
+  "gameMenu": {
+    "bar": "Commandes de la partie",
+    "open": "Menu",
+    "title": "Menu de la partie",
+    "settings": "Réglages",
+    "rules": "Règles",
+    "soundOff": "Couper les sons",
+    "soundOn": "Activer les sons",
+    "cancel": "Annuler",
+    "back": "Retour",
+    "chat": "Discuter avec votre adversaire",
+    "chatNew": "Discuter avec votre adversaire : nouveau message",
+    "chatClosed": "Discussion fermée : votre adversaire est parti",
+    "leave": "Quitter la partie"
   }
 }

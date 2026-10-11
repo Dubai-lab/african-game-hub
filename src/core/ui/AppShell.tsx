@@ -76,7 +76,7 @@ export function AppShell() {
 
       <nav
         aria-label={t('nav.label')}
-        className="fixed inset-x-0 bottom-0 z-30 border-t-2 border-ink bg-panel pb-[env(safe-area-inset-bottom)] lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 border-t-2 border-ink bg-panel pb-[var(--safe-bottom)] lg:hidden"
       >
         <ul className="mx-auto grid h-14 max-w-md grid-cols-6">
           {TABS.map((tab) => (

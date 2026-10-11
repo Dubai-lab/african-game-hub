@@ -1,5 +1,5 @@
 import { useEffect, useRef, useContext } from 'react'
-import { pointIn, Sideways } from './sideways'
+import { onCue, pullAlongCue, Sideways, touchIn } from './sideways'
 import { type Ball, canPlaceCue, POCKETS, TABLE } from '../../../supabase/functions/_shared/pool'
 import { type CueId, CUES } from './cues'
 
@@ -327,17 +327,30 @@ type Props = {
   /** The player must call a pocket: touching one calls it. */
   canCall: boolean
   onCall: (pocket: number) => void
+  /** The cue on the table may be taken hold of and pulled back to shoot. */
+  canShoot: boolean
+  /** The cue is being pulled back: 0 to 1. */
+  onPull: (power: number) => void
+  /** Let go: shoot with this power, 0 to 1. */
+  onShoot: (power: number) => void
 }
 
+/** A touch this close to a pocket (in the table's own measure) calls it: a fingertip, not a pin. */
+const POCKET_REACH = 300
+/** Pulling the cue on the table this far back gives full power. */
+const FULL_PULL = 620
+/** A pull shorter than this is a change of mind, not a shot. */
+const LEAST_PULL = 0.04
+
 /** The table and everything on it. Draws what it is given; the server decides what happens. */
-export function PoolCanvas({ balls, vertical, aim, power, ballInHand, behindHeadString, targets, onAim, onPlace, label, cloth, cue: cueId, guide, called, canCall, onCall }: Props) {
+export function PoolCanvas({ balls, vertical, aim, power, ballInHand, behindHeadString, targets, onAim, onPlace, label, cloth, cue: cueId, guide, called, canCall, onCall, canShoot, onPull, onShoot }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   // The screen this table is on may be drawn turned (see sideways.ts).
   const sideways = useContext(Sideways)
   const screenTurned = useRef(sideways)
   screenTurned.current = sideways
-  const live = useRef({ balls, aim, power, ballInHand, behindHeadString, targets, onAim, onPlace, guide, called, canCall, onCall, cueId })
-  live.current = { balls, aim, power, ballInHand, behindHeadString, targets, onAim, onPlace, guide, called, canCall, onCall, cueId }
+  const live = useRef({ balls, aim, power, ballInHand, behindHeadString, targets, onAim, onPlace, guide, called, canCall, onCall, cueId, canShoot, onPull, onShoot })
+  live.current = { balls, aim, power, ballInHand, behindHeadString, targets, onAim, onPlace, guide, called, canCall, onCall, cueId, canShoot, onPull, onShoot }
 
   useEffect(() => {
     const canvas = canvasRef.current!
@@ -574,13 +587,15 @@ export function PoolCanvas({ balls, vertical, aim, power, ballInHand, behindHead
     const observer = new ResizeObserver(resize)
     observer.observe(canvas)
 
-    // A finger on the cue ball (with ball in hand) carries it. Anywhere else, dragging turns
+    // A finger on the cue ball (with ball in hand) carries it. A finger on the cue itself takes
+    // hold of it: pulling back draws it, and letting go shoots. Anywhere else, dragging turns
     // the cue about the cue ball by as much as the finger goes round it: the cue never jumps to
     // where the table was touched, and dragging far from the ball turns it very finely.
     let carrying = false
     let turning: { finger: number; aim: number } | null = null
+    let pulling: { from: { x: number; y: number }; power: number } | null = null
     const point = (event: PointerEvent): [number, number] => {
-      const [across, down] = pointIn(canvas.getBoundingClientRect(), event.clientX, event.clientY, screenTurned.current)
+      const [across, down] = touchIn(canvas, event.clientX, event.clientY, screenTurned.current)
       return toTable(across * canvas.width, down * canvas.height)
     }
     const act = (event: PointerEvent) => {
@@ -590,6 +605,11 @@ export function PoolCanvas({ balls, vertical, aim, power, ballInHand, behindHead
       const [x, y] = point(event)
       if (carrying) {
         if (canPlaceCue(state.balls, x, y, state.behindHeadString)) state.onPlace(x, y)
+        return
+      }
+      if (pulling) {
+        pulling.power = pullAlongCue(pulling.from, { x, y }, state.aim, FULL_PULL)
+        state.onPull(pulling.power)
         return
       }
       if (!turning || Math.hypot(x - cue.x, y - cue.y) < R * 0.8) return
@@ -602,21 +622,39 @@ export function PoolCanvas({ balls, vertical, aim, power, ballInHand, behindHead
       if (!state.aim || !cue) return
       const [x, y] = point(event)
       if (state.canCall) {
-        // A touch on a pocket calls it.
+        // A touch on a pocket, or near enough for a fingertip, calls it: the nearest one.
+        let nearest = -1
+        let distance = POCKET_REACH
         for (let i = 0; i < POCKETS.length; i++) {
           const at = mouth(i)
-          if (Math.hypot(x - at.x, y - at.y) < 170) return state.onCall(i)
+          const away = Math.hypot(x - at.x, y - at.y)
+          if (away < distance) {
+            nearest = i
+            distance = away
+          }
         }
+        if (nearest >= 0) return state.onCall(nearest)
       }
       carrying = state.ballInHand && Math.hypot(x - cue.x, y - cue.y) < R * 2.5
-      turning = carrying ? null : { finger: Math.atan2(y - cue.y, x - cue.x), aim: Math.atan2(state.aim.dy, state.aim.dx) }
+      // The cue as it lies on the table (see where it is drawn): from just behind the ball.
+      const held = !carrying && state.canShoot && onCue({ x, y }, cue, state.aim, R * 1.6, R * 1.6 + (TABLE.w + RAIL * 2) * 0.42, Math.max(R * 3.2, 100))
+      pulling = held ? { from: { x, y }, power: 0 } : null
+      turning = carrying || held ? null : { finger: Math.atan2(y - cue.y, x - cue.x), aim: Math.atan2(state.aim.dy, state.aim.dx) }
       canvas.setPointerCapture(event.pointerId)
       if (carrying) act(event)
     }
     const move = (event: PointerEvent) => {
-      if (carrying || turning) act(event)
+      if (carrying || turning || pulling) act(event)
     }
-    const up = () => {
+    const up = (event: PointerEvent) => {
+      const state = live.current
+      if (pulling) {
+        const power = pulling.power
+        pulling = null
+        state.onPull(0)
+        // Letting go shoots; a cancelled touch (a call coming in, the screen locking) does not.
+        if (event.type === 'pointerup' && power >= LEAST_PULL) state.onShoot(power)
+      }
       carrying = false
       turning = null
     }

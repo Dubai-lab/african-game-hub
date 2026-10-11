@@ -22,15 +22,19 @@ type Props = {
   onShoot: (power: number) => void
   className?: string
   cue: CueId
+  /** How far the cue on the table itself is being pulled, 0 to 1: this cue shows the same. */
+  drawn?: number
 }
 
-export function PowerCue({ ready, blocked, label, onPull, onShoot, className = '', cue }: Props) {
+export function PowerCue({ ready, blocked, label, onPull, onShoot, className = '', cue, drawn = 0 }: Props) {
   const track = useRef<HTMLDivElement>(null)
   const start = useRef<{ x: number; y: number } | null>(null)
   // On a screen the game has turned, pulling "down" the cue is a pull across the glass.
   const sideways = useContext(Sideways)
   const [pull, setPull] = useState(0)
   const usable = ready && !blocked
+  // What is shown: this cue's own pull, or the pull being made on the table.
+  const level = Math.max(pull, drawn)
 
   const set = (power: number) => {
     setPull(power)
@@ -56,7 +60,7 @@ export function PowerCue({ ready, blocked, label, onPull, onShoot, className = '
       aria-orientation="vertical"
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-valuenow={Math.round(pull * 100)}
+      aria-valuenow={Math.round(level * 100)}
       aria-disabled={!usable}
       data-testid={ready ? 'pool-power' : undefined}
       className={`relative w-11 shrink-0 touch-none select-none overflow-hidden rounded-xl border-2 border-ink bg-[#161a2e] outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary ${usable ? 'cursor-grab active:cursor-grabbing' : 'opacity-45'} ${className}`}
@@ -85,7 +89,7 @@ export function PowerCue({ ready, blocked, label, onPull, onShoot, className = '
       }}
     >
       {/* How hard: fills from the top as the cue comes back, green to red. */}
-      <div className="absolute inset-x-0 top-0 opacity-80" style={{ height: `${pull * 100}%`, background: 'linear-gradient(to bottom, #2fb574, #f6c400 60%, #de1c2c)' }} aria-hidden="true" />
+      <div className="absolute inset-x-0 top-0 opacity-80" style={{ height: `${level * 100}%`, background: 'linear-gradient(to bottom, #2fb574, #f6c400 60%, #de1c2c)' }} aria-hidden="true" />
       {/* Marks along the track. */}
       {[0.2, 0.4, 0.6, 0.8].map((mark) => (
         <span key={mark} className="absolute inset-x-1.5 h-px bg-white/25" style={{ top: `${mark * 100}%` }} aria-hidden="true" />
@@ -95,12 +99,12 @@ export function PowerCue({ ready, blocked, label, onPull, onShoot, className = '
         aria-hidden="true"
         className="absolute left-1/2 top-2 h-[62%] w-2.5 rounded-full shadow-[2px_2px_3px_rgba(0,0,0,0.5)]"
         style={{
-          transform: `translate(-50%, ${pull * (FULL_PULL / 0.62) * 100}%)`,
+          transform: `translate(-50%, ${level * (FULL_PULL / 0.62) * 100}%)`,
           background: cueGradient(cue),
         }}
       />
       <span className="absolute inset-x-0 bottom-1 text-center text-xs font-bold tabular-nums text-white" aria-hidden="true">
-        {Math.round(pull * 100)}
+        {Math.round(level * 100)}
       </span>
     </div>
   )

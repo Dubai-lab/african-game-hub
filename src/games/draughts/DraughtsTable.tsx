@@ -1,9 +1,9 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
 import { useSettingsStore } from '@/core/settings/settingsStore'
 import { Avatar } from '@/core/ui/Avatar'
 import { Button } from '@/core/ui/Button'
+import { ChatFold, GameBar, GameHeader, GameMenu, GearIcon, useChatFold, useLockedScreen } from '@/core/ui/gameScreen'
 import { ResultDialog, ResultStat, ResultStats, type ResultTone } from '@/core/ui/ResultDialog'
 import { Toggle } from '@/core/ui/Toggle'
 import { type ClockState, formatClock, LOW_TIME_MS, remainingMs, TENTHS_BELOW_MS } from '@/games/chess/engine/clock'
@@ -14,8 +14,6 @@ import { feedback, preloadSounds } from './sound'
 import { DRAUGHTS_BOARDS, DRAUGHTS_PIECES } from './themes'
 import type { DraughtsController } from './useLocalDraughtsGame'
 
-const iconButton = 'flex size-11 items-center justify-center border-2 border-line bg-panel text-ink focus-visible:outline-2 focus-visible:outline-primary'
-
 /** A small in-page dialog (confirm resign, answer a draw offer, the result). No browser pop-ups. */
 export function Sheet({ title, children, onClose }: { title: string; children: ReactNode; onClose?: () => void }) {
   return (
@@ -25,7 +23,7 @@ export function Sheet({ title, children, onClose }: { title: string; children: R
         aria-modal="true"
         aria-label={title}
         onClick={(event) => event.stopPropagation()}
-        className="max-h-[92dvh] w-full max-w-md overflow-y-auto border-t-4 border-brand bg-panel px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:border-4"
+        className="max-h-[92dvh] w-full max-w-md overflow-y-auto border-t-4 border-brand bg-panel px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:border-4"
       >
         <h2 className="font-display text-2xl font-extrabold text-primary">{title}</h2>
         {children}
@@ -104,14 +102,11 @@ function MoveList({ played, viewPly, onView }: { played: Played[]; viewPly: numb
     current.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   }, [viewPly, played.length])
 
-  const step = 'flex size-11 shrink-0 items-center justify-center border-2 border-line bg-panel text-xl font-bold disabled:opacity-40'
   return (
-    <div className="flex shrink-0 items-center gap-2 lg:grid lg:min-h-48 lg:flex-1 lg:grid-cols-2 lg:grid-rows-[minmax(0,1fr)_auto] lg:items-stretch">
-      <button type="button" className={`${step} lg:col-start-1 lg:row-start-2 lg:w-full`} disabled={viewPly === 0} onClick={() => onView(viewPly - 1)} aria-label={t('draughts.moves.previous')}>
-        ‹
-      </button>
+    // Stepping back and forward is done from the bar under it.
+    <div className="flex shrink-0 items-center lg:min-h-48 lg:flex-1 lg:items-stretch">
       <ol
-        className="flex min-h-11 flex-1 items-center gap-x-1 overflow-x-auto whitespace-nowrap border-2 border-line bg-panel px-2 lg:col-span-2 lg:row-start-1 lg:grid lg:min-h-0 lg:grid-cols-2 lg:content-start lg:items-stretch lg:gap-x-3 lg:gap-y-0.5 lg:overflow-y-auto lg:overflow-x-hidden lg:bg-surface lg:p-2"
+        className="flex min-h-11 flex-1 items-center gap-x-1 overflow-x-auto whitespace-nowrap border-2 border-line bg-panel px-2 lg:grid lg:min-h-0 lg:grid-cols-2 lg:content-start lg:items-stretch lg:gap-x-3 lg:gap-y-0.5 lg:overflow-y-auto lg:overflow-x-hidden lg:bg-surface lg:p-2"
         aria-label={t('draughts.moves.title')}
       >
         {played.length === 0 && <li className="text-sm text-muted lg:col-span-2">{t('draughts.moves.none')}</li>}
@@ -133,9 +128,6 @@ function MoveList({ played, viewPly, onView }: { played: Played[]; viewPly: numb
           )
         })}
       </ol>
-      <button type="button" className={`${step} lg:col-start-2 lg:row-start-2 lg:w-full`} disabled={viewPly >= played.length} onClick={() => onView(viewPly + 1)} aria-label={t('draughts.moves.next')}>
-        ›
-      </button>
     </div>
   )
 }
@@ -154,6 +146,10 @@ type Props = {
   /** Before both players have moved: leaving simply calls the game off. */
   canAbort?: boolean
   chat?: ReactNode
+  /** The chat is over: the opponent has left the finished game. The chat button says so. */
+  chatClosed?: boolean
+  /** Goes up by one each time the opponent says something: the chat button shows there is news. */
+  chatHeard?: number
   /** Shown above the board, for example "Reconnecting". */
   notice?: ReactNode
   /** What the player can do once the game is over. */
@@ -170,13 +166,15 @@ type Props = {
 }
 
 /** The whole draughts screen: both player cards, the board, the moves and the controls. */
-export function DraughtsTable({ title, game, players, movable, perspective, timed, onlineDraws, canAbort, chat, notice, overActions, tokensChange, rating, ratingChange, onUndo, canUndo, status }: Props) {
+export function DraughtsTable({ title, game, players, movable, perspective, timed, onlineDraws, canAbort, chat, chatClosed = false, chatHeard = 0, notice, overActions, tokensChange, rating, ratingChange, onUndo, canUndo, status }: Props) {
   const { t } = useTranslation()
   const settings = useSettingsStore()
   const [flipped, setFlipped] = useState(false)
   // Null means "follow the game"; a number means the player is looking back at that move.
   const [viewPly, setViewPly] = useState<number | null>(null)
-  const [dialog, setDialog] = useState<'resign' | 'settings' | 'rules' | null>(null)
+  const [dialog, setDialog] = useState<'resign' | 'settings' | 'rules' | 'menu' | null>(null)
+  const chatFold = useChatFold(chatHeard)
+  useLockedScreen()
   const [resultClosed, setResultClosed] = useState(false)
 
   useEffect(() => preloadSounds(), [])
@@ -243,35 +241,25 @@ export function DraughtsTable({ title, game, players, movable, perspective, time
   const resultTone: ResultTone = called ? 'neutral' : !outcome || outcome.winner === null ? 'draw' : perspective === null || outcome.winner === perspective ? 'win' : 'loss'
 
   return (
-    // Phone: one column (bar, board, moves, buttons). Computer: the board takes the height of
-    // the window, with the moves and controls in a panel beside it.
-    <div className="mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-2 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 lg:grid lg:h-dvh lg:max-w-none lg:grid-cols-[min(calc(100dvh-10.5rem),calc(100vw-30rem))_24rem] lg:grid-rows-[auto_minmax(0,1fr)] lg:justify-center lg:gap-x-8 lg:gap-y-3 lg:px-8 lg:py-4">
-      <header className="flex items-center justify-between gap-2 lg:col-start-2 lg:row-start-1">
-        <Link to="/play/draughts" className="flex min-h-11 items-center font-semibold text-primary underline underline-offset-4">
-          {t('draughts.back')}
-        </Link>
-        <p className="truncate font-display text-lg font-extrabold tabular-nums text-primary">{title}</p>
-        <div className="flex gap-2">
-          <button type="button" className={`${iconButton} font-display text-lg font-extrabold`} aria-label={t('draughts.rules.title')} onClick={() => setDialog('rules')}>
-            ?
-          </button>
-          <button type="button" className={iconButton} aria-label={t('draughts.settings.title')} onClick={() => setDialog('settings')}>
-            <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <circle cx="12" cy="12" r="3.2" />
-              <path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M18.5 5.5l-2.1 2.1M7.6 16.4l-2.1 2.1" strokeLinecap="round" />
-            </svg>
-          </button>
-        </div>
-      </header>
+    // The screen is fixed: exactly as high as the phone, and it never scrolls. Phone: one
+    // column (title, board, moves, bar); if the part under the board holds more than fits, that
+    // part alone scrolls. Computer: the board takes the height of the window, with the moves
+    // and controls in a panel beside it.
+    <div className="mx-auto flex h-dvh w-full max-w-xl flex-col gap-2 overflow-hidden px-3 pb-[max(0.5rem,var(--safe-bottom))] pt-1 lg:grid lg:max-w-none lg:grid-cols-[min(calc(100dvh-10.5rem),calc(100vw-30rem))_24rem] lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:justify-center lg:gap-x-8 lg:gap-y-3 lg:px-8 lg:py-4">
+      <GameHeader title={title} over={over} backTo="/play/draughts" className="lg:col-start-2 lg:row-start-1" />
 
-      <div className="flex flex-col lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:justify-center">
-        <div className="mx-auto flex w-full max-w-[min(100%,calc(100dvh-19.5rem))] flex-col gap-2 lg:max-w-full">
+      <div className="flex shrink-0 flex-col lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:justify-center">
+        {/* The board is as large as the screen allows. A draughts board has a hundred squares,
+            so on a phone it runs from one edge of the glass to the other (the cards keep their
+            margin); only a phone too short to show it whole makes it smaller. */}
+        <div className="mx-auto flex w-full max-w-[min(100%,calc(100dvh-20.5rem))] flex-col gap-1.5 lg:max-w-full lg:gap-2">
           {notice && (
             <div role="status" className="bg-ink px-3 py-1.5 text-center text-sm font-semibold text-surface">
               {notice}
             </div>
           )}
           {card(top)}
+          <div className="max-lg:-mx-3">
           <DraughtsBoard
             board={board}
             orientation={bottom}
@@ -286,54 +274,105 @@ export function DraughtsTable({ title, game, players, movable, perspective, time
             showNumbers={settings.draughtsNumbers}
             showHints={settings.draughtsHints}
           />
+          </div>
           {card(bottom)}
         </div>
       </div>
 
-      <aside className="flex flex-col gap-2 lg:col-start-2 lg:row-start-2 lg:min-h-0 lg:overflow-y-auto lg:border-2 lg:border-line lg:bg-panel lg:p-4">
+      {/* What is under the board. If it holds more than fits, it scrolls by itself. */}
+      <aside className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto lg:col-start-2 lg:row-start-2 lg:border-2 lg:border-line lg:bg-panel lg:p-4">
         <div className="min-h-6 text-center text-sm font-semibold text-muted" role="status">
           {status ?? (mustCapture ? t('draughts.mustCapture') : <span aria-hidden="true">&nbsp;</span>)}
         </div>
 
         <MoveList played={played} viewPly={shownPly} onView={view} />
-        {chat}
-
-        {outcome ? (
-          <>
-            {resultClosed && (
-              <Button variant="ghost" onClick={() => setResultClosed(false)} data-testid="show-result">
-                {t('draughts.over.showResult')}
-              </Button>
-            )}
-            {overActions}
-          </>
-        ) : !atLive ? (
-          <Button onClick={() => setViewPly(null)}>{t('draughts.moves.backToGame')}</Button>
-        ) : (
-          <div className="grid auto-cols-fr grid-flow-col gap-2 *:px-1 *:text-sm">
-            {onlineDraws && perspective && (
-              <Button variant="ghost" onClick={() => game.offerDraw(perspective)} disabled={livePly < 2 || game.drawOfferBy !== null}>
-                {game.drawOfferBy === perspective ? t('draughts.actions.drawOffered') : t('draughts.actions.draw')}
-              </Button>
-            )}
-            {onUndo && (
-              <Button variant="ghost" onClick={onUndo} disabled={!canUndo}>
-                {t('draughts.actions.undo')}
-              </Button>
-            )}
-            {/* Someone only watching the game has nothing to resign. */}
-            {movable !== 'none' && (
-              <Button variant="ghost" onClick={() => setDialog('resign')}>
-                {canAbort ? t('draughts.actions.abort') : t('draughts.actions.resign')}
-              </Button>
-            )}
-            <Button variant="ghost" onClick={() => setFlipped((f) => !f)}>
-              {t('draughts.actions.flip')}
-            </Button>
-          </div>
+        {chat && (
+          <ChatFold open={chatFold.open} onClose={chatFold.hide}>
+            {chat}
+          </ChatFold>
         )}
-        {outcome && resultClosed && !atLive && <Button variant="ghost" onClick={() => setViewPly(null)}>{t('draughts.moves.lastPosition')}</Button>}
+
+        {outcome ? overActions : !atLive && <Button onClick={() => setViewPly(null)}>{t('draughts.moves.backToGame')}</Button>}
       </aside>
+
+      <GameBar
+        className="lg:col-start-2 lg:row-start-3"
+        onMenu={() => setDialog('menu')}
+        chat={chat ? { closed: chatClosed, news: chatFold.news, onOpen: chatFold.show } : null}
+        steps={{
+          atStart: shownPly === 0,
+          atEnd: shownPly >= livePly,
+          onPrevious: () => view(shownPly - 1),
+          onNext: () => view(shownPly + 1),
+          previousLabel: t('draughts.moves.previous'),
+          nextLabel: t('draughts.moves.next'),
+        }}
+      />
+
+      {dialog === 'menu' && (
+        <GameMenu onClose={() => setDialog(null)}>
+          {!outcome && atLive && onlineDraws && perspective && (
+            <Button
+              variant="ghost"
+              disabled={livePly < 2 || game.drawOfferBy !== null}
+              onClick={() => {
+                setDialog(null)
+                game.offerDraw(perspective)
+              }}
+            >
+              {game.drawOfferBy === perspective ? t('draughts.actions.drawOffered') : t('draughts.actions.draw')}
+            </Button>
+          )}
+          {!outcome && atLive && onUndo && (
+            <Button
+              variant="ghost"
+              disabled={!canUndo}
+              onClick={() => {
+                setDialog(null)
+                onUndo()
+              }}
+            >
+              {t('draughts.actions.undo')}
+            </Button>
+          )}
+          {/* Someone only watching the game has nothing to resign. */}
+          {!outcome && movable !== 'none' && (
+            <Button variant="ghost" onClick={() => setDialog('resign')}>
+              {canAbort ? t('draughts.actions.abort') : t('draughts.actions.resign')}
+            </Button>
+          )}
+          {outcome && resultClosed && (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setDialog(null)
+                setResultClosed(false)
+              }}
+              data-testid="show-result"
+            >
+              {t('draughts.over.showResult')}
+            </Button>
+          )}
+          <Button variant="ghost" onClick={() => setDialog('rules')}>
+            {t('gameMenu.rules')}
+          </Button>
+          <Button variant="ghost" onClick={() => setDialog('settings')}>
+            <span className="me-2 inline-flex align-middle">
+              <GearIcon />
+            </span>
+            {t('gameMenu.settings')}
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setDialog(null)
+              setFlipped((f) => !f)
+            }}
+          >
+            {t('draughts.actions.flip')}
+          </Button>
+        </GameMenu>
+      )}
 
       {dialog === 'resign' && !outcome && perspective && (
         <Sheet title={canAbort ? t('draughts.abort.title') : t('draughts.resign.title')} onClose={() => setDialog(null)}>

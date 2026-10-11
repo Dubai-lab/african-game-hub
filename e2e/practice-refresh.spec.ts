@@ -20,9 +20,11 @@ test('pool against the computer survives a refresh', async ({ page }) => {
   const state = page.getByTestId('pool-state')
   const cue = page.getByTestId('pool-power')
   const box = (await cue.boundingBox())!
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.25)
+  // (On this upright phone the game draws its screen turned: the cue lies across the top of
+  // the glass and is pulled from right to left.)
+  await page.mouse.move(box.x + box.width * 0.75, box.y + box.height / 2)
   await page.mouse.down()
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.8, { steps: 5 })
+  await page.mouse.move(box.x + box.width * 0.2, box.y + box.height / 2, { steps: 5 })
   await page.mouse.up()
   await expect.poll(async () => Number(await state.getAttribute('data-shot-no')), { timeout: 20_000 }).toBeGreaterThan(0)
   await expect(state).toHaveAttribute('data-playing', 'false', { timeout: 30_000 })
@@ -32,7 +34,10 @@ test('pool against the computer survives a refresh', async ({ page }) => {
   // Straight back at the table, in the same game: no setup screen, and no shot has been lost.
   await expect(page.getByTestId('pool-table')).toBeVisible({ timeout: 20_000 })
   await expect(page.getByRole('button', { name: 'Start' })).toHaveCount(0)
-  await expect(page.getByText(/9-ball/).first()).toBeVisible()
+  // (The table fills the screen; the name of the game is in its menu.)
+  await page.getByRole('button', { name: 'Menu' }).click()
+  await expect(page.getByRole('dialog', { name: /9-ball/ })).toBeVisible()
+  await page.getByRole('dialog', { name: /9-ball/ }).getByRole('button', { name: 'Close' }).click()
   expect(Number(await state.getAttribute('data-shot-no'))).toBeGreaterThanOrEqual(before)
 
   // Choosing to leave the game really does end it.
@@ -57,6 +62,7 @@ test('Ludo against the computer survives a refresh', async ({ page }) => {
   expect(before).toBeGreaterThan(0)
 
   // Leaving the game forgets it: the next visit offers a new one.
+  await page.getByTestId('game-menu').click()
   await page.getByRole('button', { name: 'Leave this game' }).click()
   const confirm = page.getByRole('dialog').getByRole('button').last()
   if ((await page.getByRole('dialog').count()) > 0) await confirm.click()

@@ -699,19 +699,6 @@
       "takeBack": "Take back",
       "back": "Back to the game",
       "hint": "Move any piece to try another line. The real game is kept."
-    },
-    "menu": {
-      "bar": "Game controls",
-      "open": "Menu",
-      "title": "Game menu",
-      "settings": "Settings",
-      "soundOff": "Turn sounds off",
-      "soundOn": "Turn sounds on",
-      "cancel": "Cancel",
-      "back": "Back to chess",
-      "chat": "Chat with your opponent",
-      "chatNew": "Chat with your opponent: new message",
-      "chatClosed": "Chat is closed: your opponent has left"
     }
   },
   "ratingPools": {
@@ -963,7 +950,7 @@
       "other": "The game is over.",
       "no_show": "A player did not take their first turn in time, and loses the game."
     },
-    "back": "Lobby",
+    "back": "Back",
     "playersCount_one": "{{count}} player",
     "playersCount_other": "{{count}} players",
     "place": {
@@ -1059,7 +1046,7 @@
     "tableLabel": "Pool table",
     "clockLabel": "Seconds left for this shot",
     "stake": "{{stake}} tokens",
-    "back": "Lobby",
+    "back": "Back",
     "backToLobby": "Back to the lobby",
     "notFound": "This game could not be found.",
     "loadFailed": "We could not load this game.",
@@ -1072,7 +1059,7 @@
     "aimRight": "Aim a little right",
     "aimLeftMore": "Aim further left",
     "aimRightMore": "Aim further right",
-    "howTo": "Drag on the table to turn the cue, then pull the cue beside the table back and let go: the further you pull, the harder the shot. The arrows fine-tune the aim; the white ball adds spin.",
+    "howTo": "Drag on the table to turn the cue. To shoot, take hold of the cue itself and pull it back, then let go: the further you pull, the harder the shot. The cue at the side of the table does the same. The arrows fine-tune the aim; the white ball adds spin.",
     "status": {
       "yourShot": "Your shot",
       "ballInHand": "Ball in hand: place the cue ball, then pull the cue",
@@ -1176,7 +1163,8 @@
       "spinHint": "Touch where the cue should strike the white ball: high to follow, low to draw back, the sides for side spin.",
       "spinReset": "Centre"
     },
-    "rotate": "Turn your phone sideways: the table fills the screen."
+    "rotate": "Turn your phone sideways: the table fills the screen.",
+    "backToPool": "Back to pool"
   },
   "share": {
     "link": "Link to share",
@@ -1522,5 +1510,20 @@
     "homeDescription": "Play chess, ludo, draughts (checkers) and 8-ball pool online against real players across Africa. Free to play: one account, free tokens to start, fair games checked by the server.",
     "signupDescription": "Create a free African Game Hub account and play chess, ludo, draughts and pool online against real players across Africa. It takes a minute. 18 or older.",
     "loginDescription": "Log in to African Game Hub to play chess, ludo, draughts and pool online against real players across Africa."
+  },
+  "gameMenu": {
+    "bar": "Game controls",
+    "open": "Menu",
+    "title": "Game menu",
+    "settings": "Settings",
+    "rules": "Rules",
+    "soundOff": "Turn sounds off",
+    "soundOn": "Turn sounds on",
+    "cancel": "Cancel",
+    "back": "Back",
+    "chat": "Chat with your opponent",
+    "chatNew": "Chat with your opponent: new message",
+    "chatClosed": "Chat is closed: your opponent has left",
+    "leave": "Leave the game"
   }
 }

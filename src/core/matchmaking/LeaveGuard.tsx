@@ -60,7 +60,7 @@ export function LeaveGuard({ active }: { active: boolean }) {
   }
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/55 sm:items-center" role="presentation">
-      <div role="alertdialog" aria-modal="true" aria-label={t('leaveGame.title')} className="w-full max-w-md border-t-4 border-brand bg-panel px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:border-4">
+      <div role="alertdialog" aria-modal="true" aria-label={t('leaveGame.title')} className="w-full max-w-md border-t-4 border-brand bg-panel px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:border-4">
         <h2 className="font-display text-2xl font-extrabold text-primary">{t('leaveGame.title')}</h2>
         <p className="mt-1 text-muted">{t('leaveGame.body')}</p>
         <div className="mt-5 grid grid-cols-2 gap-2">

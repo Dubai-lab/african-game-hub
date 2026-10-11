@@ -194,7 +194,7 @@ export default function LudoComputerPage() {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-5 py-6">
-      <Link to="/lobby" className="flex min-h-11 items-center self-start font-semibold text-primary underline underline-offset-4">
+      <Link to="/play/ludo" className="flex min-h-11 items-center self-start font-semibold text-primary underline underline-offset-4">
         {t('ludo.back')}
       </Link>
       <div>
