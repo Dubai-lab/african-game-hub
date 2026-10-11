@@ -261,9 +261,11 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
         (balls) => frames.push(balls.map((b) => ({ ...b }))),
         (event) => knocks.push({ ...event, at: (event.step / 4) * FRAME_MS }),
       )
-      const { soundOn, dataSaver } = useSettingsStore.getState()
-      // In data-saver mode the balls are simply shown where they came to rest.
-      if (dataSaver || frames.length < 2) {
+      const { soundOn } = useSettingsStore.getState()
+      // The roll of the balls is always shown, data saver or not: it is the game itself, it is
+      // worked out on the phone and costs no data, and without it the balls simply jump to new
+      // places and the game cannot be followed.
+      if (frames.length < 2) {
         setShown(frames.at(-1) ?? from)
         settle(no)
         return
