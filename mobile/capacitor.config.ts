@@ -13,7 +13,10 @@ const config: CapacitorConfig = {
   // What the shell itself carries: only the page shown when the site cannot be reached.
   webDir: 'www',
   // The site can tell it is inside the app (see src/core/lib/nativeApp.ts in the web app).
-  appendUserAgent: 'AfricanGameHubApp/1.0',
+  // The number is the shell's own version: the site behaves a little differently for each
+  // (see shellKeepsPageClear in nativeApp.ts). Raise it whenever the shell changes how it
+  // shows the page.
+  appendUserAgent: 'AfricanGameHubApp/1.1',
   backgroundColor: '#1f2a7a',
   server: {
     // Straight to the lobby: a signed-out player is sent to the log-in page from there. The
@@ -30,8 +33,11 @@ const config: CapacitorConfig = {
     allowMixedContent: false,
   },
   ios: {
-    // The page is kept clear of the notch, the status bar and the home bar by the phone itself.
-    contentInset: 'always',
+    // The page is given the whole glass, as in a browser, and keeps itself clear of the notch
+    // and the home bar (--safe-top and --app-h in the site's index.css). The first shell let
+    // the phone push the page down instead; on that, a screen the game draws turned (pool) was
+    // touched in the wrong place.
+    contentInset: 'never',
     // Pages are not zoomed or previewed like documents in a browser.
     allowsLinkPreview: false,
   },

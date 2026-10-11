@@ -28,7 +28,7 @@ function ErrorFallback({ fullScreen, onRetry }: { fullScreen?: boolean; onRetry:
   return (
     <div
       role="alert"
-      className={`flex flex-col items-center justify-center gap-4 px-6 py-12 text-center ${fullScreen ? 'min-h-dvh' : ''}`}
+      className={`flex flex-col items-center justify-center gap-4 px-6 py-12 text-center ${fullScreen ? 'min-h-(--app-h)' : ''}`}
     >
       <p className="text-lg font-semibold">{t('errors.sectionCrashed')}</p>
       <div className="flex gap-3">

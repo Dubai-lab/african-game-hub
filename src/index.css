@@ -37,6 +37,9 @@ html {
   --safe-right: env(safe-area-inset-right, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
+  /* How high a page is: the screen, less the room at the top for the phone's status bar and
+     notch. Every page is sized from this, never from the screen itself. */
+  --app-h: calc(100dvh - var(--safe-top));
 }
 
 html.in-app {
@@ -62,6 +65,20 @@ html.screen-locked body {
 body {
   @apply bg-surface font-sans text-ink antialiased;
   -webkit-tap-highlight-color: transparent;
+  /* The page starts below the phone's status bar and notch. */
+  padding-top: var(--safe-top);
+}
+
+/* Behind the status bar: the page's own colour, so that what scrolls up the page passes under
+   it and is not read through the clock. (Above the page, below anything opened over it.) */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: var(--safe-top);
+  background: var(--color-surface);
+  z-index: 15;
+  pointer-events: none;
 }
 
 /* The band: the one decorative motif. Imigongo zigzag over a run of strip-weave colour blocks.

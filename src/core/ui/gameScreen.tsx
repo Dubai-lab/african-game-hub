@@ -9,12 +9,13 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
+import { setPlayingFullScreen } from '@/core/lib/nativeApp'
 import { useSettingsStore } from '@/core/settings/settingsStore'
 import { Button } from './Button'
 
 /**
  * Fixes the page in place for as long as the screen that calls this is shown: no scrolling, and
- * no rubber-band bounce on an iPhone. What does not fit on the screen scrolls inside its own
+ * no rubber-band bounce on an iPhone. In the phone apps it also puts the phone's status bar away. What does not fit on the screen scrolls inside its own
  * part of it (see the game tables), never the page.
  */
 export function useLockedScreen() {
@@ -22,7 +23,12 @@ export function useLockedScreen() {
     const root = document.documentElement
     root.classList.add('screen-locked')
     window.scrollTo(0, 0)
-    return () => root.classList.remove('screen-locked')
+    // In the phone apps the game takes the whole screen: the clock and battery are put away.
+    setPlayingFullScreen(true)
+    return () => {
+      root.classList.remove('screen-locked')
+      setPlayingFullScreen(false)
+    }
   }, [])
 }
 

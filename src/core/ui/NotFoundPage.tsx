@@ -5,7 +5,7 @@ import { buttonClass } from './Button'
 export default function NotFoundPage() {
   const { t } = useTranslation()
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center gap-3 px-6 text-center">
+    <div className="flex min-h-(--app-h) flex-col items-center justify-center gap-3 px-6 text-center">
       <h1 className="text-2xl font-bold">{t('notFound.title')}</h1>
       <p className="text-muted">{t('notFound.body')}</p>
       <Link to="/" className={buttonClass('primary', 'mt-4')}>

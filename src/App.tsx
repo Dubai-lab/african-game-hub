@@ -60,7 +60,7 @@ function PublicFrame() {
 function ConfigMissing() {
   const { t } = useTranslation()
   return (
-    <div role="alert" className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-3 px-6">
+    <div role="alert" className="mx-auto flex min-h-(--app-h) max-w-md flex-col justify-center gap-3 px-6">
       <h1 className="text-xl font-bold">{t('app.configMissing')}</h1>
       <p className="text-muted">{t('app.configMissingHint')}</p>
     </div>

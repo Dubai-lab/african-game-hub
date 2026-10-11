@@ -7,7 +7,7 @@ stores. The shell itself carries only the app's icon, its splash screen and the 
 there is no connection (`www/offline.html`).
 
 Nothing here is part of the website's download. The site knows it is inside the app by the name
-the shell adds to the browser's description (`AfricanGameHubApp/1.0`); the little the site does
+the shell adds to the browser's description (`AfricanGameHubApp/1.1`, the number being the shell's own version); the little the site does
 differently is in `src/core/lib/nativeApp.ts`.
 
 | | |

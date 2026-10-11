@@ -37,7 +37,7 @@ export default function LegalPage({ doc }: { doc: Doc }) {
   const sections = t(`legal.${doc}.sections`, { returnObjects: true }) as { h: string; p: string }[]
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col px-5 pb-12 pt-4">
+    <div className="mx-auto flex min-h-(--app-h) w-full max-w-2xl flex-col px-5 pb-12 pt-4">
       <header className="flex items-center justify-between">
         <Link to="/" className="font-display text-lg font-extrabold text-primary">
           {t('app.name')}

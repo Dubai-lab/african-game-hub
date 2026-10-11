@@ -1171,7 +1171,8 @@
       "again": "Play again",
       "change": "Change game",
       "youWon": "You won",
-      "youLost": "The computer won"
+      "youLost": "The computer won",
+      "leave": "Leave this game"
     },
     "wins_one": "{{count}} win",
     "wins_other": "{{count}} wins",

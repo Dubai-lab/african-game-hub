@@ -1171,7 +1171,8 @@
       "again": "Rejouer",
       "change": "Changer de jeu",
       "youWon": "Vous avez gagné",
-      "youLost": "L’ordinateur a gagné"
+      "youLost": "L’ordinateur a gagné",
+      "leave": "Quitter cette partie"
     },
     "wins_one": "{{count}} victoire",
     "wins_other": "{{count}} victoires",

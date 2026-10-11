@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
-import { Button, buttonClass } from '@/core/ui/Button'
+import { Button } from '@/core/ui/Button'
 import { ResultDialog } from '@/core/ui/ResultDialog'
 import { toast } from '@/core/ui/toast'
 import { applyShot, type PoolState, rack, type Seat, type Shot, type ShotResult, type Variant } from '../../../supabase/functions/_shared/pool'
@@ -101,7 +101,7 @@ export default function PoolComputerPage() {
 
   if (!game) {
     return (
-      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-4 py-6">
+      <div className="mx-auto flex min-h-(--app-h) w-full max-w-md flex-col gap-6 px-4 py-6">
         <Link to="/play/pool" className="font-semibold text-primary underline underline-offset-4">
           {t('pool.back')}
         </Link>
@@ -167,9 +167,10 @@ export default function PoolComputerPage() {
           over ? (
             actions
           ) : (
-            <Link to="/lobby" className={buttonClass('ghost', 'w-full')}>
-              {t('pool.backToLobby')}
-            </Link>
+            // The way out of a practice game is to end it: back to where it was set up.
+            <Button variant="ghost" className="w-full" onClick={() => setGame(null)}>
+              {t('pool.computer.leave')}
+            </Button>
           )
         }
       />

@@ -28,8 +28,8 @@ export function AppShell() {
   const inGame = /^\/(play|tournaments|challenge)\//.test(useLocation().pathname)
 
   return (
-    <div className="min-h-dvh lg:grid lg:grid-cols-[15rem_minmax(0,1fr)]">
-      <aside className="sticky top-0 hidden h-dvh flex-col bg-primary px-4 py-6 text-surface lg:flex">
+    <div className="min-h-(--app-h) lg:grid lg:grid-cols-[15rem_minmax(0,1fr)]">
+      <aside className="sticky top-0 hidden h-(--app-h) flex-col bg-primary px-4 py-6 text-surface lg:flex">
         <Link to="/lobby" className="px-3 font-display text-xl font-extrabold">
           {t('app.name')}
         </Link>
@@ -53,7 +53,7 @@ export function AppShell() {
         <div className="band mt-auto" role="presentation" style={{ ['--band-ground' as string]: 'var(--color-primary)' }} />
       </aside>
 
-      <div className="flex min-h-dvh min-w-0 flex-col">
+      <div className="flex min-h-(--app-h) min-w-0 flex-col">
         <OfflineBanner />
         <header className="mx-auto flex w-full max-w-md items-center justify-between gap-3 px-5 pb-3 pt-4 lg:hidden">
           <Link to="/lobby" className="text-base font-display font-extrabold text-primary">

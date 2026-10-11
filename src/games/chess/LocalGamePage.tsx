@@ -26,7 +26,7 @@ function Setup({ onStart }: { onStart: (control: TimeControl) => void }) {
   const control = parseTimeControls(schema).find((c) => c.id === chosen?.time_control)
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-5 pb-8 pt-4 lg:max-w-2xl lg:justify-center lg:py-12">
+    <div className="mx-auto flex min-h-(--app-h) w-full max-w-md flex-col gap-6 px-5 pb-8 pt-4 lg:max-w-2xl lg:justify-center lg:py-12">
       <header className="flex items-center justify-between">
         <Link to="/play/chess" className="flex min-h-11 items-center font-semibold text-primary underline underline-offset-4">
           {t('chess.local.back')}

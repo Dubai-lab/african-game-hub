@@ -66,7 +66,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex h-[calc(100dvh-11rem)] flex-col lg:h-[calc(100dvh-7rem)] lg:max-w-3xl">
+    <div className="flex h-[calc(var(--app-h)_-_11rem)] flex-col lg:h-[calc(var(--app-h)_-_7rem)] lg:max-w-3xl">
       <header className="flex items-center justify-between gap-3 border-b-2 border-line pb-2">
         {back}
         <h1 className="truncate font-display text-xl font-extrabold text-primary">

@@ -7,7 +7,7 @@ import { LanguageSwitcher } from '@/core/ui/LanguageSwitcher'
 export function AuthLayout({ title, children }: { title: string; children: ReactNode }) {
   const { t } = useTranslation()
   return (
-    <div className="min-h-dvh lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+    <div className="min-h-(--app-h) lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
       <aside className="hidden flex-col justify-between bg-primary p-12 text-surface lg:flex">
         <Link to="/" className="font-display text-xl font-extrabold">
           {t('app.name')}
@@ -19,7 +19,7 @@ export function AuthLayout({ title, children }: { title: string; children: React
         <div className="band" role="presentation" />
       </aside>
 
-      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 pb-8 pt-4 lg:justify-center lg:py-12">
+      <div className="mx-auto flex min-h-(--app-h) w-full max-w-md flex-col px-5 pb-8 pt-4 lg:justify-center lg:py-12">
         <header className="flex items-center justify-between lg:justify-end">
           <Link to="/" className="text-base font-display font-extrabold text-primary lg:hidden">
             {t('app.name')}

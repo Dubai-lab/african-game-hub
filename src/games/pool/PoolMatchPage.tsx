@@ -15,7 +15,7 @@ import { usePoolGame } from './usePoolGame'
 function Message({ title, children }: { title: string; children?: ReactNode }) {
   const { t } = useTranslation()
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-6 text-center">
+    <div className="flex min-h-(--app-h) flex-col items-center justify-center gap-4 px-6 text-center">
       <h1 className="font-display text-2xl font-extrabold text-primary">{title}</h1>
       {children}
       <Link to="/lobby" className={buttonClass('ghost')}>

@@ -247,14 +247,14 @@ export function DraughtsTable({ title, game, players, movable, perspective, time
     // column (title, board, moves, bar); if the part under the board holds more than fits, that
     // part alone scrolls. Computer: the board takes the height of the window, with the moves
     // and controls in a panel beside it.
-    <div className="mx-auto flex h-dvh w-full max-w-xl flex-col gap-2 overflow-hidden px-3 pb-[max(0.5rem,var(--safe-bottom))] pt-1 lg:grid lg:max-w-none lg:grid-cols-[min(calc(100dvh-10.5rem),calc(100vw-30rem))_24rem] lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:justify-center lg:gap-x-8 lg:gap-y-3 lg:px-8 lg:py-4">
+    <div className="mx-auto flex h-(--app-h) w-full max-w-xl flex-col gap-2 overflow-hidden px-3 pb-[max(0.5rem,var(--safe-bottom))] pt-1 lg:grid lg:max-w-none lg:grid-cols-[min(calc(var(--app-h)_-_10.5rem),calc(100vw-30rem))_24rem] lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:justify-center lg:gap-x-8 lg:gap-y-3 lg:px-8 lg:py-4">
       <GameHeader title={title} over={over} backTo="/play/draughts" className="lg:col-start-2 lg:row-start-1" />
 
       <div className="flex shrink-0 flex-col lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:justify-center">
         {/* The board is as large as the screen allows. A draughts board has a hundred squares,
             so on a phone it runs from one edge of the glass to the other (the cards keep their
             margin); only a phone too short to show it whole makes it smaller. */}
-        <div className="mx-auto flex w-full max-w-[min(100%,calc(100dvh-20.5rem))] flex-col gap-1.5 lg:max-w-full lg:gap-2">
+        <div className="mx-auto flex w-full max-w-[min(100%,calc(var(--app-h)_-_20.5rem))] flex-col gap-1.5 lg:max-w-full lg:gap-2">
           {notice && (
             <div role="status" className="bg-ink px-3 py-1.5 text-center text-sm font-semibold text-surface">
               {notice}

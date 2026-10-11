@@ -554,13 +554,13 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
     // then at the top of the phone (where the camera is) and its right end at the bottom.
     const frame = turned
       ? 'fixed left-[100vw] top-0 z-20 h-[100vw] w-[100dvh] origin-top-left rotate-90 ps-[max(0.375rem,var(--safe-top))] pe-[max(0.375rem,var(--safe-bottom))]'
-      : 'h-dvh w-full ps-[max(0.375rem,var(--safe-left))] pe-[max(0.375rem,var(--safe-right))]'
+      : 'h-(--app-h) w-full ps-[max(0.375rem,var(--safe-left))] pe-[max(0.375rem,var(--safe-right))]'
     return (
       <Sideways.Provider value={turned}>
       <div
         className={`grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] grid-rows-[2.25rem_minmax(0,1fr)] gap-x-1.5 gap-y-1 overflow-hidden bg-[#141a33] py-1 ${frame}`}
         // How high the screen is, whichever way it is drawn: the table is sized from it.
-        style={{ '--pool-high': turned ? '100vw' : '100dvh' } as CSSProperties}
+        style={{ '--pool-high': turned ? '100vw' : 'var(--app-h)' } as CSSProperties}
         {...(turned ? { [TURNED_SCREEN]: '' } : {})}
         data-testid="pool-screen"
         data-layout={layout}
@@ -578,7 +578,7 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
 
         {powerCue('col-start-1 row-start-2 h-full w-full')}
 
-        <div className="col-start-2 row-start-2 flex min-h-0 items-center justify-center">{tableView('max-w-[calc((var(--pool-high)-3.25rem)*1.85)]')}</div>
+        <div className="col-start-2 row-start-2 flex min-h-0 items-center justify-center">{tableView('max-w-[calc((var(--pool-high)_-_3.25rem)_*_1.85)]')}</div>
 
         {/* The round buttons beside the table: spin, the cue, the chat, and a finer turn of the cue. */}
         <div className="col-start-3 row-start-2 flex min-h-0 flex-col items-center justify-center gap-1.5" data-testid={myShot ? 'pool-controls' : undefined}>
@@ -659,7 +659,7 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
   const desktop = layout === 'desktop'
   return (
     <div
-      className={desktop ? 'grid h-dvh w-full grid-cols-[minmax(0,1fr)_23rem] grid-rows-[auto_minmax(0,1fr)] gap-x-6 gap-y-3 px-6 py-4' : 'mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-2 px-3 pb-[max(0.75rem,var(--safe-bottom))] pt-2'}
+      className={desktop ? 'grid h-(--app-h) w-full grid-cols-[minmax(0,1fr)_23rem] grid-rows-[auto_minmax(0,1fr)] gap-x-6 gap-y-3 px-6 py-4' : 'mx-auto flex min-h-(--app-h) w-full max-w-xl flex-col gap-2 px-3 pb-[max(0.75rem,var(--safe-bottom))] pt-2'}
       data-testid="pool-screen"
       data-layout={layout}
     >
@@ -677,14 +677,14 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
 
       <div className={`flex min-h-0 flex-col gap-1.5 ${desktop ? 'col-start-1 row-span-2 row-start-1 justify-center' : ''}`}>
         {offline}
-        <div className={`grid grid-cols-2 gap-2 ${desktop ? 'mx-auto w-full max-w-[calc((100dvh-9rem)*1.85)]' : ''}`}>
+        <div className={`grid grid-cols-2 gap-2 ${desktop ? 'mx-auto w-full max-w-[calc((var(--app-h)_-_9rem)_*_1.85)]' : ''}`}>
           {cardFor(bottomSeat)}
           {cardFor(topSeat)}
         </div>
         {/* The cue to pull stands beside the table: under the right thumb on a phone, on the left on a computer. */}
         <div className="flex items-stretch justify-center gap-2">
           {powerCue(desktop ? 'order-first' : 'order-last')}
-          {tableView(desktop ? 'max-w-[calc((100dvh-9rem)*1.85)]' : 'max-w-[calc((100dvh-20rem)*0.54)]')}
+          {tableView(desktop ? 'max-w-[calc((var(--app-h)_-_9rem)_*_1.85)]' : 'max-w-[calc((var(--app-h)_-_20rem)_*_0.54)]')}
         </div>
       </div>
 

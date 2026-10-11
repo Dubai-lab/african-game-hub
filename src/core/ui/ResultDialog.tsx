@@ -56,7 +56,7 @@ export function ResultDialog({ title, tone, reason, children, onClose, closeLabe
         data-testid="game-over"
         data-tone={tone}
         onClick={(event) => event.stopPropagation()}
-        className="result-in flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col overflow-hidden rounded-xl bg-panel shadow-[0_18px_50px_rgba(13,17,48,0.45)]"
+        className="result-in flex max-h-[calc(var(--app-h)_-_2rem)] w-full max-w-sm flex-col overflow-hidden rounded-xl bg-panel shadow-[0_18px_50px_rgba(13,17,48,0.45)]"
       >
         <div className={`relative flex flex-col items-center gap-1 px-12 pb-4 pt-5 text-center ${HEAD[tone]}`}>
           <button
