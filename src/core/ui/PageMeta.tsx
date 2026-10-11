@@ -47,6 +47,12 @@ export function PageMeta() {
   const page = PUBLIC_PAGES[path]
   const language = i18n.resolvedLanguage
 
+  // Inside the phone apps the page scrolls in the app's own frame (see index.css): a new page
+  // starts at its top there, as a new page does in a browser window.
+  useEffect(() => {
+    if (document.documentElement.classList.contains('native-app')) document.getElementById('root')?.scrollTo(0, 0)
+  }, [path])
+
   useEffect(() => {
     const name = t('app.name')
     const fallback = t('seo.homeDescription')

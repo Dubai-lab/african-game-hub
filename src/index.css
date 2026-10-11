@@ -49,6 +49,37 @@ html.in-app {
   --safe-left: 0px;
 }
 
+/* Something that scrolls without showing a scroll bar beside it: a phone's page, not a website's. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Inside the Android and iPhone apps nothing may look like a web page being scrolled: no
+   scroll bar down the side, and no rubber-band bounce of the whole screen. The page itself is
+   held still, and what is longer than the screen scrolls inside the app's own frame. */
+html.native-app,
+html.native-app body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+html.native-app #root {
+  height: var(--app-h);
+  overflow-y: auto;
+  overscroll-behavior: none;
+  scrollbar-width: none;
+}
+html.native-app #root::-webkit-scrollbar,
+html.native-app *::-webkit-scrollbar {
+  display: none;
+}
+html.native-app * {
+  scrollbar-width: none;
+}
+
 /* A playing screen is fixed in place: the page does not scroll and does not bounce. What does
    not fit scrolls inside its own part of the screen. (See useLockedScreen.) */
 html.screen-locked,

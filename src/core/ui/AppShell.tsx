@@ -1,5 +1,5 @@
 import { ChallengeInbox } from '@/core/lobby/ChallengePage'
-import { Suspense } from 'react'
+import { Suspense, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { useSocialBadge } from '@/core/social/social'
@@ -10,7 +10,9 @@ const TABS = ['lobby', 'wallet', 'leaderboards', 'friends', 'profile', 'settings
 
 /**
  * Frame for signed-in pages, in two shapes:
- *  - phone: the name on top, the tabs within thumb reach at the bottom, one column of content;
+ *  - phone: the name on top, the tabs within thumb reach at the bottom, and one column of
+ *    content between them. The top bar and the tabs never move: the page scrolls between them,
+ *    under the line that closes the top bar, as in an app and not as on a website.
  *  - computer: a sidebar on the left, and the pages use the width (each lays out its own columns).
  */
 export function AppShell() {
@@ -25,10 +27,16 @@ export function AppShell() {
     ) : null
 
   // A game's own page (/play/chess) belongs to the Play tab.
-  const inGame = /^\/(play|tournaments|challenge)\//.test(useLocation().pathname)
+  const { pathname } = useLocation()
+  const inGame = /^\/(play|tournaments|challenge)\//.test(pathname)
+  // A new page starts at its top, not where the last one was left.
+  const page = useRef<HTMLElement>(null)
+  useEffect(() => {
+    page.current?.scrollTo(0, 0)
+  }, [pathname])
 
   return (
-    <div className="min-h-(--app-h) lg:grid lg:grid-cols-[15rem_minmax(0,1fr)]">
+    <div className="h-(--app-h) overflow-hidden lg:grid lg:h-auto lg:min-h-(--app-h) lg:grid-cols-[15rem_minmax(0,1fr)] lg:overflow-visible">
       <aside className="sticky top-0 hidden h-(--app-h) flex-col bg-primary px-4 py-6 text-surface lg:flex">
         <Link to="/lobby" className="px-3 font-display text-xl font-extrabold">
           {t('app.name')}
@@ -53,14 +61,17 @@ export function AppShell() {
         <div className="band mt-auto" role="presentation" style={{ ['--band-ground' as string]: 'var(--color-primary)' }} />
       </aside>
 
-      <div className="flex min-h-(--app-h) min-w-0 flex-col">
+      <div className="flex h-(--app-h) min-w-0 flex-col lg:h-auto lg:min-h-(--app-h)">
         <OfflineBanner />
-        <header className="mx-auto flex w-full max-w-md items-center justify-between gap-3 px-5 pb-3 pt-4 lg:hidden">
-          <Link to="/lobby" className="text-base font-display font-extrabold text-primary">
-            {t('app.name')}
-          </Link>
+        {/* The top bar: fixed, closed by a line the page scrolls under. */}
+        <header className="shrink-0 border-b-2 border-line bg-surface lg:hidden" data-testid="top-bar">
+          <div className="mx-auto flex w-full max-w-md items-center justify-between gap-3 px-5 py-3">
+            <Link to="/lobby" className="text-base font-display font-extrabold text-primary">
+              {t('app.name')}
+            </Link>
+          </div>
         </header>
-        <main className="flex-1 px-5 pb-24 pt-4 lg:px-10 lg:pb-12 lg:pt-10">
+        <main ref={page} className="no-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-24 pt-4 lg:overflow-visible lg:px-10 lg:pb-12 lg:pt-10" data-testid="page-scroll">
           <div className="mx-auto w-full max-w-md lg:mx-0 lg:max-w-6xl">
             <RouteErrorBoundary>
               <Suspense fallback={<div className="h-40 animate-pulse rounded-lg bg-line/60" aria-hidden="true" />}>

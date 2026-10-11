@@ -61,6 +61,8 @@ export function backAction(pathname: string, canGoBack: boolean): 'back' | 'leav
 /** Run once, before anything is drawn. Does nothing in a browser. */
 export function startNativeApp() {
   if (!isNativeApp()) return
+  // An app, not a website in a frame: no scroll bars, no bounce (see index.css).
+  document.documentElement.classList.add('native-app')
   // Where the shell keeps the page clear of the notch and the home bar itself, the page must
   // not leave the room a second time (see index.css).
   if (shellKeepsPageClear()) document.documentElement.classList.add('in-app')

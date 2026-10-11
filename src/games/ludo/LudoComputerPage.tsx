@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { useSettingsStore } from '@/core/settings/settingsStore'
-import { Button, buttonClass } from '@/core/ui/Button'
+import { Button } from '@/core/ui/Button'
 import { ResultDialog } from '@/core/ui/ResultDialog'
 import { Toggle } from '@/core/ui/Toggle'
 import { type Seat, SEATS } from './board'
@@ -244,9 +244,6 @@ export default function LudoComputerPage() {
       >
         {t('ludo.computer.start')}
       </Button>
-      <Link to="/lobby" className={buttonClass('ghost')}>
-        {t('ludo.backToLobby')}
-      </Link>
     </main>
   )
 }
