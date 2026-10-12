@@ -143,6 +143,27 @@ function useLayout(): Layout {
   return layout
 }
 
+/**
+ * The popups of a pool page (the result, "resign?"): on an upright phone the game draws its
+ * screen turned a quarter turn, and what opens over it must be turned the same way, or the
+ * player reads the table one way and the popup another. Wrap them in this.
+ */
+export function TurnedWithTable({ children }: { children: ReactNode }) {
+  const layout = useLayout()
+  if (layout !== 'portrait') return <>{children}</>
+  return (
+    // The same frame as the turned screen itself (see PoolTable). Being transformed, it is what
+    // the popups inside measure "the whole screen" from; it takes no touches of its own.
+    <div
+      className="pointer-events-none fixed left-[100vw] top-0 z-40 h-[100vw] w-[100dvh] origin-top-left rotate-90 *:pointer-events-auto"
+      style={{ '--app-h': '100vw' } as CSSProperties}
+      data-testid="pool-popups"
+    >
+      {children}
+    </div>
+  )
+}
+
 /** Something opened over the table on a small screen: the spin ball, the cues, the chat, the menu. */
 function Panel({ title, open, onClose, children }: { title: string; open: boolean; onClose: () => void; children: ReactNode }) {
   const { t } = useTranslation()
@@ -326,13 +347,17 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
   const [power, setPower] = useState(0)
   const [spin, setSpin] = useState({ x: 0, y: 0 })
   const [placed, setPlaced] = useState<{ x: number; y: number } | null>(null)
+  // The pocket called for the 8. Touching a pocket only asks; the player confirms, and from
+  // then on the call is fixed for the shot: no later touch, meant or not, can change it.
   const [called, setCalled] = useState<number | null>(null)
+  const [asking, setAsking] = useState<number | null>(null)
 
   const myShot = !decided && mySeat !== null && game.turn === mySeat && !playing && !busy
   const shotNo = game.shotNo
   useEffect(() => {
     setPlaced(null)
     setCalled(null)
+    setAsking(null)
     setSpin({ x: 0, y: 0 })
   }, [shotNo])
 
@@ -445,7 +470,9 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
       : myShot
         ? needCall && called === null
           ? t('pool.status.callPocket')
-          : game.ballInHand
+          : needCall
+            ? t('pool.status.pocketCalled')
+            : game.ballInHand
             ? t(game.breakShot ? 'pool.status.breakPlace' : 'pool.status.ballInHand')
             : t('pool.status.yourShot')
         : mySeat
@@ -533,14 +560,34 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
         cloth={settings.poolCloth}
         cue={settings.poolCue}
         guide={settings.poolGuide}
-        called={myShot ? (needCall ? called : null) : playingPocket}
-        canCall={needCall}
-        onCall={setCalled}
+        called={myShot ? (needCall ? (called ?? asking) : null) : playingPocket}
+        canCall={needCall && called === null && asking === null}
+        onCall={(pocket) => called === null && setAsking(pocket)}
         canShoot={myShot && !(needCall && called === null)}
         onPull={(pulled) => setPower(pulled * 1000)}
         onShoot={(pulled) => shoot(Math.max(1, Math.round(pulled * 1000)))}
       />
     </div>
+  )
+  // Asked once, over the table (and turned with it): this pocket, or another?
+  const callPanel = (
+    <Panel title={t('pool.call.title')} open={needCall && asking !== null && called === null} onClose={() => setAsking(null)}>
+      <p className="text-sm">{t('pool.call.body')}</p>
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="ghost" onClick={() => setAsking(null)} data-testid="pool-call-other">
+          {t('pool.call.other')}
+        </Button>
+        <Button
+          data-testid="pool-call-confirm"
+          onClick={() => {
+            setCalled(asking)
+            setAsking(null)
+          }}
+        >
+          {t('pool.call.confirm')}
+        </Button>
+      </div>
+    </Panel>
   )
   const offline = !decided && !connected && (
     <div role="status" className="bg-ink px-3 py-1.5 text-center text-sm font-semibold text-surface">
@@ -618,6 +665,7 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
           </button>
         </div>
 
+        {callPanel}
         <Panel title={t('pool.tools.spin')} open={panel === 'spin'} onClose={() => setPanel(null)}>
           <div className="flex items-center gap-4">
             {spinPad('size-36')}
@@ -714,6 +762,7 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
         {children}
         <div className="mt-auto">{footer}</div>
       </aside>
+      {callPanel}
     </div>
   )
 }

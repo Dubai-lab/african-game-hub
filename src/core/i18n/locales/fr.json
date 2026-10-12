@@ -1115,7 +1115,8 @@
       "turnOf": "Au tour de {{name}}",
       "over": "Partie terminée",
       "callPocket": "Annoncez la 8 : touchez la poche visée",
-      "thinking": "{{name}} réfléchit"
+      "thinking": "{{name}} réfléchit",
+      "pocketCalled": "Poche annoncée. Jouez votre coup."
     },
     "foul": {
       "scratch": "Faute de {{name}} : la blanche est tombée.",
@@ -1212,7 +1213,13 @@
       "spinReset": "Centre"
     },
     "rotate": "Tournez votre téléphone : la table remplit l’écran.",
-    "backToPool": "Retour au billard"
+    "backToPool": "Retour au billard",
+    "call": {
+      "title": "Annoncer cette poche ?",
+      "body": "La 8 doit entrer dans la poche marquée. Une fois confirmée, l’annonce est fixée pour ce coup et ne peut plus être changée.",
+      "other": "En choisir une autre",
+      "confirm": "Confirmer la poche"
+    }
   },
   "share": {
     "link": "Lien à partager",

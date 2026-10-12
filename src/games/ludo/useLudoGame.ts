@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/core/auth/AuthContext'
 import i18n from '@/core/i18n'
 import { callFunction, type FunctionReply, refusalMessage } from '@/core/lib/functions'
-import { type GameLink, openGameLink } from '@/core/lib/gameServer'
+import { alreadyPlayed, type GameLink, openGameLink, sendMove } from '@/core/lib/gameServer'
 import { supabase } from '@/core/lib/supabase'
 import { toast } from '@/core/ui/toast'
 import type { Seat } from './board'
@@ -222,22 +222,14 @@ export function useLudoGame(matchId: string) {
         const asked = { action, ...(move ? { color: move.color, piece: move.piece, full: move.full, ...(move.die === null ? {} : { die: move.die }) } : {}), turn_no: turnNo }
         // Rolling and moving go over the open connection when there is one; everything else,
         // and everything when there is not, through the Edge Function.
-        const server = (action === 'roll' || action === 'move') && link.current?.ready ? link.current : null
-        let reply: FunctionReply<{ row?: GameRow }>
-        if (server) {
-          try {
-            reply = await server.request<FunctionReply<{ row?: GameRow }>>({ t: 'move', ply: turnNo, ...asked })
-          } catch (error) {
-            // The connection dropped with the request in the air: the database knows what happened.
-            if (action === 'move') setPending(null)
-            void load()
-            throw error
-          }
-        } else {
-          reply = await callFunction<{ row?: GameRow }>('ludo-action', { match_id: matchId, ...asked })
-        }
+        // (If that connection lets the request down it is sent again through the Edge Function,
+        // without a word to the player: see sendMove.)
+        const sent = await sendMove<{ row?: GameRow }>(action === 'roll' || action === 'move' ? link.current : null, { t: 'move', ply: turnNo, ...asked }, () =>
+          callFunction<{ row?: GameRow }>('ludo-action', { match_id: matchId, ...asked }),
+        )
+        const reply: FunctionReply<{ row?: GameRow }> = sent.reply
         if (!reply.ok) {
-          if (!quiet && reply.code !== 'OUT_OF_SYNC') toast.error(refusalMessage(reply.code))
+          if (!quiet && reply.code !== 'OUT_OF_SYNC' && !alreadyPlayed(sent)) toast.error(refusalMessage(reply.code))
           if (action === 'move') setPending(null)
           if (RELOAD_AFTER.has(reply.code)) void load()
         } else if (reply.row) {

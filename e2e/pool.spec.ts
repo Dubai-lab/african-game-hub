@@ -220,9 +220,23 @@ test('8-ball: the 8 is a called shot, and going down in the called pocket wins',
   // Touch the pocket behind the 8. (The table is drawn turned on an upright phone: its far
   // right corner pocket is at the bottom left of the glass.)
   const box = (await first.getByTestId('pool-table').boundingBox())!
-  await first.mouse.click(box.x + box.width * 0.096, box.y + box.height * 0.947)
+  const corner = { x: box.x + box.width * 0.096, y: box.y + box.height * 0.947 }
+  const otherCorner = { x: box.x + box.width * 0.904, y: box.y + box.height * 0.947 }
+  // A touch only asks. The wrong pocket first, as a slip of the hand would: it can be put right.
+  await first.mouse.click(otherCorner.x, otherCorner.y)
+  await expect(first.getByRole('dialog', { name: 'Call this pocket?' })).toBeVisible()
+  await expect(cue(first)).toHaveAttribute('aria-disabled', 'true')
+  await first.getByTestId('pool-call-other').click()
+  await expect(first.getByText('Call the 8: touch the pocket you will put it in')).toBeVisible()
+  // The right pocket, confirmed: from here the call is fixed.
+  await first.mouse.click(corner.x, corner.y)
+  await first.getByTestId('pool-call-confirm').click()
   await expect(state(first)).toHaveAttribute('data-called', '5')
-  await expect(first.getByText('Your shot')).toBeVisible()
+  await expect(first.getByText('Pocket called. Take your shot.')).toBeVisible()
+  // A touch on another pocket now changes nothing, and asks nothing.
+  await first.mouse.click(otherCorner.x, otherCorner.y)
+  await expect(first.getByRole('dialog', { name: 'Call this pocket?' })).toBeHidden()
+  await expect(state(first)).toHaveAttribute('data-called', '5')
 
   // The opponent's screen is watched while the balls roll: the cards must go on showing the
   // shooter at the table until they stop. (The roll is short, so it is recorded in the page.)
@@ -241,6 +255,8 @@ test('8-ball: the 8 is a called shot, and going down in the called pocket wins',
   await expect(first.getByRole('dialog', { name: 'You won' })).toBeVisible({ timeout: 30_000 })
   await expect(second.getByRole('dialog', { name: 'You lost' })).toBeVisible({ timeout: 30_000 })
   await expect(first.getByTestId('game-over-reason')).toHaveText('The 8 ball was pocketed.')
+  // The result is turned the same way as the table it lies over.
+  await expect(first.getByTestId('pool-popups').getByRole('dialog', { name: 'You won' })).toBeVisible()
   expect(await second.evaluate(() => (window as unknown as { poolSeen: unknown }).poolSeen)).toEqual({ rolled: true, early: false })
   const [shot] = await runSql<{ pocket: number }>(`select (shot ->> 'pocket')::int as pocket from public.pool_shots where match_id = '${matchId}' order by shot_no desc limit 1`)
   expect(shot!.pocket).toBe(5)

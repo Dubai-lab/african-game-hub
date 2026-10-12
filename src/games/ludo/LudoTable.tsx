@@ -142,21 +142,35 @@ export function LudoTable({ title, state, players, mySeat, deadline, busy, notic
   const [rolling, setRolling] = useState(false)
   const shownRef = useRef(shown)
   shownRef.current = shown
+  /** The throw being shown: the turn it was thrown on, and when its dice come to rest. */
+  const tumble = useRef<{ from: number; until: number } | null>(null)
   useEffect(() => {
     const before = shownRef.current
     const thrown = state.turnNo > before.turnNo && before.phase === 'roll' && state.lastEvent?.dice !== undefined
     // (Shown whatever the data-saver setting: the throw and the walk cost no data, and without
     // them the pieces simply jump and the game cannot be followed.)
     if (!thrown) {
+      tumble.current = null
       setRolling(false)
       return setShown(state)
     }
+    // One throw, one tumble. The same throw can be told to this screen more than once (by the
+    // live message, then again by the answer to the player's own request), and each telling
+    // used to start the dice tumbling afresh: the player who threw then watched their dice
+    // spin on after everyone else had seen the numbers. The dice now finish the tumble they
+    // began, so every player at the table sees them come to rest together.
+    const going = tumble.current?.from === before.turnNo ? tumble.current : { from: before.turnNo, until: Date.now() + ROLL_MS }
+    if (going !== tumble.current) ludoFeedback('roll')
+    tumble.current = going
     setRolling(true)
-    ludoFeedback('roll')
-    const id = setTimeout(() => {
-      setRolling(false)
-      setShown(state)
-    }, ROLL_MS)
+    const id = setTimeout(
+      () => {
+        tumble.current = null
+        setRolling(false)
+        setShown(state)
+      },
+      Math.max(0, going.until - Date.now()),
+    )
     return () => clearTimeout(id)
   }, [state])
 

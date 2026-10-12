@@ -349,6 +349,9 @@ export function PoolCanvas({ balls, vertical, aim, power, ballInHand, behindHead
   const sideways = useContext(Sideways)
   const screenTurned = useRef(sideways)
   screenTurned.current = sideways
+  // True while the cue ball is in the player's fingers (ball in hand): the cue and its aiming
+  // line are put away until the ball is set down, so that only the ball follows the finger.
+  const carried = useRef(false)
   const live = useRef({ balls, aim, power, ballInHand, behindHeadString, targets, onAim, onPlace, guide, called, canCall, onCall, cueId, canShoot, onPull, onShoot })
   live.current = { balls, aim, power, ballInHand, behindHeadString, targets, onAim, onPlace, guide, called, canCall, onCall, cueId, canShoot, onPull, onShoot }
 
@@ -443,7 +446,7 @@ export function PoolCanvas({ balls, vertical, aim, power, ballInHand, behindHead
       const cue = state.balls.find((b) => b.n === 0 && !b.in)
 
       // The line of aim: to where the cue ball will first touch something, and on from there.
-      if (state.aim && cue) {
+      if (state.aim && cue && !carried.current) {
         const length = Math.hypot(state.aim.dx, state.aim.dy) || 1
         const ux = state.aim.dx / length
         const uy = state.aim.dy / length
@@ -530,7 +533,7 @@ export function PoolCanvas({ balls, vertical, aim, power, ballInHand, behindHead
       }
 
       // The cue: behind the cue ball, along the line of aim, drawn back by the power chosen.
-      if (state.aim && cue) {
+      if (state.aim && cue && !carried.current) {
         const length = Math.hypot(state.aim.dx, state.aim.dy) || 1
         const [sx, sy] = toScreen(cue.x, cue.y)
         const [tx, ty] = toScreen(cue.x + state.aim.dx / length, cue.y + state.aim.dy / length)
@@ -636,6 +639,7 @@ export function PoolCanvas({ balls, vertical, aim, power, ballInHand, behindHead
         if (nearest >= 0) return state.onCall(nearest)
       }
       carrying = state.ballInHand && Math.hypot(x - cue.x, y - cue.y) < R * 2.5
+      carried.current = carrying
       // The cue as it lies on the table (see where it is drawn): from just behind the ball.
       const held = !carrying && state.canShoot && onCue({ x, y }, cue, state.aim, R * 1.6, R * 1.6 + (TABLE.w + RAIL * 2) * 0.42, Math.max(R * 3.2, 100))
       pulling = held ? { from: { x, y }, power: 0 } : null
@@ -656,6 +660,7 @@ export function PoolCanvas({ balls, vertical, aim, power, ballInHand, behindHead
         if (event.type === 'pointerup' && power >= LEAST_PULL) state.onShoot(power)
       }
       carrying = false
+      carried.current = false
       turning = null
     }
     canvas.addEventListener('pointerdown', down)

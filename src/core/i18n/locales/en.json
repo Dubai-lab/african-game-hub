@@ -1115,7 +1115,8 @@
       "turnOf": "{{name}} to shoot",
       "over": "Game over",
       "callPocket": "Call the 8: touch the pocket you will put it in",
-      "thinking": "{{name}} is thinking"
+      "thinking": "{{name}} is thinking",
+      "pocketCalled": "Pocket called. Take your shot."
     },
     "foul": {
       "scratch": "Foul by {{name}}: the cue ball was pocketed.",
@@ -1212,7 +1213,13 @@
       "spinReset": "Centre"
     },
     "rotate": "Turn your phone sideways: the table fills the screen.",
-    "backToPool": "Back to pool"
+    "backToPool": "Back to pool",
+    "call": {
+      "title": "Call this pocket?",
+      "body": "The 8 must go into the pocket that is marked. Once you confirm, the call is fixed for this shot and cannot be changed.",
+      "other": "Choose another",
+      "confirm": "Confirm pocket"
+    }
   },
   "share": {
     "link": "Link to share",

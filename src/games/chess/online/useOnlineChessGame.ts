@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '@/core/auth/AuthContext'
 import i18n from '@/core/i18n'
 import { callFunction, type FunctionReply, refusalMessage } from '@/core/lib/functions'
-import { type GameLink, openGameLink } from '@/core/lib/gameServer'
+import { alreadyPlayed, type GameLink, openGameLink, sendMove } from '@/core/lib/gameServer'
 import { supabase } from '@/core/lib/supabase'
 import { toast } from '@/core/ui/toast'
 import {
@@ -349,12 +349,16 @@ export function useOnlineChessGame(matchId: string) {
       }
       const uci = from + to + (promotion ?? '')
       // Over the open connection when there is one; otherwise the Edge Function, as always.
-      const server = link.current?.ready ? link.current : null
-      const sent: Promise<FunctionReply<MoveReply>> = server
-        ? server.request<FunctionReply<MoveReply>>({ t: 'move', uci, ply: ply - 1 })
-        : callFunction<MoveReply>('chess-make-move', { match_id: matchId, uci, ply: ply - 1 })
-      sent
-        .then((reply) => {
+      // (If that connection lets the move down it is sent again through the Edge Function,
+      // without a word to the player: see sendMove.)
+      // Whether the move was played is the database's to say: the game is fetched, and the move
+      // is taken back only if it is not there.
+      const askTheDatabase = () => void load().then(() => setTimeout(() => live.current.pending?.ply === ply && takeBack(i18n.t('chess.moveNotSent')), 60))
+      sendMove<MoveReply>(link.current, { t: 'move', uci, ply: ply - 1 }, () => callFunction<MoveReply>('chess-make-move', { match_id: matchId, uci, ply: ply - 1 }))
+        .then((sent) => {
+          const reply: FunctionReply<MoveReply> = sent.reply
+          // Sent twice and refused the second time: the first copy was played.
+          if (alreadyPlayed(sent)) return askTheDatabase()
           if (!reply.ok) {
             takeBack(reply.code === 'ILLEGAL_MOVE' ? i18n.t('chess.moveRejected') : refusalMessage(reply.code))
             if (RELOAD_AFTER.has(reply.code)) void load()
@@ -379,15 +383,8 @@ export function useOnlineChessGame(matchId: string) {
           })
           setPending((p) => (p && p.ply <= reply.ply ? null : p))
         })
-        .catch(() => {
-          if (!server) {
-            takeBack(i18n.t('chess.moveNotSent'))
-            return void load()
-          }
-          // The connection dropped with the move in the air: it may or may not have been
-          // played. The database knows; only if it was not is the move taken back.
-          void load().then(() => setTimeout(() => live.current.pending?.ply === ply && takeBack(i18n.t('chess.moveNotSent')), 60))
-        })
+        // Neither road could be reached. The move may still have been played before the line went.
+        .catch(askTheDatabase)
       return 'ok'
     },
     [matchId, myColor, load],

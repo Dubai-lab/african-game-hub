@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/core/auth/AuthContext'
 import i18n from '@/core/i18n'
 import { callFunction, type FunctionReply, refusalMessage } from '@/core/lib/functions'
-import { type GameLink, openGameLink } from '@/core/lib/gameServer'
+import { alreadyPlayed, type GameLink, openGameLink, sendMove } from '@/core/lib/gameServer'
 import { supabase } from '@/core/lib/supabase'
 import { toast } from '@/core/ui/toast'
 import type { LastShot } from './PoolTable'
@@ -241,20 +241,18 @@ export function usePoolGame(matchId: string) {
         const shotNo = live.current?.game.shotNo ?? 0
         // A shot goes over the open connection when there is one; everything else, and every
         // shot when there is not, through the Edge Function.
-        const server = action === 'shoot' && shot && link.current?.ready ? link.current : null
-        let reply: FunctionReply<Record<string, never>>
-        if (server) {
-          try {
-            reply = await server.request<FunctionReply<Record<string, never>>>({ t: 'move', ply: shotNo, shot })
-          } catch (error) {
-            // The connection dropped with the shot in the air: the database knows whether it counted.
-            void load()
-            throw error
-          }
-        } else {
-          reply = await callFunction('pool-action', { match_id: matchId, action, shot_no: shotNo, ...(shot ? { shot } : {}) })
-        }
+        // (If that connection lets the shot down it is sent again through the Edge Function,
+        // without a word to the player: see sendMove.)
+        const sent = await sendMove<Record<string, never>>(action === 'shoot' && shot ? link.current : null, { t: 'move', ply: shotNo, shot }, () =>
+          callFunction('pool-action', { match_id: matchId, action, shot_no: shotNo, ...(shot ? { shot } : {}) }),
+        )
+        const reply: FunctionReply<Record<string, never>> = sent.reply
         if (!reply.ok) {
+          // Sent twice and refused the second time: the first copy was played. The table is fetched.
+          if (alreadyPlayed(sent)) {
+            void load()
+            return true
+          }
           if (!quiet && reply.code !== 'OUT_OF_SYNC') toast.error(refusalMessage(reply.code))
           if (RELOAD_AFTER.has(reply.code)) void load()
           return false

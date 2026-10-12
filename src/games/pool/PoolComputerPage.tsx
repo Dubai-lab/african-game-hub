@@ -6,7 +6,7 @@ import { ResultDialog } from '@/core/ui/ResultDialog'
 import { toast } from '@/core/ui/toast'
 import { applyShot, type PoolState, rack, type Seat, type Shot, type ShotResult, type Variant } from '../../../supabase/functions/_shared/pool'
 import { chooseShot, type Level } from './computer'
-import { PoolTable, type TableGame } from './PoolTable'
+import { PoolTable, type TableGame, TurnedWithTable } from './PoolTable'
 
 // Practice against the computer: no tokens, no rating, nothing sent anywhere. The same rules
 // and physics as a real match, run on this device. The player is seat 1 and breaks.
@@ -174,17 +174,20 @@ export default function PoolComputerPage() {
           )
         }
       />
-      {over && !playing && !closed && (
-        <ResultDialog
-          title={t(over.winner === 1 ? 'pool.computer.youWon' : 'pool.computer.youLost')}
-          tone={over.winner === 1 ? 'win' : 'loss'}
-          reason={t(`pool.reason.${over.reason}`, { defaultValue: t('pool.reason.other') })}
-          onClose={() => setClosed(true)}
-          closeLabel={t('pool.over.close')}
-        >
-          <div>{actions}</div>
-        </ResultDialog>
-      )}
+      {/* Turned with the table on an upright phone. */}
+      <TurnedWithTable>
+        {over && !playing && !closed && (
+          <ResultDialog
+            title={t(over.winner === 1 ? 'pool.computer.youWon' : 'pool.computer.youLost')}
+            tone={over.winner === 1 ? 'win' : 'loss'}
+            reason={t(`pool.reason.${over.reason}`, { defaultValue: t('pool.reason.other') })}
+            onClose={() => setClosed(true)}
+            closeLabel={t('pool.over.close')}
+          >
+            <div>{actions}</div>
+          </ResultDialog>
+        )}
+      </TurnedWithTable>
     </>
   )
 }

@@ -9,7 +9,7 @@ import { ResultDialog, ResultStat, ResultStats, type ResultTone } from '@/core/u
 import { LoadingScreen } from '@/core/ui/LoadingScreen'
 import { useOnline } from '@/core/ui/OfflineBanner'
 import type { GameOptions } from '@/games/types'
-import { PoolTable, Sheet } from './PoolTable'
+import { PoolTable, Sheet, TurnedWithTable } from './PoolTable'
 import { usePoolGame } from './usePoolGame'
 
 function Message({ title, children }: { title: string; children?: ReactNode }) {
@@ -115,43 +115,46 @@ export default function PoolMatchPage({ matchId }: { matchId: string }) {
         {mySeat && <MatchChat matchId={matchId} gameId="pool" names={Object.fromEntries(players.map((p) => [p.userId, p.name]))} ended={decided} onClosed={setChatClosed} onHeard={() => setChatHeard((n) => n + 1)} onQuickSent={() => setChatSent((n) => n + 1)} />}
       </PoolTable>
 
-      {confirmResign && !decided && (
-        <Sheet title={t('pool.resign.title')} onClose={() => setConfirmResign(false)}>
-          <p className="mt-1 text-muted">{t('pool.resign.body', { opponent: opponent?.name ?? '' })}</p>
-          <div className="mt-5 grid grid-cols-2 gap-2">
-            <Button variant="ghost" onClick={() => setConfirmResign(false)}>
-              {t('pool.resign.cancel')}
-            </Button>
-            <Button
-              className="bg-hibiscus text-white active:bg-hibiscus"
-              onClick={() => {
-                setConfirmResign(false)
-                pool.resign()
-              }}
-            >
-              {t('pool.resign.confirm')}
-            </Button>
-          </div>
-        </Sheet>
-      )}
+      {/* Turned with the table on an upright phone. */}
+      <TurnedWithTable>
+        {confirmResign && !decided && (
+          <Sheet title={t('pool.resign.title')} onClose={() => setConfirmResign(false)}>
+            <p className="mt-1 text-muted">{t('pool.resign.body', { opponent: opponent?.name ?? '' })}</p>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <Button variant="ghost" onClick={() => setConfirmResign(false)}>
+                {t('pool.resign.cancel')}
+              </Button>
+              <Button
+                className="bg-hibiscus text-white active:bg-hibiscus"
+                onClick={() => {
+                  setConfirmResign(false)
+                  pool.resign()
+                }}
+              >
+                {t('pool.resign.confirm')}
+              </Button>
+            </div>
+          </Sheet>
+        )}
 
-      {decided && !playing && !resultClosed && (
-        <ResultDialog
-          title={resultTitle}
-          tone={resultTone}
-          reason={t(`pool.reason.${match.end_reason}`, { defaultValue: t('pool.reason.other') })}
-          onClose={() => setResultClosed(true)}
-          closeLabel={t('pool.over.close')}
-        >
-          {(tokensChange !== undefined || winsNow !== undefined) && (
-            <ResultStats>
-              {winsNow !== undefined && <ResultStat testId="game-over-wins" label={t('pool.over.wins', { game: t(`pool.variant.${game.variant}`) })} value={winsNow} />}
-              {tokensChange !== undefined && <ResultStat testId="game-over-tokens" label={t('pool.over.tokens')} change={tokensChange} />}
-            </ResultStats>
-          )}
-          <div>{actions}</div>
-        </ResultDialog>
-      )}
+        {decided && !playing && !resultClosed && (
+          <ResultDialog
+            title={resultTitle}
+            tone={resultTone}
+            reason={t(`pool.reason.${match.end_reason}`, { defaultValue: t('pool.reason.other') })}
+            onClose={() => setResultClosed(true)}
+            closeLabel={t('pool.over.close')}
+          >
+            {(tokensChange !== undefined || winsNow !== undefined) && (
+              <ResultStats>
+                {winsNow !== undefined && <ResultStat testId="game-over-wins" label={t('pool.over.wins', { game: t(`pool.variant.${game.variant}`) })} value={winsNow} />}
+                {tokensChange !== undefined && <ResultStat testId="game-over-tokens" label={t('pool.over.tokens')} change={tokensChange} />}
+              </ResultStats>
+            )}
+            <div>{actions}</div>
+          </ResultDialog>
+        )}
+      </TurnedWithTable>
     </>
   )
 }

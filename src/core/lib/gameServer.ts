@@ -1,3 +1,4 @@
+import type { FunctionReply } from './functions'
 import { supabase } from './supabase'
 
 // The app's line to the game server: one open connection for the game on screen, so a move
@@ -39,6 +40,8 @@ export function openGameLink(game: string, matchId: string, handlers: Handlers):
   let closed = false
   let attempt = 0
   let seq = 0
+  /** How many times in a row the server has said it does not know this player. */
+  let unknown = 0
   let retry: ReturnType<typeof setTimeout> | undefined
   const waiting = new Map<number, { resolve: (value: unknown) => void; reject: (reason: Error) => void; timer: ReturnType<typeof setTimeout> }>()
 
@@ -79,6 +82,7 @@ export function openGameLink(game: string, matchId: string, handlers: Handlers):
       if (message.t === 'ready') {
         ready = true
         attempt = 0
+        unknown = 0
         return handlers.onReady(typeof message.ply === 'number' ? message.ply : 0)
       }
       if (message.t === 'ack' && typeof message.id === 'number') {
@@ -86,12 +90,14 @@ export function openGameLink(game: string, matchId: string, handlers: Handlers):
         if (!request) return
         waiting.delete(message.id)
         clearTimeout(request.timer)
-        return request.resolve(message)
+        request.resolve(message)
+        return renewWhenFree()
       }
-      // Refused at the door (not in this game, signed out): there is no point knocking again
-      // for this match. The Edge Functions carry the game.
+      // Refused at the door. Not in this game: there is no point knocking again for this match,
+      // and the Edge Functions carry the game. Not known: the sign-in had just run out as the
+      // door was knocked on, so it is tried again (a few times) with the new one.
       if (message.t === 'error') {
-        closed = true
+        if (message.code !== 'NOT_AUTHENTICATED' || ++unknown > 3) closed = true
         return ws.close()
       }
       if (typeof message.t === 'string') handlers.onMessage(message as { t: string } & Record<string, unknown>)
@@ -110,6 +116,41 @@ export function openGameLink(game: string, matchId: string, handlers: Handlers):
     clearTimeout(retry)
     retry = setTimeout(() => void connect(), RETRY_MS[Math.min(attempt++, RETRY_MS.length - 1)])
   }
+
+  /** Lets go of the connection at once (without waiting for it to say it has closed) and opens another. */
+  function renew(why: string, wait = 0) {
+    const old = socket
+    if (!old || closed) return
+    socket = null
+    ready = false
+    old.onclose = null
+    old.onmessage = null
+    old.onerror = null
+    try {
+      old.close()
+    } catch {
+      // Already gone.
+    }
+    failAll(why)
+    attempt = 0
+    clearTimeout(retry)
+    retry = setTimeout(() => void connect(), wait)
+  }
+
+  // The server knows the player by the sign-in they arrived with, and a sign-in lasts an hour.
+  // When the app is given a new one the connection is opened again with it, between moves, so
+  // the server never finds itself holding one that has run out in the middle of a game.
+  let stale = false
+  const renewWhenFree = () => {
+    if (!stale || waiting.size > 0) return
+    stale = false
+    renew('new sign-in')
+  }
+  const auth = supabase.auth.onAuthStateChange((event) => {
+    if (event !== 'TOKEN_REFRESHED' || closed) return
+    stale = true
+    renewWhenFree()
+  })
 
   // Back from the background or from no signal: do not wait out the retry timer.
   const wake = () => {
@@ -134,6 +175,10 @@ export function openGameLink(game: string, matchId: string, handlers: Handlers):
         const timer = setTimeout(() => {
           waiting.delete(id)
           reject(new Error('no answer'))
+          // A connection that does not answer is a dead one that has not been told (a phone
+          // that changed network, say): it is dropped and another opened, instead of being
+          // trusted with the next move as well.
+          renew('no answer')
         }, REPLY_WITHIN_MS)
         waiting.set(id, { resolve: resolve as (value: unknown) => void, reject, timer })
         socket.send(JSON.stringify({ ...message, id }))
@@ -141,6 +186,7 @@ export function openGameLink(game: string, matchId: string, handlers: Handlers):
     },
     close() {
       closed = true
+      auth.data.subscription.unsubscribe()
       clearTimeout(retry)
       document.removeEventListener('visibilitychange', wake)
       window.removeEventListener('online', wake)
@@ -150,3 +196,27 @@ export function openGameLink(game: string, matchId: string, handlers: Handlers):
     },
   }
 }
+
+/**
+ * Sends a move by the quick road when it is open, and by the Edge Function when it is not, or
+ * when the quick road lets the move down: no answer, a connection that dropped with the move in
+ * the air, or a server that no longer knows the player's sign-in. The player is not told about
+ * any of that; they are told only if the Edge Function cannot be reached either (this rejects).
+ *
+ * `retried` says the move was sent twice. Every move names the turn it is for, so a second
+ * copy of one that did arrive is refused as out of turn, never played twice: see `alreadyPlayed`.
+ */
+export async function sendMove<T>(link: GameLink | null, message: Record<string, unknown>, byFunction: () => Promise<FunctionReply<T>>): Promise<{ reply: FunctionReply<T>; retried: boolean }> {
+  if (!link?.ready) return { reply: await byFunction(), retried: false }
+  try {
+    const reply = await link.request<FunctionReply<T>>(message)
+    if (reply.ok || reply.code !== 'NOT_AUTHENTICATED') return { reply, retried: false }
+  } catch {
+    // Dropped or unanswered: the Edge Function is asked, and the database decides.
+  }
+  return { reply: await byFunction(), retried: true }
+}
+
+/** A move sent a second time and refused only because the first copy had already been played. */
+export const alreadyPlayed = (sent: { reply: { ok: boolean; code?: string }; retried: boolean }) =>
+  sent.retried && !sent.reply.ok && (sent.reply.code === 'OUT_OF_SYNC' || sent.reply.code === 'NOT_YOUR_TURN')
