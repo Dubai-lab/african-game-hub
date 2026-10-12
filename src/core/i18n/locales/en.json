@@ -110,7 +110,8 @@
     "ageRequired": "You must be 18 or older to play.",
     "countryRequired": "Select your country.",
     "usernameTaken": "This username is taken. Choose another one.",
-    "passwordsDiffer": "The two passwords are not the same."
+    "passwordsDiffer": "The two passwords are not the same.",
+    "genderRequired": "Choose male or female."
   },
   "landing": {
     "login": "Log in",
@@ -253,7 +254,15 @@
       "askAgain": "Send me a new link"
     },
     "usernameChecking": "Checking whether this name is free…",
-    "usernameFree": "@{{username}} is free."
+    "usernameFree": "@{{username}} is free.",
+    "gender": {
+      "label": "Gender",
+      "male": "Male",
+      "female": "Female",
+      "promptTitle": "One quick question",
+      "promptBody": "Are you male or female? It chooses the figure other players see at your place at the table. We ask only once.",
+      "save": "Save"
+    }
   },
   "lobby": {
     "title": "Lobby",

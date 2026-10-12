@@ -349,6 +349,24 @@ describe('row level security', () => {
     expect(await visible(outsider)).toEqual({ matches: 1, players: 2, games: 1 })
   })
 
+  it('takes a gender from the signup form, asks an older account once, and lets no player rewrite it', async () => {
+    const said = await db.createUser('gender-said@example.com', { username: 'gender_said', gender: 'Female' })
+    const odd = await db.createUser('gender-odd@example.com', { username: 'gender_odd', gender: 'robot' })
+    const old = await db.createUser('gender-old@example.com', { username: 'gender_old' })
+    const of = async (id: string) => (await db.rows<{ gender: string | null }>(`select gender from public.profiles where id = $1`, [id]))[0]!.gender
+    expect([await of(said), await of(odd), await of(old)]).toEqual(['female', null, null])
+
+    await db.as('authenticated', old, async () => {
+      await expect(db.pg.query(`select public.set_my_gender('other')`)).rejects.toThrow(/BAD_REQUEST/)
+      await db.pg.query(`select public.set_my_gender('male')`)
+      // Answered: asking again changes nothing, and the column is not the player's to write.
+      await db.pg.query(`select public.set_my_gender('female')`)
+      await expect(db.pg.query(`update public.profiles set gender = 'female' where id = '${old}'`)).rejects.toThrow(/permission denied/)
+    })
+    expect(await of(old)).toBe('male')
+    await expect(db.as('anon', null, () => db.pg.query(`select public.set_my_gender('male')`))).rejects.toThrow(/permission denied/)
+  })
+
   it('lets a player set a missing country once, and only once', async () => {
     const id = await db.createUser('nocountry@example.com', { username: 'nocountry' })
     await db.as('authenticated', id, async () => {

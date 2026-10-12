@@ -110,7 +110,8 @@
     "ageRequired": "Vous devez avoir 18 ans ou plus pour jouer.",
     "countryRequired": "Sélectionnez votre pays.",
     "usernameTaken": "Ce nom d’utilisateur est pris. Choisissez-en un autre.",
-    "passwordsDiffer": "Les deux mots de passe ne sont pas identiques."
+    "passwordsDiffer": "Les deux mots de passe ne sont pas identiques.",
+    "genderRequired": "Choisissez homme ou femme."
   },
   "landing": {
     "login": "Se connecter",
@@ -253,7 +254,15 @@
       "askAgain": "Envoyez-moi un nouveau lien"
     },
     "usernameChecking": "Nous vérifions si ce nom est libre…",
-    "usernameFree": "@{{username}} est libre."
+    "usernameFree": "@{{username}} est libre.",
+    "gender": {
+      "label": "Sexe",
+      "male": "Homme",
+      "female": "Femme",
+      "promptTitle": "Une petite question",
+      "promptBody": "Êtes-vous un homme ou une femme ? Cela choisit la figurine que les autres joueurs voient à votre place à la table. Nous ne le demandons qu’une fois.",
+      "save": "Enregistrer"
+    }
   },
   "lobby": {
     "title": "Salon",

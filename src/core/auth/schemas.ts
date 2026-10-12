@@ -18,6 +18,7 @@ export const signupSchema = z.object({
       z.regex(/^[A-Za-z0-9_]+$/, 'validation.usernameChars'),
     ),
   countryCode: z.string().check(z.regex(/^[A-Z]{2}$/, 'validation.countryRequired')),
+  gender: z.enum(['male', 'female'], 'validation.genderRequired'),
   email,
   password: z.string().check(z.minLength(8, 'validation.passwordTooShort'), z.maxLength(72, 'validation.passwordTooShort')),
   isAdult: z.literal(true, 'validation.ageRequired'),

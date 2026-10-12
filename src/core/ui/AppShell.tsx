@@ -3,6 +3,7 @@ import { Suspense, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { flagEmoji } from '@/core/countries/useCountries'
+import { GenderPrompt } from '@/core/profile/GenderPrompt'
 import { useMyProfile } from '@/core/profile/useMyProfile'
 import { useSocialBadge } from '@/core/social/social'
 import { RouteErrorBoundary } from './ErrorBoundary'
@@ -69,6 +70,8 @@ export function AppShell() {
 
       <div className="flex h-(--app-h) min-w-0 flex-col lg:h-auto lg:min-h-(--app-h)">
         <OfflineBanner />
+        {/* Players who joined before gender was asked for are asked once, here. */}
+        <GenderPrompt />
         {/* The top bar: fixed, closed by a line the page scrolls under. */}
         <header className="shrink-0 border-b-2 border-line bg-surface lg:hidden" data-testid="top-bar">
           <div className="mx-auto flex w-full max-w-md flex-col gap-1 px-5 pb-2 pt-2">

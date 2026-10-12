@@ -6,13 +6,13 @@ import { requireDevelopmentProject, requireEnv, runSql } from './managementApi.t
 /** The test accounts' password: from .env.local, never written in the code. */
 export const TEST_PASSWORD = requireEnv('E2E_TEST_PASSWORD')
 export const TEST_ACCOUNTS = [
-  { email: 'e2e-player@example.com', username: 'e2e_player', country: 'RW' },
-  { email: 'e2e-player-2@example.com', username: 'e2e_player2', country: 'NG' },
+  { email: 'e2e-player@example.com', username: 'e2e_player', country: 'RW', gender: 'male' },
+  { email: 'e2e-player-2@example.com', username: 'e2e_player2', country: 'NG', gender: 'female' },
   // Extra players for the concurrency tests, which need several matches at once.
-  { email: 'e2e-player-3@example.com', username: 'e2e_player3', country: 'KE' },
-  { email: 'e2e-player-4@example.com', username: 'e2e_player4', country: 'GH' },
-  { email: 'e2e-player-5@example.com', username: 'e2e_player5', country: 'ZA' },
-  { email: 'e2e-player-6@example.com', username: 'e2e_player6', country: 'SN' },
+  { email: 'e2e-player-3@example.com', username: 'e2e_player3', country: 'KE', gender: 'female' },
+  { email: 'e2e-player-4@example.com', username: 'e2e_player4', country: 'GH', gender: 'male' },
+  { email: 'e2e-player-5@example.com', username: 'e2e_player5', country: 'ZA', gender: 'female' },
+  { email: 'e2e-player-6@example.com', username: 'e2e_player6', country: 'SN', gender: 'male' },
 ] as const
 
 const emails = TEST_ACCOUNTS.map((a) => `'${a.email}'`).join(', ')
@@ -29,7 +29,7 @@ export async function ensureTestAccounts() {
       email: account.email,
       password: TEST_PASSWORD,
       email_confirm: true,
-      user_metadata: { username: account.username, age_confirmed: true, country_code: account.country },
+      user_metadata: { username: account.username, age_confirmed: true, country_code: account.country, gender: account.gender },
     })
     if (error && error.code !== 'email_exists') throw error
   }
@@ -42,6 +42,8 @@ export async function ensureTestAccounts() {
     const updated = await admin.auth.admin.updateUserById(user.id, { password: TEST_PASSWORD })
     if (updated.error) throw updated.error
   }
+  // Accounts made before gender was asked for: give them theirs, so no test meets the question.
+  await runSql(TEST_ACCOUNTS.map((a) => `update public.profiles set gender = '${a.gender}' where gender is null and id = (select id from auth.users where email = '${a.email}');`).join('\n'))
 }
 
 /**

@@ -5,6 +5,8 @@ import { supabase } from '@/core/lib/supabase'
 export type MyProfile = {
   username: string
   displayName: string | null
+  /** Null until the player has said: the app then asks, once (see GenderPrompt). */
+  gender: 'male' | 'female' | null
   /** Null for accounts created without one (for example by an admin); the lobby then asks for it. */
   country: {
     code: string
@@ -31,7 +33,7 @@ export function useMyProfile() {
       const { data, error } = await supabase
         .from('profiles')
         .select(
-          'username, display_name, countries (country_code, currency_code, currency_minor_units, token_to_currency_rate, real_money_enabled)',
+          'username, display_name, gender, countries (country_code, currency_code, currency_minor_units, token_to_currency_rate, real_money_enabled)',
         )
         .eq('id', userId!)
         .single()
@@ -40,6 +42,7 @@ export function useMyProfile() {
       return {
         username: data.username,
         displayName: data.display_name,
+        gender: data.gender === 'male' || data.gender === 'female' ? data.gender : null,
         country: c && {
           code: c.country_code,
           currencyCode: c.currency_code,

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useMyProfile } from '@/core/profile/useMyProfile'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { Button } from '@/core/ui/Button'
@@ -137,9 +138,13 @@ function Game({ setup, onSetup, resume }: { setup: Setup; onSetup: () => void; r
     }
   }, [state, game.event, setup])
 
+  const gender = useMyProfile().data?.gender ?? null
   const players = useMemo<TablePlayer[]>(
-    () => state.seats.map((seat, index) => ({ seat, name: seat === HUMAN ? t('words.you') : state.seats.length === 2 ? t('words.computer.name') : t('words.computer.numbered', { number: index }) })),
-    [state.seats, t],
+    () =>
+      state.seats.map((seat, index) =>
+        seat === HUMAN ? { seat, name: t('words.you'), gender } : { seat, name: state.seats.length === 2 ? t('words.computer.name') : t('words.computer.numbered', { number: index }), computer: true },
+      ),
+    [state.seats, t, gender],
   )
 
   // The computer's turns, one at a time so each can be followed.

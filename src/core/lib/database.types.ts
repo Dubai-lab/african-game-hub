@@ -1463,6 +1463,7 @@ export type Database = {
           country_code: string | null
           created_at: string
           display_name: string | null
+          gender: string | null
           id: string
           username: string
         }
@@ -1471,6 +1472,7 @@ export type Database = {
           country_code?: string | null
           created_at?: string
           display_name?: string | null
+          gender?: string | null
           id: string
           username: string
         }
@@ -1479,6 +1481,7 @@ export type Database = {
           country_code?: string | null
           created_at?: string
           display_name?: string | null
+          gender?: string | null
           id?: string
           username?: string
         }
@@ -2297,6 +2300,7 @@ export type Database = {
       }
       server_now: { Args: never; Returns: string }
       set_my_country: { Args: { p_country_code: string }; Returns: undefined }
+      set_my_gender: { Args: { p_gender: string }; Returns: undefined }
       tournament_cancel: {
         Args: { p_tournament_id: string; p_user_id: string }
         Returns: Json

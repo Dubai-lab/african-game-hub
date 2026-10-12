@@ -34,6 +34,7 @@ test('signup refuses a username that is already taken, without creating an accou
   await page.goto('/signup')
   await page.getByLabel('Username').fill('E2E_Player')
   await page.getByLabel('Country').selectOption('RW')
+  await page.getByText('Female', { exact: true }).click()
   await page.getByLabel('Email').fill('someone-new@example.com')
   await page.getByLabel('Password').fill('long-enough-password')
   await page.getByRole('checkbox').check()

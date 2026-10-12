@@ -96,6 +96,7 @@ test('the sign-up form says whether a username is free while it is being typed',
   await username.fill(owner.username)
   await expect(page.getByText('This username is taken. Choose another one.')).toBeVisible({ timeout: 10_000 })
   await page.getByLabel('Country').selectOption('RW')
+  await page.getByText('Male', { exact: true }).click()
   await page.getByLabel('Email').fill('someone-new@example.com')
   await page.getByLabel('Password', { exact: true }).fill('a-long-enough-password')
   await page.getByRole('checkbox').check()

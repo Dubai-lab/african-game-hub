@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { authErrorKey } from './errors'
 import { fieldErrors, loginSchema, signupSchema } from './schemas'
 
-const valid = { username: 'amina_k', countryCode: 'RW', email: ' Amina@Example.com ', password: 'longenough', isAdult: true }
+const valid = { username: 'amina_k', countryCode: 'RW', gender: 'female', email: ' Amina@Example.com ', password: 'longenough', isAdult: true }
 
 describe('signupSchema', () => {
   it('accepts a valid signup and normalises the email', () => {
@@ -21,6 +21,7 @@ describe('signupSchema', () => {
     const result = signupSchema.safeParse({
       username: 'a b',
       countryCode: '',
+      gender: null,
       email: 'nope',
       password: 'short',
       isAdult: true,
@@ -30,6 +31,7 @@ describe('signupSchema', () => {
       expect(fieldErrors(result.error)).toEqual({
         username: 'validation.usernameChars',
         countryCode: 'validation.countryRequired',
+        gender: 'validation.genderRequired',
         email: 'validation.emailInvalid',
         password: 'validation.passwordTooShort',
       })

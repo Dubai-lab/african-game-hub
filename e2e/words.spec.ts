@@ -77,6 +77,10 @@ test('two players are dealt racks only they can see, the server judges the words
   const firstIsOne = seats.find((row) => row.seat === '1')!.username === TEST_ACCOUNTS[0]!.username
   const [first, second] = firstIsOne ? [one.page, two.page] : [two.page, one.page]
   await expect(first.getByTestId('words-player-2')).toHaveAttribute('data-tiles', '7')
+  // Each sees the other's tiles face down, and the figure their gender gives them.
+  await expect(first.getByTestId('words-player-2').locator('[data-tile-back]:visible')).toHaveCount(7, { timeout: 15_000 })
+  await expect(one.page.locator('[data-figure="female"]')).toHaveCount(1)
+  await expect(one.page.locator('[data-figure="male"]')).toHaveCount(1)
   await expect(first.getByTestId('words-status')).toContainText('Your turn')
   await expect(second.getByTestId('words-status')).toContainText('Waiting for ')
   // Out of turn, nothing can be asked for.
@@ -147,7 +151,15 @@ test('practice against the computer: it plays real words on the phone, and the g
   await page.goto('/play/words/computer')
   await page.getByRole('button', { name: 'Start game' }).click()
   await expect(board(page)).toBeVisible()
+  // The tiles are shared out from the bag, seen to travel to each rack.
+  await expect(page.getByTestId('words-dealing')).toBeVisible()
+  await expect(page.getByTestId('words-flight').first()).toBeAttached()
+  await expect(page.getByTestId('words-dealing')).toHaveCount(0, { timeout: 15_000 })
+  await expect(page.getByTestId('words-flight')).toHaveCount(0)
   await expect(rack(page)).toHaveCount(7)
+  // The computer sits opposite, with its own figure and its seven tiles face down.
+  await expect(page.getByTestId('words-player-2').locator('[data-figure="computer"]')).toBeVisible()
+  await expect(page.getByTestId('words-player-2').locator('[data-tile-back]:visible')).toHaveCount(7)
   await expect(page.getByTestId('words-status')).toContainText('Your turn')
   // Once the word list is on the phone the player may act. They pass; the computer opens.
   await expect(page.getByTestId('words-pass')).toBeEnabled({ timeout: 60_000 })

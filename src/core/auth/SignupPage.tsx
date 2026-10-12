@@ -3,7 +3,9 @@ import { useTranslation, Trans } from 'react-i18next'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { guessCountry, useCountries } from '@/core/countries/useCountries'
 import { supabase } from '@/core/lib/supabase'
+import { GenderChoice } from '@/core/profile/GenderPrompt'
 import { Button } from '@/core/ui/Button'
+import type { Gender } from '@/core/ui/PlayerFigure'
 import { TextField } from '@/core/ui/TextField'
 import { toast } from '@/core/ui/toast'
 import { AuthLayout } from './AuthLayout'
@@ -19,6 +21,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isAdult, setIsAdult] = useState(false)
+  const [gender, setGender] = useState<Gender | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState(false)
   const countryFieldId = useId()
@@ -58,6 +61,7 @@ export default function SignupPage() {
     const first = Object.values(found)[0]
     if (first) toast.error(t(first))
     requestAnimationFrame(() => {
+      // (A choice of two is one field: its first button stands for it.)
       const field = form.current?.querySelector<HTMLElement>('[aria-invalid="true"]')
       field?.scrollIntoView({ block: 'center', behavior: 'smooth' })
       field?.focus({ preventScroll: true })
@@ -70,7 +74,7 @@ export default function SignupPage() {
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
     if (busy) return
-    const parsed = signupSchema.safeParse({ username, countryCode, email, password, isAdult })
+    const parsed = signupSchema.safeParse({ username, countryCode, gender, email, password, isAdult })
     if (!parsed.success) return refuse(fieldErrors(parsed.error))
     if (nameState === 'taken') return refuse({ username: 'validation.usernameTaken' })
     setErrors({})
@@ -95,6 +99,7 @@ export default function SignupPage() {
           data: {
             username: parsed.data.username,
             country_code: parsed.data.countryCode,
+            gender: parsed.data.gender,
             preferred_language: i18n.resolvedLanguage ?? 'en',
             age_confirmed: true,
           },
@@ -168,6 +173,21 @@ export default function SignupPage() {
             <p className="mt-1 text-sm text-muted">{t('auth.countryHint')}</p>
           )}
         </div>
+        <fieldset>
+          <legend className="block text-sm font-medium">{t('auth.gender.label')}</legend>
+          <div className="mt-1">
+            <GenderChoice
+              value={gender}
+              name="gender"
+              invalid={Boolean(errors.gender)}
+              onChange={(next) => {
+                setGender(next)
+                setErrors(({ gender: _gone, ...rest }) => rest)
+              }}
+            />
+          </div>
+          {errors.gender && <p className="mt-1 text-sm text-danger">{t(errors.gender)}</p>}
+        </fieldset>
         <TextField
           label={t('auth.email')}
           type="email"
