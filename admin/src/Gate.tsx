@@ -1,5 +1,6 @@
-import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from 'react'
+import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { api, ApiError, sessionProblem } from './lib/api'
+import { Captcha, type CaptchaHandle, captchaRequired } from './lib/Captcha'
 import { configured, supabase } from './lib/supabase'
 import { Button, inputClass } from './ui'
 
@@ -99,22 +100,36 @@ function Frame({ title, children }: { title: string; children?: ReactNode }) {
 function SignIn({ notice, onSignedIn }: { notice: string | null; onSignedIn: () => Promise<boolean> }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // The check that this is a person: when it is on for the project, no sign-in is accepted without its answer.
+  const captcha = useRef<CaptchaHandle>(null)
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
+    if (captchaRequired && !captchaToken) return setError('Wait for the check under the password to finish, then try again.')
     setBusy(true)
     setError(null)
     try {
       const { error: failed } = await supabase.auth.signInWithPassword({
         email: String(form.get('email')).trim(),
         password: String(form.get('password')),
+        options: captchaToken ? { captchaToken } : undefined,
       })
       // One answer for a wrong password and for a real account that is not an admin, so this
       // screen cannot be used to find out which accounts are admins.
       if (failed || !(await onSignedIn())) {
         await leave()
-        setError(failed && !failed.status ? 'Could not reach the server. Try again.' : 'Wrong email or password, or this account has no admin access.')
+        // An answer to the check is good for one attempt.
+        captcha.current?.reset()
+        setError(
+          failed && !failed.status
+            ? 'Could not reach the server. Try again.'
+            : // Said plainly, because it has nothing to do with the account: the sign-in was turned away before the password was looked at.
+              failed?.code === 'captcha_failed'
+              ? 'The check that you are a person did not pass, so the sign-in was not attempted. Reload the page and try again.'
+              : 'Wrong email or password, or this account has no admin access.',
+        )
       }
     } catch {
       setError('Could not reach the server. Try again.')
@@ -135,6 +150,7 @@ function SignIn({ notice, onSignedIn }: { notice: string | null; onSignedIn: () 
           Password
           <input name="password" type="password" autoComplete="current-password" required className={`${inputClass} mt-1`} />
         </label>
+        <Captcha ref={captcha} onToken={setCaptchaToken} onUnavailable={() => setError('The check that you are a person could not be loaded. Reload the page and try again.')} />
         {error && (
           <p role="alert" className="text-sm font-semibold text-danger">
             {error}
