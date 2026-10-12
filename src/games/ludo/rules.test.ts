@@ -145,6 +145,72 @@ describe('lay', () => {
   })
 })
 
+describe('without lay: a piece that captures with one die does not count the other', () => {
+  // Red's square 15 is yellow's square 41; red's gate (square 0) is yellow's square 26.
+  it('one piece on the board cannot capture and walk on: it counts both dice and passes the opponent', () => {
+    const start = thrown(two({ positions: { red: [10, 56, 56, 56], yellow: [41, -1, -1, -1] } }), [5, 2])
+    // The 5 would capture with nobody to take the 2. The 2 first is fine (the 5 then goes past).
+    expect(plays(start)).toEqual([{ color: 'red', piece: 0, die: 2 }])
+    expect(applyMove(start, { piece: 0, die: 5 })).toBe(start)
+    expect(applyMove(start, { piece: 0, full: true }).positions).toMatchObject({ red: [17, 56, 56, 56], yellow: [41, -1, -1, -1] })
+  })
+
+  it('5 and 2: the 5 captures and the 2 goes to the other piece', () => {
+    const start = thrown(two({ positions: { red: [10, 30, 56, 56], yellow: [41, -1, -1, -1] } }), [5, 2])
+    const after = applyMove(start, { piece: 0, die: 5 })
+    expect(after.positions).toMatchObject({ red: [15, 32, 56, 56], yellow: [-1, -1, -1, -1] })
+    expect(after).toMatchObject({ turn: 'yellow', phase: 'roll' })
+  })
+
+  it('with several other pieces the player chooses, and the piece that captured is not offered', () => {
+    const start = thrown(two({ positions: { red: [10, 30, 40, 56], yellow: [41, -1, -1, -1] } }), [5, 2])
+    const after = applyMove(start, { piece: 0, die: 5 })
+    expect(after).toMatchObject({ turn: 'red', phase: 'move', dice: [2] })
+    expect(plays(after)).toEqual([
+      { color: 'red', piece: 1, die: 2 },
+      { color: 'red', piece: 2, die: 2 },
+    ])
+    expect(applyMove(after, { piece: 0, die: 2 })).toBe(after)
+    expect(applyMove(after, { piece: 2, die: 2 }).positions).toMatchObject({ red: [15, 30, 42, 56] })
+  })
+
+  it('the gate: 6 and 3 with nothing out counts all nine past the piece on the gate; with a piece out, the six captures there', () => {
+    const alone = thrown(two({ positions: { red: [-1, -1, -1, -1], yellow: [26, -1, -1, -1] } }), [6, 3])
+    expect(plays(alone)).toEqual([])
+    expect(applyMove(alone, { piece: 0, full: true }).positions).toMatchObject({ red: [3, -1, -1, -1], yellow: [26, -1, -1, -1] })
+
+    const helped = thrown(two({ positions: { red: [20, -1, -1, -1], yellow: [26, -1, -1, -1] } }), [6, 3])
+    expect(applyMove(helped, { piece: 1, die: 6 }).positions).toMatchObject({ red: [23, 0, -1, -1], yellow: [-1, -1, -1, -1] })
+  })
+
+  it('a capture with the last die, or with the whole count, stands', () => {
+    const start = thrown(two({ positions: { red: [10, 56, 56, 56], yellow: [41, -1, -1, -1] } }), [3, 2])
+    expect(applyMove(start, { piece: 0, die: 3 }).positions).toMatchObject({ red: [15, 56, 56, 56], yellow: [-1, -1, -1, -1] })
+    expect(applyMove(start, { piece: 0, full: true }).positions).toMatchObject({ red: [15, 56, 56, 56], yellow: [-1, -1, -1, -1] })
+  })
+
+  it('the computer plays by the same rule: whole games without lay, never a capture followed by the same piece', () => {
+    for (let round = 0; round < 6; round++) {
+      let game: LocalGame = newLocalGame({ players: 3, pieces: 4, dice: 2, lay: false })
+      for (let step = 0; step < 4000 && game.phase !== 'over'; step++) {
+        if (game.phase === 'roll') {
+          game = applyRoll(game, throwDice(2))
+          continue
+        }
+        const before = game
+        const choice = chooseMove(game)
+        const last = before.lastEvent
+        // With one die of two left after a capture, the piece chosen is never the one that captured.
+        if (before.dice.length === 1 && before.rolled.length === 2 && last?.captured && last.piece !== undefined && last.seat === before.turn) {
+          expect(`${choice.color}:${choice.piece}`).not.toBe(`${last.color ?? last.seat}:${last.piece}`)
+        }
+        game = applyMove(game, choice)
+        expect(game).not.toBe(before)
+      }
+    }
+  })
+})
+
 describe('both sides', () => {
   const both = (over: Partial<LocalGame>): LocalGame => ({ ...newLocalGame({ players: 2, pieces: 2, dice: 2, sides: 2, lay: false }), ...over })
 
@@ -198,11 +264,12 @@ describe('both dice must be played; the gate', () => {
     expect(plays(start)).toEqual([{ color: 'red', piece: 0, die: 3 }])
   })
 
-  it('a second piece that can take the other die makes the capture legal; so does playing without lay', () => {
+  it('a second piece that can take the other die makes the capture legal; without lay, too, a piece alone cannot capture and walk on', () => {
     const two = thrown(lay({ positions: { red: [10, 30, 56, 56], yellow: [41, -1, -1, -1] } }), [5, 5])
     expect(applyMove(two, { piece: 0, die: 5 }).positions).toMatchObject({ red: [56, 35, 56, 56], yellow: [-1, -1, -1, -1] })
     const stay = thrown(lay({ lay: false, positions: { red: [10, 56, 56, 56], yellow: [41, -1, -1, -1] } }), [5, 5])
-    expect(applyMove(stay, { piece: 0, die: 5 }).positions).toMatchObject({ red: [20, 56, 56, 56], yellow: [-1, -1, -1, -1] })
+    expect(applyMove(stay, { piece: 0, die: 5 })).toBe(stay)
+    expect(applyMove(stay, { piece: 0, full: true }).positions).toMatchObject({ red: [20, 56, 56, 56], yellow: [41, -1, -1, -1] })
   })
 
   it('when nothing can play both dice, one is played and the other is lost', () => {

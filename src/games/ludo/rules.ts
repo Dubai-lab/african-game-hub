@@ -54,6 +54,11 @@ export type LudoState = {
   places: Seat[]
   /** Players who left the table. */
   gone: Seat[]
+  /**
+   * The piece that captured with the first die of this throw, when the screen knows it before
+   * the record of the game says so (a move shown early). Otherwise it is read from `lastEvent`.
+   */
+  killer?: { color: Seat; piece: number } | null
 }
 
 export type LocalGame = LudoState & {
@@ -117,25 +122,48 @@ function nextSeat(game: LudoState, from: Seat): Seat {
 
 const pass = (game: LocalGame): LocalGame => ({ ...game, turn: nextSeat(game, game.turn), phase: 'roll', dice: [], extra: false, sixes: 0 })
 
+/**
+ * The piece that captured with the first die of this throw, if one did. It may not count the
+ * second: "you cannot kill and count with the same piece". (Read, as on the server, from the
+ * last thing that happened: with one die of two still lying there, that is the move made with
+ * the other.)
+ */
+export function killerOf(game: LudoState, seat: Seat = game.turn): { color: Seat; piece: number } | null {
+  if (game.dice.length !== 1 || game.rolled.length !== 2) return null
+  if (game.killer !== undefined) return game.killer
+  const last = game.lastEvent
+  if (!last || last.seat !== seat || last.piece === undefined || !last.captured) return null
+  return { color: last.color ?? seat, piece: last.piece }
+}
+
 /** Every single-die move there is for this player with the dice lying there, allowed or not. */
 function everyPlay(game: LudoState, seat: Seat): Play[] {
   const dice = [...new Set(game.dice)]
-  return (game.teams[seat] ?? []).flatMap((color) => dice.flatMap((die) => movable(game.positions[color] ?? [], die).map((piece) => ({ color, piece, die }))))
+  const killer = killerOf(game, seat)
+  return (game.teams[seat] ?? []).flatMap((color) =>
+    dice.flatMap((die) =>
+      movable(game.positions[color] ?? [], die)
+        .filter((piece) => !(killer && killer.color === color && killer.piece === piece))
+        .map((piece) => ({ color, piece, die })),
+    ),
+  )
 }
 
 /**
  * The single-die moves this player is allowed to make. Both dice must be played whenever that
  * is possible: with two dice still lying there, a move is allowed only if the other die can be
  * played after it, as long as there is some way of playing both (such a move, or the full
- * count). When there is no such way, any move may be made and the other die is lost.
+ * count). After a capture the other die must be played by another piece, so a capture is on
+ * only when another piece can take it. When there is no way of playing both, any move may be
+ * made and the other die is lost.
  */
 export function plays(game: LudoState, seat: Seat = game.turn): Play[] {
   const all = everyPlay(game, seat)
   if (game.dice.length !== 2) return all
   const keepsOtherAlive = all.filter((play) => {
     const other = game.dice[0] === play.die ? game.dice[1]! : game.dice[0]!
-    const { positions } = preview(game, seat, play.color, play.piece, play.die)
-    return (game.teams[seat] ?? []).some((color) => movable(positions[color] ?? [], other).length > 0)
+    const { positions, captures } = preview(game, seat, play.color, play.piece, play.die)
+    return (game.teams[seat] ?? []).some((color) => movable(positions[color] ?? [], other).some((piece) => !(captures.length > 0 && color === play.color && piece === play.piece)))
   })
   return keepsOtherAlive.length > 0 || fullCountPieces(game, seat).length > 0 ? keepsOtherAlive : all
 }
@@ -200,7 +228,8 @@ function movePiece(game: LocalGame, color: Seat, piece: number, die: number, ful
   if ((game.teams[seat] ?? []).every((own) => positions[own]!.every((p) => p === HOME))) {
     return { ...game, positions, dice: [], extra: false, places: [seat], phase: 'over', lastEvent: { ...event, finished: true } }
   }
-  return { ...game, positions, dice, lastEvent: event }
+  // (Any early word about who captured belongs to the move before this one.)
+  return { ...game, positions, dice, lastEvent: event, killer: undefined }
 }
 
 /**

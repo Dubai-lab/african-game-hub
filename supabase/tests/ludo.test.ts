@@ -694,7 +694,8 @@ describe('both sides, lay and full count', () => {
     const stay = await table({ lay: false })
     await thrown(stay.matchId, 3, 1, { positions: { red: [27, 40], yellow: [4, 9] } })
     await play(stay.by.red!, stay.matchId, 'red', 0, 3)
-    expect((await game(stay.matchId)).positions).toEqual({ red: [30, 40], yellow: [-1, 9] })
+    // It stays on the square it captured on, and does not walk the 1: the other piece does.
+    expect((await game(stay.matchId)).positions).toEqual({ red: [30, 41], yellow: [-1, 9] })
   })
 
   it('full count: one piece takes both dice as a single move and touches nothing on the way', async () => {
@@ -824,11 +825,79 @@ describe('both dice must be played; the gate', () => {
     expect(await legal(matchId)).toEqual([{ piece: 0, die: 2 }])
   })
 
-  it('without lay the capturing piece stays on the board, so the other die can follow and the capture stands', async () => {
+  // ---- Without lay: "you cannot kill and count with the same piece" ----
+  // The piece that captures stays on the board, but it does not walk the other die: another
+  // piece must. With no other piece to do it, the capture is not on and the piece counts both.
+
+  it('no lay: one piece on the board cannot capture with one die and walk the other; it counts both and passes', async () => {
     const { matchId, red } = await table({ lay: false })
     await thrown(matchId, 5, 5, { red: [10, 56, 56, 56], yellow: [41, -1, -1, -1] })
+    expect(await legal(matchId)).toEqual([])
+    expect(await play(red, matchId, 0, 5)).toEqual({ ok: false, code: 'ILLEGAL_MOVE' })
+    expect(await play(red, matchId, 0, null, true)).toEqual({ ok: true })
+    // Ten squares on, past the opponent, who is untouched.
+    expect((await game(matchId)).positions).toEqual({ red: [20, 56, 56, 56], yellow: [41, -1, -1, -1] })
+  })
+
+  it('no lay: 5 and 2, the 5 captures, and the 2 is played by the other piece, never by the one that captured', async () => {
+    const { matchId, red } = await table({ lay: false })
+    await thrown(matchId, 5, 2, { red: [10, 30, 56, 56], yellow: [41, -1, -1, -1] })
     expect(await play(red, matchId, 0, 5)).toEqual({ ok: true })
-    expect((await game(matchId)).positions).toEqual({ red: [20, 56, 56, 56], yellow: [-1, -1, -1, -1] })
+    // The capturing piece stands where it landed (15, not 17); the only other piece took the 2 at once.
+    const g = await game(matchId)
+    expect(g.positions).toEqual({ red: [15, 32, 56, 56], yellow: [-1, -1, -1, -1] })
+    expect(g).toMatchObject({ turn: 'yellow', phase: 'roll' })
+  })
+
+  it('no lay: with several other pieces the player chooses which one counts, and the piece that captured is not among them', async () => {
+    const { matchId, red } = await table({ lay: false })
+    await thrown(matchId, 5, 2, { red: [10, 30, 40, 56], yellow: [41, -1, -1, -1] })
+    expect(await play(red, matchId, 0, 5)).toEqual({ ok: true })
+    expect(await game(matchId)).toMatchObject({ turn: 'red', phase: 'move' })
+    expect(await legal(matchId)).toEqual([{ piece: 1, die: 2 }, { piece: 2, die: 2 }])
+    expect(await play(red, matchId, 0, 2)).toEqual({ ok: false, code: 'ILLEGAL_MOVE' })
+    expect(await play(red, matchId, 2, 2)).toEqual({ ok: true })
+    expect((await game(matchId)).positions).toEqual({ red: [15, 30, 42, 56], yellow: [-1, -1, -1, -1] })
+  })
+
+  it('no lay, the gate: 6 and 3 with nothing on the board comes out and counts all nine, passing the piece on the gate', async () => {
+    const { matchId, red } = await table({ lay: false })
+    await thrown(matchId, 6, 3, { red: [-1, -1, -1, -1], yellow: [26, -1, -1, -1] })
+    expect(await legal(matchId)).toEqual([])
+    expect(await play(red, matchId, 0, 6)).toEqual({ ok: false, code: 'ILLEGAL_MOVE' })
+    expect(await play(red, matchId, 0, null, true)).toEqual({ ok: true })
+    expect((await game(matchId)).positions).toEqual({ red: [3, -1, -1, -1], yellow: [26, -1, -1, -1] })
+  })
+
+  it('no lay, the gate: with a piece already on the board the six captures on the gate and that other piece counts the three', async () => {
+    const { matchId, red } = await table({ lay: false })
+    await thrown(matchId, 6, 3, { red: [20, -1, -1, -1], yellow: [26, -1, -1, -1] })
+    expect(await play(red, matchId, 1, 6)).toEqual({ ok: true })
+    // The piece that came out stays on its gate; the 3 went to the piece that was already out.
+    expect((await game(matchId)).positions).toEqual({ red: [23, 0, -1, -1], yellow: [-1, -1, -1, -1] })
+  })
+
+  it('no lay: a capture made with the last die, or with the whole count, stands: nothing is left to count', async () => {
+    // Five ahead, 3 and 2. Either die first is fine (the second then lands on the opponent).
+    const apart = await table({ lay: false })
+    await thrown(apart.matchId, 3, 2, { red: [10, 56, 56, 56], yellow: [41, -1, -1, -1] })
+    expect(await legal(apart.matchId)).toEqual([{ piece: 0, die: 2 }, { piece: 0, die: 3 }])
+    expect(await play(apart.red, apart.matchId, 0, 3)).toEqual({ ok: true })
+    expect((await game(apart.matchId)).positions).toEqual({ red: [15, 56, 56, 56], yellow: [-1, -1, -1, -1] })
+
+    const whole = await table({ lay: false })
+    await thrown(whole.matchId, 3, 2, { red: [10, 56, 56, 56], yellow: [41, -1, -1, -1] })
+    expect(await play(whole.red, whole.matchId, 0, null, true)).toEqual({ ok: true })
+    expect((await game(whole.matchId)).positions).toEqual({ red: [15, 56, 56, 56], yellow: [-1, -1, -1, -1] })
+  })
+
+  it('no lay: a move that captures nothing leaves the same piece free to walk the other die', async () => {
+    const { matchId, red } = await table({ lay: false })
+    await thrown(matchId, 5, 2, { red: [10, 30, 56, 56], yellow: [-1, -1, -1, -1] })
+    expect(await play(red, matchId, 0, 5)).toEqual({ ok: true })
+    expect(await legal(matchId)).toEqual([{ piece: 0, die: 2 }, { piece: 1, die: 2 }])
+    expect(await play(red, matchId, 0, 2)).toEqual({ ok: true })
+    expect((await game(matchId)).positions).toEqual({ red: [17, 30, 56, 56], yellow: [-1, -1, -1, -1] })
   })
 
   it('the gate: the first piece out must walk the other die too, so it does not capture on the gate', async () => {

@@ -81,7 +81,7 @@ export function useLudoGame(matchId: string) {
   const [connected, setConnected] = useState(true)
   const [busy, setBusy] = useState(false)
   /** The player's own move, shown while the server is deciding: the board after it, on the turn it was made. */
-  const [pending, setPending] = useState<{ turnNo: number; positions: LudoState['positions']; dice: number[] } | null>(null)
+  const [pending, setPending] = useState<{ turnNo: number; positions: LudoState['positions']; dice: number[]; killer: LudoState['killer'] } | null>(null)
   /** Server time minus this device's time, in milliseconds. */
   const offset = useRef(0)
   const loadSeq = useRef(0)
@@ -214,7 +214,8 @@ export function useLudoGame(matchId: string) {
           const steps = move.full ? game.dice[0]! + game.dice[1]! : move.die!
           const dice = move.full ? [] : [...game.dice]
           if (!move.full) dice.splice(dice.indexOf(move.die!), 1)
-          setPending({ turnNo: game.turnNo, positions: preview(game, game.turn, move.color, move.piece, steps).positions, dice })
+          const early = preview(game, game.turn, move.color, move.piece, steps)
+          setPending({ turnNo: game.turnNo, positions: early.positions, dice, killer: early.captures.length > 0 && !move.full ? { color: move.color, piece: move.piece } : null })
         }
       }
       try {
@@ -252,7 +253,7 @@ export function useLudoGame(matchId: string) {
 
   const me = snapshot?.players.find((p) => p.userId === userId) ?? null
   // The early picture lasts only until the server's own state for that move arrives.
-  const shownGame = snapshot ? (pending && pending.turnNo === snapshot.game.turnNo && snapshot.game.phase === 'move' ? { ...snapshot.game, positions: pending.positions, dice: pending.dice } : snapshot.game) : null
+  const shownGame = snapshot ? (pending && pending.turnNo === snapshot.game.turnNo && snapshot.game.phase === 'move' ? { ...snapshot.game, positions: pending.positions, dice: pending.dice, killer: pending.killer } : snapshot.game) : null
   /** The turn deadline on this device's clock, while the table is open. */
   const deadline = snapshot && snapshot.game.phase !== 'over' && snapshot.game.deadline ? snapshot.game.deadline - offset.current : null
 

@@ -1052,7 +1052,7 @@
       "on": "Pose",
       "off": "Sans pose",
       "onHint": "Le pion qui capture rentre directement",
-      "offHint": "Le pion qui capture reste où il est arrivé"
+      "offHint": "Un pion qui capture reste où il est arrivé. L’autre dé est compté par un autre pion."
     },
     "rule": {
       "lay": "la capture pose le pion",

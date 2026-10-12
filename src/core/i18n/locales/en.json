@@ -1052,7 +1052,7 @@
       "on": "Lay",
       "off": "No lay",
       "onHint": "A piece that captures goes straight home",
-      "offHint": "A piece that captures stays where it landed"
+      "offHint": "A piece that captures stays where it landed. The other die is counted by another piece."
     },
     "rule": {
       "lay": "a capture lays",
