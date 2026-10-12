@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
+import { useMyProfile } from '@/core/profile/useMyProfile'
 import { Button } from '@/core/ui/Button'
 import { ResultDialog } from '@/core/ui/ResultDialog'
 import { act, type Card, type CheckUpState, chooseAction, deal, isSound, leave, type Played, type Seat, type Shape, type TableEvent } from '../../../supabase/functions/_shared/checkup'
@@ -85,9 +86,13 @@ function Game({ setup, onSetup, resume }: { setup: Setup; onSetup: () => void; r
     }
   }, [state, game.event, setup])
 
+  const gender = useMyProfile().data?.gender ?? null
   const players = useMemo<TablePlayer[]>(
-    () => state.seats.map((seat, index) => ({ seat, name: seat === HUMAN ? t('checkup.you') : state.seats.length === 2 ? t('checkup.computer.name') : t('checkup.computer.numbered', { number: index }) })),
-    [state.seats, t],
+    () =>
+      state.seats.map((seat, index) =>
+        seat === HUMAN ? { seat, name: t('checkup.you'), gender } : { seat, name: state.seats.length === 2 ? t('checkup.computer.name') : t('checkup.computer.numbered', { number: index }), computer: true },
+      ),
+    [state.seats, t, gender],
   )
 
   // The computer's turns, one at a time so each can be followed.

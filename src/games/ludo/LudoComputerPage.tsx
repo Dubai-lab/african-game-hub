@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
+import { useMyProfile } from '@/core/profile/useMyProfile'
 import { useSettingsStore } from '@/core/settings/settingsStore'
 import { Button } from '@/core/ui/Button'
 import { ResultDialog } from '@/core/ui/ResultDialog'
@@ -88,14 +89,15 @@ function Game({ setup, onSetup, resume }: { setup: Setup; onSetup: () => void; r
     }
   }, [game, setup])
 
+  const gender = useMyProfile().data?.gender ?? null
   const players = useMemo(() => {
-    const names: Partial<Record<Seat, TablePlayer>> = { [HUMAN]: { name: t('ludo.computer.you') } }
+    const names: Partial<Record<Seat, TablePlayer>> = { [HUMAN]: { name: t('ludo.computer.you'), gender } }
     const others = SEATS.filter((seat) => game.teams[seat] && seat !== HUMAN)
     others.forEach((seat, index) => {
-      names[seat] = { name: others.length === 1 ? t('ludo.computer.name') : t('ludo.computer.numbered', { number: index + 1 }) }
+      names[seat] = { name: others.length === 1 ? t('ludo.computer.name') : t('ludo.computer.numbered', { number: index + 1 }), computer: true }
     })
     return names
-  }, [game.teams, t])
+  }, [game.teams, t, gender])
 
   // The computer's turns, one step at a time so each can be followed.
   useEffect(() => {

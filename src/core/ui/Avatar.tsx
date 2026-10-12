@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 import { useSettingsStore } from '@/core/settings/settingsStore'
 
 type Props = {
@@ -10,13 +10,15 @@ type Props = {
   className?: string
   /** Colours of the letter tile, when the screen has its own (a chess player's side, say). */
   tileClassName?: string
+  /** Shown instead of the letter when there is no photo: a player's figure at a table, say. */
+  fallback?: ReactNode
 }
 
 /**
  * A player's picture. Decoration: the name is always written next to it, so it is hidden from
  * screen readers. With data saver on, no photo is fetched at all.
  */
-export function Avatar({ url, name, className = '', tileClassName = 'bg-primary text-surface' }: Props) {
+export function Avatar({ url, name, className = '', tileClassName = 'bg-primary text-surface', fallback }: Props) {
   const dataSaver = useSettingsStore((state) => state.dataSaver)
   const [failed, setFailed] = useState(false)
   useEffect(() => setFailed(false), [url])
@@ -24,6 +26,7 @@ export function Avatar({ url, name, className = '', tileClassName = 'bg-primary 
   if (url && !dataSaver && !failed) {
     return <img src={url} alt="" width={256} height={256} loading="lazy" decoding="async" onError={() => setFailed(true)} className={`shrink-0 object-cover ${className}`} data-testid="avatar-photo" />
   }
+  if (fallback) return <>{fallback}</>
   return (
     <div aria-hidden="true" className={`flex shrink-0 items-center justify-center font-display font-extrabold ${tileClassName} ${className}`}>
       {name.slice(0, 1).toUpperCase()}

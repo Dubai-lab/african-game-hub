@@ -18,12 +18,14 @@ type Props = {
   kind: FigureKind
   /** The player's place at the table (0 for the first seat): the colour they wear. */
   seatIndex?: number
+  /** The colour they wear, when the game has its own for each player (a Ludo house, say). */
+  colour?: string
   /** Size: for example "size-8". */
   className?: string
 }
 
-export function PlayerFigure({ kind, seatIndex = 0, className = 'size-8' }: Props) {
-  const wear = SEAT_COLOURS[seatIndex % SEAT_COLOURS.length]!
+export function PlayerFigure({ kind, seatIndex = 0, colour, className = 'size-8' }: Props) {
+  const wear = colour ?? SEAT_COLOURS[seatIndex % SEAT_COLOURS.length]!
   return (
     <svg viewBox="0 0 40 40" className={`shrink-0 ${className}`} aria-hidden="true" data-figure={kind ?? 'plain'}>
       <rect width="40" height="40" rx="8" fill="#e9ecf7" stroke={INK} strokeWidth="2" />

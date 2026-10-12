@@ -68,7 +68,7 @@ export default function LudoMatchPage({ matchId }: { matchId: string }) {
   }
 
   const seats: Partial<Record<Seat, TablePlayer>> = Object.fromEntries(
-    players.map((p) => [p.seat, { name: p.name, flag: p.countryCode ? flagEmoji(p.countryCode) : undefined, wins: p.wins }]),
+    players.map((p) => [p.seat, { name: p.name, flag: p.countryCode ? flagEmoji(p.countryCode) : undefined, wins: p.wins, gender: p.gender }]),
   )
   const me = players.find((p) => p.seat === mySeat)
   const opponent = players.find((p) => p.seat !== mySeat)

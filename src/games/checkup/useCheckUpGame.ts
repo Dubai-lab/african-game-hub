@@ -37,6 +37,8 @@ export type CheckUpPlayer = {
   name: string
   countryCode: string | null
   avatarUrl: string | null
+  /** Chooses the figure at their place at the table. Null for a player who has not said. */
+  gender: 'male' | 'female' | null
   /** Games of Check Up this player has won. */
   wins: number
   ratingAfter: number | null
@@ -102,7 +104,7 @@ export function useCheckUpGame(matchId: string) {
       const [match, game, hand, time] = await Promise.all([
         supabase
           .from('matches')
-          .select('status, result, winner_id, end_reason, options, stake_amount, match_players (user_id, seat, rating_after, tokens_change, profiles (username, display_name, country_code, avatar_url))')
+          .select('status, result, winner_id, end_reason, options, stake_amount, match_players (user_id, seat, rating_after, tokens_change, profiles (username, display_name, country_code, avatar_url, gender))')
           .eq('id', matchId)
           .maybeSingle(),
         supabase.from('checkup_games').select(GAME_COLUMNS).eq('match_id', matchId).maybeSingle(),
@@ -126,6 +128,7 @@ export function useCheckUpGame(matchId: string) {
         name: p.profiles?.display_name ?? p.profiles?.username ?? '?',
         countryCode: p.profiles?.country_code ?? null,
         avatarUrl: p.profiles?.avatar_url ?? null,
+        gender: p.profiles?.gender === 'male' || p.profiles?.gender === 'female' ? p.profiles.gender : null,
         wins: wins.get(p.user_id) ?? 0,
         ratingAfter: p.rating_after,
         tokensChange: p.tokens_change,

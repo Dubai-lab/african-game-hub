@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSettingsStore } from '@/core/settings/settingsStore'
+import { type Gender, PlayerFigure } from '@/core/ui/PlayerFigure'
 import { ChatFold, GameBar, GameHeader, GameMenu, useChatFold, useLockedScreen } from '@/core/ui/gameScreen'
 import { HOME, type Seat, SEATS } from './board'
 import { BOARDS, type DieView, LudoBoard, useWalkingPieces } from './LudoBoard'
@@ -9,7 +10,7 @@ import { ludoFeedback, preloadLudoSounds } from './sound'
 
 const ROLL_MS = 550
 
-export type TablePlayer = { name: string; flag?: string; wins?: number | null }
+export type TablePlayer = { name: string; flag?: string; wins?: number | null; gender?: Gender | null; computer?: boolean }
 export type TableMove = { color: Seat; piece: number; die: number | null; full: boolean }
 
 /** A small in-page dialog (confirm resign, the result). No browser pop-ups. */
@@ -72,9 +73,11 @@ function PlayerCard({ player, seat, colors, shades, home, total, toMove, clock, 
       data-testid={`ludo-player-${seat}`}
       data-to-move={toMove}
     >
-      {/* One disc for each house the player holds. */}
-      <span className="flex shrink-0 -space-x-2" aria-hidden="true">
-        {colors.map((color) => (
+      {/* The player's figure, wearing the colour of their house. */}
+      {player && <PlayerFigure kind={player.computer ? 'computer' : player.gender} colour={shades[colors[0] ?? seat]} className={compact ? 'size-7' : 'size-9'} />}
+      {/* One disc for each house, when the player holds more than the one their figure wears (or has no figure). */}
+      <span className="flex shrink-0 -space-x-2 empty:hidden" aria-hidden="true">
+        {(player && colors.length === 1 ? [] : colors).map((color) => (
           <span key={color} className={`${compact ? 'size-6' : 'size-9'} rounded-full border-2 border-ink`} style={{ backgroundColor: shades[color] }} />
         ))}
       </span>

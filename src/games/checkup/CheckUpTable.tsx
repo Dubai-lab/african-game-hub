@@ -2,6 +2,7 @@ import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useSta
 import { useTranslation } from 'react-i18next'
 import { flagEmoji } from '@/core/countries/useCountries'
 import { Avatar } from '@/core/ui/Avatar'
+import { type Gender, PlayerFigure } from '@/core/ui/PlayerFigure'
 import { Button } from '@/core/ui/Button'
 import { ChatFold, GameBar, GameHeader, GameMenu, useChatFold, useLockedScreen } from '@/core/ui/gameScreen'
 import { canPlay, type Card, handTotal, isWhot, numberOf, SHAPES, type Seat, type Shape, shapeOf } from '../../../supabase/functions/_shared/checkup'
@@ -14,7 +15,7 @@ import type { TableView } from './useCheckUpGame'
 // the middle, the player's own hand under them. Shows a table; decides nothing. The same
 // screen serves an online game (the server's table) and practice against the computer.
 
-export type TablePlayer = { seat: Seat; name: string; countryCode?: string | null; avatarUrl?: string | null; wins?: number | null }
+export type TablePlayer = { seat: Seat; name: string; countryCode?: string | null; avatarUrl?: string | null; wins?: number | null; gender?: Gender | null; computer?: boolean }
 
 /** A small in-page dialog (confirm leaving, call a shape, the rules). No browser pop-ups. */
 export function Sheet({ title, children, onClose }: { title: string; children: ReactNode; onClose?: () => void }) {
@@ -212,7 +213,8 @@ export function CheckUpTable({ title, backTo, view, hand, players, mySeat, deadl
     const toMove = !over && view.turn === seat
     return (
       <div key={seat} className={`flex min-w-0 flex-1 items-center gap-2 border-2 px-2 py-1.5 ${toMove ? 'border-ink bg-panel' : 'border-transparent'} ${gone ? 'opacity-50' : ''}`} data-testid={`checkup-player-${seat}`} data-to-move={toMove} data-cards={count}>
-        <Avatar url={who?.avatarUrl ?? null} name={who?.name ?? '?'} className="size-9" />
+        {/* Their photo when they have one; otherwise their figure, wearing the colour of their seat. */}
+        <Avatar url={who?.avatarUrl ?? null} name={who?.name ?? '?'} className="size-9" fallback={<PlayerFigure kind={who?.computer ? 'computer' : who?.gender} seatIndex={Math.max(0, view.seats.indexOf(seat))} className="size-9" />} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold">
             {who?.countryCode && <span aria-hidden="true">{flagEmoji(who.countryCode)} </span>}

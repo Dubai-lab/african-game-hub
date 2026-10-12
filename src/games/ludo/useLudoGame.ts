@@ -23,6 +23,8 @@ export type LudoPlayer = {
   seat: Seat
   name: string
   countryCode: string | null
+  /** Chooses the figure at their place at the table. Null for a player who has not said. */
+  gender: 'male' | 'female' | null
   rating: number | null
   /** Games of Ludo this player has won. */
   wins: number
@@ -92,7 +94,7 @@ export function useLudoGame(matchId: string) {
         supabase
           .from('matches')
           .select(
-            'status, result, winner_id, end_reason, options, stake_amount, match_players (user_id, seat, rating_before, rating_after, tokens_change, profiles (username, display_name, country_code))',
+            'status, result, winner_id, end_reason, options, stake_amount, match_players (user_id, seat, rating_before, rating_after, tokens_change, profiles (username, display_name, country_code, gender))',
           )
           .eq('id', matchId)
           .maybeSingle(),
@@ -115,6 +117,7 @@ export function useLudoGame(matchId: string) {
         seat: p.seat as Seat,
         name: p.profiles?.display_name ?? p.profiles?.username ?? '?',
         countryCode: p.profiles?.country_code ?? null,
+        gender: p.profiles?.gender === 'male' || p.profiles?.gender === 'female' ? p.profiles.gender : null,
         rating: p.rating_before,
         wins: wins.get(p.user_id) ?? 0,
         ratingAfter: p.rating_after,
