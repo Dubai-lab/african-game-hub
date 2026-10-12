@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { chooseShot } from './computer'
-import { applyShot, type Ball, canPlaceCue, HEAD_STRING, type PoolState, rack, type Shot, simulate, TABLE, targets } from '../../../supabase/functions/_shared/pool'
+import { applyShot, type Ball, canPlaceCue, HEAD_STRING, type PoolState, rack, type Shot, simulate, TABLE, targets, pocketOpening, POCKETS } from '../../../supabase/functions/_shared/pool'
 
 // The physics and the rules of pool, as the server runs them.
 
@@ -261,5 +261,30 @@ describe('the computer', () => {
     const call = chooseShot(last, 'hard')
     expect(call.pocket).toBe(5)
     expect(applyShot(last, call)!.result).toMatchObject({ winner: 2, reason: 'eight_ball' })
+  })
+})
+
+describe('the pockets', () => {
+  // Players found the corners all but shut: a ball that looked dead in was turned away. What
+  // counts is the gap a ball's CENTRE has to find, and it must be about the width of a ball.
+  it('a corner pocket opens about a ball wide to a ball coming in on the diagonal, and a middle pocket wider', () => {
+    const ball = TABLE.r * 2
+    for (const corner of [0, 2, 3, 5]) {
+      expect(pocketOpening(corner)).toBeGreaterThan(ball * 0.95)
+      expect(pocketOpening(corner)).toBeLessThan(ball * 1.3)
+    }
+    for (const middle of [1, 4]) expect(pocketOpening(middle)).toBeGreaterThan(ball * 1.6)
+  })
+
+  it('a ball sent at a corner a little off the diagonal drops, where it used to be turned away', () => {
+    const corner = POCKETS[5]!
+    // Aimed from the middle of the table at a point half a ball to one side of the pocket's centre.
+    for (const off of [-28, 28]) {
+      const from = { x: 1900, y: 700 }
+      const to = { x: corner.x + off * 0.7071, y: corner.y - off * 0.7071 }
+      const played = simulate([{ n: 0, x: from.x, y: from.y, in: false }], { dx: Math.round(to.x - from.x), dy: Math.round(to.y - from.y), power: 500, spinX: 0, spinY: 0 })
+      expect(played.pocketed, `off by ${off}`).toEqual([0])
+      expect(played.pockets).toEqual([5])
+    }
   })
 })

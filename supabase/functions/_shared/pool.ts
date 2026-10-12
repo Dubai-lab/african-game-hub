@@ -67,14 +67,36 @@ const D = R * 2
  * rail, outside the playing surface, so only their mouths open onto the cloth. Corners are a
  * little wider than the middle pockets.
  */
+//
+// How wide a pocket is to a ball: a ball's centre can come no nearer a cushion than its own
+// radius, so what matters is how much of the pocket's circle lies inside that line. The corner
+// pockets used to sit so far back in the rail that a ball coming in on the diagonal had a gap
+// of 30 mm to find with its centre (less than half its own width): shots that looked dead in
+// were turned away by a cushion that was not drawn there. They now sit on the corner of the
+// cloth itself, and that gap is 71 mm, the width of a ball. The middle pockets open 127 mm
+// (they were 113).
 export const POCKETS: readonly { x: number; y: number; r: number }[] = [
-  { x: -16, y: -16, r: 90 },
-  { x: TABLE.w / 2, y: -26, r: 84 },
-  { x: TABLE.w + 16, y: -16, r: 90 },
-  { x: -16, y: TABLE.h + 16, r: 90 },
-  { x: TABLE.w / 2, y: TABLE.h + 26, r: 84 },
-  { x: TABLE.w + 16, y: TABLE.h + 16, r: 90 },
+  { x: 4, y: 4, r: 88 },
+  { x: TABLE.w / 2, y: -28, r: 90 },
+  { x: TABLE.w - 4, y: 4, r: 88 },
+  { x: 4, y: TABLE.h - 4, r: 88 },
+  { x: TABLE.w / 2, y: TABLE.h + 28, r: 90 },
+  { x: TABLE.w - 4, y: TABLE.h - 4, r: 88 },
 ]
+
+/**
+ * How wide each pocket's opening is to a ball's centre, in millimetres: for a corner, across
+ * the diagonal; for a middle pocket, along the cushion. (For the tests, and for anyone tuning.)
+ */
+export function pocketOpening(index: number): number {
+  const pocket = POCKETS[index]!
+  const corner = index !== 1 && index !== 4
+  // How far the pocket's centre lies behind the line a ball's centre runs along beside the cushion.
+  const depth = corner ? TABLE.r - Math.min(pocket.x, TABLE.w - pocket.x) : TABLE.r + (pocket.y < 0 ? -pocket.y : pocket.y - TABLE.h)
+  // Half of the pocket's circle that lies on that line.
+  const half = Math.sqrt(Math.max(0, pocket.r * pocket.r - depth * depth))
+  return corner ? (half - depth) * Math.SQRT2 : half * 2
+}
 export const HEAD_STRING = TABLE.w / 4
 export const FOOT_SPOT = { x: (TABLE.w * 3) / 4, y: TABLE.h / 2 }
 export const HEAD_SPOT = { x: HEAD_STRING, y: TABLE.h / 2 }

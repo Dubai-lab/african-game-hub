@@ -2,15 +2,17 @@ import { useEffect, useRef, useContext } from 'react'
 import { onCue, pullAlongCue, Sideways, touchIn } from './sideways'
 import { type Ball, canPlaceCue, POCKETS, TABLE } from '../../../supabase/functions/_shared/pool'
 import { type CueId, CUES } from './cues'
+import { paintTable, RAIL } from './tablePaint'
 
-// The pool table, drawn on a canvas. Nothing here is an image file: the cloth, the wooden
-// rails and the pockets are painted once in code, and every ball is a true sphere, lit from
-// above and shaded pixel by pixel, with its number and stripe wrapped round it. As a ball
-// travels its surface turns by exactly the distance rolled, so the numbers roll with it.
+export { RAIL }
+
+// The pool table, drawn on a canvas. Nothing here is an image file: the table is painted once
+// in code (see tablePaint.ts), and every ball is a true sphere, lit from a lamp above the table
+// and shaded pixel by pixel, with its number and stripe wrapped round it: polished, so the lamp
+// shows in it as a bright spot, the room as a softer glow, and the cloth as a tint underneath.
+// As a ball travels its surface turns by exactly the distance rolled, so the numbers roll with it.
 
 const R = TABLE.r
-/** Wood and cushion around the playing surface, in millimetres. */
-export const RAIL = 112
 const BALL_COLOR: Record<number, [number, number, number]> = {
   0: [247, 245, 236],
   1: [246, 196, 0],
@@ -123,13 +125,19 @@ function shade(image: ImageData, n: number, m: Mat) {
         }
       }
       const diffuse = Math.max(0, x * LX + y * LY + z * LZ)
-      const gleam = Math.pow(Math.max(0, x * HX + y * HY + z * HZ), 60)
-      const light = 0.34 + 0.72 * diffuse
+      const toLamp = Math.max(0, x * HX + y * HY + z * HZ)
+      // The lamp itself, small and bright, and the lit room round it, wide and soft.
+      const gleam = Math.pow(toLamp, 90) * 0.95 + Math.pow(toLamp, 9) * 0.16
+      // Round the edge the surface turns away from the eye: it darkens there, and a polished
+      // ball picks up a little of the light that comes off the cloth.
+      const turnedAway = 1 - z
+      const light = (0.3 + 0.78 * diffuse) * (1 - 0.34 * turnedAway * turnedAway)
+      const bounce = Math.max(0, y * 0.7 + 0.3) * turnedAway * turnedAway * 26
       // Soften the very edge, so the ball is round and not stair-stepped.
       const edge = Math.min(1, (1 - Math.sqrt(d2)) * half)
-      data[at] = Math.min(255, r * light + 255 * gleam * 0.85)
-      data[at + 1] = Math.min(255, g * light + 255 * gleam * 0.85)
-      data[at + 2] = Math.min(255, b * light + 255 * gleam * 0.85)
+      data[at] = Math.min(255, r * light + 255 * gleam + bounce * 0.6)
+      data[at + 1] = Math.min(255, g * light + 255 * gleam + bounce)
+      data[at + 2] = Math.min(255, b * light + 255 * gleam + bounce * 0.7)
       data[at + 3] = 255 * edge
     }
   }
@@ -145,160 +153,6 @@ export type ClothId = keyof typeof CLOTHS
 export const CLOTH_IDS = Object.keys(CLOTHS) as ClothId[]
 /** Where each pocket is drawn (the middle of its mouth). */
 const mouth = (i: number) => ({ x: POCKETS[i]!.x, y: POCKETS[i]!.y })
-
-/** The table without the balls, painted once for a given size. */
-function paintTable(width: number, height: number, vertical: boolean, scale: number, clothId: ClothId): HTMLCanvasElement {
-  const colors = CLOTHS[clothId]
-  const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-  const ctx = canvas.getContext('2d')!
-  // Everything below is drawn as if the table lay on its side; a tall screen turns it.
-  if (vertical) ctx.transform(0, -scale, scale, 0, RAIL * scale, (TABLE.w + RAIL) * scale)
-  else ctx.transform(scale, 0, 0, scale, RAIL * scale, RAIL * scale)
-  const W = TABLE.w
-  const H = TABLE.h
-
-  // The wooden frame, with a grain of fine darker and lighter streaks.
-  const wood = ctx.createLinearGradient(0, -RAIL, 0, H + RAIL)
-  wood.addColorStop(0, '#6b3b17')
-  wood.addColorStop(0.5, '#8a4f22')
-  wood.addColorStop(1, '#5a2f11')
-  ctx.fillStyle = wood
-  ctx.beginPath()
-  ctx.roundRect(-RAIL, -RAIL, W + RAIL * 2, H + RAIL * 2, 70)
-  ctx.fill()
-  ctx.save()
-  ctx.clip()
-  let seed = 7
-  const random = () => ((seed = (seed * 16807) % 2147483647) / 2147483647)
-  for (let i = 0; i < 260; i++) {
-    const y = -RAIL + random() * (H + RAIL * 2)
-    ctx.strokeStyle = random() > 0.5 ? 'rgba(40, 18, 4, 0.16)' : 'rgba(255, 214, 160, 0.09)'
-    ctx.lineWidth = 2 + random() * 5
-    ctx.beginPath()
-    ctx.moveTo(-RAIL, y)
-    ctx.bezierCurveTo(W * 0.3, y + random() * 30 - 15, W * 0.7, y + random() * 30 - 15, W + RAIL, y + random() * 20 - 10)
-    ctx.stroke()
-  }
-  ctx.restore()
-  ctx.strokeStyle = 'rgba(255, 225, 180, 0.35)'
-  ctx.lineWidth = 6
-  ctx.beginPath()
-  ctx.roundRect(-RAIL + 8, -RAIL + 8, W + RAIL * 2 - 16, H + RAIL * 2 - 16, 64)
-  ctx.stroke()
-
-  // Cloth: lighter under the lamp in the middle, darker toward the rails, with a fine nap.
-  const lip = 46
-  ctx.fillStyle = colors.bed
-  ctx.fillRect(-lip, -lip, W + lip * 2, H + lip * 2)
-  const cloth = ctx.createRadialGradient(W / 2, H / 2, 80, W / 2, H / 2, W * 0.62)
-  cloth.addColorStop(0, colors.cloth[0])
-  cloth.addColorStop(0.6, colors.cloth[1])
-  cloth.addColorStop(1, colors.cloth[2])
-  ctx.fillStyle = cloth
-  ctx.fillRect(0, 0, W, H)
-  for (let i = 0; i < 5200; i++) {
-    ctx.fillStyle = random() > 0.5 ? 'rgba(255, 255, 255, 0.035)' : 'rgba(0, 0, 0, 0.05)'
-    ctx.fillRect(random() * W, random() * H, 5 + random() * 6, 3)
-  }
-
-  // Cushions: a raised strip along each side, catching the light on its top edge.
-  const nose = (x1: number, y1: number, x2: number, y2: number, inward: [number, number]) => {
-    const [ix, iy] = inward
-    const cut = 34
-    const along = x1 === x2 ? [0, 1] : [1, 0]
-    ctx.beginPath()
-    ctx.moveTo(x1 - ix * lip, y1 - iy * lip)
-    ctx.lineTo(x2 - ix * lip, y2 - iy * lip)
-    ctx.lineTo(x2 - along[0]! * cut, y2 - along[1]! * cut)
-    ctx.lineTo(x1 + along[0]! * cut, y1 + along[1]! * cut)
-    ctx.closePath()
-    const shade = ctx.createLinearGradient(x1 - ix * lip, y1 - iy * lip, x1, y1)
-    shade.addColorStop(0, colors.cushion[0])
-    shade.addColorStop(0.75, colors.cushion[1])
-    shade.addColorStop(1, colors.cushion[2])
-    ctx.fillStyle = shade
-    ctx.fill()
-  }
-  const corner = 72
-  const mid = 74
-  nose(corner, 0, W / 2 - mid, 0, [0, 1])
-  nose(W / 2 + mid, 0, W - corner, 0, [0, 1])
-  nose(corner, H, W / 2 - mid, H, [0, -1])
-  nose(W / 2 + mid, H, W - corner, H, [0, -1])
-  nose(0, corner, 0, H - corner, [1, 0])
-  nose(W, corner, W, H - corner, [-1, 0])
-
-  // Shadow thrown onto the cloth by the cushions.
-  for (const [x, y, w, h, gx, gy] of [[0, 0, W, 34, 0, 1], [0, H - 34, W, 34, 0, -1], [0, 0, 34, H, 1, 0], [W - 34, 0, 34, H, -1, 0]] as const) {
-    const fade = ctx.createLinearGradient(gx < 0 ? x + w : x, gy < 0 ? y + h : y, gx > 0 ? x + w : gx < 0 ? x : x, gy > 0 ? y + h : gy < 0 ? y : y)
-    fade.addColorStop(0, 'rgba(0, 0, 0, 0.3)')
-    fade.addColorStop(1, 'rgba(0, 0, 0, 0)')
-    ctx.fillStyle = fade
-    ctx.fillRect(x, y, w, h)
-  }
-
-  // The head string and the two spots, faintly.
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)'
-  ctx.lineWidth = 3
-  ctx.beginPath()
-  ctx.moveTo(W / 4, 0)
-  ctx.lineTo(W / 4, H)
-  ctx.stroke()
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'
-  for (const x of [W / 4, (W * 3) / 4]) {
-    ctx.beginPath()
-    ctx.arc(x, H / 2, 7, 0, Math.PI * 2)
-    ctx.fill()
-  }
-
-  // Pockets: a dark mouth with depth, and a metal rim on the outer side.
-  for (const pocket of POCKETS) {
-    const px = pocket.x
-    const py = pocket.y
-    // The hole is drawn just inside the line a ball's centre must cross to drop.
-    const radius = pocket.r - 9
-    ctx.fillStyle = '#3a2a1c'
-    ctx.beginPath()
-    ctx.arc(px, py, radius + 7, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.fillStyle = '#1a1310'
-    ctx.beginPath()
-    ctx.arc(px, py, radius + 3, 0, Math.PI * 2)
-    ctx.fill()
-    const hole = ctx.createRadialGradient(px, py + 6, 8, px, py, radius)
-    hole.addColorStop(0, '#000000')
-    hole.addColorStop(0.75, '#0b0b0d')
-    hole.addColorStop(1, '#2a2a30')
-    ctx.fillStyle = hole
-    ctx.beginPath()
-    ctx.arc(px, py, radius, 0, Math.PI * 2)
-    ctx.fill()
-  }
-
-  // Sights: the ivory diamonds players aim by.
-  ctx.fillStyle = '#f3ead2'
-  const diamond = (x: number, y: number) => {
-    ctx.beginPath()
-    ctx.moveTo(x, y - 13)
-    ctx.lineTo(x + 9, y)
-    ctx.lineTo(x, y + 13)
-    ctx.lineTo(x - 9, y)
-    ctx.closePath()
-    ctx.fill()
-  }
-  for (let i = 1; i < 8; i++) {
-    if (i === 4) continue
-    diamond((W * i) / 8, -RAIL * 0.62)
-    diamond((W * i) / 8, H + RAIL * 0.62)
-  }
-  for (let i = 1; i < 4; i++) {
-    diamond(-RAIL * 0.62, (H * i) / 4)
-    diamond(W + RAIL * 0.62, (H * i) / 4)
-  }
-  return canvas
-}
 
 export type Aim = { dx: number; dy: number }
 type Props = {
@@ -379,7 +233,7 @@ export function PoolCanvas({ balls, vertical, aim, power, ballInHand, behindHead
       canvas.width = width
       canvas.height = Math.round((width * spanY) / spanX)
       scale = width / spanX
-      table = paintTable(canvas.width, canvas.height, vertical, scale, cloth)
+      table = paintTable(canvas.width, canvas.height, vertical, scale, CLOTHS[cloth])
       const size = Math.max(8, Math.ceil(R * scale * 2))
       sprite = ctx.createImageData(size, size)
       spriteCanvas = null
@@ -434,12 +288,22 @@ export function PoolCanvas({ balls, vertical, aim, power, ballInHand, behindHead
       for (const ball of state.balls) {
         if (ball.in) continue
         const [sx, sy] = toScreen(ball.x, ball.y)
-        const shadow = ctx.createRadialGradient(sx + rp * 0.28, sy + rp * 0.36, rp * 0.2, sx + rp * 0.28, sy + rp * 0.36, rp * 1.25)
-        shadow.addColorStop(0, 'rgba(0, 0, 0, 0.5)')
-        shadow.addColorStop(1, 'rgba(0, 0, 0, 0)')
-        ctx.fillStyle = shadow
+        // Thrown by the lamp, away from it: wide and soft.
+        const cast = ctx.createRadialGradient(sx + rp * 0.34, sy + rp * 0.44, rp * 0.25, sx + rp * 0.34, sy + rp * 0.44, rp * 1.45)
+        cast.addColorStop(0, 'rgba(0, 0, 0, 0.46)')
+        cast.addColorStop(0.6, 'rgba(0, 0, 0, 0.2)')
+        cast.addColorStop(1, 'rgba(0, 0, 0, 0)')
+        ctx.fillStyle = cast
         ctx.beginPath()
-        ctx.arc(sx + rp * 0.28, sy + rp * 0.36, rp * 1.25, 0, Math.PI * 2)
+        ctx.arc(sx + rp * 0.34, sy + rp * 0.44, rp * 1.45, 0, Math.PI * 2)
+        ctx.fill()
+        // Where the ball rests on the cloth: small and dark, so it sits on the table and does not float.
+        const rest = ctx.createRadialGradient(sx + rp * 0.08, sy + rp * 0.12, rp * 0.5, sx + rp * 0.08, sy + rp * 0.12, rp * 1.12)
+        rest.addColorStop(0, 'rgba(0, 0, 0, 0.55)')
+        rest.addColorStop(1, 'rgba(0, 0, 0, 0)')
+        ctx.fillStyle = rest
+        ctx.beginPath()
+        ctx.arc(sx + rp * 0.08, sy + rp * 0.12, rp * 1.12, 0, Math.PI * 2)
         ctx.fill()
       }
 
@@ -542,28 +406,79 @@ export function PoolCanvas({ balls, vertical, aim, power, ballInHand, behindHead
         ctx.translate(sx, sy)
         ctx.rotate(angle)
         const back = rp * (1.6 + state.power * 5)
-        const stick = Math.max(canvas.width, canvas.height) * 0.42
+        const stick = Math.max(canvas.width, canvas.height) * 0.44
         const style = CUES[state.cueId]
-        const grain = ctx.createLinearGradient(0, -rp * 0.3, 0, rp * 0.3)
-        grain.addColorStop(0, style.shaft[0])
-        grain.addColorStop(0.5, style.shaft[1])
-        grain.addColorStop(1, style.shaft[2])
-        ctx.fillStyle = grain
+        const tipHalf = rp * 0.17
+        const buttHalf = rp * 0.42
+        // How thick the cue is at a point along it (0 at the tip, 1 at the butt): it tapers.
+        const halfAt = (part: number) => tipHalf + (buttHalf - tipHalf) * part
+        const xAt = (part: number) => -back - stick * part
+        /** A length of the cue, from one point along it to another, filled with this paint. */
+        const span = (from: number, to: number, paint: string | CanvasGradient) => {
+          ctx.fillStyle = paint
+          ctx.beginPath()
+          ctx.moveTo(xAt(from), -halfAt(from))
+          ctx.lineTo(xAt(to), -halfAt(to))
+          ctx.lineTo(xAt(to), halfAt(to))
+          ctx.lineTo(xAt(from), halfAt(from))
+          ctx.closePath()
+          ctx.fill()
+        }
+        // Round, not flat: light along the top of the cue, shade along the bottom.
+        const round = (colors: readonly [string, string, string]) => {
+          const paint = ctx.createLinearGradient(0, -buttHalf, 0, buttHalf)
+          paint.addColorStop(0, colors[2])
+          paint.addColorStop(0.3, colors[0])
+          paint.addColorStop(0.62, colors[1])
+          paint.addColorStop(1, colors[2])
+          return paint
+        }
+
+        // Its shadow on the cloth, a little below it: the cue is held just above the table.
+        ctx.save()
+        ctx.rotate(-angle)
+        ctx.translate(rp * 0.3, rp * 0.42)
+        ctx.rotate(angle)
+        ctx.globalAlpha = 0.3
+        span(0, 1, '#000000')
+        ctx.restore()
+
+        // Shaft, then the butt with its wrap, from the tip back.
+        span(0.035, 0.56, round(style.shaft))
+        span(0.56, 1, round([style.buttLight, style.butt, style.buttDark]))
+        // The wrap where the hand holds it: fine turns of thread.
+        span(0.7, 0.88, round(style.wrap))
+        ctx.save()
         ctx.beginPath()
-        ctx.moveTo(-back, -rp * 0.13)
-        ctx.lineTo(-back - stick, -rp * 0.3)
-        ctx.lineTo(-back - stick, rp * 0.3)
-        ctx.lineTo(-back, rp * 0.13)
-        ctx.closePath()
-        ctx.fill()
-        ctx.fillStyle = style.butt
-        ctx.fillRect(-back - stick, -rp * 0.3, stick * 0.32, rp * 0.6)
+        ctx.rect(xAt(0.88), -buttHalf, xAt(0.7) - xAt(0.88), buttHalf * 2)
+        ctx.clip()
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.28)'
+        ctx.lineWidth = Math.max(0.6, rp * 0.03)
+        for (let turn = xAt(0.88); turn < xAt(0.7); turn += Math.max(1.6, rp * 0.1)) {
+          ctx.beginPath()
+          ctx.moveTo(turn, -buttHalf)
+          ctx.lineTo(turn + rp * 0.08, buttHalf)
+          ctx.stroke()
+        }
+        ctx.restore()
+        // Points of inlay running up from the butt into the shaft, and rings where the pieces join.
         ctx.fillStyle = style.band
-        ctx.fillRect(-back - stick * 0.68, -rp * 0.26, stick * 0.02, rp * 0.52)
-        ctx.fillStyle = '#f4efe2'
-        ctx.fillRect(-back - rp * 0.7, -rp * 0.14, rp * 0.48, rp * 0.28)
-        ctx.fillStyle = '#3d7fd6'
-        ctx.fillRect(-back - rp * 0.22, -rp * 0.13, rp * 0.22, rp * 0.26)
+        for (const side of [-1, 1]) {
+          ctx.beginPath()
+          ctx.moveTo(xAt(0.56), side * halfAt(0.56) * 0.92)
+          ctx.lineTo(xAt(0.4), side * halfAt(0.4) * 0.12)
+          ctx.lineTo(xAt(0.56), side * halfAt(0.56) * 0.2)
+          ctx.closePath()
+          ctx.fill()
+        }
+        const brass = round(['#fff0b8', '#c9962e', '#6f4c10'])
+        span(0.555, 0.575, brass)
+        span(0.69, 0.7, style.band)
+        span(0.88, 0.89, style.band)
+        span(0.975, 1, round(['#5a5a60', '#26262a', '#0c0c0e']))
+        // The ferrule (ivory white) and the leather tip, blue with chalk.
+        span(0.012, 0.035, round(['#ffffff', '#efe9da', '#b9b2a0']))
+        span(0, 0.012, round(['#7fb2f0', '#3d7fd6', '#1f4f96']))
         ctx.restore()
       }
 

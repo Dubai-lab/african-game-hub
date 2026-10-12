@@ -109,7 +109,7 @@ No chess.com piece art, board graphics, sounds or branding is used anywhere. The
 
 | Asset | Source | License |
 | --- | --- | --- |
-| Table, balls and cue | Drawn in code for this project (`src/games/pool/PoolCanvas.tsx`): the wooden frame, cloth, cushions and pockets are painted on a canvas, and every ball is shaded pixel by pixel as a lit sphere that turns as it rolls. No image or model files, and nothing taken from any other pool game. Ball colours and numbers are the standard ones of the game and belong to nobody. | Original work |
+| Table, balls and cue | **Original.** Drawn in code for this project (`src/games/pool/tablePaint.ts`, `src/games/pool/PoolCanvas.tsx`). The frame is our own design: dark hardwood with a band of inlaid diamonds in the hub's colours along each rail, brass plates at the pockets, and the hub's mark woven into the cloth. It is not modelled on any other game's table. The wooden frame, cloth, cushions and pockets are painted on a canvas, and every ball is shaded pixel by pixel as a lit sphere that turns as it rolls. No image or model files, and nothing taken from any other pool game. Ball colours and numbers are the standard ones of the game and belong to nobody. | Original work |
 | Sounds (cue on ball, ball on ball, cushion, pocket) | Synthesised with the Web Audio API (`src/games/pool/sound.ts`): short, dry knocks shaped like resin balls meeting, louder and brighter for harder hits. No audio files. The end-of-game chime is the Kenney `chime-2` recording listed below. | Original work (chime: CC0) |
 
 ## Ludo
