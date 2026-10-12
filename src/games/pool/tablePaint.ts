@@ -244,8 +244,8 @@ export function paintTable(width: number, height: number, vertical: boolean, sca
 
   // ---- The cushions: a strip of cloth-covered rubber along each side, cut back at the pockets ----
   // Where each cushion's nose begins and ends, measured from the corners and from the middle.
-  const cornerCut = 98
-  const middleCut = 84
+  const cornerCut = 102
+  const middleCut = 82
   const jaw = 38 // the nose is cut back this much more than the back: the pocket's mouth is wider than its throat
   const cushion = (x1: number, y1: number, x2: number, y2: number, inward: [number, number]) => {
     const [ix, iy] = inward

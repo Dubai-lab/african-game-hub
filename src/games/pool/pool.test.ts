@@ -132,8 +132,8 @@ describe('8-ball', () => {
     const made = applyShot(state({ solidsSeat: 1, balls: lineUp(3, [at(8, 1200, 300), at(12, 600, 300)]) }), shot(1, 1, 450))!
     expect(made.state).toMatchObject({ turn: 1, ballInHand: false })
 
-    // A hard hit down the table: the ball misses the pocket but reaches a rail.
-    const missed = applyShot(state({ solidsSeat: 1, balls: [at(0, 700, 635), at(3, 1300, 600), at(8, 1200, 300)] }), shot(1, 0, 600))!
+    // A hard hit straight down the table: the ball runs to the far rail, nowhere near a pocket.
+    const missed = applyShot(state({ solidsSeat: 1, balls: [at(0, 700, 635), at(3, 1300, 635), at(8, 1200, 300)] }), shot(1, 0, 600))!
     expect(missed.result).toMatchObject({ foul: null, again: false })
     expect(missed.state).toMatchObject({ turn: 2, ballInHand: false })
 
@@ -273,7 +273,12 @@ describe('the pockets', () => {
       expect(pocketOpening(corner)).toBeGreaterThan(ball * 0.95)
       expect(pocketOpening(corner)).toBeLessThan(ball * 1.3)
     }
-    for (const middle of [1, 4]) expect(pocketOpening(middle)).toBeGreaterThan(ball * 1.6)
+    for (const middle of [1, 4]) expect(pocketOpening(middle)).toBeGreaterThan(ball * 1.35)
+    // And a pocket looks right beside a ball: its hole is between one and a half and two balls wide.
+    for (const pocket of POCKETS) {
+      expect(pocket.r * 2).toBeGreaterThan(ball * 1.5)
+      expect(pocket.r * 2).toBeLessThan(ball * 2)
+    }
   })
 
   it('a ball sent at a corner a little off the diagonal drops, where it used to be turned away', () => {

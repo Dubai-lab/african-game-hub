@@ -10,10 +10,11 @@
 // and on a pool table the last digit matters.)
 //
 // Units: millimetres and seconds. The table is a 9-foot table's playing surface. The balls are
-// about a quarter larger than real ones (as in most pool games for phones), so that they can
-// be seen and aimed at on a small screen; the pockets are larger to match.
+// about half as large again as real ones (as in most pool games for phones), so that they can
+// be seen and aimed at on a small screen, and so that a ball looks the right size beside a
+// pocket; the pockets are sized to match (see POCKETS).
 
-export const TABLE = { w: 2540, h: 1270, r: 36 } as const
+export const TABLE = { w: 2540, h: 1270, r: 42 } as const
 export type Variant = '8ball' | '9ball'
 /** n is the number on the ball; 0 is the cue ball. */
 export type Ball = { n: number; x: number; y: number; in: boolean }
@@ -73,15 +74,20 @@ const D = R * 2
 // pockets used to sit so far back in the rail that a ball coming in on the diagonal had a gap
 // of 30 mm to find with its centre (less than half its own width): shots that looked dead in
 // were turned away by a cushion that was not drawn there. They now sit on the corner of the
-// cloth itself, and that gap is 71 mm, the width of a ball. The middle pockets open 127 mm
-// (they were 113).
+// cloth itself, and that gap is the width of a ball.
+//
+// A pocket should also LOOK right beside a ball: a hole a little under twice as wide as the
+// ball, as on a real table. The further onto the cloth a pocket sits, the smaller it can be
+// for the same opening, so the pockets are set well into the corners (and the middle pockets
+// just behind the cushion's nose): a hole 1.7 balls wide that opens a full ball to the corner
+// and nearly a ball and a half at the middle.
 export const POCKETS: readonly { x: number; y: number; r: number }[] = [
-  { x: 4, y: 4, r: 88 },
-  { x: TABLE.w / 2, y: -28, r: 90 },
-  { x: TABLE.w - 4, y: 4, r: 88 },
-  { x: 4, y: TABLE.h - 4, r: 88 },
-  { x: TABLE.w / 2, y: TABLE.h + 28, r: 90 },
-  { x: TABLE.w - 4, y: TABLE.h - 4, r: 88 },
+  { x: 24, y: 24, r: 80 },
+  { x: TABLE.w / 2, y: -10, r: 80 },
+  { x: TABLE.w - 24, y: 24, r: 80 },
+  { x: 24, y: TABLE.h - 24, r: 80 },
+  { x: TABLE.w / 2, y: TABLE.h + 10, r: 80 },
+  { x: TABLE.w - 24, y: TABLE.h - 24, r: 80 },
 ]
 
 /**
