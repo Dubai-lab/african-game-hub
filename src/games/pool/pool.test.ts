@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { chooseShot } from './computer'
-import { applyShot, type Ball, canPlaceCue, HEAD_STRING, type PoolState, rack, type Shot, simulate, TABLE, targets, pocketOpening, POCKETS } from '../../../supabase/functions/_shared/pool'
+import { applyShot, type Ball, canPlaceCue, HEAD_STRING, type PoolState, rack, type Shot, simulate, TABLE, targets, pocketOpening, POCKETS, CORNER_CUT, MIDDLE_CUT, JAWS } from '../../../supabase/functions/_shared/pool'
 
 // The physics and the rules of pool, as the server runs them.
 
@@ -265,31 +265,127 @@ describe('the computer', () => {
 })
 
 describe('the pockets', () => {
-  // Players found the corners all but shut: a ball that looked dead in was turned away. What
-  // counts is the gap a ball's CENTRE has to find, and it must be about the width of a ball.
-  it('a corner pocket opens about a ball wide to a ball coming in on the diagonal, and a middle pocket wider', () => {
-    const ball = TABLE.r * 2
+  // A pocket is built as on a real table: the cushions stop short of it and are cut back at an
+  // angle (the jaws), the hole is in the rail behind them, and a ball goes in through the mouth
+  // between the tips of two cushions.
+  const ball = TABLE.r * 2
+  const W = TABLE.w
+  const H = TABLE.h
+  /** One ball, sent from a place toward a point, at this speed. Where it ends up. */
+  const send = (from: { x: number; y: number }, to: { x: number; y: number }, power = 450) =>
+    simulate([{ n: 0, x: from.x, y: from.y, in: false }], { dx: Math.round((to.x - from.x) * 1000), dy: Math.round((to.y - from.y) * 1000), power, spinX: 0, spinY: 0 })
+
+  it('the mouth of a pocket leaves a ball about its own width of room, and the hole is about one and a half balls wide', () => {
     for (const corner of [0, 2, 3, 5]) {
-      expect(pocketOpening(corner)).toBeGreaterThan(ball * 0.95)
-      expect(pocketOpening(corner)).toBeLessThan(ball * 1.3)
+      expect(pocketOpening(corner)).toBeGreaterThan(ball * 0.85)
+      expect(pocketOpening(corner)).toBeLessThan(ball * 1.15)
     }
-    for (const middle of [1, 4]) expect(pocketOpening(middle)).toBeGreaterThan(ball * 1.35)
-    // And a pocket looks right beside a ball: its hole is between one and a half and two balls wide.
+    for (const middle of [1, 4]) {
+      expect(pocketOpening(middle)).toBeGreaterThan(ball)
+      expect(pocketOpening(middle)).toBeLessThan(ball * 1.3)
+    }
+    // The hole itself: not the two-ball-wide disc it once was.
     for (const pocket of POCKETS) {
-      expect(pocket.r * 2).toBeGreaterThan(ball * 1.5)
-      expect(pocket.r * 2).toBeLessThan(ball * 2)
+      expect(pocket.r * 2).toBeGreaterThan(ball * 1.3)
+      expect(pocket.r * 2).toBeLessThan(ball * 1.7)
     }
   })
 
-  it('a ball sent at a corner a little off the diagonal drops, where it used to be turned away', () => {
-    const corner = POCKETS[5]!
-    // Aimed from the middle of the table at a point half a ball to one side of the pocket's centre.
-    for (const off of [-28, 28]) {
-      const from = { x: 1900, y: 700 }
-      const to = { x: corner.x + off * 0.7071, y: corner.y - off * 0.7071 }
-      const played = simulate([{ n: 0, x: from.x, y: from.y, in: false }], { dx: Math.round(to.x - from.x), dy: Math.round(to.y - from.y), power: 500, spinX: 0, spinY: 0 })
+  it('the holes are in the rail, behind the line of the cushions, not on the cloth', () => {
+    for (const [index, pocket] of POCKETS.entries()) {
+      const corner = index !== 1 && index !== 4
+      if (corner) {
+        expect(pocket.x < 0 || pocket.x > W).toBe(true)
+        expect(pocket.y < 0 || pocket.y > H).toBe(true)
+      } else {
+        expect(pocket.y < 0 || pocket.y > H).toBe(true)
+        // How far the hole reaches onto the cloth: less than half a ball.
+        expect(pocket.r - Math.min(Math.abs(pocket.y), Math.abs(pocket.y - H))).toBeLessThan(TABLE.r)
+      }
+    }
+  })
+
+  it('a ball sent into a corner on the diagonal drops, and so does one a third of a ball off line to either side', () => {
+    for (const off of [0, -28, 28]) {
+      const played = send({ x: 1900, y: 700 }, { x: W + off * 0.7071, y: H - off * 0.7071 }, 500)
       expect(played.pocketed, `off by ${off}`).toEqual([0])
       expect(played.pockets).toEqual([5])
+    }
+  })
+
+  it('a ball running along a cushion into the corner drops', () => {
+    // Along the bottom cushion, touching it, toward the bottom-right corner; and down the right-hand one.
+    expect(send({ x: 1700, y: H - TABLE.r }, { x: W, y: H - TABLE.r }).pockets).toEqual([5])
+    expect(send({ x: W - TABLE.r, y: 500 }, { x: W - TABLE.r, y: H }).pockets).toEqual([5])
+  })
+
+  it('a ball sent squarely into a middle pocket drops; along the cushion it runs past the mouth', () => {
+    expect(send({ x: W / 2, y: 600 }, { x: W / 2, y: 0 }).pockets).toEqual([1])
+    expect(send({ x: W / 2 + 30, y: 600 }, { x: W / 2 + 30, y: 0 }).pockets).toEqual([1])
+    // Rolling along the top cushion, touching it: the far jaw of the middle pocket turns it away.
+    const along = send({ x: 500, y: TABLE.r }, { x: 1900, y: TABLE.r }, 300)
+    expect(along.pockets).not.toContain(1)
+  })
+
+  it('a ball that meets the flat of a cushion beside a pocket is turned back, as the picture shows', () => {
+    // Straight at the cushion, a ball's width along from the end of its nose.
+    const besideCorner = send({ x: CORNER_CUT + ball, y: 600 }, { x: CORNER_CUT + ball, y: 0 }, 250)
+    expect(besideCorner.pocketed).toEqual([])
+    const besideMiddle = send({ x: W / 2 + MIDDLE_CUT + ball, y: 600 }, { x: W / 2 + MIDDLE_CUT + ball, y: 0 }, 250)
+    expect(besideMiddle.pocketed).toEqual([])
+  })
+
+  it('the tip of a jaw turns a ball aside: struck full on it, the ball does not drop and does not pass through', () => {
+    // Straight up at the tip of the cushion to the right of the top-left corner.
+    const played = send({ x: CORNER_CUT, y: 500 }, { x: CORNER_CUT, y: 0 }, 250)
+    const rest = played.balls[0]!
+    if (!rest.in) {
+      expect(rest.x).toBeGreaterThanOrEqual(0)
+      expect(rest.y).toBeGreaterThanOrEqual(0)
+    }
+    // And every jaw is a real one: it starts on the line of the cushions and runs back into the rail.
+    expect(JAWS).toHaveLength(12)
+    for (const jaw of JAWS) {
+      expect(jaw.ax === 0 || jaw.ax === W || jaw.ay === 0 || jaw.ay === H).toBe(true)
+      expect(jaw.bx < 0 || jaw.bx > W || jaw.by < 0 || jaw.by > H).toBe(true)
+    }
+  })
+
+  it('whatever is played, no ball ever leaves the table: each ends on the cloth, clear of the cushions, or in a pocket', () => {
+    let seed = 20261013
+    const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647
+    for (let round = 0; round < 250; round++) {
+      // A few balls scattered about, some of them close to pockets and cushions, and a hard shot in any direction.
+      const balls: Ball[] = [{ n: 0, x: 200 + random() * (W - 400), y: 200 + random() * (H - 400), in: false }]
+      for (let n = 1; n <= 9; n++) {
+        const near = random() < 0.5
+        const x = near ? (random() < 0.5 ? TABLE.r + random() * 200 : W - TABLE.r - random() * 200) : TABLE.r + random() * (W - ball)
+        const y = near ? (random() < 0.5 ? TABLE.r + random() * 200 : H - TABLE.r - random() * 200) : TABLE.r + random() * (H - ball)
+        if (balls.every((other) => (other.x - x) ** 2 + (other.y - y) ** 2 > (ball + 2) ** 2)) balls.push({ n, x, y, in: false })
+      }
+      const played = simulate(balls, { dx: Math.round((random() - 0.5) * 2000), dy: Math.round((random() - 0.5) * 2000) || 1, power: 300 + Math.round(random() * 700), spinX: Math.round((random() - 0.5) * 200), spinY: Math.round((random() - 0.5) * 200) })
+      for (const [index, rest] of played.balls.entries()) {
+        expect(Number.isFinite(rest.x) && Number.isFinite(rest.y), `round ${round}`).toBe(true)
+        if (rest.in) continue
+        // On the cloth...
+        expect(rest.x, `round ${round} ball ${rest.n}`).toBeGreaterThanOrEqual(0)
+        expect(rest.x).toBeLessThanOrEqual(W)
+        expect(rest.y).toBeGreaterThanOrEqual(0)
+        expect(rest.y).toBeLessThanOrEqual(H)
+        // ...and, away from the pockets, no nearer a cushion than its own radius (to a hair).
+        const awayFromCorners = rest.y >= CORNER_CUT && rest.y <= H - CORNER_CUT
+        if (awayFromCorners) {
+          expect(rest.x).toBeGreaterThanOrEqual(TABLE.r - 0.001)
+          expect(rest.x).toBeLessThanOrEqual(W - TABLE.r + 0.001)
+        }
+        // No two balls left overlapping.
+        for (const other of played.balls.slice(index + 1)) {
+          if (!other.in) expect((other.x - rest.x) ** 2 + (other.y - rest.y) ** 2).toBeGreaterThan((ball - 1) ** 2)
+        }
+      }
+      // The same shot played again gives the same answer, to the last digit.
+      const again = simulate(balls, { dx: 1, dy: 1, power: 500, spinX: 0, spinY: 0 })
+      expect(simulate(balls, { dx: 1, dy: 1, power: 500, spinX: 0, spinY: 0 }).balls).toEqual(again.balls)
     }
   })
 })

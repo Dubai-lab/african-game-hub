@@ -1,4 +1,4 @@
-import { POCKETS, TABLE } from '../../../supabase/functions/_shared/pool'
+import { CORNER_CUT, CORNER_JAW, CUSHION_DEPTH, MIDDLE_CUT, MIDDLE_JAW, POCKETS, TABLE } from '../../../supabase/functions/_shared/pool'
 
 // The pool table without the balls, painted once for a given size. Nothing here is an image
 // file, and nothing is taken from another game: the frame is our own, a dark hardwood with a
@@ -10,8 +10,8 @@ import { POCKETS, TABLE } from '../../../supabase/functions/_shared/pool'
 
 /** Wood and cushion around the playing surface, in millimetres. */
 export const RAIL = 112
-/** How far a cushion stands out from the wood onto the slate. */
-const LIP = 48
+/** How far a cushion stands out from the wood onto the slate: the same number the physics uses. */
+const LIP = CUSHION_DEPTH
 
 export type ClothColors = { bed: string; cloth: readonly [string, string, string]; cushion: readonly [string, string, string] }
 
@@ -164,7 +164,7 @@ export function paintTable(width: number, height: number, vertical: boolean, sca
   // ---- Brass at the pockets: a plate let into the wood behind each one ----
   // (Laid before the slate, which covers the part of it that would lie on the cloth.)
   POCKETS.forEach((pocket, index) => {
-    const radius = pocket.r - 8
+    const radius = pocket.r - 6
     const outX = index === 1 || index === 4 ? 0 : pocket.x < W / 2 ? -1 : 1
     const outY = pocket.y < H / 2 ? -1 : 1
     const length = Math.hypot(outX, outY)
@@ -177,7 +177,7 @@ export function paintTable(width: number, height: number, vertical: boolean, sca
     plate.addColorStop(1, '#e0b757')
     ctx.fillStyle = plate
     ctx.beginPath()
-    ctx.arc(cx, cy, radius + 22, 0, Math.PI * 2)
+    ctx.arc(cx, cy, radius + 15, 0, Math.PI * 2)
     ctx.fill()
     ctx.strokeStyle = 'rgba(40, 20, 0, 0.6)'
     ctx.lineWidth = 2.5
@@ -186,7 +186,7 @@ export function paintTable(width: number, height: number, vertical: boolean, sca
     ctx.strokeStyle = 'rgba(90, 55, 5, 0.55)'
     ctx.lineWidth = 1.5
     ctx.beginPath()
-    ctx.arc(cx, cy, radius + 15, 0, Math.PI * 2)
+    ctx.arc(cx, cy, radius + 10, 0, Math.PI * 2)
     ctx.stroke()
   })
 
@@ -244,15 +244,16 @@ export function paintTable(width: number, height: number, vertical: boolean, sca
 
   // ---- The cushions: a strip of cloth-covered rubber along each side, cut back at the pockets ----
   // Where each cushion's nose begins and ends, measured from the corners and from the middle.
-  const cornerCut = 102
-  const middleCut = 82
-  const jaw = 38 // the nose is cut back this much more than the back: the pocket's mouth is wider than its throat
-  const cushion = (x1: number, y1: number, x2: number, y2: number, inward: [number, number]) => {
+  // (The same cuts and the same slopes as the physics: what is drawn is what the ball meets.)
+  const cornerCut = CORNER_CUT
+  const middleCut = MIDDLE_CUT
+  /** One cushion, from one tip of its nose to the other; `jaw1` and `jaw2` are how far its back runs on past each tip. */
+  const cushion = (x1: number, y1: number, x2: number, y2: number, inward: [number, number], jaw1: number, jaw2: number) => {
     const [ix, iy] = inward
     const [ax, ay] = x1 === x2 ? [0, 1] : [1, 0]
     ctx.beginPath()
-    ctx.moveTo(x1 - ax * jaw - ix * LIP, y1 - ay * jaw - iy * LIP)
-    ctx.lineTo(x2 + ax * jaw - ix * LIP, y2 + ay * jaw - iy * LIP)
+    ctx.moveTo(x1 - ax * jaw1 - ix * LIP, y1 - ay * jaw1 - iy * LIP)
+    ctx.lineTo(x2 + ax * jaw2 - ix * LIP, y2 + ay * jaw2 - iy * LIP)
     ctx.lineTo(x2, y2)
     ctx.lineTo(x1, y1)
     ctx.closePath()
@@ -268,14 +269,23 @@ export function paintTable(width: number, height: number, vertical: boolean, sca
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)'
     ctx.lineWidth = 4
     ctx.beginPath()
-    ctx.moveTo(x1 - ax * jaw - ix * LIP, y1 - ay * jaw - iy * LIP)
-    ctx.lineTo(x2 + ax * jaw - ix * LIP, y2 + ay * jaw - iy * LIP)
+    ctx.moveTo(x1 - ax * jaw1 - ix * LIP, y1 - ay * jaw1 - iy * LIP)
+    ctx.lineTo(x2 + ax * jaw2 - ix * LIP, y2 + ay * jaw2 - iy * LIP)
     ctx.stroke()
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)'
     ctx.lineWidth = 3
     ctx.beginPath()
     ctx.moveTo(x1 - ix * 5, y1 - iy * 5)
     ctx.lineTo(x2 - ix * 5, y2 - iy * 5)
+    ctx.stroke()
+    // The cut faces of the two jaws: darker than the top of the cushion, with a hard edge.
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)'
+    ctx.lineWidth = 3.5
+    ctx.beginPath()
+    ctx.moveTo(x1, y1)
+    ctx.lineTo(x1 - ax * jaw1 - ix * LIP, y1 - ay * jaw1 - iy * LIP)
+    ctx.moveTo(x2, y2)
+    ctx.lineTo(x2 + ax * jaw2 - ix * LIP, y2 + ay * jaw2 - iy * LIP)
     ctx.stroke()
   }
 
@@ -288,19 +298,19 @@ export function paintTable(width: number, height: number, vertical: boolean, sca
     ctx.fillStyle = fade
     ctx.fillRect(x, y, w, h)
   }
-  cushion(cornerCut, 0, W / 2 - middleCut, 0, [0, 1])
-  cushion(W / 2 + middleCut, 0, W - cornerCut, 0, [0, 1])
-  cushion(cornerCut, H, W / 2 - middleCut, H, [0, -1])
-  cushion(W / 2 + middleCut, H, W - cornerCut, H, [0, -1])
-  cushion(0, cornerCut, 0, H - cornerCut, [1, 0])
-  cushion(W, cornerCut, W, H - cornerCut, [-1, 0])
+  cushion(cornerCut, 0, W / 2 - middleCut, 0, [0, 1], CORNER_JAW, MIDDLE_JAW)
+  cushion(W / 2 + middleCut, 0, W - cornerCut, 0, [0, 1], MIDDLE_JAW, CORNER_JAW)
+  cushion(cornerCut, H, W / 2 - middleCut, H, [0, -1], CORNER_JAW, MIDDLE_JAW)
+  cushion(W / 2 + middleCut, H, W - cornerCut, H, [0, -1], MIDDLE_JAW, CORNER_JAW)
+  cushion(0, cornerCut, 0, H - cornerCut, [1, 0], CORNER_JAW, CORNER_JAW)
+  cushion(W, cornerCut, W, H - cornerCut, [-1, 0], CORNER_JAW, CORNER_JAW)
 
   // ---- The pockets: brass round the mouth, a leather lip, and a hole with depth to it ----
   POCKETS.forEach((pocket, index) => {
     const px = pocket.x
     const py = pocket.y
     // The hole is drawn just inside the line a ball's centre must cross to drop.
-    const radius = pocket.r - 8
+    const radius = pocket.r - 6
     // Which way is "out of the table" from this pocket: the brass sits on that side.
     const outX = index === 1 || index === 4 ? 0 : px < W / 2 ? -1 : 1
     const outY = py < H / 2 ? -1 : 1
@@ -311,12 +321,12 @@ export function paintTable(width: number, height: number, vertical: boolean, sca
     // The leather lip round the hole.
     ctx.fillStyle = '#241710'
     ctx.beginPath()
-    ctx.arc(px, py, radius + 7, 0, Math.PI * 2)
+    ctx.arc(px, py, radius + 4, 0, Math.PI * 2)
     ctx.fill()
     ctx.strokeStyle = 'rgba(255, 220, 170, 0.18)'
     ctx.lineWidth = 2
     ctx.beginPath()
-    ctx.arc(px, py, radius + 4.5, 0, Math.PI * 2)
+    ctx.arc(px, py, radius + 2.5, 0, Math.PI * 2)
     ctx.stroke()
 
     // The hole: black at the bottom, which lies toward the outside of the table, and a little

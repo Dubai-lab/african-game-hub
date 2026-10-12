@@ -64,44 +64,74 @@ export type ShotResult = {
 const R = TABLE.r
 const D = R * 2
 /**
- * Pocket centres and how close a ball's centre must come to drop. The pockets sit back in the
- * rail, outside the playing surface, so only their mouths open onto the cloth. Corners are a
- * little wider than the middle pockets.
+ * The cushions and the pockets, as on a real table.
+ *
+ * A cushion's nose runs along each side of the cloth, and stops short of every pocket. Where
+ * it stops it is cut back at an angle (the jaw), so that each pocket has a mouth, between the
+ * tips of two cushions, that narrows a little toward the hole. The hole itself is in the rail,
+ * behind the line of the cushions: at a corner, out beyond the corner of the cloth; at the
+ * middle of a long side, behind the cushion.
+ *
+ * What a ball meets, then: the flat of a cushion, which turns it back; the tip or the face of
+ * a jaw, which turns it aside (into the pocket, or out of it: the rattle); or the mouth, where
+ * there is nothing to stop it. A ball drops when its centre comes over the hole, or crosses the
+ * line of the cushions, which it can only do in a mouth.
+ *
+ * All of it is here, in numbers, and the table is drawn from the same numbers (tablePaint.ts),
+ * so that what the player sees is what the ball meets.
  */
-//
-// How wide a pocket is to a ball: a ball's centre can come no nearer a cushion than its own
-// radius, so what matters is how much of the pocket's circle lies inside that line. The corner
-// pockets used to sit so far back in the rail that a ball coming in on the diagonal had a gap
-// of 30 mm to find with its centre (less than half its own width): shots that looked dead in
-// were turned away by a cushion that was not drawn there. They now sit on the corner of the
-// cloth itself, and that gap is the width of a ball.
-//
-// A pocket should also LOOK right beside a ball: a hole a little under twice as wide as the
-// ball, as on a real table. The further onto the cloth a pocket sits, the smaller it can be
-// for the same opening, so the pockets are set well into the corners (and the middle pockets
-// just behind the cushion's nose): a hole 1.7 balls wide that opens a full ball to the corner
-// and nearly a ball and a half at the middle.
+/** How far along the cloth's edge from a corner the cushion's nose begins. The mouth of a corner pocket is this times the square root of two: 164 mm, a little under two balls. */
+export const CORNER_CUT = 116
+/** Half the mouth of a middle pocket, along the cushion: 176 mm in all, a little over two balls. */
+export const MIDDLE_CUT = 88
+/** How far a cushion stands out from the wood of the rail. */
+export const CUSHION_DEPTH = 48
+/** How much further toward the pocket the back of a cushion runs than its nose: the slope of the jaw. */
+export const CORNER_JAW = 40
+export const MIDDLE_JAW = 14
+
+/** Pocket centres (the middle of each hole), and how close a ball's centre must come to drop into it. */
 export const POCKETS: readonly { x: number; y: number; r: number }[] = [
-  { x: 24, y: 24, r: 80 },
-  { x: TABLE.w / 2, y: -10, r: 80 },
-  { x: TABLE.w - 24, y: 24, r: 80 },
-  { x: 24, y: TABLE.h - 24, r: 80 },
-  { x: TABLE.w / 2, y: TABLE.h + 10, r: 80 },
-  { x: TABLE.w - 24, y: TABLE.h - 24, r: 80 },
+  { x: -26, y: -26, r: 68 },
+  { x: TABLE.w / 2, y: -40, r: 62 },
+  { x: TABLE.w + 26, y: -26, r: 68 },
+  { x: -26, y: TABLE.h + 26, r: 68 },
+  { x: TABLE.w / 2, y: TABLE.h + 40, r: 62 },
+  { x: TABLE.w + 26, y: TABLE.h + 26, r: 68 },
 ]
 
+/** A jaw: the angled end of a cushion, from the tip of its nose back to the wood. `rail` is 1 for a cushion along a short side, 2 along a long side. */
+export type Jaw = { ax: number; ay: number; bx: number; by: number; rail: 1 | 2 }
+export const JAWS: readonly Jaw[] = (() => {
+  const W = TABLE.w
+  const H = TABLE.h
+  const jaws: Jaw[] = []
+  // The long sides (top, then bottom): a jaw at each corner end and one each side of the middle pocket.
+  for (const [y, out] of [[0, -1], [H, 1]] as const) {
+    const back = y + out * CUSHION_DEPTH
+    jaws.push({ ax: CORNER_CUT, ay: y, bx: CORNER_CUT - CORNER_JAW, by: back, rail: 2 })
+    jaws.push({ ax: W / 2 - MIDDLE_CUT, ay: y, bx: W / 2 - MIDDLE_CUT + MIDDLE_JAW, by: back, rail: 2 })
+    jaws.push({ ax: W / 2 + MIDDLE_CUT, ay: y, bx: W / 2 + MIDDLE_CUT - MIDDLE_JAW, by: back, rail: 2 })
+    jaws.push({ ax: W - CORNER_CUT, ay: y, bx: W - CORNER_CUT + CORNER_JAW, by: back, rail: 2 })
+  }
+  // The short sides (left, then right): a jaw at each end.
+  for (const [x, out] of [[0, -1], [W, 1]] as const) {
+    const back = x + out * CUSHION_DEPTH
+    jaws.push({ ax: x, ay: CORNER_CUT, bx: back, by: CORNER_CUT - CORNER_JAW, rail: 1 })
+    jaws.push({ ax: x, ay: H - CORNER_CUT, bx: back, by: H - CORNER_CUT + CORNER_JAW, rail: 1 })
+  }
+  return jaws
+})()
+
 /**
- * How wide each pocket's opening is to a ball's centre, in millimetres: for a corner, across
- * the diagonal; for a middle pocket, along the cushion. (For the tests, and for anyone tuning.)
+ * How much room a ball's centre has in the mouth of each pocket, in millimetres: the width of
+ * the mouth between the tips of the cushions, less the ball itself. (For the tests, and for
+ * anyone tuning the table.)
  */
 export function pocketOpening(index: number): number {
-  const pocket = POCKETS[index]!
   const corner = index !== 1 && index !== 4
-  // How far the pocket's centre lies behind the line a ball's centre runs along beside the cushion.
-  const depth = corner ? TABLE.r - Math.min(pocket.x, TABLE.w - pocket.x) : TABLE.r + (pocket.y < 0 ? -pocket.y : pocket.y - TABLE.h)
-  // Half of the pocket's circle that lies on that line.
-  const half = Math.sqrt(Math.max(0, pocket.r * pocket.r - depth * depth))
-  return corner ? (half - depth) * Math.SQRT2 : half * 2
+  // 1.41421356 is the square root of two: a corner's mouth runs across the diagonal.
+  return (corner ? CORNER_CUT * 1.41421356 : MIDDLE_CUT * 2) - TABLE.r * 2
 }
 export const HEAD_STRING = TABLE.w / 4
 export const FOOT_SPOT = { x: (TABLE.w * 3) / 4, y: TABLE.h / 2 }
@@ -247,7 +277,7 @@ export function simulate(
       ball.y += vy[i]! * DT
       moving = true
 
-      // A pocket takes the ball before the cushion can turn it away.
+      // A pocket takes the ball before a cushion can turn it away: its centre is over the hole.
       let dropped = -1
       for (let p = 0; p < POCKETS.length; p++) {
         const pocket = POCKETS[p]!
@@ -256,6 +286,51 @@ export function simulate(
         if (px * px + py * py < pocket.r * pocket.r) {
           dropped = p
           break
+        }
+      }
+
+      // The flat of a cushion, between its two jaws: the ball's centre comes no nearer than its
+      // own radius, and is turned back. Side spin on the cue ball throws it along the first
+      // rail it meets.
+      let rail = 0
+      if (dropped < 0) {
+        if (ball.y >= CORNER_CUT && ball.y <= TABLE.h - CORNER_CUT) {
+          if (ball.x < R) {
+            ball.x = R
+            vx[i] = -vx[i]! * CUSHION
+            rail = 1
+          } else if (ball.x > TABLE.w - R) {
+            ball.x = TABLE.w - R
+            vx[i] = -vx[i]! * CUSHION
+            rail = 1
+          }
+        }
+        if ((ball.x >= CORNER_CUT && ball.x <= TABLE.w / 2 - MIDDLE_CUT) || (ball.x >= TABLE.w / 2 + MIDDLE_CUT && ball.x <= TABLE.w - CORNER_CUT)) {
+          if (ball.y < R) {
+            ball.y = R
+            vy[i] = -vy[i]! * CUSHION
+            rail = 2
+          } else if (ball.y > TABLE.h - R) {
+            ball.y = TABLE.h - R
+            vy[i] = -vy[i]! * CUSHION
+            rail = 2
+          }
+        }
+
+        // Past the line of the cushions: that can only be in the mouth of a pocket, and the
+        // ball is in it. (Whichever hole is nearest.)
+        if (ball.x < 0 || ball.x > TABLE.w || ball.y < 0 || ball.y > TABLE.h) {
+          let nearest = 0
+          for (let p = 0; p < POCKETS.length; p++) {
+            const pocket = POCKETS[p]!
+            const px = ball.x - pocket.x
+            const py = ball.y - pocket.y
+            const away = px * px + py * py
+            if (dropped < 0 || away < nearest) {
+              dropped = p
+              nearest = away
+            }
+          }
         }
       }
       if (dropped >= 0) {
@@ -269,25 +344,35 @@ export function simulate(
         continue
       }
 
-      // Cushions. Side spin on the cue ball throws it along the first rail it meets.
-      let rail = 0
-      if (ball.x < R) {
-        ball.x = R
-        vx[i] = -vx[i]! * CUSHION
-        rail = 1
-      } else if (ball.x > TABLE.w - R) {
-        ball.x = TABLE.w - R
-        vx[i] = -vx[i]! * CUSHION
-        rail = 1
-      }
-      if (ball.y < R) {
-        ball.y = R
-        vy[i] = -vy[i]! * CUSHION
-        rail = 2
-      } else if (ball.y > TABLE.h - R) {
-        ball.y = TABLE.h - R
-        vy[i] = -vy[i]! * CUSHION
-        rail = 2
+      // The jaws: the angled end of each cushion, from the tip of its nose back to the wood.
+      // The ball is turned aside from the nearest point of whichever one it has run into, as
+      // from anything round or flat: into the pocket, or out of it.
+      if (rail === 0 && (ball.x < R + CORNER_CUT || ball.x > TABLE.w - R - CORNER_CUT || (ball.x > TABLE.w / 2 - MIDDLE_CUT - R && ball.x < TABLE.w / 2 + MIDDLE_CUT + R)) && (ball.y < R + CORNER_CUT || ball.y > TABLE.h - R - CORNER_CUT)) {
+        for (let j = 0; j < JAWS.length; j++) {
+          const jaw = JAWS[j]!
+          const sx = jaw.bx - jaw.ax
+          const sy = jaw.by - jaw.ay
+          // How far along the jaw the nearest point lies: 0 at the tip, 1 at the wood.
+          let along = ((ball.x - jaw.ax) * sx + (ball.y - jaw.ay) * sy) / (sx * sx + sy * sy)
+          if (along < 0) along = 0
+          else if (along > 1) along = 1
+          const nx = ball.x - (jaw.ax + sx * along)
+          const ny = ball.y - (jaw.ay + sy * along)
+          const gap2 = nx * nx + ny * ny
+          if (gap2 >= R * R || gap2 === 0) continue
+          const gap = Math.sqrt(gap2)
+          const ux = nx / gap
+          const uy = ny / gap
+          // Clear of it again, and turned back by as much of its motion as was into it.
+          ball.x += ux * (R - gap)
+          ball.y += uy * (R - gap)
+          const into = vx[i]! * ux + vy[i]! * uy
+          if (into < 0) {
+            vx[i] = vx[i]! - (1 + CUSHION) * into * ux
+            vy[i] = vy[i]! - (1 + CUSHION) * into * uy
+            rail = jaw.rail
+          }
+        }
       }
       if (rail !== 0) {
         if (i === cue && side !== 0) {
