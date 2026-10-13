@@ -81,9 +81,9 @@ const D = R * 2
  * so that what the player sees is what the ball meets.
  */
 /** How far along the cloth's edge from a corner the cushion's nose begins. The mouth of a corner pocket is this times the square root of two: 144 mm, about one and three quarter balls. */
-export const CORNER_CUT = 102
+export const CORNER_CUT = 104
 /** Half the mouth of a middle pocket, along the cushion: 152 mm in all. */
-export const MIDDLE_CUT = 76
+export const MIDDLE_CUT = 80
 /** How far a cushion stands out from the wood of the rail. */
 export const CUSHION_DEPTH = 48
 /**
@@ -91,8 +91,8 @@ export const CUSHION_DEPTH = 48
  * the jaw. Chosen so that the back corner of each cushion lies on the rim of the hole: the
  * cushion's cut end runs from the tip of its nose right up to the pocket, with nothing between.
  */
-export const CORNER_JAW = 77
-export const MIDDLE_JAW = 31
+export const CORNER_JAW = 65
+export const MIDDLE_JAW = 16
 /**
  * How much of its speed into a jaw a ball keeps on coming off it. Far less than off the flat of
  * a cushion: the cut end of a cushion is soft and faces the pocket, so a ball that catches it
@@ -103,18 +103,18 @@ export const JAW_BOUNCE = 0.4
 /**
  * Pocket centres (the middle of each hole), and how close a ball's centre must come to drop
  * into it. The hole as drawn is 6 mm wider than that all round: a ball goes when its centre
- * is just over the rim. The holes are small: a corner hole is a ball and a quarter wide, and a
- * middle one barely wider than the ball, so a ball only just fits. That is how a pocket looks
- * on a real table seen from above. What makes a pocket easy or hard is not the hole but the
- * mouth, which is wider, and the jaws that lead from it to the hole.
+ * is just over the rim. A corner hole is one and three quarter balls wide and a middle one a
+ * ball and a half, each set into a plate in the frame, where the backs of the cushions end.
+ * What makes a pocket easy or hard is not the hole but the mouth, between the tips of the
+ * cushions, and the jaws that lead from it to the hole.
  */
 export const POCKETS: readonly { x: number; y: number; r: number }[] = [
-  { x: -18, y: -18, r: 46 },
-  { x: TABLE.w / 2, y: -40, r: 40 },
-  { x: TABLE.w + 18, y: -18, r: 46 },
-  { x: -18, y: TABLE.h + 18, r: 46 },
-  { x: TABLE.w / 2, y: TABLE.h + 40, r: 40 },
-  { x: TABLE.w + 18, y: TABLE.h + 18, r: 46 },
+  { x: -34, y: -34, r: 68 },
+  { x: TABLE.w / 2, y: -48, r: 58 },
+  { x: TABLE.w + 34, y: -34, r: 68 },
+  { x: -34, y: TABLE.h + 34, r: 68 },
+  { x: TABLE.w / 2, y: TABLE.h + 48, r: 58 },
+  { x: TABLE.w + 34, y: TABLE.h + 34, r: 68 },
 ]
 /** How much wider than that the hole itself is, all round. */
 export const POCKET_RIM = 6

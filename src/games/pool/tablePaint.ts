@@ -188,11 +188,15 @@ export function paintTable(width: number, height: number, vertical: boolean, sca
     ctx.stroke(path)
     ctx.restore()
   }
-  // Each band keeps clear of the pockets at its ends: plain wood is left round every hole.
+  // A plate of gold is let into the frame at every pocket, and the hole is in the plate. How far
+  // each plate runs along its rail: past the hole, with a margin.
   const cornerHole = POCKETS[0]!.r + POCKET_RIM
   const middleHole = POCKETS[1]!.r + POCKET_RIM
-  const fromCorner = -POCKETS[0]!.x + cornerHole + 12 * U
-  const fromMiddle = middleHole + 14 * U
+  const cornerPlate = POCKETS[0]!.x + Math.sqrt(Math.max(0, cornerHole * cornerHole - (LIP + POCKETS[0]!.y) * (LIP + POCKETS[0]!.y))) + 8 * U
+  const middlePlate = middleHole + 8 * U
+  // Each band keeps clear of the plates at its ends.
+  const fromCorner = cornerPlate + 9 * U
+  const fromMiddle = middlePlate + 9 * U
   for (const rail of ['top', 'bottom'] as const) {
     carveBand(rail, fromCorner, W / 2 - fromMiddle)
     carveBand(rail, W / 2 + fromMiddle, W - fromCorner)
@@ -224,24 +228,42 @@ export function paintTable(width: number, height: number, vertical: boolean, sca
   for (const i of [1, 2, 3, 5, 6, 7]) for (const rail of ['top', 'bottom'] as const) sight(...rails[rail]((W * i) / 8, middleOfBand))
   for (const i of [1, 2, 3]) for (const rail of ['left', 'right'] as const) sight(...rails[rail]((H * i) / 4, middleOfBand))
 
-  // Gold round each pocket, on the wood: a dark seat and a fine bright ring.
-  // (Laid before the slate, which covers the part that would lie on the cloth.)
+  // ---- The plates: a block of gold at each corner of the frame and beside each middle pocket ----
+  // (Laid before the slate, which covers the part that would lie on the cloth, so that what
+  // shows is the plate on the wood: an L at a corner, a bar at the middle of a long rail.)
+  const plate = (x: number, y: number, w: number, h: number, radii: number[]) => {
+    const gold = ctx.createLinearGradient(x, y, x + w, y + h)
+    gold.addColorStop(0, '#ffeeb0')
+    gold.addColorStop(0.35, '#f1c44e')
+    gold.addColorStop(0.75, '#c8962a')
+    gold.addColorStop(1, '#a87a1c')
+    ctx.beginPath()
+    ctx.roundRect(x, y, w, h, radii)
+    ctx.fillStyle = gold
+    ctx.fill()
+    // Its edge: a dark line where it is let into the frame, and a bright bevel just inside.
+    ctx.strokeStyle = '#4a3206'
+    ctx.lineWidth = 1.6 * U
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.roundRect(x + 2.2 * U, y + 2.2 * U, w - 4.4 * U, h - 4.4 * U, radii.map((r) => Math.max(0, r - 2.2 * U)))
+    ctx.strokeStyle = 'rgba(255, 246, 205, 0.7)'
+    ctx.lineWidth = 1 * U
+    ctx.stroke()
+  }
   ctx.save()
   frame()
   ctx.clip()
-  for (const pocket of POCKETS) {
-    const radius = pocket.r + POCKET_RIM
-    ctx.strokeStyle = FRAME.ink
-    ctx.lineWidth = 3 * U
-    ctx.beginPath()
-    ctx.arc(pocket.x, pocket.y, radius + 2 * U, 0, Math.PI * 2)
-    ctx.stroke()
-    ctx.strokeStyle = FRAME.gold
-    ctx.lineWidth = 1.1 * U
-    ctx.beginPath()
-    ctx.arc(pocket.x, pocket.y, radius + 3.8 * U, 0, Math.PI * 2)
-    ctx.stroke()
-  }
+  const small = 5 * U
+  const reach = RAIL + cornerPlate
+  // Corners: a square block from the corner of the frame, rounded as the frame is on its outer corner.
+  plate(-RAIL, -RAIL, reach, reach, [ROUND, small, small, small])
+  plate(W + RAIL - reach, -RAIL, reach, reach, [small, ROUND, small, small])
+  plate(W + RAIL - reach, H + RAIL - reach, reach, reach, [small, small, ROUND, small])
+  plate(-RAIL, H + RAIL - reach, reach, reach, [small, small, small, ROUND])
+  // Middles: a bar across the rail.
+  plate(W / 2 - middlePlate, -RAIL, middlePlate * 2, RAIL, [0, 0, small, small])
+  plate(W / 2 - middlePlate, H, middlePlate * 2, RAIL, [small, small, 0, 0])
   ctx.restore()
 
   // ---- The slate and its cloth ----
@@ -328,13 +350,20 @@ export function paintTable(width: number, height: number, vertical: boolean, sca
   /** One cushion along a rail, from one tip of its nose to the other; `jaw1` and `jaw2` are how far its back runs on past each tip. */
   const cushion = (rail: Rail, from: number, to: number, jaw1: number, jaw2: number) => {
     const at = rails[rail]
-    const shape = (points: [number, number][]) => {
+    /** The cushion's outline: its nose, and its two cut ends, with the tips of the nose and the corners at the wood rounded off. */
+    const outline = (nose: number, back: number) => {
+      const soft = 5 * U
       ctx.beginPath()
-      points.forEach(([u, v], index) => (index === 0 ? ctx.moveTo(...at(u, v)) : ctx.lineTo(...at(u, v))))
+      ctx.moveTo(...at((from + to) / 2, nose))
+      ctx.arcTo(...at(to, nose), ...at(to + jaw2, back), soft)
+      ctx.arcTo(...at(to + jaw2, back), ...at(to, back), soft * 0.6)
+      ctx.lineTo(...at(from, back))
+      ctx.arcTo(...at(from - jaw1, back), ...at(from, nose), soft * 0.6)
+      ctx.arcTo(...at(from, nose), ...at(to, nose), soft)
       ctx.closePath()
     }
     // Its body, with a fine darker edge.
-    shape([[from, 0], [to, 0], [to + jaw2, LIP], [from - jaw1, LIP]])
+    outline(0, LIP)
     ctx.fillStyle = colors.cushion[1]
     ctx.fill()
     ctx.strokeStyle = colors.cushion[0]
@@ -344,17 +373,25 @@ export function paintTable(width: number, height: number, vertical: boolean, sca
     const [nx, ny] = at(from, 0)
     const [bx, by] = at(from, LIP)
     const slope = ctx.createLinearGradient(bx, by, nx, ny)
-    slope.addColorStop(0, 'rgba(0, 0, 0, 0.26)')
+    slope.addColorStop(0, 'rgba(0, 0, 0, 0.28)')
     slope.addColorStop(0.7, 'rgba(0, 0, 0, 0)')
-    shape([[from, 0], [to, 0], [to + jaw2, LIP], [from - jaw1, LIP]])
+    outline(0, LIP)
     ctx.fillStyle = slope
     ctx.fill()
-    // The bevel along its nose, where the light catches it.
-    const deep = 4 * U
-    const inset = 2.5 * U
-    shape([[from, 0], [to, 0], [to - inset + (jaw2 * deep) / LIP, deep], [from + inset - (jaw1 * deep) / LIP, deep]])
+    // The bevel along its nose, where the light catches it: the same shape, a few millimetres deep.
+    const deep = 4.5 * U
+    ctx.save()
+    outline(0, LIP)
+    ctx.clip()
+    ctx.beginPath()
+    ctx.moveTo(...at(from - jaw1, 0))
+    ctx.lineTo(...at(to + jaw2, 0))
+    ctx.lineTo(...at(to + jaw2, deep))
+    ctx.lineTo(...at(from - jaw1, deep))
+    ctx.closePath()
     ctx.fillStyle = colors.cushion[2]
     ctx.fill()
+    ctx.restore()
   }
 
   // The shadow the cushions throw onto the cloth (drawn first: the cushions stand over it).
@@ -388,50 +425,47 @@ export function paintTable(width: number, height: number, vertical: boolean, sca
   for (const [rail, from, to] of noses) shadow(rail, from, to)
   for (const [rail, from, to, jaw1, jaw2] of noses) cushion(rail, from, to, jaw1, jaw2)
 
-  // ---- The pockets: a hole with depth to it, dark on the side of the cloth, its far wall catching the light ----
+  // ---- The pockets: a dark liner in the plate, and the drop inside it, set a little toward the outside ----
+  // Two circles, one inside the other and off-centre: that is what makes a hole look deep.
   for (const pocket of POCKETS) {
     const px = pocket.x
     const py = pocket.y
     // The hole is a little wider than the line a ball's centre must cross to drop: it goes when its centre is just over the rim.
     const radius = pocket.r + POCKET_RIM
-    // Toward the middle of the table from this pocket.
-    const dx = W / 2 - px
-    const dy = H / 2 - py
+    // Away from the middle of the table, from this pocket.
+    const dx = px - W / 2
+    const dy = py - H / 2
     const away = Math.hypot(dx, dy)
-    const ix = dx / away
-    const iy = dy / away
-    const hole = ctx.createRadialGradient(px + ix * radius * 0.56, py + iy * radius * 0.56, 0, px - ix * radius * 0.2, py - iy * radius * 0.2, radius * 1.24)
-    hole.addColorStop(0, '#000000')
-    hole.addColorStop(0.5, '#02030a')
-    hole.addColorStop(0.78, '#141a4a')
-    hole.addColorStop(0.93, '#2a348a')
-    hole.addColorStop(1, '#3a49bd')
-    ctx.fillStyle = hole
+    const ox = dx / away
+    const oy = dy / away
+    // The liner: the leather the ball rolls over, lit a little on the side nearest the lamp.
+    const liner = ctx.createLinearGradient(px - ox * radius, py - oy * radius, px + ox * radius, py + oy * radius)
+    liner.addColorStop(0, '#30323f')
+    liner.addColorStop(0.5, '#1c1d27')
+    liner.addColorStop(1, '#101117')
+    ctx.fillStyle = liner
     ctx.beginPath()
     ctx.arc(px, py, radius, 0, Math.PI * 2)
     ctx.fill()
-    // Its rim: pale where it meets the cloth, gold where it meets the wood.
-    ctx.save()
-    ctx.beginPath()
-    ctx.rect(-LIP, -LIP, W + LIP * 2, H + LIP * 2)
-    ctx.clip()
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'
-    ctx.lineWidth = 1.6 * U
-    ctx.beginPath()
-    ctx.arc(px, py, radius, 0, Math.PI * 2)
-    ctx.stroke()
-    ctx.restore()
-    ctx.save()
-    ctx.beginPath()
-    ctx.rect(-RAIL, -RAIL, W + RAIL * 2, H + RAIL * 2)
-    ctx.rect(-LIP, -LIP, W + LIP * 2, H + LIP * 2)
-    ctx.clip('evenodd')
-    ctx.strokeStyle = FRAME.gold
+    ctx.strokeStyle = '#05060a'
     ctx.lineWidth = 1.4 * U
-    ctx.beginPath()
-    ctx.arc(px, py, radius, 0, Math.PI * 2)
     ctx.stroke()
-    ctx.restore()
+    // The drop.
+    const drop = ctx.createRadialGradient(px + ox * radius * 0.3, py + oy * radius * 0.3, radius * 0.1, px + ox * radius * 0.2, py + oy * radius * 0.2, radius * 0.72)
+    drop.addColorStop(0, '#000000')
+    drop.addColorStop(0.8, '#030306')
+    drop.addColorStop(1, '#0c0d13')
+    ctx.fillStyle = drop
+    ctx.beginPath()
+    ctx.arc(px + ox * radius * 0.2, py + oy * radius * 0.2, radius * 0.72, 0, Math.PI * 2)
+    ctx.fill()
+    // A thin light on the liner's near lip.
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)'
+    ctx.lineWidth = 1.2 * U
+    const turn = Math.atan2(-oy, -ox)
+    ctx.beginPath()
+    ctx.arc(px, py, radius - 1.5 * U, turn - 1.1, turn + 1.1)
+    ctx.stroke()
   }
 
   return canvas
