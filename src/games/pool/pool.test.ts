@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { chooseShot } from './computer'
-import { applyShot, type Ball, canPlaceCue, HEAD_STRING, type PoolState, rack, type Shot, simulate, TABLE, targets, pocketOpening, POCKETS, POCKET_RIM, CORNER_CUT, MIDDLE_CUT, JAWS } from '../../../supabase/functions/_shared/pool'
+import { applyShot, type Ball, canPlaceCue, HEAD_STRING, type PoolState, rack, type Shot, simulate, TABLE, targets, pocketOpening, POCKETS, POCKET_RIM, CORNER_CUT, MIDDLE_CUT, JAWS, CUSHION_ENDS, jawCurve, CORNER_JAW } from '../../../supabase/functions/_shared/pool'
 
 // The physics and the rules of pool, as the server runs them.
 
@@ -306,12 +306,24 @@ describe('the pockets', () => {
     }
   })
 
-  it('the cut end of every cushion runs right up to the rim of its pocket: nothing is left between them', () => {
-    // Each jaw ends, at the wood, on the edge of the hole it leads to (to within a few millimetres).
-    for (const jaw of JAWS) {
-      const nearest = Math.min(...POCKETS.map((pocket) => Math.abs(Math.hypot(jaw.bx - pocket.x, jaw.by - pocket.y) - (pocket.r + POCKET_RIM))))
+  it('the end of every cushion runs right up to the rim of its pocket: nothing is left between them', () => {
+    // Each cushion ends, at the wood, on the edge of the hole it leads to (to within a few millimetres).
+    expect(CUSHION_ENDS).toHaveLength(12)
+    for (const end of CUSHION_ENDS) {
+      const nearest = Math.min(...POCKETS.map((pocket) => Math.abs(Math.hypot(end.x - pocket.x, end.y - pocket.y) - (pocket.r + POCKET_RIM))))
       expect(nearest).toBeLessThan(4)
     }
+  })
+
+  it('the end of a cushion is rounded like a C, not cut straight like a V', () => {
+    const curve = jawCurve(CORNER_JAW)
+    const [first, last] = [curve[0]!, curve[curve.length - 1]!]
+    expect(first).toEqual([0, 0])
+    // It leaves the line of the nose gently: a third of the way round it has run on a long way and dropped back very little...
+    expect(curve[1]![1]).toBeLessThan(last[1] * 0.15)
+    expect(curve[1]![0]).toBeGreaterThan(last[0] * 0.3)
+    // ...and every point of it lies outside the straight cut between its two ends: the cushion is fuller there.
+    for (const [along, back] of curve.slice(1, -1)) expect(back / last[1]).toBeLessThan(along / last[0])
   })
 
   it('a ball sent into a corner on the diagonal drops, and so does one a third of a ball off line to either side', () => {
@@ -353,10 +365,12 @@ describe('the pockets', () => {
       expect(rest.y).toBeGreaterThanOrEqual(0)
     }
     // And every jaw is a real one: it starts on the line of the cushions and runs back into the rail.
-    expect(JAWS).toHaveLength(12)
-    for (const jaw of JAWS) {
-      expect(jaw.ax === 0 || jaw.ax === W || jaw.ay === 0 || jaw.ay === H).toBe(true)
-      expect(jaw.bx < 0 || jaw.bx > W || jaw.by < 0 || jaw.by > H).toBe(true)
+    // Twelve ends, each a curve of three straight pieces that starts on the line of the cushions and runs back into the rail.
+    expect(JAWS).toHaveLength(36)
+    for (let i = 0; i < JAWS.length; i += 3) {
+      const [start, end] = [JAWS[i]!, JAWS[i + 2]!]
+      expect(start.ax === 0 || start.ax === W || start.ay === 0 || start.ay === H).toBe(true)
+      expect(end.bx < 0 || end.bx > W || end.by < 0 || end.by > H).toBe(true)
     }
   })
 

@@ -67,8 +67,9 @@ const D = R * 2
  * The cushions and the pockets, as on a real table.
  *
  * A cushion's nose runs along each side of the cloth, and stops short of every pocket. Where
- * it stops it is cut back at an angle (the jaw), so that each pocket has a mouth, between the
- * tips of two cushions, that narrows a little toward the hole. The hole itself is in the rail,
+ * it stops, the cushion's end is rounded (the jaw): it sweeps round, like a C, to meet the wood
+ * at the rim of the hole. So each pocket has a mouth, between the rounded ends of two cushions,
+ * that narrows a little toward the hole. The hole itself is in the rail,
  * behind the line of the cushions: at a corner, out beyond the corner of the cloth; at the
  * middle of a long side, behind the cushion.
  *
@@ -80,19 +81,40 @@ const D = R * 2
  * All of it is here, in numbers, and the table is drawn from the same numbers (tablePaint.ts),
  * so that what the player sees is what the ball meets.
  */
-/** How far along the cloth's edge from a corner the cushion's nose begins. The mouth of a corner pocket is this times the square root of two: 144 mm, about one and three quarter balls. */
-export const CORNER_CUT = 104
-/** Half the mouth of a middle pocket, along the cushion: 152 mm in all. */
-export const MIDDLE_CUT = 80
+/** How far along the cloth's edge from a corner the flat of a cushion's nose ends and its rounded end begins. */
+export const CORNER_CUT = 146
+/** The same at a middle pocket, measured from the middle of the pocket. */
+export const MIDDLE_CUT = 98
 /** How far a cushion stands out from the wood of the rail. */
 export const CUSHION_DEPTH = 48
 /**
- * How much further toward the pocket the back of a cushion runs than its nose: the slope of
- * the jaw. Chosen so that the back corner of each cushion lies on the rim of the hole: the
- * cushion's cut end runs from the tip of its nose right up to the pocket, with nothing between.
+ * How far the end of a cushion runs on toward the pocket, from where the flat of its nose
+ * stops to where its back meets the wood. Chosen so that the back corner of each cushion lies
+ * on the rim of the hole: the cushion runs right up to the pocket, with nothing between.
  */
-export const CORNER_JAW = 65
-export const MIDDLE_JAW = 16
+export const CORNER_JAW = 107
+export const MIDDLE_JAW = 34
+/**
+ * The end of a cushion is rounded, not cut straight: it leaves the line of the nose gently and
+ * sweeps round to meet the wood square, like the letter C. This says how round: 0 would be a
+ * straight cut, 1 a full quarter turn.
+ */
+export const JAW_ROUND = 0.65
+/**
+ * The rounded end of a cushion as a few points along it, from the end of the flat nose to the
+ * wood: for each, how far it has run on toward the pocket and how far back from the line of
+ * the nose it lies. (Only + and x: the same on every machine. The table is drawn through the
+ * very same points.)
+ */
+export function jawCurve(jaw: number): readonly (readonly [number, number])[] {
+  const bend = jaw * JAW_ROUND
+  const points: [number, number][] = []
+  for (let i = 0; i <= 3; i++) {
+    const t = i / 3
+    points.push([2 * t * (1 - t) * bend + t * t * jaw, t * t * CUSHION_DEPTH])
+  }
+  return points
+}
 /**
  * How much of its speed into a jaw a ball keeps on coming off it. Far less than off the flat of
  * a cushion: the cut end of a cushion is soft and faces the pocket, so a ball that catches it
@@ -119,38 +141,54 @@ export const POCKETS: readonly { x: number; y: number; r: number }[] = [
 /** How much wider than that the hole itself is, all round. */
 export const POCKET_RIM = 6
 
-/** A jaw: the angled end of a cushion, from the tip of its nose back to the wood. `rail` is 1 for a cushion along a short side, 2 along a long side. */
+/** A piece of the rounded end of a cushion (a jaw), straight from one point of its curve to the next. `rail` is 1 for a cushion along a short side, 2 along a long side. */
 export type Jaw = { ax: number; ay: number; bx: number; by: number; rail: 1 | 2 }
+/** Where the back of each cushion meets the wood, at each of its two ends: twelve points, each on the rim of a pocket. */
+export const CUSHION_ENDS: { x: number; y: number }[] = []
 export const JAWS: readonly Jaw[] = (() => {
   const W = TABLE.w
   const H = TABLE.h
   const jaws: Jaw[] = []
-  // The long sides (top, then bottom): a jaw at each corner end and one each side of the middle pocket.
-  for (const [y, out] of [[0, -1], [H, 1]] as const) {
-    const back = y + out * CUSHION_DEPTH
-    jaws.push({ ax: CORNER_CUT, ay: y, bx: CORNER_CUT - CORNER_JAW, by: back, rail: 2 })
-    jaws.push({ ax: W / 2 - MIDDLE_CUT, ay: y, bx: W / 2 - MIDDLE_CUT + MIDDLE_JAW, by: back, rail: 2 })
-    jaws.push({ ax: W / 2 + MIDDLE_CUT, ay: y, bx: W / 2 + MIDDLE_CUT - MIDDLE_JAW, by: back, rail: 2 })
-    jaws.push({ ax: W - CORNER_CUT, ay: y, bx: W - CORNER_CUT + CORNER_JAW, by: back, rail: 2 })
+  /**
+   * One end of a cushion: from (x, y) on the line of the nose, running on in the direction
+   * (ux, uy) toward the pocket, and back from the cloth in the direction (ox, oy).
+   */
+  const end = (x: number, y: number, ux: number, uy: number, ox: number, oy: number, jaw: number, rail: 1 | 2) => {
+    const curve = jawCurve(jaw)
+    for (let i = 1; i < curve.length; i++) {
+      const from = curve[i - 1]!
+      const to = curve[i]!
+      jaws.push({ ax: x + ux * from[0] + ox * from[1], ay: y + uy * from[0] + oy * from[1], bx: x + ux * to[0] + ox * to[1], by: y + uy * to[0] + oy * to[1], rail })
+    }
+    const last = curve[curve.length - 1]!
+    CUSHION_ENDS.push({ x: x + ux * last[0] + ox * last[1], y: y + uy * last[0] + oy * last[1] })
   }
-  // The short sides (left, then right): a jaw at each end.
+  // The long sides (top, then bottom): an end at each corner and one each side of the middle pocket.
+  for (const [y, out] of [[0, -1], [H, 1]] as const) {
+    end(CORNER_CUT, y, -1, 0, 0, out, CORNER_JAW, 2)
+    end(W / 2 - MIDDLE_CUT, y, 1, 0, 0, out, MIDDLE_JAW, 2)
+    end(W / 2 + MIDDLE_CUT, y, -1, 0, 0, out, MIDDLE_JAW, 2)
+    end(W - CORNER_CUT, y, 1, 0, 0, out, CORNER_JAW, 2)
+  }
+  // The short sides (left, then right): an end at each corner.
   for (const [x, out] of [[0, -1], [W, 1]] as const) {
-    const back = x + out * CUSHION_DEPTH
-    jaws.push({ ax: x, ay: CORNER_CUT, bx: back, by: CORNER_CUT - CORNER_JAW, rail: 1 })
-    jaws.push({ ax: x, ay: H - CORNER_CUT, bx: back, by: H - CORNER_CUT + CORNER_JAW, rail: 1 })
+    end(x, CORNER_CUT, 0, -1, out, 0, CORNER_JAW, 1)
+    end(x, H - CORNER_CUT, 0, 1, out, 0, CORNER_JAW, 1)
   }
   return jaws
 })()
 
 /**
  * How much room a ball's centre has in the mouth of each pocket, in millimetres: the width of
- * the mouth between the tips of the cushions, less the ball itself. (For the tests, and for
- * anyone tuning the table.)
+ * the mouth, less the ball itself. A rounded end leaves the line of the nose so gently that the
+ * mouth is measured where the curve has first properly turned away: at its first point.
+ * (For the tests, and for anyone tuning the table.)
  */
 export function pocketOpening(index: number): number {
   const corner = index !== 1 && index !== 4
+  const turned = jawCurve(corner ? CORNER_JAW : MIDDLE_JAW)[1]![0]
   // 1.41421356 is the square root of two: a corner's mouth runs across the diagonal.
-  return (corner ? CORNER_CUT * 1.41421356 : MIDDLE_CUT * 2) - TABLE.r * 2
+  return (corner ? (CORNER_CUT - turned) * 1.41421356 : (MIDDLE_CUT - turned) * 2) - TABLE.r * 2
 }
 export const HEAD_STRING = TABLE.w / 4
 export const FOOT_SPOT = { x: (TABLE.w * 3) / 4, y: TABLE.h / 2 }

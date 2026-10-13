@@ -1,4 +1,4 @@
-import { CORNER_CUT, CORNER_JAW, CUSHION_DEPTH, MIDDLE_CUT, MIDDLE_JAW, POCKET_RIM, POCKETS, TABLE } from '../../../supabase/functions/_shared/pool'
+import { CORNER_CUT, CORNER_JAW, CUSHION_DEPTH, JAW_ROUND, MIDDLE_CUT, MIDDLE_JAW, POCKET_RIM, POCKETS, TABLE } from '../../../supabase/functions/_shared/pool'
 
 // The pool table without the balls, painted once for a given size.
 //
@@ -350,16 +350,17 @@ export function paintTable(width: number, height: number, vertical: boolean, sca
   /** One cushion along a rail, from one tip of its nose to the other; `jaw1` and `jaw2` are how far its back runs on past each tip. */
   const cushion = (rail: Rail, from: number, to: number, jaw1: number, jaw2: number) => {
     const at = rails[rail]
-    /** The cushion's outline: its nose, and its two cut ends, with the tips of the nose and the corners at the wood rounded off. */
+    /**
+     * The cushion's outline: the flat of its nose, and at each end the curve that sweeps round
+     * to the wood, like a C. (The very curve the physics follows: see jawCurve.)
+     */
     const outline = (nose: number, back: number) => {
-      const soft = 5 * U
       ctx.beginPath()
-      ctx.moveTo(...at((from + to) / 2, nose))
-      ctx.arcTo(...at(to, nose), ...at(to + jaw2, back), soft)
-      ctx.arcTo(...at(to + jaw2, back), ...at(to, back), soft * 0.6)
-      ctx.lineTo(...at(from, back))
-      ctx.arcTo(...at(from - jaw1, back), ...at(from, nose), soft * 0.6)
-      ctx.arcTo(...at(from, nose), ...at(to, nose), soft)
+      ctx.moveTo(...at(from, nose))
+      ctx.lineTo(...at(to, nose))
+      ctx.quadraticCurveTo(...at(to + jaw2 * JAW_ROUND, nose), ...at(to + jaw2, back))
+      ctx.lineTo(...at(from - jaw1, back))
+      ctx.quadraticCurveTo(...at(from - jaw1 * JAW_ROUND, nose), ...at(from, nose))
       ctx.closePath()
     }
     // Its body, with a fine darker edge.
