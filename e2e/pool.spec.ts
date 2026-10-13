@@ -57,7 +57,7 @@ async function pullCue(page: Page, power: number) {
 }
 
 /** The width of the wooden rail round the cloth, in the table's own measure (see PoolCanvas). */
-const RAIL = 112
+const RAIL = 124
 /**
  * Where a point of the table is on the glass. The screen is drawn turned on these upright
  * phones: the table's length runs down the glass, and its width from right to left.

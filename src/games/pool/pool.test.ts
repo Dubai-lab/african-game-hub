@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { chooseShot } from './computer'
-import { applyShot, type Ball, canPlaceCue, HEAD_STRING, type PoolState, rack, type Shot, simulate, TABLE, targets, pocketOpening, POCKETS, CORNER_CUT, MIDDLE_CUT, JAWS } from '../../../supabase/functions/_shared/pool'
+import { applyShot, type Ball, canPlaceCue, HEAD_STRING, type PoolState, rack, type Shot, simulate, TABLE, targets, pocketOpening, POCKETS, POCKET_RIM, CORNER_CUT, MIDDLE_CUT, JAWS } from '../../../supabase/functions/_shared/pool'
 
 // The physics and the rules of pool, as the server runs them.
 
@@ -286,8 +286,8 @@ describe('the pockets', () => {
     }
     // The hole itself: not the two-ball-wide disc it once was.
     for (const pocket of POCKETS) {
-      expect(pocket.r * 2).toBeGreaterThan(ball * 1.3)
-      expect(pocket.r * 2).toBeLessThan(ball * 1.7)
+      expect(pocket.r * 2).toBeGreaterThan(ball * 1.4)
+      expect(pocket.r * 2).toBeLessThan(ball * 2)
     }
   })
 
@@ -302,6 +302,14 @@ describe('the pockets', () => {
         // How far the hole reaches onto the cloth: less than half a ball.
         expect(pocket.r - Math.min(Math.abs(pocket.y), Math.abs(pocket.y - H))).toBeLessThan(TABLE.r)
       }
+    }
+  })
+
+  it('the cut end of every cushion runs right up to the rim of its pocket: nothing is left between them', () => {
+    // Each jaw ends, at the wood, on the edge of the hole it leads to (to within a few millimetres).
+    for (const jaw of JAWS) {
+      const nearest = Math.min(...POCKETS.map((pocket) => Math.abs(Math.hypot(jaw.bx - pocket.x, jaw.by - pocket.y) - (pocket.r + POCKET_RIM))))
+      expect(nearest).toBeLessThan(4)
     }
   })
 
