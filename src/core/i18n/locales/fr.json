@@ -195,7 +195,6 @@
       "terms": "Conditions",
       "privacy": "Confidentialité",
       "responsibleLink": "Jeu responsable",
-      "follow": "Suivez-nous :",
       "contact": "Contact",
       "rights": "© {{year}} African Game Hub",
       "cookies": "Cookies",
@@ -740,9 +739,6 @@
   },
   "settings": {
     "title": "Réglages",
-    "follow": "Suivez-nous",
-    "followHint": "Les nouvelles, les nouveaux jeux et les promotions sont annoncés d’abord sur nos pages.",
-    "followOn": "Suivez-nous sur {{name}}",
     "general": "Général",
     "account": "Compte",
     "about": "À propos",
@@ -1854,6 +1850,10 @@
       "news": "Nouvelles par e-mail",
       "newsHint": "Nouveaux jeux et tournois, quelques fois par an. Les e-mails concernant votre compte sont toujours envoyés."
     }
+  },
+  "social": {
+    "follow": "Suivez-nous",
+    "hint": "Les nouvelles, les nouveaux jeux et les promotions sont annoncés d’abord sur nos pages."
   },
   "support": {
     "title": "Signaler un problème",

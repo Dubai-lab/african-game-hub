@@ -80,7 +80,9 @@ export function AppShell() {
         <header className="shrink-0 border-b-2 border-line bg-surface lg:hidden" data-testid="top-bar">
           <div className="relative mx-auto flex w-full max-w-md flex-col gap-1 px-5 pb-2 pt-2">
             {/* What the player should know of, at the end of the bar. */}
-            <NotificationBell className="absolute end-3 top-0.5 text-primary" />
+            <div className="absolute end-3 top-0.5">
+              <NotificationBell className="text-primary" />
+            </div>
             {/* The hub's name, in the middle. */}
             <Link to="/lobby" className="self-center text-base font-display font-extrabold text-primary">
               {t('app.name')}

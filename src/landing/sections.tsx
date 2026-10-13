@@ -3,10 +3,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { flagEmoji, guessCountry, useCountries } from '@/core/countries/useCountries'
-import { SOCIAL_LINKS } from '@/core/lib/socialLinks'
 import { GameArt } from '@/core/lobby/GameArt'
 import { buttonClass } from '@/core/ui/Button'
 import { LanguageSwitcher } from '@/core/ui/LanguageSwitcher'
+import { FollowList } from '@/core/ui/SocialLinks'
 import {
   FALLBACK_COUNTRY_CODES,
   type LandingGame,
@@ -236,7 +236,9 @@ export function Footer() {
   const link = 'underline underline-offset-4'
   return (
     <footer className="bg-ink text-surface">
-      <div className={`${shell} flex flex-col gap-8 py-12`}>
+      {/* The hub's own matters on one side; where to follow it on the other (under them on a phone). */}
+      <div className={`${shell} flex flex-col gap-10 py-12 md:flex-row md:items-start md:justify-between`}>
+       <div className="flex min-w-0 flex-col gap-8">
         <div className="flex items-start gap-4">
           <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-hibiscus font-display text-xl font-extrabold text-white">
             {t('landing.footer.age')}
@@ -261,18 +263,10 @@ export function Footer() {
           </Link>
           <LanguageSwitcher />
         </nav>
-        {SOCIAL_LINKS.length > 0 && (
-          <p className="flex flex-wrap items-center gap-x-4 gap-y-2 font-semibold" data-testid="footer-follow">
-            <span className="text-primary-tint">{t('landing.footer.follow')}</span>
-            {SOCIAL_LINKS.map((page) => (
-              <a key={page.id} href={page.url} target="_blank" rel="noopener noreferrer" className={link}>
-                {page.name}
-              </a>
-            ))}
-          </p>
-        )}
         <BusinessDetails className="text-primary-tint" />
         <p className="text-sm text-primary-tint">{t('landing.footer.rights', { year: new Date().getFullYear() })}</p>
+       </div>
+       <FollowList className="shrink-0 md:min-w-44" />
       </div>
     </footer>
   )

@@ -5,6 +5,7 @@ import { SOCIAL_LINKS } from '@/core/lib/socialLinks'
 import { NotificationSettings } from '@/core/notifications/NotificationSettings'
 import { Button, buttonClass } from '@/core/ui/Button'
 import { LanguageSwitcher } from '@/core/ui/LanguageSwitcher'
+import { FollowButton } from '@/core/ui/SocialLinks'
 import { Toggle } from '@/core/ui/Toggle'
 import { useMatchChatSetting } from '@/core/social/social'
 import { useSettingsStore } from './settingsStore'
@@ -72,14 +73,10 @@ export default function SettingsPage() {
       {SOCIAL_LINKS.length > 0 && (
         <section aria-labelledby="settings-follow" data-testid="settings-follow">
           <h2 id="settings-follow" className={sectionTitle}>
-            {t('settings.follow')}
+            {t('social.follow')}
           </h2>
-          <p className="mt-2 text-muted">{t('settings.followHint')}</p>
-          {SOCIAL_LINKS.map((page) => (
-            <a key={page.id} href={page.url} target="_blank" rel="noopener noreferrer" className={buttonClass('ghost', 'mt-3 w-full bg-panel')}>
-              {t('settings.followOn', { name: page.name })}
-            </a>
-          ))}
+          <p className="mt-2 text-muted">{t('social.hint')}</p>
+          <FollowButton className="mt-3 w-full bg-panel" />
         </section>
       )}
 
