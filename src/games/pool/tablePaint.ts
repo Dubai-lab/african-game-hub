@@ -9,7 +9,7 @@ import { CORNER_CUT, CORNER_JAW, CUSHION_DEPTH, MIDDLE_CUT, MIDDLE_JAW, POCKET_R
 // the cushions standing on it, the shadows they throw, then the pockets cut through all of it.
 
 /** Wood and cushion around the playing surface, in millimetres: wide enough to hold a corner pocket with a rim of wood round it. */
-export const RAIL = 124
+export const RAIL = 112
 /** The frame's corners are rounded about the middle of each corner pocket, so the wood wraps the hole evenly. */
 const CORNER_ROUND = RAIL + POCKETS[0]!.x
 /** How far a cushion stands out from the wood onto the slate: the same number the physics uses. */

@@ -281,13 +281,14 @@ describe('the pockets', () => {
       expect(pocketOpening(corner)).toBeLessThan(ball * 1.15)
     }
     for (const middle of [1, 4]) {
-      expect(pocketOpening(middle)).toBeGreaterThan(ball)
+      expect(pocketOpening(middle)).toBeGreaterThan(ball * 0.9)
       expect(pocketOpening(middle)).toBeLessThan(ball * 1.3)
     }
     // The hole itself: not the two-ball-wide disc it once was.
     for (const pocket of POCKETS) {
-      expect(pocket.r * 2).toBeGreaterThan(ball * 1.4)
-      expect(pocket.r * 2).toBeLessThan(ball * 2)
+      // (As drawn, 6 mm wider all round: 1.6 balls at a corner, 1.4 at the middle.)
+      expect((pocket.r + POCKET_RIM) * 2).toBeGreaterThan(ball * 1.3)
+      expect((pocket.r + POCKET_RIM) * 2).toBeLessThan(ball * 1.7)
     }
   })
 

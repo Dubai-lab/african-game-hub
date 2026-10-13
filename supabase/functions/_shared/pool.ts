@@ -82,8 +82,8 @@ const D = R * 2
  */
 /** How far along the cloth's edge from a corner the cushion's nose begins. The mouth of a corner pocket is this times the square root of two: 156 mm, a little under two balls. */
 export const CORNER_CUT = 110
-/** Half the mouth of a middle pocket, along the cushion: 172 mm in all, two balls. */
-export const MIDDLE_CUT = 86
+/** Half the mouth of a middle pocket, along the cushion: 164 mm in all, a little under two balls. */
+export const MIDDLE_CUT = 82
 /** How far a cushion stands out from the wood of the rail. */
 export const CUSHION_DEPTH = 48
 /**
@@ -91,22 +91,22 @@ export const CUSHION_DEPTH = 48
  * the jaw. Chosen so that the back corner of each cushion lies on the rim of the hole: the
  * cushion's cut end runs from the tip of its nose right up to the pocket, with nothing between.
  */
-export const CORNER_JAW = 61
-export const MIDDLE_JAW = 16
+export const CORNER_JAW = 74
+export const MIDDLE_JAW = 23
 
 /**
  * Pocket centres (the middle of each hole), and how close a ball's centre must come to drop
  * into it. The hole as drawn is 6 mm wider than that all round: a ball goes when its centre
- * is just over the rim. A corner hole is two balls wide and a middle one a little under
- * one and three quarters.
+ * is just over the rim. A corner hole is 1.6 balls wide and a middle one 1.4: a ball looks as
+ * if it only just fits, as it should. The mouths are wider than the holes, and the jaws lead in.
  */
 export const POCKETS: readonly { x: number; y: number; r: number }[] = [
-  { x: -34, y: -34, r: 78 },
-  { x: TABLE.w / 2, y: -52, r: 64 },
-  { x: TABLE.w + 34, y: -34, r: 78 },
-  { x: -34, y: TABLE.h + 34, r: 78 },
-  { x: TABLE.w / 2, y: TABLE.h + 52, r: 64 },
-  { x: TABLE.w + 34, y: TABLE.h + 34, r: 78 },
+  { x: -28, y: -28, r: 61 },
+  { x: TABLE.w / 2, y: -44, r: 53 },
+  { x: TABLE.w + 28, y: -28, r: 61 },
+  { x: -28, y: TABLE.h + 28, r: 61 },
+  { x: TABLE.w / 2, y: TABLE.h + 44, r: 53 },
+  { x: TABLE.w + 28, y: TABLE.h + 28, r: 61 },
 ]
 /** How much wider than that the hole itself is, all round. */
 export const POCKET_RIM = 6
