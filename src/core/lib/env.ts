@@ -6,6 +6,9 @@ const envSchema = z.object({
   VITE_SUPABASE_ANON_KEY: z.string().check(z.minLength(20)),
   // Shown in the landing page footer. Optional: the line is left out when unset.
   VITE_CONTACT_EMAIL: z.optional(z.email()),
+  // The public half of the key that signs notifications to phones (made by npm run mail:setup).
+  // Optional: without it the app simply does not offer them.
+  VITE_VAPID_PUBLIC_KEY: z.optional(z.string()),
   // Who runs the hub: shown in the footer and on the legal pages. Real details only.
   VITE_BUSINESS_NAME: z.optional(z.string()),
   VITE_BUSINESS_ADDRESS: z.optional(z.string()),

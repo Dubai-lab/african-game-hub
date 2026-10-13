@@ -23,6 +23,8 @@ const MESSAGES: Record<string, string> = {
   PLAYER_NOT_FOUND: 'No such player.',
   MATCH_NOT_ACTIVE: 'That match is already over.',
   REPORT_NOT_OPEN: 'That report has already been closed.',
+  REQUEST_NOT_OPEN: 'That request has already been answered or closed.',
+  TOO_SOON: 'An announcement went out less than ten minutes ago. Wait a little before sending another.',
   NETWORK: 'Could not reach the server. Check the connection and try again.',
   SERVER_ERROR: 'Something went wrong on the server. Nothing was changed.',
 }

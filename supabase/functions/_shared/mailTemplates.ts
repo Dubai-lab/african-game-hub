@@ -5,7 +5,7 @@
 // claim that tokens can be turned into money. Anything a player wrote is shown as text, never
 // as markup.
 
-export type MailTemplate = 'welcome' | 'support_received' | 'support_notice'
+export type MailTemplate = 'welcome' | 'support_received' | 'support_notice' | 'support_answered' | 'account_suspended' | 'account_restored' | 'password_changed' | 'announcement'
 export type MailData = Record<string, unknown>
 export type Rendered = { subject: string; html: string; text: string }
 export type MailContext = { siteUrl: string; supportAddress: string }
@@ -159,6 +159,105 @@ export function renderMail(template: MailTemplate, language: string, data: MailD
       },
       context,
       'en',
+    )
+  }
+  if (template === 'support_answered') {
+    const reference = text(data.reference)
+    return page(
+      l === 'fr'
+        ? {
+            subject: `Réponse à votre message (n° ${reference})`,
+            heading: 'Notre réponse à votre message',
+            paragraphs: [`Bonjour ${name},`, `Voici notre réponse à votre message n° ${reference} :`],
+            quote: text(data.reply),
+            footnote: `Vous nous aviez écrit : « ${text(data.message)} » Si le problème continue, répondez à cet e-mail.`,
+          }
+        : {
+            subject: `Our answer to your report (no. ${reference})`,
+            heading: 'Our answer to your report',
+            paragraphs: [`Hello ${name},`, `Here is our answer to your report number ${reference}:`],
+            quote: text(data.reply),
+            footnote: `You wrote to us: "${text(data.message)}" If the problem continues, reply to this email.`,
+          },
+      context,
+      l,
+    )
+  }
+  if (template === 'account_suspended') {
+    return page(
+      l === 'fr'
+        ? {
+            subject: 'Votre compte a été suspendu',
+            heading: 'Votre compte a été suspendu',
+            paragraphs: [`Bonjour ${name},`, 'Notre équipe a suspendu votre compte. Vous ne pouvez pas jouer en ligne pour le moment.', 'La raison donnée :'],
+            quote: text(data.reason),
+            footnote: 'Si vous pensez qu’il s’agit d’une erreur, répondez à cet e-mail et expliquez-nous pourquoi. Nous examinerons votre demande.',
+          }
+        : {
+            subject: 'Your account has been suspended',
+            heading: 'Your account has been suspended',
+            paragraphs: [`Hello ${name},`, 'Our team has suspended your account. You cannot play online for now.', 'The reason given:'],
+            quote: text(data.reason),
+            footnote: 'If you think this is a mistake, reply to this email and tell us why. We will look at it again.',
+          },
+      context,
+      l,
+    )
+  }
+  if (template === 'account_restored') {
+    return page(
+      l === 'fr'
+        ? {
+            subject: 'Votre compte est de nouveau actif',
+            heading: 'Votre compte est de nouveau actif',
+            paragraphs: [`Bonjour ${name},`, 'Notre équipe a rétabli votre compte. Vous pouvez de nouveau jouer en ligne.'],
+            action: { label: 'Jouer', url: `${context.siteUrl}/lobby` },
+          }
+        : {
+            subject: 'Your account is active again',
+            heading: 'Your account is active again',
+            paragraphs: [`Hello ${name},`, 'Our team has restored your account. You can play online again.'],
+            action: { label: 'Play', url: `${context.siteUrl}/lobby` },
+          },
+      context,
+      l,
+    )
+  }
+  if (template === 'password_changed') {
+    return page(
+      l === 'fr'
+        ? {
+            subject: 'Votre mot de passe a été modifié',
+            heading: 'Votre mot de passe a été modifié',
+            paragraphs: [`Bonjour ${name},`, 'Le mot de passe de votre compte vient d’être modifié.', 'Si c’était vous, vous n’avez rien à faire.'],
+            footnote: 'Si ce n’était pas vous, répondez tout de suite à cet e-mail : quelqu’un d’autre a peut-être accès à votre compte.',
+          }
+        : {
+            subject: 'Your password was changed',
+            heading: 'Your password was changed',
+            paragraphs: [`Hello ${name},`, 'The password of your account has just been changed.', 'If that was you, there is nothing to do.'],
+            footnote: 'If it was not you, reply to this email at once: someone else may have access to your account.',
+          },
+      context,
+      l,
+    )
+  }
+  if (template === 'announcement') {
+    // Our team's own words, as they wrote them (in one language): one paragraph for each line.
+    const lines = text(data.body).split(/\n+/).map((line) => line.trim()).filter(Boolean)
+    return page(
+      {
+        subject: text(data.title),
+        heading: text(data.title),
+        paragraphs: [l === 'fr' ? `Bonjour ${name},` : `Hello ${name},`, ...lines],
+        action: { label: l === 'fr' ? 'Ouvrir African Game Hub' : 'Open African Game Hub', url: `${context.siteUrl}/lobby` },
+        footnote:
+          l === 'fr'
+            ? 'Vous recevez cet e-mail parce que vous avez un compte African Game Hub. Pour ne plus recevoir nos nouvelles, ouvrez Réglages dans l’application et désactivez « E-mails de nouvelles ».'
+            : 'You are receiving this because you have an African Game Hub account. To stop our news emails, open Settings in the app and switch off "News emails".',
+      },
+      context,
+      l,
     )
   }
   throw new Error(`Unknown email template: ${String(template)}`)

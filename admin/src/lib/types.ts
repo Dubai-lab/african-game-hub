@@ -149,6 +149,29 @@ export type Report = {
   reports_against_player: number
 }
 
+export type SupportRequest = {
+  id: number
+  user_id: string
+  username: string | null
+  email: string | null
+  category: string
+  message: string
+  page: string | null
+  device: string | null
+  status: 'open' | 'answered' | 'closed'
+  created_at: string
+  answered_at: string | null
+  answered_by: string | null
+  admin_note: string | null
+}
+
+export type Announcements = {
+  total: number
+  waiting_emails: number
+  per_minute: number
+  rows: { id: number; title: string; body: string; emailed: boolean; created_at: string; created_by: string | null; recipients: number; emails: number }[]
+}
+
 export type RevenueDay = { day: string; matches: number; staked: number; rake: number; rake_cash: number; signups: number }
 
 export type Integrity = {

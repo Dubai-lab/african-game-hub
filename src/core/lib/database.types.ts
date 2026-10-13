@@ -38,6 +38,47 @@ export type Database = {
           },
         ]
       }
+      announcements: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string
+          emailed: boolean
+          emails: number
+          id: number
+          recipients: number
+          title: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by: string
+          emailed?: boolean
+          emails?: number
+          id?: never
+          recipients?: number
+          title: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string
+          emailed?: boolean
+          emails?: number
+          id?: never
+          recipients?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blocks: {
         Row: {
           blocked_id: string
@@ -1118,6 +1159,44 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          data: Json
+          id: number
+          kind: string
+          pushed_at: string | null
+          read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          id?: never
+          kind: string
+          pushed_at?: string | null
+          read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: never
+          kind?: string
+          pushed_at?: string | null
+          read_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           country_code: string
@@ -1416,6 +1495,7 @@ export type Database = {
           ban_reason: string | null
           is_banned: boolean
           match_chat_enabled: boolean
+          news_emails: boolean
           phone_e164: string | null
           phone_verified_at: string | null
           preferences: Json
@@ -1429,6 +1509,7 @@ export type Database = {
           ban_reason?: string | null
           is_banned?: boolean
           match_chat_enabled?: boolean
+          news_emails?: boolean
           phone_e164?: string | null
           phone_verified_at?: string | null
           preferences?: Json
@@ -1442,6 +1523,7 @@ export type Database = {
           ban_reason?: string | null
           is_banned?: boolean
           match_chat_enabled?: boolean
+          news_emails?: boolean
           phone_e164?: string | null
           phone_verified_at?: string | null
           preferences?: Json
@@ -1495,6 +1577,47 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "countries"
             referencedColumns: ["country_code"]
+          },
+        ]
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: number
+          language: string
+          last_ok_at: string | null
+          p256dh: string
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: never
+          language?: string
+          last_ok_at?: string | null
+          p256dh: string
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: never
+          language?: string
+          last_ok_at?: string | null
+          p256dh?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2150,6 +2273,28 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_announce: {
+        Args: {
+          p_admin_id: string
+          p_body: string
+          p_email: boolean
+          p_title: string
+        }
+        Returns: Json
+      }
+      admin_announcements: {
+        Args: { p_limit: number; p_offset: number }
+        Returns: Json
+      }
+      admin_answer_support: {
+        Args: {
+          p_admin_id: string
+          p_reply: string
+          p_request_id: number
+          p_status: string
+        }
+        Returns: Json
+      }
       admin_audit: {
         Args: { p_limit: number; p_offset: number }
         Returns: Json
@@ -2187,6 +2332,10 @@ export type Database = {
           p_reason: string
           p_user_id: string
         }
+        Returns: Json
+      }
+      admin_support_requests: {
+        Args: { p_limit: number; p_offset: number; p_status: string }
         Returns: Json
       }
       assert_ledger_integrity: { Args: never; Returns: undefined }
@@ -2313,6 +2462,10 @@ export type Database = {
       }
       mail_release: { Args: { p_ids: number[] }; Returns: undefined }
       mark_messages_read: { Args: { p_from: string }; Returns: undefined }
+      mark_notifications_read: {
+        Args: { p_up_to?: number }
+        Returns: undefined
+      }
       match_chat_status: { Args: { p_match_id: string }; Returns: Json }
       pool_apply_shot: {
         Args: {
@@ -2333,11 +2486,20 @@ export type Database = {
         Args: { p_match_id: string; p_user_id: string }
         Returns: Json
       }
+      push_claim: { Args: { p_limit: number }; Returns: Json }
+      push_result: {
+        Args: { p_gone: number[]; p_ok: number[] }
+        Returns: undefined
+      }
       rematch: {
         Args: { p_action: string; p_match_id: string; p_user_id: string }
         Returns: Json
       }
       remove_friend: { Args: { p_other_id: string }; Returns: Json }
+      remove_push_subscription: {
+        Args: { p_endpoint: string }
+        Returns: undefined
+      }
       report_player: {
         Args: {
           p_match_id: string
@@ -2349,6 +2511,15 @@ export type Database = {
       }
       respond_friend_request: {
         Args: { p_accept: boolean; p_requester_id: string }
+        Returns: Json
+      }
+      save_push_subscription: {
+        Args: {
+          p_auth: string
+          p_endpoint: string
+          p_language?: string
+          p_p256dh: string
+        }
         Returns: Json
       }
       send_direct_message: {
@@ -2367,6 +2538,7 @@ export type Database = {
       server_now: { Args: never; Returns: string }
       set_my_country: { Args: { p_country_code: string }; Returns: undefined }
       set_my_gender: { Args: { p_gender: string }; Returns: undefined }
+      set_news_emails: { Args: { p_on: boolean }; Returns: undefined }
       submit_support_request: {
         Args: {
           p_category: string

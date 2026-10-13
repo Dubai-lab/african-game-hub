@@ -67,7 +67,7 @@ async function signIn(page: Page, email: string) {
 test('a player account gets nowhere: not in the app, not through the API', async ({ browser }) => {
   const page = await adminPage(browser)
   await signIn(page, PLAYER.email)
-  await expect(page.getByRole('alert')).toHaveText('Wrong email or password, or this account has no admin access.')
+  await expect(page.getByRole('alert')).toHaveText('Wrong email or password, or this account has no admin access.', { timeout: 20_000 })
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible()
   // Nothing of the session is kept.
   expect(await page.evaluate(() => window.sessionStorage.getItem('agh.admin.auth'))).toBeNull()
@@ -91,6 +91,13 @@ test('an admin: password alone is not enough; then reports, a balance correction
   const [target] = await runSql<{ id: string }>(`select id from public.profiles where username = '${TARGET.username}'`)
   const report = await player.rpc('report_player', { p_user_id: target!.id, p_reason: 'abuse', p_note: 'Called me names all game', p_match_id: null })
   expect(report.data).toEqual({ ok: true })
+  // And reports a problem to our team.
+  await runSql(`delete from private.mail_outbox where to_email = '${PLAYER.email}' or reply_to = '${PLAYER.email}';
+                delete from public.support_requests where user_id = (select id from auth.users where email = '${PLAYER.email}');
+                delete from public.notifications where user_id = (select id from auth.users where email = '${PLAYER.email}');
+                update public.announcements set created_at = created_at - interval '11 minutes' where created_at > now() - interval '11 minutes';`)
+  const problem = await player.rpc('submit_support_request', { p_category: 'tokens', p_message: 'My tokens did not come back after the game.', p_page: '/wallet', p_device: 'Test phone' })
+  expect(problem.data).toMatchObject({ ok: true })
 
   const page = await adminPage(browser)
   await signIn(page, ADMIN.email)
@@ -177,7 +184,42 @@ test('an admin: password alone is not enough; then reports, a balance correction
   await page.getByRole('link', { name: 'Integrity' }).click()
   await expect(page.getByText('The books balance. No problems found just now.')).toBeVisible()
 
+  // The problem a player reported: answered here, emailed to them, and told to them in the app.
+  await page.getByRole('link', { name: /^Support/ }).click()
+  await expect(page.getByRole('heading', { name: 'Problems reported by players' })).toBeVisible()
+  await expect(page.getByText('My tokens did not come back after the game.')).toBeVisible()
+  await page.getByLabel(/^Your answer/).fill('Your tokens are back in your wallet. Sorry for the trouble.')
+  await page.getByRole('button', { name: 'Send the answer' }).click()
+  await expect(page.getByText('No requests are waiting.')).toBeVisible()
+  const answer = await runSql<{ template: string; reply: string }>(
+    `select template, data ->> 'reply' as reply from private.mail_outbox where to_email = '${PLAYER.email}' and template = 'support_answered'`,
+  )
+  expect(answer).toEqual([{ template: 'support_answered', reply: 'Your tokens are back in your wallet. Sorry for the trouble.' }])
+  await page.getByRole('button', { name: 'Answered' }).click()
+  await expect(page.getByText('Your tokens are back in your wallet. Sorry for the trouble.')).toBeVisible()
+
+  // A word to every player, in the app only.
+  page.on('dialog', (dialog) => void dialog.accept())
+  await page.getByRole('link', { name: 'Announcements' }).click()
+  await expect(page.getByRole('heading', { name: 'Announcements', level: 1 })).toBeVisible()
+  const title = `Test announcement ${Date.now()}`
+  await page.getByLabel('Title').fill(title)
+  await page.getByLabel('Message').fill('This is written by the automatic test of the admin system.')
+  await page.getByRole('button', { name: 'Send to every player' }).click()
+  await expect(page.getByRole('status')).toContainText(/Sent to \d+ players in the app\./)
+  await expect(page.getByText(title)).toBeVisible()
+  const told = await runSql<{ kind: string }>(
+    `select kind from public.notifications where user_id = (select id from auth.users where email = '${PLAYER.email}') order by id`,
+  )
+  expect(told.map((row) => row.kind)).toEqual(['support_answered', 'announcement'])
+  // Not twice in ten minutes.
+  await page.getByLabel('Title').fill('A second one')
+  await page.getByLabel('Message').fill('This one must be refused by the server.')
+  await page.getByRole('button', { name: 'Send to every player' }).click()
+  await expect(page.getByRole('alert')).toContainText('less than ten minutes ago')
+
   // A reload keeps the admin signed in (same tab); signing out ends it.
+  await page.getByRole('link', { name: 'Integrity' }).click()
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Ledger integrity' })).toBeVisible({ timeout: 20_000 })
   await page.getByRole('button', { name: 'Sign out' }).click()

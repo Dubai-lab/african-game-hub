@@ -1828,6 +1828,29 @@
       ]
     }
   },
+  "notifications": {
+    "title": "Notifications",
+    "open": "Notifications",
+    "openUnread_one": "Notifications: {{count}} new",
+    "openUnread_other": "Notifications: {{count}} new",
+    "none": "Nothing yet. Friend requests, challenges, tournaments and messages from the hub will show here.",
+    "kind": {
+      "friend_request": "{{username}} wants to be your friend.",
+      "friend_accepted": "{{username}} accepted your friend request.",
+      "challenge": "{{username}} challenges you to {{game}}.",
+      "tournament_started": "The tournament {{name}} has started.",
+      "support_answered": "We have answered your report number {{reference}}. The answer is in your email.",
+      "other": "There is news for you on the hub."
+    },
+    "settings": {
+      "phone": "Notify me on this phone",
+      "phoneHint": "A friend request, a challenge or a tournament starting, even when the app is closed.",
+      "blocked": "Notifications are blocked for this site in your phone's settings. Allow them there, then come back here.",
+      "unsupported": "This browser cannot receive notifications. On an iPhone, first add the hub to your Home screen and open it from there.",
+      "news": "News by email",
+      "newsHint": "New games and tournaments, a few times a year. Emails about your own account are always sent."
+    }
+  },
   "support": {
     "title": "Report a problem",
     "help": "Help",

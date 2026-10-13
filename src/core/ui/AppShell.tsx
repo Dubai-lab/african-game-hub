@@ -3,6 +3,7 @@ import { Suspense, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { flagEmoji } from '@/core/countries/useCountries'
+import { NotificationBell } from '@/core/notifications/NotificationBell'
 import { GenderPrompt } from '@/core/profile/GenderPrompt'
 import { useMyProfile } from '@/core/profile/useMyProfile'
 import { useSocialBadge } from '@/core/social/social'
@@ -45,9 +46,12 @@ export function AppShell() {
   return (
     <div className="h-(--app-h) overflow-hidden lg:grid lg:h-auto lg:min-h-(--app-h) lg:grid-cols-[15rem_minmax(0,1fr)] lg:overflow-visible">
       <aside className="sticky top-0 hidden h-(--app-h) flex-col bg-primary px-4 py-6 text-surface lg:flex">
-        <Link to="/lobby" className="px-3 font-display text-xl font-extrabold">
-          {t('app.name')}
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link to="/lobby" className="px-3 font-display text-xl font-extrabold">
+            {t('app.name')}
+          </Link>
+          <NotificationBell />
+        </div>
         <nav aria-label={t('nav.label')} className="mt-8">
           <ul className="flex flex-col gap-1">
             {TABS.map((tab) => (
@@ -74,7 +78,9 @@ export function AppShell() {
         <GenderPrompt />
         {/* The top bar: fixed, closed by a line the page scrolls under. */}
         <header className="shrink-0 border-b-2 border-line bg-surface lg:hidden" data-testid="top-bar">
-          <div className="mx-auto flex w-full max-w-md flex-col gap-1 px-5 pb-2 pt-2">
+          <div className="relative mx-auto flex w-full max-w-md flex-col gap-1 px-5 pb-2 pt-2">
+            {/* What the player should know of, at the end of the bar. */}
+            <NotificationBell className="absolute end-3 top-0.5 text-primary" />
             {/* The hub's name, in the middle. */}
             <Link to="/lobby" className="self-center text-base font-display font-extrabold text-primary">
               {t('app.name')}

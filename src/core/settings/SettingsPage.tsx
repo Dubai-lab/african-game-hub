@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { useAuth } from '@/core/auth/AuthContext'
+import { NotificationSettings } from '@/core/notifications/NotificationSettings'
 import { Button, buttonClass } from '@/core/ui/Button'
 import { LanguageSwitcher } from '@/core/ui/LanguageSwitcher'
 import { Toggle } from '@/core/ui/Toggle'
@@ -44,6 +45,8 @@ export default function SettingsPage() {
           />
         </div>
       </section>
+
+      <NotificationSettings />
 
       <section aria-labelledby="settings-account">
         <h2 id="settings-account" className={sectionTitle}>

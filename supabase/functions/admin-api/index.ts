@@ -97,6 +97,29 @@ const ACTIONS: Record<string, Action<any>> = {
     }),
   ),
 
+  'support.list': action(z.object({ status: z.optional(z.enum(['open', 'answered', 'closed'])), ...page }), (p) => ({
+    fn: 'admin_support_requests',
+    args: { p_status: p.status ?? null, p_limit: p.limit ?? 25, p_offset: p.offset ?? 0 },
+  })),
+  // An answer is emailed to the player; closing without one sends nothing.
+  'support.answer': action(
+    z.object({ requestId: z.int().min(1), status: z.enum(['answered', 'closed']), reply: z.optional(z.string().trim().max(1000)) }),
+    (p, adminId) => ({
+      fn: 'admin_answer_support',
+      args: { p_admin_id: adminId, p_request_id: p.requestId, p_status: p.status, p_reply: p.reply ?? null },
+    }),
+  ),
+
+  'announcements.list': action(z.object(page), (p) => ({ fn: 'admin_announcements', args: { p_limit: p.limit ?? 25, p_offset: p.offset ?? 0 } })),
+  // To every player, in the app; and by email as well when asked.
+  'announcements.send': action(
+    z.object({ title: z.string().trim().min(3).max(80), body: z.string().trim().min(10).max(2000), email: z.boolean() }),
+    (p, adminId) => ({
+      fn: 'admin_announce',
+      args: { p_admin_id: adminId, p_title: p.title, p_body: p.body, p_email: p.email },
+    }),
+  ),
+
   revenue: action(z.object({ days: z.optional(z.int().min(1).max(90)) }), (p) => ({ fn: 'admin_revenue', args: { p_days: p.days ?? 14 } })),
   integrity: action(z.object({}), () => ({ fn: 'admin_integrity', args: {} })),
   audit: action(z.object(page), (p) => ({ fn: 'admin_audit', args: { p_limit: p.limit ?? 50, p_offset: p.offset ?? 0 } })),

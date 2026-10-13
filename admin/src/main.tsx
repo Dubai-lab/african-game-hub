@@ -5,7 +5,8 @@ import { BrowserRouter, NavLink, Route, Routes } from 'react-router'
 import { Gate } from './Gate'
 import './index.css'
 import { ApiError, useApi } from './lib/api'
-import type { Overview } from './lib/types'
+import type { Overview, Page, SupportRequest } from './lib/types'
+import AnnouncementsPage from './pages/AnnouncementsPage'
 import AuditPage from './pages/AuditPage'
 import IntegrityPage from './pages/IntegrityPage'
 import MatchesPage from './pages/MatchesPage'
@@ -15,6 +16,7 @@ import PlayerPage from './pages/PlayerPage'
 import PlayersPage from './pages/PlayersPage'
 import ReportsPage from './pages/ReportsPage'
 import RevenuePage from './pages/RevenuePage'
+import SupportPage from './pages/SupportPage'
 import { Button } from './ui'
 
 const queryClient = new QueryClient({
@@ -33,6 +35,8 @@ const NAV = [
   ['/players', 'Players'],
   ['/matches', 'Matches'],
   ['/reports', 'Reports'],
+  ['/support', 'Support'],
+  ['/announcements', 'Announcements'],
   ['/revenue', 'Revenue'],
   ['/integrity', 'Integrity'],
   ['/audit', 'Audit log'],
@@ -60,6 +64,9 @@ function Shell({ email, signOut }: { email: string | null; signOut: () => void }
   const overview = useApi<Overview>('overview', {}, { refetchInterval: 60_000 })
   const open = overview.data?.open_reports ?? 0
   const broken = (overview.data?.integrity_problems ?? 0) > 0
+  // Problems reported by players that nobody has answered yet.
+  const support = useApi<Page<SupportRequest>>('support.list', { status: 'open', limit: 1, offset: 0 }, { refetchInterval: 60_000 })
+  const unanswered = support.data?.total ?? 0
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[13rem_minmax(0,1fr)]">
@@ -80,6 +87,7 @@ function Shell({ email, signOut }: { email: string | null; signOut: () => void }
             >
               {label}
               {to === '/reports' && open > 0 && <span className="rounded bg-danger px-1.5 text-xs text-white">{open}</span>}
+              {to === '/support' && unanswered > 0 && <span className="rounded bg-danger px-1.5 text-xs text-white">{unanswered}</span>}
               {to === '/integrity' && broken && <span className="rounded bg-danger px-1.5 text-xs text-white">!</span>}
             </NavLink>
           ))}
@@ -107,6 +115,8 @@ function Shell({ email, signOut }: { email: string | null; signOut: () => void }
               <Route path="matches" element={<MatchesPage />} />
               <Route path="matches/:matchId" element={<MatchPage />} />
               <Route path="reports" element={<ReportsPage />} />
+              <Route path="support" element={<SupportPage />} />
+              <Route path="announcements" element={<AnnouncementsPage />} />
               <Route path="revenue" element={<RevenuePage />} />
               <Route path="integrity" element={<IntegrityPage />} />
               <Route path="audit" element={<AuditPage />} />

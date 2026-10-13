@@ -1828,6 +1828,29 @@
       ]
     }
   },
+  "notifications": {
+    "title": "Notifications",
+    "open": "Notifications",
+    "openUnread_one": "Notifications : {{count}} nouvelle",
+    "openUnread_other": "Notifications : {{count}} nouvelles",
+    "none": "Rien pour l’instant. Les demandes d’ami, les défis, les tournois et les messages du hub s’afficheront ici.",
+    "kind": {
+      "friend_request": "{{username}} veut être votre ami.",
+      "friend_accepted": "{{username}} a accepté votre demande d’ami.",
+      "challenge": "{{username}} vous défie : {{game}}.",
+      "tournament_started": "Le tournoi {{name}} a commencé.",
+      "support_answered": "Nous avons répondu à votre signalement numéro {{reference}}. La réponse est dans vos e-mails.",
+      "other": "Il y a du nouveau pour vous sur le hub."
+    },
+    "settings": {
+      "phone": "Me prévenir sur ce téléphone",
+      "phoneHint": "Une demande d’ami, un défi ou un tournoi qui commence, même quand l’application est fermée.",
+      "blocked": "Les notifications sont bloquées pour ce site dans les réglages de votre téléphone. Autorisez-les là, puis revenez ici.",
+      "unsupported": "Ce navigateur ne peut pas recevoir de notifications. Sur iPhone, ajoutez d’abord le hub à votre écran d’accueil et ouvrez-le depuis là.",
+      "news": "Nouvelles par e-mail",
+      "newsHint": "Nouveaux jeux et tournois, quelques fois par an. Les e-mails concernant votre compte sont toujours envoyés."
+    }
+  },
   "support": {
     "title": "Signaler un problème",
     "help": "Aide",

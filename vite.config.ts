@@ -66,6 +66,8 @@ export default defineConfig({
       workbox: {
         // App shell only. Supabase responses (balances, games) are never cached by the service worker.
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // Notifications to the phone while the app is closed (public/push-sw.js).
+        importScripts: ['/push-sw.js'],
         // Never precache the landing page's 3D scene or pictures (app users must not pay for them),
         // nor the font files for scripts we do not use.
         // (The flag font is for computers that cannot draw flags; phones must not be made to fetch it.)
