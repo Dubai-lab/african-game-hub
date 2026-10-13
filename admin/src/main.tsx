@@ -14,6 +14,8 @@ import MatchPage from './pages/MatchPage'
 import OverviewPage from './pages/OverviewPage'
 import PlayerPage from './pages/PlayerPage'
 import PlayersPage from './pages/PlayersPage'
+import PromotionPage from './pages/PromotionPage'
+import PromotionsPage from './pages/PromotionsPage'
 import ReportsPage from './pages/ReportsPage'
 import RevenuePage from './pages/RevenuePage'
 import SupportPage from './pages/SupportPage'
@@ -37,6 +39,7 @@ const NAV = [
   ['/reports', 'Reports'],
   ['/support', 'Support'],
   ['/announcements', 'Announcements'],
+  ['/promotions', 'Promotions'],
   ['/revenue', 'Revenue'],
   ['/integrity', 'Integrity'],
   ['/audit', 'Audit log'],
@@ -117,6 +120,8 @@ function Shell({ email, signOut }: { email: string | null; signOut: () => void }
               <Route path="reports" element={<ReportsPage />} />
               <Route path="support" element={<SupportPage />} />
               <Route path="announcements" element={<AnnouncementsPage />} />
+              <Route path="promotions" element={<PromotionsPage />} />
+              <Route path="promotions/:promotionId" element={<PromotionPage />} />
               <Route path="revenue" element={<RevenuePage />} />
               <Route path="integrity" element={<IntegrityPage />} />
               <Route path="audit" element={<AuditPage />} />

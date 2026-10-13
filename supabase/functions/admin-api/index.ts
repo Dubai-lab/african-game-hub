@@ -120,6 +120,53 @@ const ACTIONS: Record<string, Action<any>> = {
     }),
   ),
 
+  // Promotions ("register and play N games"): read from the record of games; no tokens move.
+  'promotions.list': action(z.object(page), (p) => ({ fn: 'admin_promotions', args: { p_limit: p.limit ?? 25, p_offset: p.offset ?? 0 } })),
+  'promotions.get': action(z.object({ promotionId: z.int().min(1) }), (p) => ({ fn: 'admin_promotion', args: { p_promotion_id: p.promotionId } })),
+  'promotions.player': action(z.object({ promotionId: z.int().min(1), userId: uuid }), (p) => ({
+    fn: 'admin_promotion_player',
+    args: { p_promotion_id: p.promotionId, p_user_id: p.userId },
+  })),
+  'promotions.save': action(
+    z.object({
+      promotionId: z.optional(z.int().min(1)),
+      name: z.string().trim().min(3).max(80),
+      reward: z.optional(z.string().trim().max(200)),
+      startsAt: z.iso.datetime({ offset: true }),
+      endsAt: z.iso.datetime({ offset: true }),
+      gamesNeeded: z.int().min(1).max(1000),
+      winners: z.int().min(1).max(10000),
+      gameTypes: z.optional(z.array(z.string().max(40)).max(30)),
+      newPlayersOnly: z.boolean(),
+      maxPerOpponent: z.int().min(1).max(1000),
+      minSeconds: z.int().min(0).max(3600),
+    }),
+    (p, adminId) => ({
+      fn: 'admin_promotion_save',
+      args: {
+        p_admin_id: adminId,
+        p_id: p.promotionId ?? null,
+        p_name: p.name,
+        p_reward: p.reward ?? null,
+        p_starts_at: p.startsAt,
+        p_ends_at: p.endsAt,
+        p_games_needed: p.gamesNeeded,
+        p_winners: p.winners,
+        p_game_types: p.gameTypes?.length ? p.gameTypes : null,
+        p_new_players_only: p.newPlayersOnly,
+        p_max_per_opponent: p.maxPerOpponent,
+        p_min_seconds: p.minSeconds,
+      },
+    }),
+  ),
+  'promotions.paid': action(
+    z.object({ promotionId: z.int().min(1), userId: uuid, paid: z.boolean(), note: z.optional(z.string().trim().max(300)) }),
+    (p, adminId) => ({
+      fn: 'admin_promotion_mark_paid',
+      args: { p_admin_id: adminId, p_promotion_id: p.promotionId, p_user_id: p.userId, p_paid: p.paid, p_note: p.note ?? null },
+    }),
+  ),
+
   revenue: action(z.object({ days: z.optional(z.int().min(1).max(90)) }), (p) => ({ fn: 'admin_revenue', args: { p_days: p.days ?? 14 } })),
   integrity: action(z.object({}), () => ({ fn: 'admin_integrity', args: {} })),
   audit: action(z.object(page), (p) => ({ fn: 'admin_audit', args: { p_limit: p.limit ?? 50, p_offset: p.offset ?? 0 } })),

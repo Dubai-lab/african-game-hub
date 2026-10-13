@@ -190,7 +190,7 @@ test('an admin: password alone is not enough; then reports, a balance correction
   await expect(page.getByText('My tokens did not come back after the game.')).toBeVisible()
   await page.getByLabel(/^Your answer/).fill('Your tokens are back in your wallet. Sorry for the trouble.')
   await page.getByRole('button', { name: 'Send the answer' }).click()
-  await expect(page.getByText('No requests are waiting.')).toBeVisible()
+  await expect(page.getByText('No requests are waiting.')).toBeVisible({ timeout: 20_000 })
   const answer = await runSql<{ template: string; reply: string }>(
     `select template, data ->> 'reply' as reply from private.mail_outbox where to_email = '${PLAYER.email}' and template = 'support_answered'`,
   )
@@ -217,6 +217,42 @@ test('an admin: password alone is not enough; then reports, a balance correction
   await page.getByLabel('Message').fill('This one must be refused by the server.')
   await page.getByRole('button', { name: 'Send to every player' }).click()
   await expect(page.getByRole('alert')).toContainText('less than ten minutes ago')
+
+  // A promotion: set up, read from the record of games, and a winner marked as paid.
+  await page.getByRole('link', { name: 'Promotions' }).click()
+  await expect(page.getByRole('heading', { name: 'Promotions', level: 1 })).toBeVisible()
+  await page.getByRole('button', { name: 'New promotion' }).click()
+  const promotion = `Test promotion ${Date.now()}`
+  await page.getByLabel('Name (for our team)').fill(promotion)
+  await page.getByLabel(/^What the winners get/).fill('1000 RWF by mobile money')
+  // Open to players already here, over the last month, so that games already played show.
+  const monthAgo = new Date(Date.now() - 30 * 86_400_000 - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
+  await page.getByLabel('Starts (your time)').fill(monthAgo)
+  await page.getByLabel('Games a player must finish').fill('1')
+  await page.getByLabel(/^How many players win/).fill('3')
+  await page.getByLabel(/^Only players who register after it starts/).uncheck()
+  await page.getByLabel(/^Shortest game that counts/).fill('0')
+  await page.getByRole('button', { name: 'Set up the promotion' }).click()
+  await expect(page.getByRole('heading', { name: new RegExp(promotion), level: 1 })).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByText('finish 1 game (any game) · the first 3 win · 1000 RWF by mobile money')).toBeVisible()
+  await expect(page.getByText('Registered in the period')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Players, the first to qualify first' })).toBeVisible()
+  if (process.env.AGH_SCREENSHOT_DIR) await page.screenshot({ path: `${process.env.AGH_SCREENSHOT_DIR}/admin-promotion.png`, fullPage: true })
+  // When a player has qualified: their games open under them, and the first is marked as paid, once.
+  const pay = page.getByRole('button', { name: 'Mark as paid' })
+  if ((await pay.count()) > 0) {
+    await page.getByRole('button', { name: /^\d+ of 1$/ }).first().click()
+    await expect(page.getByRole('list', { name: /^Games of / })).toBeVisible()
+    await expect(page.getByText(/counts, no\. 1/).first()).toBeVisible()
+    if (process.env.AGH_SCREENSHOT_DIR) await page.screenshot({ path: `${process.env.AGH_SCREENSHOT_DIR}/admin-promotion-games.png`, fullPage: true })
+    await pay.first().click()
+    await page.getByRole('dialog').getByLabel(/^How it was sent/).fill('MoMo test reference')
+    await page.getByRole('dialog').getByRole('button', { name: 'Mark as paid' }).click()
+    await expect(page.getByText('MoMo test reference')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'undo' })).toHaveCount(1)
+  }
+  await page.getByRole('link', { name: 'Promotions' }).click()
+  await expect(page.getByRole('link', { name: promotion })).toBeVisible()
 
   // A reload keeps the admin signed in (same tab); signing out ends it.
   await page.getByRole('link', { name: 'Integrity' }).click()

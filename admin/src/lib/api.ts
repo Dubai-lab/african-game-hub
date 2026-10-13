@@ -25,6 +25,10 @@ const MESSAGES: Record<string, string> = {
   REPORT_NOT_OPEN: 'That report has already been closed.',
   REQUEST_NOT_OPEN: 'That request has already been answered or closed.',
   TOO_SOON: 'An announcement went out less than ten minutes ago. Wait a little before sending another.',
+  PROMOTION_NOT_FOUND: 'No such promotion.',
+  NOT_A_WINNER: 'This player is not among the winners of the promotion.',
+  ALREADY_PAID: 'This player is already marked as paid.',
+  NOT_MARKED_PAID: 'This player is not marked as paid.',
   NETWORK: 'Could not reach the server. Check the connection and try again.',
   SERVER_ERROR: 'Something went wrong on the server. Nothing was changed.',
 }

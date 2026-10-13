@@ -172,6 +172,55 @@ export type Announcements = {
   rows: { id: number; title: string; body: string; emailed: boolean; created_at: string; created_by: string | null; recipients: number; emails: number }[]
 }
 
+export type Promotion = {
+  id: number
+  name: string
+  reward: string | null
+  starts_at: string
+  ends_at: string
+  games_needed: number
+  winners: number
+  game_types: string[] | null
+  new_players_only: boolean
+  max_per_opponent: number
+  min_seconds: number
+  created_by: string | null
+  created_at: string
+}
+export type PromotionRow = Pick<Promotion, 'id' | 'name' | 'reward' | 'starts_at' | 'ends_at' | 'games_needed' | 'winners' | 'game_types'> & { qualified: number; paid: number }
+export type PromotionPlayer = {
+  user_id: string
+  username: string
+  display_name: string | null
+  country_code: string | null
+  registered_at: string
+  email: string | null
+  phone: string | null
+  banned: boolean
+  /** Games that count towards the promotion, and all the games finished in the period. */
+  games: number
+  games_played: number
+  opponents: number
+  qualified_at: string | null
+  place: number | null
+  winner: boolean
+  paid_at: string | null
+  paid_note: string | null
+  paid_by: string | null
+}
+export type PromotionBoard = { promotion: Promotion; qualified: number; playing: number; paid: number; registered: number; rows: PromotionPlayer[] }
+export type PromotionGame = {
+  match_id: string
+  game_type: string
+  started_at: string
+  finished_at: string
+  seconds: number
+  won: boolean
+  counted: boolean
+  nth: number | null
+  against: { user_id: string; username: string }[]
+}
+
 export type RevenueDay = { day: string; matches: number; staked: number; rake: number; rake_cash: number; signups: number }
 
 export type Integrity = {
