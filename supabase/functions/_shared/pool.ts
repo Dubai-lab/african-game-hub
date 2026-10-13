@@ -80,10 +80,10 @@ const D = R * 2
  * All of it is here, in numbers, and the table is drawn from the same numbers (tablePaint.ts),
  * so that what the player sees is what the ball meets.
  */
-/** How far along the cloth's edge from a corner the cushion's nose begins. The mouth of a corner pocket is this times the square root of two: 156 mm, a little under two balls. */
-export const CORNER_CUT = 110
-/** Half the mouth of a middle pocket, along the cushion: 164 mm in all, a little under two balls. */
-export const MIDDLE_CUT = 82
+/** How far along the cloth's edge from a corner the cushion's nose begins. The mouth of a corner pocket is this times the square root of two: 144 mm, about one and three quarter balls. */
+export const CORNER_CUT = 102
+/** Half the mouth of a middle pocket, along the cushion: 152 mm in all. */
+export const MIDDLE_CUT = 76
 /** How far a cushion stands out from the wood of the rail. */
 export const CUSHION_DEPTH = 48
 /**
@@ -91,22 +91,30 @@ export const CUSHION_DEPTH = 48
  * the jaw. Chosen so that the back corner of each cushion lies on the rim of the hole: the
  * cushion's cut end runs from the tip of its nose right up to the pocket, with nothing between.
  */
-export const CORNER_JAW = 74
-export const MIDDLE_JAW = 23
+export const CORNER_JAW = 77
+export const MIDDLE_JAW = 31
+/**
+ * How much of its speed into a jaw a ball keeps on coming off it. Far less than off the flat of
+ * a cushion: the cut end of a cushion is soft and faces the pocket, so a ball that catches it
+ * is slowed and led in, more often than thrown back out.
+ */
+export const JAW_BOUNCE = 0.4
 
 /**
  * Pocket centres (the middle of each hole), and how close a ball's centre must come to drop
  * into it. The hole as drawn is 6 mm wider than that all round: a ball goes when its centre
- * is just over the rim. A corner hole is 1.6 balls wide and a middle one 1.4: a ball looks as
- * if it only just fits, as it should. The mouths are wider than the holes, and the jaws lead in.
+ * is just over the rim. The holes are small: a corner hole is a ball and a quarter wide, and a
+ * middle one barely wider than the ball, so a ball only just fits. That is how a pocket looks
+ * on a real table seen from above. What makes a pocket easy or hard is not the hole but the
+ * mouth, which is wider, and the jaws that lead from it to the hole.
  */
 export const POCKETS: readonly { x: number; y: number; r: number }[] = [
-  { x: -28, y: -28, r: 61 },
-  { x: TABLE.w / 2, y: -44, r: 53 },
-  { x: TABLE.w + 28, y: -28, r: 61 },
-  { x: -28, y: TABLE.h + 28, r: 61 },
-  { x: TABLE.w / 2, y: TABLE.h + 44, r: 53 },
-  { x: TABLE.w + 28, y: TABLE.h + 28, r: 61 },
+  { x: -18, y: -18, r: 46 },
+  { x: TABLE.w / 2, y: -40, r: 40 },
+  { x: TABLE.w + 18, y: -18, r: 46 },
+  { x: -18, y: TABLE.h + 18, r: 46 },
+  { x: TABLE.w / 2, y: TABLE.h + 40, r: 40 },
+  { x: TABLE.w + 18, y: TABLE.h + 18, r: 46 },
 ]
 /** How much wider than that the hole itself is, all round. */
 export const POCKET_RIM = 6
@@ -379,8 +387,8 @@ export function simulate(
           ball.y += uy * (R - gap)
           const into = vx[i]! * ux + vy[i]! * uy
           if (into < 0) {
-            vx[i] = vx[i]! - (1 + CUSHION) * into * ux
-            vy[i] = vy[i]! - (1 + CUSHION) * into * uy
+            vx[i] = vx[i]! - (1 + JAW_BOUNCE) * into * ux
+            vy[i] = vy[i]! - (1 + JAW_BOUNCE) * into * uy
             rail = jaw.rail
           }
         }

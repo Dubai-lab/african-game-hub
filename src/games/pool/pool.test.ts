@@ -277,18 +277,18 @@ describe('the pockets', () => {
 
   it('the mouth of a pocket leaves a ball about its own width of room, and the hole is about one and a half balls wide', () => {
     for (const corner of [0, 2, 3, 5]) {
-      expect(pocketOpening(corner)).toBeGreaterThan(ball * 0.85)
+      expect(pocketOpening(corner)).toBeGreaterThan(ball * 0.65)
       expect(pocketOpening(corner)).toBeLessThan(ball * 1.15)
     }
     for (const middle of [1, 4]) {
-      expect(pocketOpening(middle)).toBeGreaterThan(ball * 0.9)
+      expect(pocketOpening(middle)).toBeGreaterThan(ball * 0.75)
       expect(pocketOpening(middle)).toBeLessThan(ball * 1.3)
     }
     // The hole itself: not the two-ball-wide disc it once was.
     for (const pocket of POCKETS) {
-      // (As drawn, 6 mm wider all round: 1.6 balls at a corner, 1.4 at the middle.)
-      expect((pocket.r + POCKET_RIM) * 2).toBeGreaterThan(ball * 1.3)
-      expect((pocket.r + POCKET_RIM) * 2).toBeLessThan(ball * 1.7)
+      // (As drawn, 6 mm wider all round: a ball and a quarter at a corner, barely over a ball at the middle.)
+      expect((pocket.r + POCKET_RIM) * 2).toBeGreaterThan(ball)
+      expect((pocket.r + POCKET_RIM) * 2).toBeLessThan(ball * 1.35)
     }
   })
 

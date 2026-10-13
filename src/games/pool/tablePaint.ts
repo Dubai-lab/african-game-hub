@@ -1,21 +1,53 @@
 import { CORNER_CUT, CORNER_JAW, CUSHION_DEPTH, MIDDLE_CUT, MIDDLE_JAW, POCKET_RIM, POCKETS, TABLE } from '../../../supabase/functions/_shared/pool'
 
-// The pool table without the balls, painted once for a given size. Nothing here is an image
-// file, and nothing is taken from another game: the frame is our own, a dark hardwood with a
-// band of inlaid diamonds along each rail (the hub's textile band), brass at the pockets, and
-// the hub's mark woven faintly into the cloth.
+// The pool table without the balls, painted once for a given size.
 //
-// It is painted as a real table is built, from the floor up: the frame, the slate and cloth,
-// the cushions standing on it, the shadows they throw, then the pockets cut through all of it.
+// The design is the hub's own (the owner's design, kept in /pooltable as a drawing and the
+// script that made it): a lacquered frame with a carved band of scrollwork let into each rail,
+// ringed sights, plain wood round every pocket, cushions with a bevelled nose, and the hub's
+// mark on the cloth inside a sunburst. Here it is in the hub's colours, indigo and gold, and it
+// is drawn straight onto a canvas: no image file, no filters, so it looks the same on every
+// phone and costs nothing while a game is being played.
+//
+// Its measurements are not the drawing's but the game's: the cushions, their cut ends and the
+// pockets are drawn from the very numbers the physics uses, so what the player sees is what
+// the ball meets.
 
-/** Wood and cushion around the playing surface, in millimetres: wide enough to hold a corner pocket with a rim of wood round it. */
-export const RAIL = 112
-/** The frame's corners are rounded about the middle of each corner pocket, so the wood wraps the hole evenly. */
-const CORNER_ROUND = RAIL + POCKETS[0]!.x
+/** Wood and cushion around the playing surface, in millimetres: room for the carved band. */
+export const RAIL = 140
 /** How far a cushion stands out from the wood onto the slate: the same number the physics uses. */
 const LIP = CUSHION_DEPTH
+/** The design is drawn in units of a thousandth of the table's length; this many millimetres each. */
+const U = TABLE.w / 1000
 
 export type ClothColors = { bed: string; cloth: readonly [string, string, string]; cushion: readonly [string, string, string] }
+
+/** The frame's colours: the hub's indigo, with gold for everything carved or inlaid. */
+const FRAME = {
+  top: '#3a49bd',
+  middle: '#232f8a',
+  bottom: '#141b52',
+  edge: 'rgba(170, 182, 255, 0.6)',
+  bandBase: '#0a0e33',
+  carveShadow: '#02030c',
+  carve: '#c0912f',
+  carveLight: '#ffe9a6',
+  gold: '#f5c542',
+  ivory: '#fbf4e4',
+  ink: '#070a26',
+}
+
+/** The scrollwork, one repeat of it (58 units long, 27 high), as the design draws it. */
+const SCROLL_LINES = [
+  'M0 14 C7 3 18 3 23 10 C27 16 21 20 17 17 C14 14 17 10 20 12',
+  'M29 14 C36 25 47 25 52 18 C56 12 50 8 46 11 C43 14 46 18 49 16',
+  'M23 10 C26 14 28 14 29 14 M52 18 C55 16 57 14 58 14',
+]
+const SCROLL_FINE = 'M3 22 C10 25 16 24 22 20 M32 6 C39 3 45 4 51 8'
+const SCROLL_LEAVES = ['M8 18 q4 -3 8 2 q-5 3 -8 -2Z', 'M37 9 q4 3 8 -2 q-5 -3 -8 2Z']
+const SCROLL_DOTS: readonly [number, number][] = [[27, 4], [56, 24]]
+const TILE_W = 58
+const TILE_H = 27
 
 /** A source of numbers that is the same every time, so the grain does not change between paintings. */
 function chance(seed: number) {
@@ -34,163 +66,185 @@ export function paintTable(width: number, height: number, vertical: boolean, sca
   const W = TABLE.w
   const H = TABLE.h
   const random = chance(7)
+  const ROUND = 40 * U
   const frame = () => {
     ctx.beginPath()
-    ctx.roundRect(-RAIL, -RAIL, W + RAIL * 2, H + RAIL * 2, CORNER_ROUND)
+    ctx.roundRect(-RAIL, -RAIL, W + RAIL * 2, H + RAIL * 2, ROUND)
   }
+  /** The four rails. Each turns "this far along the rail, this far out from the cloth" into a place on the table. */
+  const rails = {
+    top: (u: number, v: number): [number, number] => [u, -v],
+    bottom: (u: number, v: number): [number, number] => [u, H + v],
+    left: (u: number, v: number): [number, number] => [-v, u],
+    right: (u: number, v: number): [number, number] => [W + v, u],
+  }
+  type Rail = keyof typeof rails
 
-  // ---- The frame: dark hardwood, rounded over at its outer edge ----
-  const wood = ctx.createLinearGradient(0, -RAIL, 0, H + RAIL)
-  wood.addColorStop(0, '#5b2c12')
-  wood.addColorStop(0.08, '#7c421c')
-  wood.addColorStop(0.5, '#6a3616')
-  wood.addColorStop(0.92, '#55290f')
-  wood.addColorStop(1, '#3a1b09')
-  ctx.fillStyle = wood
+  // ---- The frame: lacquered, lighter along the top, with a fine bright line round its edge ----
+  const lacquer = ctx.createLinearGradient(0, -RAIL, 0, H + RAIL)
+  lacquer.addColorStop(0, FRAME.top)
+  lacquer.addColorStop(0.45, FRAME.middle)
+  lacquer.addColorStop(1, FRAME.bottom)
+  ctx.fillStyle = lacquer
   frame()
   ctx.fill()
+  // Lacquer is smooth: a soft sheen along the top rail and a deepening toward the bottom, and no grain.
   ctx.save()
   frame()
   ctx.clip()
-  // Grain: long streaks that run with each rail, so the wood turns the corners as joinery does.
-  const streak = (along: 'x' | 'y', from: number, to: number, at: number, spread: number) => {
-    ctx.strokeStyle = random() > 0.55 ? `rgba(30, 12, 2, ${0.1 + random() * 0.14})` : `rgba(255, 205, 140, ${0.04 + random() * 0.07})`
-    ctx.lineWidth = 1.5 + random() * 4.5
-    const a = at + (random() - 0.5) * spread
-    const b = a + (random() - 0.5) * 14
-    const c = a + (random() - 0.5) * 14
-    ctx.beginPath()
-    if (along === 'x') {
-      ctx.moveTo(from, a)
-      ctx.bezierCurveTo(from + (to - from) * 0.33, b, from + (to - from) * 0.66, c, to, a + (random() - 0.5) * 8)
-    } else {
-      ctx.moveTo(a, from)
-      ctx.bezierCurveTo(b, from + (to - from) * 0.33, c, from + (to - from) * 0.66, a + (random() - 0.5) * 8, to)
-    }
-    ctx.stroke()
-  }
-  for (let i = 0; i < 90; i++) {
-    streak('x', -RAIL, W + RAIL, -RAIL / 2, RAIL)
-    streak('x', -RAIL, W + RAIL, H + RAIL / 2, RAIL)
-  }
-  for (let i = 0; i < 50; i++) {
-    streak('y', -RAIL, H + RAIL, -RAIL / 2, RAIL)
-    streak('y', -RAIL, H + RAIL, W + RAIL / 2, RAIL)
-  }
-  // The rounded-over edge: light along the top and left, shade along the bottom and right.
-  for (const [inset, color, line] of [
-    [5, 'rgba(255, 226, 180, 0.42)', 5],
-    [13, 'rgba(255, 226, 180, 0.13)', 9],
-  ] as const) {
-    ctx.strokeStyle = color
-    ctx.lineWidth = line
-    ctx.beginPath()
-    ctx.roundRect(-RAIL + inset, -RAIL + inset, W + RAIL * 2 - inset * 2, H + RAIL * 2 - inset * 2, CORNER_ROUND - inset)
-    ctx.stroke()
-  }
-  const shade = ctx.createLinearGradient(-RAIL, -RAIL, W + RAIL, H + RAIL)
-  shade.addColorStop(0, 'rgba(255, 240, 210, 0.10)')
-  shade.addColorStop(0.5, 'rgba(0, 0, 0, 0)')
-  shade.addColorStop(1, 'rgba(0, 0, 0, 0.30)')
-  ctx.fillStyle = shade
-  ctx.fillRect(-RAIL, -RAIL, W + RAIL * 2, H + RAIL * 2)
+  const sheen = ctx.createLinearGradient(0, -RAIL, 0, -RAIL * 0.35)
+  sheen.addColorStop(0, 'rgba(190, 200, 255, 0.22)')
+  sheen.addColorStop(1, 'rgba(190, 200, 255, 0)')
+  ctx.fillStyle = sheen
+  ctx.fillRect(-RAIL, -RAIL, W + RAIL * 2, RAIL)
   ctx.restore()
+  ctx.strokeStyle = FRAME.edge
+  ctx.lineWidth = 1.5 * U
+  ctx.beginPath()
+  ctx.roundRect(-RAIL + 1.5 * U, -RAIL + 1.5 * U, W + RAIL * 2 - 3 * U, H + RAIL * 2 - 3 * U, ROUND - 1.5 * U)
+  ctx.stroke()
 
-  // ---- The inlay: a band of diamonds along each rail, between two fine lines of brass ----
-  const band = RAIL - LIP // the wood that shows, from the frame's edge to the cushion's back
-  const middle = -(LIP + band * 0.52) // the middle of the band, measured out from the cloth
-  const half = band * 0.2
-  const diamond = (x: number, y: number, w: number, h: number, fill: string, edge = 'rgba(20, 8, 0, 0.55)') => {
+  // ---- The carved bands: one let into each rail between the pockets, its ends drawn in an S ----
+  const inner = LIP + 4 * U // where a band begins, out from the cloth
+  const outer = RAIL - 5 * U // and where it ends, short of the frame's edge
+  const sweep = 34 * U // how long each S-shaped end is
+  const bandPath = (rail: Rail, from: number, to: number) => {
+    const at = rails[rail]
+    const path = new Path2D()
+    const move = (u: number, v: number) => path.moveTo(...at(u, v))
+    const line = (u: number, v: number) => path.lineTo(...at(u, v))
+    const curve = (u1: number, v1: number, u2: number, v2: number, u3: number, v3: number) => path.bezierCurveTo(...at(u1, v1), ...at(u2, v2), ...at(u3, v3))
+    move(from, inner)
+    curve(from + sweep * 0.95, inner, from + sweep * 0.05, outer, from + sweep, outer)
+    line(to - sweep, outer)
+    curve(to - sweep * 0.05, outer, to - sweep * 0.95, inner, to, inner)
+    path.closePath()
+    return path
+  }
+  /** The scrollwork, in its own units, in one colour: lines, finer lines, leaves and dots. */
+  const scroll = (color: string, widen = 0) => {
+    ctx.strokeStyle = color
+    ctx.fillStyle = color
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+    ctx.lineWidth = 2 + widen
+    for (const line of SCROLL_LINES) ctx.stroke(new Path2D(line))
+    ctx.lineWidth = 1.4 + widen
+    ctx.stroke(new Path2D(SCROLL_FINE))
+    for (const leaf of SCROLL_LEAVES) {
+      const path = new Path2D(leaf)
+      ctx.fill(path)
+      if (widen > 0) ctx.stroke(path)
+    }
+    for (const [x, y] of SCROLL_DOTS) {
+      ctx.beginPath()
+      ctx.arc(x, y, 1.5 + widen / 2, 0, Math.PI * 2)
+      ctx.fill()
+    }
+    ctx.lineCap = 'butt'
+  }
+  const bandHigh = (outer - inner) / U // the band's height in the design's units: about one repeat of the scrollwork
+  const carveBand = (rail: Rail, from: number, to: number) => {
+    const path = bandPath(rail, from, to)
+    ctx.fillStyle = FRAME.bandBase
+    ctx.fill(path)
+    ctx.save()
+    ctx.clip(path)
+    // Carved, not painted: each stroke is laid three times, its shadow below and to the right,
+    // its body, and the light it catches above and to the left. (The light comes from the same
+    // side on every rail, so the offsets are made on the table, before the band is turned.)
+    for (const [dx, dy, color, widen] of [
+      [1.1 * U, 1.5 * U, FRAME.carveShadow, 0.9],
+      [0, 0, FRAME.carve, 0.5],
+      [-0.55 * U, -0.6 * U, FRAME.carveLight, -1.1],
+    ] as const) {
+      ctx.save()
+      ctx.translate(dx, dy)
+      // Into the band's own space: x along the rail, y across it from its outer edge, in the design's units.
+      if (rail === 'top') ctx.transform(U, 0, 0, U, 0, -outer)
+      else if (rail === 'bottom') ctx.transform(U, 0, 0, -U, 0, H + outer)
+      else if (rail === 'left') ctx.transform(0, U, U, 0, -outer, 0)
+      else ctx.transform(0, U, -U, 0, W + outer, 0)
+      ctx.translate(0, (bandHigh - TILE_H) / 2)
+      const first = Math.floor(from / U / TILE_W) - 1
+      const last = Math.ceil(to / U / TILE_W) + 1
+      for (let tile = first; tile <= last; tile++) {
+        ctx.save()
+        ctx.translate(tile * TILE_W, 0)
+        scroll(color, widen)
+        ctx.restore()
+      }
+      ctx.restore()
+    }
+    ctx.restore()
+    // Its edge: a dark line, and a fine gold one just inside the light.
+    ctx.strokeStyle = FRAME.carveShadow
+    ctx.lineWidth = 2.2 * U
+    ctx.stroke(path)
+    ctx.save()
+    ctx.translate(-0.6 * U, -0.6 * U)
+    ctx.strokeStyle = 'rgba(245, 197, 66, 0.9)'
+    ctx.lineWidth = 1 * U
+    ctx.stroke(path)
+    ctx.restore()
+  }
+  // Each band keeps clear of the pockets at its ends: plain wood is left round every hole.
+  const cornerHole = POCKETS[0]!.r + POCKET_RIM
+  const middleHole = POCKETS[1]!.r + POCKET_RIM
+  const fromCorner = -POCKETS[0]!.x + cornerHole + 12 * U
+  const fromMiddle = middleHole + 14 * U
+  for (const rail of ['top', 'bottom'] as const) {
+    carveBand(rail, fromCorner, W / 2 - fromMiddle)
+    carveBand(rail, W / 2 + fromMiddle, W - fromCorner)
+  }
+  for (const rail of ['left', 'right'] as const) carveBand(rail, fromCorner, H - fromCorner)
+
+  // The line where the wood meets the cushions.
+  ctx.strokeStyle = FRAME.ink
+  ctx.lineWidth = 2 * U
+  ctx.strokeRect(-LIP - 1.5 * U, -LIP - 1.5 * U, W + LIP * 2 + 3 * U, H + LIP * 2 + 3 * U)
+
+  // The sights players aim by: an ivory dot in a gold ring, set into the band.
+  const sight = (x: number, y: number) => {
+    ctx.fillStyle = FRAME.ink
     ctx.beginPath()
-    ctx.moveTo(x, y - h)
-    ctx.lineTo(x + w, y)
-    ctx.lineTo(x, y + h)
-    ctx.lineTo(x - w, y)
-    ctx.closePath()
-    ctx.fillStyle = fill
+    ctx.arc(x, y, 5.2 * U, 0, Math.PI * 2)
     ctx.fill()
-    ctx.strokeStyle = edge
-    ctx.lineWidth = 1.5
+    ctx.strokeStyle = FRAME.gold
+    ctx.lineWidth = 1.3 * U
+    ctx.beginPath()
+    ctx.arc(x, y, 4.3 * U, 0, Math.PI * 2)
     ctx.stroke()
+    ctx.fillStyle = FRAME.ivory
+    ctx.beginPath()
+    ctx.arc(x, y, 2.4 * U, 0, Math.PI * 2)
+    ctx.fill()
   }
-  /** One rail's inlay, from `from` to `to` along it. `place` turns "along, out" into table x, y. */
-  const inlay = (from: number, to: number, sights: number[], place: (along: number, out: number) => [number, number]) => {
-    for (const side of [-1, 1]) {
-      const [x1, y1] = place(from, middle + side * half)
-      const [x2, y2] = place(to, middle + side * half)
-      ctx.strokeStyle = 'rgba(232, 188, 92, 0.75)'
-      ctx.lineWidth = 2.2
-      ctx.beginPath()
-      ctx.moveTo(x1, y1)
-      ctx.lineTo(x2, y2)
-      ctx.stroke()
-    }
-    const step = 46
-    const count = Math.floor((to - from) / step)
-    const start = from + ((to - from) - count * step) / 2
-    for (let i = 0; i <= count; i++) {
-      const along = start + i * step
-      if (sights.some((sight) => Math.abs(sight - along) < step * 0.9)) continue
-      const [x, y] = place(along, middle)
-      // Gold, hibiscus and ivory by turns: the colours of the hub's band.
-      diamond(x, y, 10, 10, ['#e2b24a', '#b3263f', '#efe3c4'][i % 3]!)
-    }
-    // The sights players aim by: a larger ivory diamond in a brass ring.
-    for (const sight of sights) {
-      const [x, y] = place(sight, middle)
-      const ring = ctx.createLinearGradient(x - 16, y - 16, x + 16, y + 16)
-      ring.addColorStop(0, '#fff0b8')
-      ring.addColorStop(0.5, '#c9962e')
-      ring.addColorStop(1, '#7a5512')
-      ctx.fillStyle = ring
-      ctx.beginPath()
-      ctx.arc(x, y, 17, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.fillStyle = '#2a1408'
-      ctx.beginPath()
-      ctx.arc(x, y, 13, 0, Math.PI * 2)
-      ctx.fill()
-      diamond(x, y, 8, 11, '#f6efd9', 'rgba(0, 0, 0, 0.25)')
-    }
-  }
-  const sightsLong = [1, 2, 3].map((i) => (W * i) / 8)
-  const clear = 150 // how far the inlay keeps from a pocket
-  inlay(clear, W / 2 - clear, sightsLong, (a, o) => [a, o])
-  inlay(W / 2 + clear, W - clear, sightsLong.map((x) => W - x), (a, o) => [a, o])
-  inlay(clear, W / 2 - clear, sightsLong, (a, o) => [a, H - o])
-  inlay(W / 2 + clear, W - clear, sightsLong.map((x) => W - x), (a, o) => [a, H - o])
-  const sightsShort = [1, 2, 3].map((i) => (H * i) / 4)
-  inlay(clear, H - clear, sightsShort, (a, o) => [o, a])
-  inlay(clear, H - clear, sightsShort, (a, o) => [W - o, a])
+  const middleOfBand = (inner + outer) / 2
+  for (const i of [1, 2, 3, 5, 6, 7]) for (const rail of ['top', 'bottom'] as const) sight(...rails[rail]((W * i) / 8, middleOfBand))
+  for (const i of [1, 2, 3]) for (const rail of ['left', 'right'] as const) sight(...rails[rail]((H * i) / 4, middleOfBand))
 
-  // ---- Brass at the pockets: a slim ring let into the wood round each hole ----
-  // (Laid before the slate, which covers the part of it that would lie on the cloth; and kept
-  // inside the frame, whose corners are rounded about the same point.)
+  // Gold round each pocket, on the wood: a dark seat and a fine bright ring.
+  // (Laid before the slate, which covers the part that would lie on the cloth.)
   ctx.save()
   frame()
   ctx.clip()
-  POCKETS.forEach((pocket) => {
+  for (const pocket of POCKETS) {
     const radius = pocket.r + POCKET_RIM
-    const cx = pocket.x
-    const cy = pocket.y
-    const plate = ctx.createLinearGradient(cx - radius, cy - radius, cx + radius, cy + radius)
-    plate.addColorStop(0, '#fff1bd')
-    plate.addColorStop(0.35, '#d6a43a')
-    plate.addColorStop(0.7, '#8f6416')
-    plate.addColorStop(1, '#e0b757')
-    ctx.fillStyle = plate
+    ctx.strokeStyle = FRAME.ink
+    ctx.lineWidth = 3 * U
     ctx.beginPath()
-    ctx.arc(cx, cy, radius + 9, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.strokeStyle = 'rgba(40, 20, 0, 0.6)'
-    ctx.lineWidth = 2
+    ctx.arc(pocket.x, pocket.y, radius + 2 * U, 0, Math.PI * 2)
     ctx.stroke()
-  })
+    ctx.strokeStyle = FRAME.gold
+    ctx.lineWidth = 1.1 * U
+    ctx.beginPath()
+    ctx.arc(pocket.x, pocket.y, radius + 3.8 * U, 0, Math.PI * 2)
+    ctx.stroke()
+  }
   ctx.restore()
 
   // ---- The slate and its cloth ----
-  // (The cloth runs on under the cushions and into the mouth of every pocket, right up to the
-  // hole, in its own colour: no darker patch between the end of a cushion and the pocket.)
   // Lighter under the lamp in the middle, falling away toward the rails. One piece of cloth,
   // one fall of light: it is the same in the mouth of a pocket as on the table beside it.
   const cloth = ctx.createRadialGradient(W / 2, H / 2, 60, W / 2, H / 2, W * 0.66)
@@ -205,187 +259,180 @@ export function paintTable(width: number, height: number, vertical: boolean, sca
     ctx.fillRect(random() * W, random() * H, 4 + random() * 9, 2 + random() * 1.5)
   }
 
-  // The hub's mark, woven into the cloth: four squares, and the name under them.
+  // ---- The hub's mark on the cloth: the four squares in a ring, a sunburst round it, the name above and below ----
   ctx.save()
   ctx.translate(W / 2, H / 2)
-  ctx.globalAlpha = 0.085
-  const tile = 92
-  ctx.fillStyle = '#ffffff'
-  ctx.fillRect(-tile, -tile - 40, tile, tile)
-  ctx.fillRect(0, -40, tile, tile)
-  ctx.fillStyle = '#000000'
-  ctx.fillRect(0, -tile - 40, tile, tile)
-  ctx.fillRect(-tile, -40, tile, tile)
-  ctx.strokeStyle = '#ffffff'
-  ctx.lineWidth = 7
-  ctx.strokeRect(-tile - 16, -tile - 56, tile * 2 + 32, tile * 2 + 32)
-  ctx.globalAlpha = 0.11
-  ctx.fillStyle = '#ffffff'
-  ctx.font = `800 62px 'Ojuju Variable', 'Trebuchet MS', system-ui, sans-serif`
+  ctx.scale(U, U)
+  const mark = 'rgba(0, 0, 0, 0.17)'
+  ctx.strokeStyle = mark
+  ctx.fillStyle = mark
+  ctx.lineWidth = 5
+  ctx.beginPath()
+  ctx.arc(0, 0, 80, 0, Math.PI * 2)
+  ctx.stroke()
+  const rays = 28
+  for (let i = 0; i < rays; i++) {
+    const turn = (Math.PI * 2 * i) / rays
+    const half = (Math.PI / rays) * 0.9
+    ctx.beginPath()
+    ctx.moveTo(86 * Math.cos(turn - half), 86 * Math.sin(turn - half))
+    ctx.lineTo(98 * Math.cos(turn), 98 * Math.sin(turn))
+    ctx.lineTo(86 * Math.cos(turn + half), 86 * Math.sin(turn + half))
+    ctx.closePath()
+    ctx.fill()
+  }
+  const square = 30
+  ctx.lineWidth = 4
+  ctx.beginPath()
+  ctx.roundRect(-square - 4, -square - 4, square * 2 + 8, square * 2 + 8, 6)
+  ctx.stroke()
+  ctx.fillRect(-square, -square, square, square)
+  ctx.fillRect(0, 0, square, square)
+  // The name, set round the ring: each letter stands on the circle.
+  ctx.font = `800 21px 'Ojuju Variable', 'Arial Black', 'Trebuchet MS', system-ui, sans-serif`
   ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText('AFRICAN GAME HUB', 0, tile + 30)
+  const roundRing = (text: string, radius: number, above: boolean) => {
+    const letters = [...text]
+    const step = 0.118 // the angle from one letter to the next
+    letters.forEach((letter, index) => {
+      const offset = (index - (letters.length - 1) / 2) * step
+      ctx.save()
+      // Above the ring the word reads left to right over the top; below it, left to right under.
+      ctx.rotate(above ? offset : -offset)
+      ctx.translate(0, above ? -radius : radius)
+      ctx.textBaseline = above ? 'alphabetic' : 'top'
+      ctx.fillText(letter, 0, 0)
+      ctx.restore()
+    })
+  }
+  roundRing('AFRICAN', 103, true)
+  roundRing('GAME HUB', 103, false)
   ctx.restore()
 
   // The head string and the two spots, faintly.
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.17)'
-  ctx.lineWidth = 3
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)'
+  ctx.lineWidth = 1.5 * U
   ctx.beginPath()
-  ctx.moveTo(W / 4, 0)
-  ctx.lineTo(W / 4, H)
+  ctx.moveTo(W / 4, 1)
+  ctx.lineTo(W / 4, H - 1)
   ctx.stroke()
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.38)'
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.36)'
   for (const x of [W / 4, (W * 3) / 4]) {
     ctx.beginPath()
-    ctx.arc(x, H / 2, 7, 0, Math.PI * 2)
+    ctx.arc(x, H / 2, 6, 0, Math.PI * 2)
     ctx.fill()
   }
 
   // ---- The cushions: a strip of cloth-covered rubber along each side, cut back at the pockets ----
-  // Where each cushion's nose begins and ends, measured from the corners and from the middle.
   // (The same cuts and the same slopes as the physics: what is drawn is what the ball meets.)
-  const cornerCut = CORNER_CUT
-  const middleCut = MIDDLE_CUT
-  /** One cushion, from one tip of its nose to the other; `jaw1` and `jaw2` are how far its back runs on past each tip. */
-  const cushion = (x1: number, y1: number, x2: number, y2: number, inward: [number, number], jaw1: number, jaw2: number) => {
-    const [ix, iy] = inward
-    const [ax, ay] = x1 === x2 ? [0, 1] : [1, 0]
-    ctx.beginPath()
-    ctx.moveTo(x1 - ax * jaw1 - ix * LIP, y1 - ay * jaw1 - iy * LIP)
-    ctx.lineTo(x2 + ax * jaw2 - ix * LIP, y2 + ay * jaw2 - iy * LIP)
-    ctx.lineTo(x2, y2)
-    ctx.lineTo(x1, y1)
-    ctx.closePath()
-    // Dark where it meets the wood, rising to the light along its nose.
-    const face = ctx.createLinearGradient(x1 - ix * LIP, y1 - iy * LIP, x1, y1)
-    face.addColorStop(0, colors.cushion[0])
-    face.addColorStop(0.55, colors.cushion[1])
-    face.addColorStop(0.9, colors.cushion[2])
-    face.addColorStop(1, colors.cushion[1])
-    ctx.fillStyle = face
+  /** One cushion along a rail, from one tip of its nose to the other; `jaw1` and `jaw2` are how far its back runs on past each tip. */
+  const cushion = (rail: Rail, from: number, to: number, jaw1: number, jaw2: number) => {
+    const at = rails[rail]
+    const shape = (points: [number, number][]) => {
+      ctx.beginPath()
+      points.forEach(([u, v], index) => (index === 0 ? ctx.moveTo(...at(u, v)) : ctx.lineTo(...at(u, v))))
+      ctx.closePath()
+    }
+    // Its body, with a fine darker edge.
+    shape([[from, 0], [to, 0], [to + jaw2, LIP], [from - jaw1, LIP]])
+    ctx.fillStyle = colors.cushion[1]
     ctx.fill()
-    // The seam against the wood, and the light caught along the nose.
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)'
-    ctx.lineWidth = 4
-    ctx.beginPath()
-    ctx.moveTo(x1 - ax * jaw1 - ix * LIP, y1 - ay * jaw1 - iy * LIP)
-    ctx.lineTo(x2 + ax * jaw2 - ix * LIP, y2 + ay * jaw2 - iy * LIP)
+    ctx.strokeStyle = colors.cushion[0]
+    ctx.lineWidth = 0.8 * U
     ctx.stroke()
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)'
-    ctx.lineWidth = 3
-    ctx.beginPath()
-    ctx.moveTo(x1 - ix * 5, y1 - iy * 5)
-    ctx.lineTo(x2 - ix * 5, y2 - iy * 5)
-    ctx.stroke()
-    // The cut faces of the two jaws: darker than the top of the cushion, with a hard edge.
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.32)'
-    ctx.lineWidth = 2
-    ctx.beginPath()
-    ctx.moveTo(x1, y1)
-    ctx.lineTo(x1 - ax * jaw1 - ix * LIP, y1 - ay * jaw1 - iy * LIP)
-    ctx.moveTo(x2, y2)
-    ctx.lineTo(x2 + ax * jaw2 - ix * LIP, y2 + ay * jaw2 - iy * LIP)
-    ctx.stroke()
+    // Darker toward the wood: the cushion slopes up to its nose.
+    const [nx, ny] = at(from, 0)
+    const [bx, by] = at(from, LIP)
+    const slope = ctx.createLinearGradient(bx, by, nx, ny)
+    slope.addColorStop(0, 'rgba(0, 0, 0, 0.26)')
+    slope.addColorStop(0.7, 'rgba(0, 0, 0, 0)')
+    shape([[from, 0], [to, 0], [to + jaw2, LIP], [from - jaw1, LIP]])
+    ctx.fillStyle = slope
+    ctx.fill()
+    // The bevel along its nose, where the light catches it.
+    const deep = 4 * U
+    const inset = 2.5 * U
+    shape([[from, 0], [to, 0], [to - inset + (jaw2 * deep) / LIP, deep], [from + inset - (jaw1 * deep) / LIP, deep]])
+    ctx.fillStyle = colors.cushion[2]
+    ctx.fill()
   }
 
   // The shadow the cushions throw onto the cloth (drawn first: the cushions stand over it).
   // Only where a cushion stands: the mouth of a pocket has none, and no shadow.
   const fall = 40
-  const longs = [[cornerCut, W / 2 - middleCut], [W / 2 + middleCut, W - cornerCut]] as const
-  const strips: [number, number, number, number, number, number][] = []
-  for (const [from, to] of longs) strips.push([from, 0, to - from, fall, 0, 1], [from, H - fall, to - from, fall, 0, -1])
-  strips.push([0, cornerCut, fall, H - cornerCut * 2, 1, 0], [W - fall, cornerCut, fall, H - cornerCut * 2, -1, 0])
-  for (const [x, y, w, h, gx, gy] of strips) {
-    const fade = ctx.createLinearGradient(gx < 0 ? x + w : x, gy < 0 ? y + h : y, gx > 0 ? x + w : x, gy > 0 ? y + h : y)
+  const shadow = (rail: Rail, from: number, to: number) => {
+    const at = rails[rail]
+    const [x1, y1] = at(from, 0)
+    const [x2, y2] = at(from, -fall)
+    const fade = ctx.createLinearGradient(x1, y1, x2, y2)
     fade.addColorStop(0, 'rgba(0, 0, 0, 0.34)')
     fade.addColorStop(1, 'rgba(0, 0, 0, 0)')
     ctx.fillStyle = fade
-    // The shadow narrows to nothing at each end of the cushion: it does not stop square.
+    // It narrows to nothing at each end of the cushion: it does not stop square.
     ctx.beginPath()
-    if (gx === 0) {
-      const near = gy > 0 ? y : y + h
-      const far = gy > 0 ? y + h : y
-      ctx.moveTo(x, near)
-      ctx.lineTo(x + w, near)
-      ctx.lineTo(x + w - fall, far)
-      ctx.lineTo(x + fall, far)
-    } else {
-      const near = gx > 0 ? x : x + w
-      const far = gx > 0 ? x + w : x
-      ctx.moveTo(near, y)
-      ctx.lineTo(near, y + h)
-      ctx.lineTo(far, y + h - fall)
-      ctx.lineTo(far, y + fall)
-    }
+    ctx.moveTo(...at(from, 0))
+    ctx.lineTo(...at(to, 0))
+    ctx.lineTo(...at(to - fall, -fall))
+    ctx.lineTo(...at(from + fall, -fall))
     ctx.closePath()
     ctx.fill()
   }
-  cushion(cornerCut, 0, W / 2 - middleCut, 0, [0, 1], CORNER_JAW, MIDDLE_JAW)
-  cushion(W / 2 + middleCut, 0, W - cornerCut, 0, [0, 1], MIDDLE_JAW, CORNER_JAW)
-  cushion(cornerCut, H, W / 2 - middleCut, H, [0, -1], CORNER_JAW, MIDDLE_JAW)
-  cushion(W / 2 + middleCut, H, W - cornerCut, H, [0, -1], MIDDLE_JAW, CORNER_JAW)
-  cushion(0, cornerCut, 0, H - cornerCut, [1, 0], CORNER_JAW, CORNER_JAW)
-  cushion(W, cornerCut, W, H - cornerCut, [-1, 0], CORNER_JAW, CORNER_JAW)
+  const noses: [Rail, number, number, number, number][] = [
+    ['top', CORNER_CUT, W / 2 - MIDDLE_CUT, CORNER_JAW, MIDDLE_JAW],
+    ['top', W / 2 + MIDDLE_CUT, W - CORNER_CUT, MIDDLE_JAW, CORNER_JAW],
+    ['bottom', CORNER_CUT, W / 2 - MIDDLE_CUT, CORNER_JAW, MIDDLE_JAW],
+    ['bottom', W / 2 + MIDDLE_CUT, W - CORNER_CUT, MIDDLE_JAW, CORNER_JAW],
+    ['left', CORNER_CUT, H - CORNER_CUT, CORNER_JAW, CORNER_JAW],
+    ['right', CORNER_CUT, H - CORNER_CUT, CORNER_JAW, CORNER_JAW],
+  ]
+  for (const [rail, from, to] of noses) shadow(rail, from, to)
+  for (const [rail, from, to, jaw1, jaw2] of noses) cushion(rail, from, to, jaw1, jaw2)
 
-  // ---- The pockets: brass round the mouth, a leather lip, and a hole with depth to it ----
-  POCKETS.forEach((pocket, index) => {
+  // ---- The pockets: a hole with depth to it, dark on the side of the cloth, its far wall catching the light ----
+  for (const pocket of POCKETS) {
     const px = pocket.x
     const py = pocket.y
     // The hole is a little wider than the line a ball's centre must cross to drop: it goes when its centre is just over the rim.
     const radius = pocket.r + POCKET_RIM
-    // Which way is "out of the table" from this pocket: the brass sits on that side.
-    const outX = index === 1 || index === 4 ? 0 : px < W / 2 ? -1 : 1
-    const outY = py < H / 2 ? -1 : 1
-    const length = Math.hypot(outX, outY)
-    const ox = outX / length
-    const oy = outY / length
-
-    // A fine dark edge where the cloth and the cushions end and the drop begins.
-    ctx.fillStyle = '#17100b'
-    ctx.beginPath()
-    ctx.arc(px, py, radius + 2, 0, Math.PI * 2)
-    ctx.fill()
-
-    // The hole: black at the bottom, which lies toward the outside of the table, and a little
-    // light on the far wall, so it reads as a drop and not a painted disc.
-    const hole = ctx.createRadialGradient(px + ox * radius * 0.28, py + oy * radius * 0.28, radius * 0.1, px, py, radius)
+    // Toward the middle of the table from this pocket.
+    const dx = W / 2 - px
+    const dy = H / 2 - py
+    const away = Math.hypot(dx, dy)
+    const ix = dx / away
+    const iy = dy / away
+    const hole = ctx.createRadialGradient(px + ix * radius * 0.56, py + iy * radius * 0.56, 0, px - ix * radius * 0.2, py - iy * radius * 0.2, radius * 1.24)
     hole.addColorStop(0, '#000000')
-    hole.addColorStop(0.62, '#070708')
-    hole.addColorStop(0.86, '#17171b')
-    hole.addColorStop(1, '#34343c')
+    hole.addColorStop(0.5, '#02030a')
+    hole.addColorStop(0.78, '#141a4a')
+    hole.addColorStop(0.93, '#2a348a')
+    hole.addColorStop(1, '#3a49bd')
     ctx.fillStyle = hole
     ctx.beginPath()
     ctx.arc(px, py, radius, 0, Math.PI * 2)
     ctx.fill()
-    // The far wall of the pocket catches the lamp: a pale crescent just inside the rim.
-    const turn = Math.atan2(oy, ox)
-    ctx.lineCap = 'round'
-    ctx.strokeStyle = 'rgba(150, 150, 168, 0.5)'
-    ctx.lineWidth = 7
+    // Its rim: pale where it meets the cloth, gold where it meets the wood.
+    ctx.save()
     ctx.beginPath()
-    ctx.arc(px, py, radius - 6, turn - 1.05, turn + 1.05)
-    ctx.stroke()
-    ctx.strokeStyle = 'rgba(205, 205, 220, 0.35)'
-    ctx.lineWidth = 2.5
-    ctx.beginPath()
-    ctx.arc(px, py, radius - 3, turn - 0.8, turn + 0.8)
-    ctx.stroke()
-    // A step down inside, where the leather ends and the drop begins.
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)'
-    ctx.lineWidth = 3
-    ctx.beginPath()
-    ctx.arc(px + ox * radius * 0.1, py + oy * radius * 0.1, radius * 0.7, 0, Math.PI * 2)
-    ctx.stroke()
-    ctx.lineCap = 'butt'
-    // The near wall is in shadow.
-    const near = ctx.createRadialGradient(px - ox * radius * 0.9, py - oy * radius * 0.9, radius * 0.2, px - ox * radius * 0.9, py - oy * radius * 0.9, radius * 1.25)
-    near.addColorStop(0, 'rgba(0, 0, 0, 0.75)')
-    near.addColorStop(1, 'rgba(0, 0, 0, 0)')
-    ctx.fillStyle = near
+    ctx.rect(-LIP, -LIP, W + LIP * 2, H + LIP * 2)
+    ctx.clip()
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'
+    ctx.lineWidth = 1.6 * U
     ctx.beginPath()
     ctx.arc(px, py, radius, 0, Math.PI * 2)
-    ctx.fill()
-  })
+    ctx.stroke()
+    ctx.restore()
+    ctx.save()
+    ctx.beginPath()
+    ctx.rect(-RAIL, -RAIL, W + RAIL * 2, H + RAIL * 2)
+    ctx.rect(-LIP, -LIP, W + LIP * 2, H + LIP * 2)
+    ctx.clip('evenodd')
+    ctx.strokeStyle = FRAME.gold
+    ctx.lineWidth = 1.4 * U
+    ctx.beginPath()
+    ctx.arc(px, py, radius, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.restore()
+  }
 
   return canvas
 }

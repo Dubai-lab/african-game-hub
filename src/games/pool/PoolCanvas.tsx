@@ -221,6 +221,9 @@ export function PoolCanvas({ balls, vertical, aim, power, ballInHand, behindHead
     const turned = new Map<number, Mat>()
     const last = new Map<number, { x: number; y: number }>()
     const sprites = new Map<number, HTMLCanvasElement>()
+    // Balls on their way down a pocket: from where each was last seen on the cloth, into the hole.
+    const dropping = new Map<number, { fromX: number; fromY: number; toX: number; toY: number; since: number; picture: HTMLCanvasElement }>()
+    const DROP_MS = 240
 
     const toScreen = (x: number, y: number): [number, number] =>
       vertical ? [(y + RAIL) * scale, (TABLE.w - x + RAIL) * scale] : [(x + RAIL) * scale, (y + RAIL) * scale]
@@ -378,6 +381,47 @@ export function PoolCanvas({ balls, vertical, aim, power, ballInHand, behindHead
         ctx.beginPath()
         ctx.arc(sx, sy, rp * 1.3, 0, Math.PI * 2)
         ctx.stroke()
+      }
+
+      // A ball that has just gone: it is seen to roll over the lip and down, growing smaller and
+      // darker as it sinks, instead of vanishing at the mouth of the pocket.
+      const now = performance.now()
+      for (const ball of state.balls) {
+        const seen = last.get(ball.n)
+        if (!ball.in) {
+          dropping.delete(ball.n)
+          continue
+        }
+        if (!seen) continue
+        last.delete(ball.n)
+        const picture = sprites.get(ball.n)
+        if (!picture) continue
+        // The hole nearest to where it was last seen.
+        let hole = POCKETS[0]!
+        let nearest = Infinity
+        for (const pocket of POCKETS) {
+          const [px, py] = toScreen(pocket.x, pocket.y)
+          const away = (px - seen.x) * (px - seen.x) + (py - seen.y) * (py - seen.y)
+          if (away < nearest) {
+            nearest = away
+            hole = pocket
+          }
+        }
+        const [toX, toY] = toScreen(hole.x, hole.y)
+        dropping.set(ball.n, { fromX: seen.x, fromY: seen.y, toX, toY, since: now, picture })
+      }
+      for (const [n, drop] of dropping) {
+        const part = (now - drop.since) / DROP_MS
+        if (part >= 1) {
+          dropping.delete(n)
+          continue
+        }
+        // Quick over the lip, then sinking.
+        const along = 1 - (1 - part) * (1 - part)
+        const size = rp * 2 * (1 - 0.5 * part)
+        ctx.globalAlpha = 1 - part * part
+        ctx.drawImage(drop.picture, drop.fromX + (drop.toX - drop.fromX) * along - size / 2, drop.fromY + (drop.toY - drop.fromY) * along - size / 2, size, size)
+        ctx.globalAlpha = 1
       }
 
       // The balls themselves. A ball that has not moved keeps the picture made of it last time.
