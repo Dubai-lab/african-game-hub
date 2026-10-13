@@ -43,6 +43,7 @@ const WalletPage = lazy(() => import('@/core/wallet/WalletPage'))
 const ProfilePage = lazy(() => import('@/core/profile/ProfilePage'))
 const LeaderboardsPage = lazy(() => import('@/core/leaderboards/LeaderboardsPage'))
 const SettingsPage = lazy(() => import('@/core/settings/SettingsPage'))
+const SupportPage = lazy(() => import('@/core/support/SupportPage'))
 const FriendsPage = lazy(() => import('@/core/social/FriendsPage'))
 const ChatPage = lazy(() => import('@/core/social/ChatPage'))
 const MatchRoute = lazy(() => import('@/core/matchmaking/MatchRoute'))
@@ -126,6 +127,7 @@ export default function App({ staticLocation }: { staticLocation?: string }) {
                   <Route path="profile" element={<ProfilePage />} />
                   <Route path="players/:username" element={<ProfilePage />} />
                   <Route path="settings" element={<SettingsPage />} />
+                  <Route path="support" element={<SupportPage />} />
                 </Route>
                 {/* Game screens use the whole phone screen, so they sit outside the app frame. */}
                 <Route element={<PublicFrame />}>

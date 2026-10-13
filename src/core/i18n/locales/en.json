@@ -1827,5 +1827,40 @@
         "Words are judged by an English word list. Let your turn run out and it is passed; do it twice in a row and you are out."
       ]
     }
+  },
+  "support": {
+    "title": "Report a problem",
+    "help": "Help",
+    "helpHint": "Something not working, or a question about your account? Tell us and we will answer by email.",
+    "intro": "Tell us what went wrong. We will email you at once to confirm we have your report, and answer within 2 to 3 working days.",
+    "about": "What is it about?",
+    "category": {
+      "account": "My account",
+      "game": "A game",
+      "tokens": "Tokens",
+      "bug": "Something is not working",
+      "other": "Something else"
+    },
+    "message": "What happened?",
+    "messageHint": "Say what you were doing and what you saw. The more detail, the faster we can help.",
+    "tooShort_one": "Please write at least {{count}} character.",
+    "tooShort_other": "Please write at least {{count}} characters.",
+    "tooMany": "You have sent three reports today. We will answer those first; you can send another tomorrow.",
+    "replyTo": "We will reply to {{email}}.",
+    "send": "Send report",
+    "sending": "Sending…",
+    "sentTitle": "Thank you. We have your report.",
+    "sentBody": "Your report is number {{reference}}. Our team is looking into it and will get back to you within 2 to 3 working days.",
+    "sentEmail": "We have sent a confirmation to {{email}}. If it is not in your inbox in a few minutes, look in your spam folder.",
+    "another": "Send another report",
+    "mine": "Your reports",
+    "none": "You have not sent any reports.",
+    "number": "No. {{reference}}",
+    "status": {
+      "open": "Open",
+      "answered": "Answered",
+      "closed": "Closed"
+    },
+    "orEmail": "You can also write to us at"
   }
 }

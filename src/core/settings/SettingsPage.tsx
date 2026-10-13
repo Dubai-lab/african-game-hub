@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { useAuth } from '@/core/auth/AuthContext'
-import { Button } from '@/core/ui/Button'
+import { Button, buttonClass } from '@/core/ui/Button'
 import { LanguageSwitcher } from '@/core/ui/LanguageSwitcher'
 import { Toggle } from '@/core/ui/Toggle'
 import { useMatchChatSetting } from '@/core/social/social'
@@ -53,6 +53,16 @@ export default function SettingsPage() {
         <Button variant="ghost" className="mt-3 w-full bg-panel" onClick={() => void signOut()}>
           {t('common.logout')}
         </Button>
+      </section>
+
+      <section aria-labelledby="settings-help">
+        <h2 id="settings-help" className={sectionTitle}>
+          {t('support.help')}
+        </h2>
+        <p className="mt-2 text-muted">{t('support.helpHint')}</p>
+        <Link to="/support" className={buttonClass('ghost', 'mt-3 w-full bg-panel')} data-testid="settings-support">
+          {t('support.title')}
+        </Link>
       </section>
 
       <nav aria-label={t('settings.about')} className="flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-primary">

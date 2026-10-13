@@ -1827,5 +1827,40 @@
         "Pour l’instant, les mots sont jugés avec une liste de mots anglais. Si votre temps s’écoule, votre tour est passé ; deux fois de suite, et vous êtes hors du jeu."
       ]
     }
+  },
+  "support": {
+    "title": "Signaler un problème",
+    "help": "Aide",
+    "helpHint": "Quelque chose ne marche pas, ou une question sur votre compte ? Dites-le-nous et nous répondrons par e-mail.",
+    "intro": "Dites-nous ce qui ne va pas. Nous vous envoyons tout de suite un e-mail pour confirmer la réception, et nous répondons sous 2 à 3 jours ouvrables.",
+    "about": "De quoi s’agit-il ?",
+    "category": {
+      "account": "Mon compte",
+      "game": "Une partie",
+      "tokens": "Jetons",
+      "bug": "Quelque chose ne marche pas",
+      "other": "Autre chose"
+    },
+    "message": "Que s’est-il passé ?",
+    "messageHint": "Dites ce que vous faisiez et ce que vous avez vu. Plus il y a de détails, plus vite nous pouvons aider.",
+    "tooShort_one": "Écrivez au moins {{count}} caractère.",
+    "tooShort_other": "Écrivez au moins {{count}} caractères.",
+    "tooMany": "Vous avez envoyé trois signalements aujourd’hui. Nous y répondons d’abord ; vous pourrez en envoyer un autre demain.",
+    "replyTo": "Nous répondrons à {{email}}.",
+    "send": "Envoyer",
+    "sending": "Envoi…",
+    "sentTitle": "Merci. Nous avons bien reçu votre signalement.",
+    "sentBody": "Votre signalement porte le numéro {{reference}}. Notre équipe l’examine et vous répondra sous 2 à 3 jours ouvrables.",
+    "sentEmail": "Nous avons envoyé une confirmation à {{email}}. Si elle n’arrive pas dans quelques minutes, regardez dans vos courriers indésirables.",
+    "another": "Envoyer un autre signalement",
+    "mine": "Vos signalements",
+    "none": "Vous n’avez envoyé aucun signalement.",
+    "number": "N° {{reference}}",
+    "status": {
+      "open": "Ouvert",
+      "answered": "Répondu",
+      "closed": "Fermé"
+    },
+    "orEmail": "Vous pouvez aussi nous écrire à"
   }
 }

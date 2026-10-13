@@ -1422,6 +1422,7 @@ export type Database = {
           preferred_language: string
           updated_at: string
           user_id: string
+          welcomed_at: string | null
         }
         Insert: {
           age_confirmed_at?: string | null
@@ -1434,6 +1435,7 @@ export type Database = {
           preferred_language?: string
           updated_at?: string
           user_id: string
+          welcomed_at?: string | null
         }
         Update: {
           age_confirmed_at?: string | null
@@ -1446,6 +1448,7 @@ export type Database = {
           preferred_language?: string
           updated_at?: string
           user_id?: string
+          welcomed_at?: string | null
         }
         Relationships: [
           {
@@ -1612,6 +1615,63 @@ export type Database = {
           {
             foreignKeyName: "reports_resolved_by_fkey"
             columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_requests: {
+        Row: {
+          admin_note: string | null
+          answered_at: string | null
+          answered_by: string | null
+          category: string
+          created_at: string
+          device: string | null
+          id: number
+          message: string
+          page: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          answered_at?: string | null
+          answered_by?: string | null
+          category: string
+          created_at?: string
+          device?: string | null
+          id?: never
+          message: string
+          page?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          answered_at?: string | null
+          answered_by?: string | null
+          category?: string
+          created_at?: string
+          device?: string | null
+          id?: never
+          message?: string
+          page?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_requests_answered_by_fkey"
+            columns: ["answered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_requests_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -2246,6 +2306,12 @@ export type Database = {
         Args: { p_match_id: string; p_user_id: string }
         Returns: Json
       }
+      mail_claim: { Args: { p_limit: number }; Returns: Json }
+      mail_done: {
+        Args: { p_error?: string; p_id: number; p_ok: boolean }
+        Returns: undefined
+      }
+      mail_release: { Args: { p_ids: number[] }; Returns: undefined }
       mark_messages_read: { Args: { p_from: string }; Returns: undefined }
       match_chat_status: { Args: { p_match_id: string }; Returns: Json }
       pool_apply_shot: {
@@ -2301,6 +2367,15 @@ export type Database = {
       server_now: { Args: never; Returns: string }
       set_my_country: { Args: { p_country_code: string }; Returns: undefined }
       set_my_gender: { Args: { p_gender: string }; Returns: undefined }
+      submit_support_request: {
+        Args: {
+          p_category: string
+          p_device?: string
+          p_message: string
+          p_page?: string
+        }
+        Returns: Json
+      }
       tournament_cancel: {
         Args: { p_tournament_id: string; p_user_id: string }
         Returns: Json
