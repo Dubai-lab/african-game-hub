@@ -397,13 +397,14 @@ export function paintTable(width: number, height: number, vertical: boolean, sca
 
   // The shadow the cushions throw onto the cloth (drawn first: the cushions stand over it).
   // Only where a cushion stands: the mouth of a pocket has none, and no shadow.
-  const fall = 40
+  // (Soft and short: enough to lift the cushion off the cloth, not a dark band along it.)
+  const fall = 30
   const shadow = (rail: Rail, from: number, to: number) => {
     const at = rails[rail]
     const [x1, y1] = at(from, 0)
     const [x2, y2] = at(from, -fall)
     const fade = ctx.createLinearGradient(x1, y1, x2, y2)
-    fade.addColorStop(0, 'rgba(0, 0, 0, 0.34)')
+    fade.addColorStop(0, 'rgba(0, 0, 0, 0.18)')
     fade.addColorStop(1, 'rgba(0, 0, 0, 0)')
     ctx.fillStyle = fade
     // It narrows to nothing at each end of the cushion: it does not stop square.

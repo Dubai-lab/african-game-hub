@@ -627,7 +627,9 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
 
         {powerCue('col-start-1 row-start-2 h-full w-full')}
 
-        <div className="col-start-2 row-start-2 flex min-h-0 items-center justify-center">{tableView('max-w-[calc((var(--pool-high)_-_3.25rem)_*_1.85)]')}</div>
+        {/* The table stands clear of the edges of the screen, with room round it: it is 1.82 times as wide as it
+            is high, frame and all, and is sized from the height it is allowed. */}
+        <div className="col-start-2 row-start-2 flex min-h-0 items-center justify-center">{tableView('max-w-[calc((var(--pool-high)_-_6rem)_*_1.82)]')}</div>
 
         {/* The round buttons beside the table: spin, the cue, the chat, and a finer turn of the cue. */}
         <div className="col-start-3 row-start-2 flex min-h-0 flex-col items-center justify-center gap-1.5" data-testid={myShot ? 'pool-controls' : undefined}>
