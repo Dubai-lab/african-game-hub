@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { useAuth } from '@/core/auth/AuthContext'
+import { SOCIAL_LINKS } from '@/core/lib/socialLinks'
 import { NotificationSettings } from '@/core/notifications/NotificationSettings'
 import { Button, buttonClass } from '@/core/ui/Button'
 import { LanguageSwitcher } from '@/core/ui/LanguageSwitcher'
@@ -67,6 +68,20 @@ export default function SettingsPage() {
           {t('support.title')}
         </Link>
       </section>
+
+      {SOCIAL_LINKS.length > 0 && (
+        <section aria-labelledby="settings-follow" data-testid="settings-follow">
+          <h2 id="settings-follow" className={sectionTitle}>
+            {t('settings.follow')}
+          </h2>
+          <p className="mt-2 text-muted">{t('settings.followHint')}</p>
+          {SOCIAL_LINKS.map((page) => (
+            <a key={page.id} href={page.url} target="_blank" rel="noopener noreferrer" className={buttonClass('ghost', 'mt-3 w-full bg-panel')}>
+              {t('settings.followOn', { name: page.name })}
+            </a>
+          ))}
+        </section>
+      )}
 
       <nav aria-label={t('settings.about')} className="flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-primary">
         <Link to="/terms" className="underline underline-offset-4">

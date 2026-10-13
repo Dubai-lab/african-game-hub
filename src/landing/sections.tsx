@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { flagEmoji, guessCountry, useCountries } from '@/core/countries/useCountries'
+import { SOCIAL_LINKS } from '@/core/lib/socialLinks'
 import { GameArt } from '@/core/lobby/GameArt'
 import { buttonClass } from '@/core/ui/Button'
 import { LanguageSwitcher } from '@/core/ui/LanguageSwitcher'
@@ -260,6 +261,16 @@ export function Footer() {
           </Link>
           <LanguageSwitcher />
         </nav>
+        {SOCIAL_LINKS.length > 0 && (
+          <p className="flex flex-wrap items-center gap-x-4 gap-y-2 font-semibold" data-testid="footer-follow">
+            <span className="text-primary-tint">{t('landing.footer.follow')}</span>
+            {SOCIAL_LINKS.map((page) => (
+              <a key={page.id} href={page.url} target="_blank" rel="noopener noreferrer" className={link}>
+                {page.name}
+              </a>
+            ))}
+          </p>
+        )}
         <BusinessDetails className="text-primary-tint" />
         <p className="text-sm text-primary-tint">{t('landing.footer.rights', { year: new Date().getFullYear() })}</p>
       </div>

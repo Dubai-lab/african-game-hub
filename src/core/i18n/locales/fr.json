@@ -195,6 +195,7 @@
       "terms": "Conditions",
       "privacy": "Confidentialité",
       "responsibleLink": "Jeu responsable",
+      "follow": "Suivez-nous :",
       "contact": "Contact",
       "rights": "© {{year}} African Game Hub",
       "cookies": "Cookies",
@@ -739,6 +740,9 @@
   },
   "settings": {
     "title": "Réglages",
+    "follow": "Suivez-nous",
+    "followHint": "Les nouvelles, les nouveaux jeux et les promotions sont annoncés d’abord sur nos pages.",
+    "followOn": "Suivez-nous sur {{name}}",
     "general": "Général",
     "account": "Compte",
     "about": "À propos",
