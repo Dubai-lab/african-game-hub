@@ -168,12 +168,16 @@ describe('signup', () => {
   })
 
   it('makes the listed email an admin only once the address is confirmed', async () => {
-    const id = await db.createUser('EG8217178@gmail.com', { username: 'owner' }, false)
+    const id = await db.createUser('Admin@AfricanGameHub.com', { username: 'owner' }, false)
     expect(await db.rows(`select 1 from public.admins where user_id = $1`, [id])).toEqual([])
 
     await db.pg.query(`update auth.users set email_confirmed_at = now() where id = $1`, [id])
     expect(await db.rows(`select 1 from public.admins where user_id = $1`, [id])).toHaveLength(1)
     expect(await db.rows(`select 1 from public.admins where user_id in ($1, $2)`, [amina, kofi])).toEqual([])
+
+    // The personal address that used to be the admin's is no longer made admin.
+    const old = await db.createUser('eg8217178@gmail.com', { username: 'formerowner' })
+    expect(await db.rows(`select 1 from public.admins where user_id = $1`, [old])).toEqual([])
   })
 })
 
