@@ -246,6 +246,9 @@ export function Footer() {
           <p className="max-w-prose text-primary-tint">{t('landing.footer.responsible')}</p>
         </div>
         <nav className="flex flex-wrap items-center gap-x-6 gap-y-3 font-semibold">
+          <Link to="/about" className={link}>
+            {t('about.link')}
+          </Link>
           <Link to="/terms" className={link}>
             {t('landing.footer.terms')}
           </Link>

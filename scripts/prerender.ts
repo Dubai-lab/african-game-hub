@@ -12,6 +12,7 @@ const PUBLIC_PAGES: Record<string, unknown> = {
   '/': 1,
   '/signup': 1,
   '/login': 1,
+  '/about': 1,
   '/terms': 1,
   '/privacy': 1,
   '/cookies': 1,

@@ -17,6 +17,7 @@ export const PUBLIC_PAGES: Record<string, { title: string; description?: string 
   '/': { title: 'seo.homeTitle', description: 'seo.homeDescription' },
   '/signup': { title: 'auth.signupTitle', description: 'seo.signupDescription' },
   '/login': { title: 'auth.loginTitle', description: 'seo.loginDescription' },
+  '/about': { title: 'about.metaTitle', description: 'about.metaDescription' },
   '/terms': { title: 'legal.terms.title' },
   '/privacy': { title: 'legal.privacy.title' },
   '/cookies': { title: 'legal.cookies.title' },

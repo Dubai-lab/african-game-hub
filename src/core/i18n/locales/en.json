@@ -316,6 +316,67 @@
     "checkup": "Check Up",
     "words": "Word Battle"
   },
+  "about": {
+    "link": "About us",
+    "metaTitle": "About us",
+    "metaDescription": "Who we are and why we built African Game Hub: one fair place to play chess, ludo, draughts, pool and more against real people across Africa.",
+    "kicker": "About African Game Hub",
+    "title": "Made in Africa, for players across Africa.",
+    "intro": "African Game Hub is one place to play the games we grew up with, against real people, on any phone. Chess, ludo, draughts, pool, Check Up and Word Battle, with one account for all of them.",
+    "mission": {
+      "title": "Our mission",
+      "body": "To give every player in Africa a fair, fast and friendly place to compete in the games they love, and a rating that shows how good they really are."
+    },
+    "built": {
+      "title": "What we built",
+      "items": [
+        {
+          "title": "Fair play, checked by our server",
+          "body": "Every move is checked by our server, and the clocks are kept there too. Nobody can change the app to win."
+        },
+        {
+          "title": "Made for the phone in your hand",
+          "body": "It runs in the browser, opens fast, and is light on data. It works on budget Android phones and slow connections, with a data-saver setting."
+        },
+        {
+          "title": "One account, every game",
+          "body": "A rating for each game, leaderboards for all of Africa and for your own country, friends, chat, challenges and tournaments."
+        }
+      ]
+    },
+    "promises": {
+      "title": "What we hold ourselves to",
+      "items": [
+        {
+          "title": "Skill comes first",
+          "body": "Games you get better at by playing, against real people, with ratings that show it."
+        },
+        {
+          "title": "Free today, honest about tomorrow",
+          "body": "Playing is free. Tokens are free play money with no cash value. Deposits and withdrawals will come later, country by country, only where we are licensed."
+        },
+        {
+          "title": "We protect your account",
+          "body": "Sign-up needs only an email and a password. We never ask for your card details or your mobile money PIN, and every token movement is recorded."
+        },
+        {
+          "title": "For adults, played responsibly",
+          "body": "The hub is for people aged 18 and over. Play for the game, set yourself limits, and stop when it stops being fun."
+        }
+      ]
+    },
+    "founder": {
+      "title": "Meet the founder",
+      "role": "Founder",
+      "body": "Started African Game Hub to bring the games played at home, in school yards and on the streets of Africa to one fair place online, where anyone with a phone can play."
+    },
+    "cta": {
+      "title": "Ready to play?",
+      "body": "Create a free account in a minute and play your first game today.",
+      "button": "Play free",
+      "questions": "Questions or ideas? Write to us at"
+    }
+  },
   "legal": {
     "draft": "Draft. This text has not yet been reviewed by a lawyer.",
     "terms": {

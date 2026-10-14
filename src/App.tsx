@@ -48,6 +48,7 @@ const FriendsPage = lazy(() => import('@/core/social/FriendsPage'))
 const ChatPage = lazy(() => import('@/core/social/ChatPage'))
 const MatchRoute = lazy(() => import('@/core/matchmaking/MatchRoute'))
 const LegalPage = lazy(() => import('@/landing/LegalPage'))
+const AboutPage = lazy(() => import('@/landing/AboutPage'))
 const NotFoundPage = lazy(() => import('@/core/ui/NotFoundPage'))
 
 function PublicFrame() {
@@ -93,6 +94,7 @@ export default function App({ staticLocation }: { staticLocation?: string }) {
             <Routes>
               <Route element={<PublicFrame />}>
                 <Route index element={<LandingPage />} />
+                <Route path="about" element={<AboutPage />} />
                 <Route path="terms" element={<LegalPage doc="terms" />} />
                 <Route path="privacy" element={<LegalPage doc="privacy" />} />
                 <Route path="cookies" element={<LegalPage doc="cookies" />} />

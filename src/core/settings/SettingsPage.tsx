@@ -81,6 +81,9 @@ export default function SettingsPage() {
       )}
 
       <nav aria-label={t('settings.about')} className="flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-primary">
+        <Link to="/about" className="underline underline-offset-4">
+          {t('about.link')}
+        </Link>
         <Link to="/terms" className="underline underline-offset-4">
           {t('landing.footer.terms')}
         </Link>

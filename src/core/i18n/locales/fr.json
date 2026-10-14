@@ -316,6 +316,67 @@
     "checkup": "Check Up",
     "words": "Word Battle"
   },
+  "about": {
+    "link": "À propos",
+    "metaTitle": "À propos",
+    "metaDescription": "Qui nous sommes et pourquoi nous avons créé African Game Hub : un lieu équitable pour jouer aux échecs, au ludo, aux dames, au billard et plus encore contre de vraies personnes partout en Afrique.",
+    "kicker": "À propos d’African Game Hub",
+    "title": "Fait en Afrique, pour les joueurs de toute l’Afrique.",
+    "intro": "African Game Hub est un seul endroit pour jouer aux jeux de notre enfance, contre de vraies personnes, sur n’importe quel téléphone. Échecs, ludo, dames, billard, Check Up et Word Battle, avec un seul compte pour tous.",
+    "mission": {
+      "title": "Notre mission",
+      "body": "Offrir à chaque joueur en Afrique un lieu équitable, rapide et convivial pour s’affronter aux jeux qu’il aime, avec un classement qui montre son vrai niveau."
+    },
+    "built": {
+      "title": "Ce que nous avons construit",
+      "items": [
+        {
+          "title": "Un jeu loyal, vérifié par notre serveur",
+          "body": "Chaque coup est vérifié par notre serveur, qui tient aussi les pendules. Personne ne peut modifier l’application pour gagner."
+        },
+        {
+          "title": "Fait pour le téléphone que vous avez en main",
+          "body": "Il fonctionne dans le navigateur, s’ouvre vite et consomme peu de données. Il marche sur les téléphones Android d’entrée de gamme et les connexions lentes, avec un mode économie de données."
+        },
+        {
+          "title": "Un compte, tous les jeux",
+          "body": "Un classement pour chaque jeu, des classements pour toute l’Afrique et pour votre pays, des amis, la discussion, des défis et des tournois."
+        }
+      ]
+    },
+    "promises": {
+      "title": "Nos engagements",
+      "items": [
+        {
+          "title": "Le talent d’abord",
+          "body": "Des jeux où l’on progresse en jouant, contre de vraies personnes, avec des classements qui le montrent."
+        },
+        {
+          "title": "Gratuit aujourd’hui, honnête pour demain",
+          "body": "Jouer est gratuit. Les jetons sont de l’argent fictif sans valeur monétaire. Les dépôts et les retraits viendront plus tard, pays par pays, seulement là où nous avons une licence."
+        },
+        {
+          "title": "Nous protégeons votre compte",
+          "body": "L’inscription ne demande qu’une adresse e-mail et un mot de passe. Nous ne demandons jamais vos données de carte ni votre code mobile money, et chaque mouvement de jetons est enregistré."
+        },
+        {
+          "title": "Pour les adultes, avec modération",
+          "body": "Le hub est réservé aux personnes de 18 ans et plus. Jouez pour le jeu, fixez-vous des limites et arrêtez quand ce n’est plus amusant."
+        }
+      ]
+    },
+    "founder": {
+      "title": "Le fondateur",
+      "role": "Fondateur",
+      "body": "A créé African Game Hub pour réunir en un seul lieu équitable en ligne les jeux que l’on joue à la maison, dans les cours d’école et dans les rues d’Afrique, accessibles à toute personne qui a un téléphone."
+    },
+    "cta": {
+      "title": "Prêt à jouer ?",
+      "body": "Créez un compte gratuit en une minute et jouez votre première partie aujourd’hui.",
+      "button": "Jouer gratuitement",
+      "questions": "Des questions ou des idées ? Écrivez-nous à"
+    }
+  },
   "legal": {
     "draft": "Brouillon. Ce texte n’a pas encore été relu par un juriste.",
     "terms": {
