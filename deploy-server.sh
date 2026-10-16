@@ -54,18 +54,22 @@ declare -A programs=(
   [agh-backup.sh]=/usr/local/bin/agh-backup
   [agh-backup.service]=/etc/systemd/system/agh-backup.service
   [agh-backup.timer]=/etc/systemd/system/agh-backup.timer
+  [agh-heartbeat.sh]=/usr/local/bin/agh-heartbeat
+  [agh-tls.sh]=/usr/local/bin/agh-tls
 )
-for name in agh-deploy.sh agh-backup.sh agh-backup.service agh-backup.timer; do
+for name in agh-deploy.sh agh-backup.sh agh-backup.service agh-backup.timer agh-heartbeat.sh agh-tls.sh; do
   encoded=$(tr -d '\r' < "$root/infra/game-server/$name" | base64 -w0)
   lines+=("echo $encoded | base64 -d > ${programs[$name]}")
 done
-lines+=('chmod 755 /usr/local/bin/agh-deploy /usr/local/bin/agh-backup')
+lines+=('chmod 755 /usr/local/bin/agh-deploy /usr/local/bin/agh-backup /usr/local/bin/agh-heartbeat /usr/local/bin/agh-tls')
 # The nightly copy of the books: where it goes, and the timer that starts it.
 if [ -n "$bucket" ] && [ "$bucket" != None ]; then
   lines+=("mkdir -p /etc/agh && echo $bucket > /etc/agh/backup-bucket")
   lines+=('systemctl daemon-reload && systemctl enable --now agh-backup.timer >/dev/null 2>&1')
 fi
-lines+=("/usr/local/bin/agh-deploy $commit")
+# The server itself, then the encrypted door in front of it (certificate and nginx; this does
+# nothing when both are already in place). Either failing fails the deploy.
+lines+=("/usr/local/bin/agh-deploy $commit; server=\$?; /usr/local/bin/agh-tls; door=\$?; exit \$((server | door))")
 
 parameter_file=$(mktemp)
 trap 'rm -f "$parameter_file"' EXIT

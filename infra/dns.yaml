@@ -1,0 +1,133 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: African Game Hub - DNS for africangamehub.com (Route 53). The domain is registered at Spaceship; its nameservers there point at this zone.
+
+Parameters:
+  DomainName:
+    Type: String
+    Default: africangamehub.com
+  PlayerDistribution:
+    Type: String
+    Default: d2xirivzgoo9lw.cloudfront.net
+    Description: The player site's CloudFront address (stack agh-player).
+  AdminDistribution:
+    Type: String
+    Default: d2hp5w4slz51xb.cloudfront.net
+    Description: The admin site's CloudFront address (stack agh-admin).
+  GameServerIp:
+    Type: String
+    Default: 13.245.60.78
+    Description: The game server machine's fixed address (stack agh-game-server in af-south-1).
+  CertificateCheckName:
+    Type: String
+    Default: ''
+    Description: The record AWS Certificate Manager asks for to prove we own the domain (name), from the certificate in us-east-1. Empty until the certificate has been requested.
+  CertificateCheckValue:
+    Type: String
+    Default: ''
+
+Conditions:
+  HasCertificateCheck: !Not [!Equals [!Ref CertificateCheckName, '']]
+
+Resources:
+  # Kept if the stack is ever deleted: deleting a zone changes its nameservers, and the domain
+  # would stop resolving until the registrar was updated.
+  Zone:
+    Type: AWS::Route53::HostedZone
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Name: !Ref DomainName
+      HostedZoneConfig:
+        Comment: African Game Hub
+
+  Records:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneId: !Ref Zone
+      RecordSets:
+        # The bare domain cannot be a CNAME. Route 53 "alias" records are what let it point at
+        # CloudFront. Z2FDTNDATAQYW2 is CloudFront's own fixed zone id, the same for everyone.
+        - Name: !Ref DomainName
+          Type: A
+          AliasTarget: { DNSName: !Ref PlayerDistribution, HostedZoneId: Z2FDTNDATAQYW2 }
+        - Name: !Ref DomainName
+          Type: AAAA
+          AliasTarget: { DNSName: !Ref PlayerDistribution, HostedZoneId: Z2FDTNDATAQYW2 }
+        # www goes to the player site too, which sends it on to the bare domain.
+        - Name: !Sub www.${DomainName}
+          Type: A
+          AliasTarget: { DNSName: !Ref PlayerDistribution, HostedZoneId: Z2FDTNDATAQYW2 }
+        - Name: !Sub www.${DomainName}
+          Type: AAAA
+          AliasTarget: { DNSName: !Ref PlayerDistribution, HostedZoneId: Z2FDTNDATAQYW2 }
+        - Name: !Sub admin.${DomainName}
+          Type: A
+          AliasTarget: { DNSName: !Ref AdminDistribution, HostedZoneId: Z2FDTNDATAQYW2 }
+        - Name: !Sub admin.${DomainName}
+          Type: AAAA
+          AliasTarget: { DNSName: !Ref AdminDistribution, HostedZoneId: Z2FDTNDATAQYW2 }
+        # Text records on the bare domain. There can be only one TXT record set per name, so
+        # every value goes in this one list, each in its own double quotes.
+        - Name: !Ref DomainName
+          Type: TXT
+          TTL: '300'
+          ResourceRecords:
+            # Proves to Google Search Console that we own the domain. Must stay for as long as
+            # the site is registered there.
+            - '"google-site-verification=plML1M9_CAiyCzN5jSmR_juizIbP4kw33PGgr9AkNKs"'
+            # Says which servers may send mail as @africangamehub.com: Spacemail's, and nobody
+            # else's ("~all" = treat anything else as suspect).
+            - '"v=spf1 include:spf.spacemail.com ~all"'
+        # Mail for @africangamehub.com is handled by Spacemail (Spaceship's mail service). These
+        # two say where to deliver it; equal priority, so either server may be used.
+        - Name: !Ref DomainName
+          Type: MX
+          TTL: '300'
+          ResourceRecords:
+            - 0 mx1.spacemail.com
+            - 0 mx2.spacemail.com
+        # Lets mail apps find their settings from the address alone.
+        - Name: !Sub _autodiscover._tcp.${DomainName}
+          Type: SRV
+          TTL: '300'
+          ResourceRecords:
+            - 0 0 443 autoconfig.spacemail.com
+        # What receivers should do with mail that fails the checks: nothing yet (p=none), but
+        # send reports to us, so we can see who is sending as the domain before tightening it.
+        - Name: !Sub _dmarc.${DomainName}
+          Type: TXT
+          TTL: '300'
+          ResourceRecords:
+            - '"v=DMARC1; p=none; rua=mailto:admin@africangamehub.com"'
+        # The public half of the key Spacemail signs our outgoing mail with (DKIM), so receivers
+        # can check a message really came from us. One value, written as two quoted pieces on
+        # one line because a single piece may be at most 255 characters; receivers join them.
+        - Name: !Sub spacemail._domainkey.${DomainName}
+          Type: TXT
+          TTL: '300'
+          ResourceRecords:
+            - '"v=DKIM1;k=rsa;p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtw9+KgWxYRxl78pW7aOWIMjXaTYKIxdOHHDmgj2tg38AQTdI84HQecGoNpFyLRDSlRe3Id11c1zqK4BY2VJ5aMJRNUPjblO98ZRpRslCa+0XNsX1w/IJodxBnQO7qd5sleQ2GEB+m6E9" "axefKJoHlBfshSUpkT6qkZRwyLUSAyBssf0HzDOJeEtprxijBM6azWVXkdOBaHV1pdncynmyQPn/pGWeyC3fS3ORugbpavqH9iaWnje1nCaBG2Z3kE0sWxohVQTSJURL2XXKJx8icPvyVFHd91sFlsCbI9bW96s1wctKXq+5N7nyiJijAdNo6tmUq3d3MEtBjvFDnrfYrQIDAQAB"'
+        # The name CloudFront uses to reach the game server machine, so that the machine can
+        # hold a real certificate for it and the hop is encrypted. Players never use this name,
+        # and the machine's firewall admits CloudFront only.
+        - Name: !Sub origin.${DomainName}
+          Type: A
+          TTL: '300'
+          ResourceRecords: [!Ref GameServerIp]
+
+  CertificateCheck:
+    Type: AWS::Route53::RecordSet
+    Condition: HasCertificateCheck
+    Properties:
+      HostedZoneId: !Ref Zone
+      Name: !Ref CertificateCheckName
+      Type: CNAME
+      TTL: '300'
+      ResourceRecords: [!Ref CertificateCheckValue]
+
+Outputs:
+  ZoneId:
+    Value: !Ref Zone
+  NameServers:
+    Description: Enter these four at the registrar (Spaceship) as the domain's nameservers
+    Value: !Join [', ', !GetAtt Zone.NameServers]

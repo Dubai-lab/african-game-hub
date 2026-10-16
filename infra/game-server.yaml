@@ -9,12 +9,32 @@ Parameters:
     Type: String
     Default: pl-c0aa4fa9
     Description: AWS's list of CloudFront's own addresses in this Region (com.amazonaws.global.cloudfront.origin-facing).
+  # A fixed image on purpose. (Asking for "the latest Amazon Linux" here would make CloudFormation
+  # replace the machine on the first stack update after Amazon publishes a new one.) This is
+  # Amazon Linux 2023 for ARM in af-south-1 as of October 2026; the machine updates its own
+  # packages. To move to a newer image deliberately, change this and expect a new machine.
   ImageId:
-    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
-    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64
+    Type: AWS::EC2::Image::Id
+    Default: ami-02b189c4739e144fb
   Repository:
     Type: String
     Default: https://github.com/Dubai-lab/african-game-hub.git
+  OriginHost:
+    Type: String
+    Default: origin.africangamehub.com
+    Description: The name CloudFront uses to reach this machine (a record in the agh-dns stack). The machine holds a Let's Encrypt certificate for it, so the hop from CloudFront is encrypted.
+  ZoneId:
+    Type: String
+    Default: Z031568637Z9ZFKS4R2DH
+    Description: The Route 53 zone of the domain (output ZoneId of the agh-dns stack). The machine proves it owns OriginHost by writing one record there.
+  OpenPlainPort:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: true also admits CloudFront on the unencrypted port 8080. Only for the moment of moving from the old setup; leave false.
+
+Conditions:
+  PlainPortOpen: !Equals [!Ref OpenPlainPort, 'true']
 
 Resources:
   # What the machine itself is allowed to do: be managed without SSH, read its own secrets,
@@ -60,6 +80,20 @@ Resources:
                 Effect: Allow
                 Action: s3:PutObject
                 Resource: !Sub ${BackupBucket.Arn}/ledger/*
+              # Its own certificate (Let's Encrypt): the machine proves it owns its name by writing
+              # one TXT record, and may write that record only.
+              - Sid: FindTheZone
+                Effect: Allow
+                Action: [route53:ListHostedZones, route53:GetChange]
+                Resource: '*'
+              - Sid: ProveOwnership
+                Effect: Allow
+                Action: route53:ChangeResourceRecordSets
+                Resource: !Sub arn:aws:route53:::hostedzone/${ZoneId}
+                Condition:
+                  ForAllValues:StringEquals:
+                    route53:ChangeResourceRecordSetsNormalizedRecordNames: [!Sub '_acme-challenge.${OriginHost}']
+                    route53:ChangeResourceRecordSetsRecordTypes: [TXT]
               - Sid: ReportHealth
                 Effect: Allow
                 Action: cloudwatch:PutMetricData
@@ -73,17 +107,33 @@ Resources:
     Properties:
       Roles: [!Ref ServerRole]
 
-  # The only way in is from CloudFront, on the server's port. No SSH.
+  # The only way in is from CloudFront, on the encrypted port. No SSH.
+  # (Two groups because CloudFront's address list is long: one group cannot hold it twice.)
   ServerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
+      # (The description cannot be changed without replacing the group. It dates from when this
+      # was the only door; today the group holds the old unencrypted port, normally closed.)
       GroupDescription: Game server - reachable from CloudFront only
+      SecurityGroupIngress: !If
+        - PlainPortOpen
+        - - IpProtocol: tcp
+            FromPort: 8080
+            ToPort: 8080
+            SourcePrefixListId: !Ref CloudFrontPrefixList
+            Description: CloudFront to the game server
+        - !Ref AWS::NoValue
+
+  ServerTlsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Game server - reachable from CloudFront only, encrypted
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: 8080
-          ToPort: 8080
+          FromPort: 443
+          ToPort: 443
           SourcePrefixListId: !Ref CloudFrontPrefixList
-          Description: CloudFront to the game server
+          Description: CloudFront to the game server over TLS
 
   # Where the nightly copy of the books is kept (see server/README.md and
   # infra/game-server/agh-backup.sh). Private, encrypted, and versioned so a file can never be
@@ -145,7 +195,11 @@ Resources:
       InstanceType: t4g.micro
       ImageId: !Ref ImageId
       IamInstanceProfile: !Ref ServerProfile
-      SecurityGroupIds: [!GetAtt ServerSecurityGroup.GroupId]
+      # WARNING: changing this list makes CloudFormation REPLACE the machine (a new one is built
+      # and the old one deleted; it happened on 10 October 2026). Nothing is lost, since the
+      # machine keeps nothing of its own, but the server is away until "npm run deploy:server"
+      # has been run again. Change the rules inside the groups instead; that touches nothing.
+      SecurityGroupIds: [!GetAtt ServerSecurityGroup.GroupId, !GetAtt ServerTlsSecurityGroup.GroupId]
       MetadataOptions:
         HttpTokens: required
       BlockDeviceMappings:
@@ -358,6 +412,23 @@ Resources:
       EvaluationPeriods: 1
       Threshold: 1
       ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Alerts]
+
+  # The machine renews its own certificate about a month before it runs out. If that has not
+  # happened with 20 days left, something is wrong and there is still time to fix it.
+  CertificateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: agh-game-server-certificate
+      AlarmDescription: The game server's certificate has under 20 days left and has not renewed itself. When it runs out, CloudFront can no longer reach the server and players fall back to the Edge Functions. On the machine run "certbot renew" and read its output.
+      Namespace: AGH/GameServer
+      MetricName: CertificateDaysLeft
+      Statistic: Minimum
+      Period: 3600
+      EvaluationPeriods: 1
+      Threshold: 20
+      ComparisonOperator: LessThanThreshold
       TreatMissingData: notBreaching
       AlarmActions: [!Ref Alerts]
 

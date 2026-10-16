@@ -168,11 +168,15 @@ The game server (`server/`, see its README) runs on one small machine in `af-sou
 
 **Exactly one copy.** There is no load balancer and no auto-scaling. Docker restarts the container if it crashes, and AWS restarts or moves the machine if it stops responding.
 
-**Secrets** are in Parameter Store in `af-south-1`, encrypted, under `/agh/game-server/`: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `APP_ORIGINS`, `ORIGIN_SECRET`. The machine reads them each time a version is started; they are never in the image or the repository. After changing one, run `npm run deploy:server` again so the server picks it up. `ORIGIN_SECRET` is also held by the player stack (parameter `GameServerSecret`), so changing it means updating both.
+**Secrets** are in Parameter Store in `af-south-1`, encrypted, under `/agh/game-server/`: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `GAME_SERVER_KEY`, `APP_ORIGINS`, `ORIGIN_SECRET`. Everything under that path is handed to the server, so nothing else belongs there, and the full-access `SUPABASE_SERVICE_ROLE_KEY` must never be put back. The machine reads them each time a version is started; they are never in the image or the repository. After changing one, run `npm run deploy:server` again so the server picks it up. `ORIGIN_SECRET` is also held by the player stack (parameter `GameServerSecret`), so changing it means updating both.
 
 **Publishing.** The commit must be pushed to GitHub first. The machine fetches it, builds the image from the repository root, stops the running container (which tells its players it is restarting) and starts the new one. If the new one does not report healthy within a minute, the previous image is started again and the command fails. While the server is away the app plays through the Edge Functions.
 
 **Switching the app over.** The player site uses the server only when it is built with `VITE_GAME_SERVER_URL=wss://d2xirivzgoo9lw.cloudfront.net/ws`.
+
+**The machine's own programs** are in `infra/game-server/` and are copied to the machine by every `npm run deploy:server`, so changing one needs only that command.
+
+**The nightly copy of the books.** At 01:30 UTC the machine runs `server/backup.mjs` (through `infra/game-server/agh-backup.sh`), puts the file in the private bucket named in the stack's `BackupBucket` output, under `ledger/`, and deletes its local copy. The bucket is encrypted and versioned, keeps files for a year, and is not deleted with the stack. The machine may only add files to it: it cannot read, list or delete them. The backup's key is kept apart from the server's, at `/agh/ledger-backup/LEDGER_BACKUP_KEY`. To run it by hand: `systemctl start agh-backup` on the machine, then `journalctl -u agh-backup` for the line it prints. Two alarms watch it: `agh-ledger-backup-failed` (the script ended with an error; exit code 2 means a wallet does not equal its ledger and is an incident) and `agh-ledger-backup-missing` (no new file in 26 hours).
 
 **Alarms** (emailed): the server has not reported healthy for 3 minutes; Docker restarted it 3 times in 15 minutes; memory above 85% for 5 minutes; an out-of-memory message in the logs; AWS's hardware and machine checks (which also recover or reboot it).
 
@@ -181,6 +185,26 @@ The game server (`server/`, see its README) runs on one small machine in `af-sou
 **Stopping it in an emergency.** Stop the machine (`aws ec2 stop-instances --instance-ids <id> --region af-south-1 --profile myprofile`): the app falls back to the Edge Functions by itself. `npm run aws:off -- --site player` also cuts it off, along with the player site.
 
 **Removing it.** First update the `agh-player` stack with `GameServerOrigin` set to empty, then delete the `agh-game-server` stack and the four parameters.
+
+## 4e. The domain (africangamehub.com)
+
+Since 10 October 2026 the sites live on their own domain. Where sections 4c and 4d give `cloudfront.net` addresses, these are the addresses people use now:
+
+| | Address |
+| --- | --- |
+| Player site | https://africangamehub.com (`www.africangamehub.com` redirects to it) |
+| Admin site | https://admin.africangamehub.com |
+| Game server | `wss://africangamehub.com/ws` |
+
+**DNS.** The domain is registered at Spaceship, whose only job is to name four AWS nameservers. Every record is in Route 53, in the stack `agh-dns` (`infra/dns.yaml`, Region `eu-north-1`). Route 53 is used because the bare domain cannot be a CNAME; its "alias" records can point it at CloudFront. To add or change a record, edit that file and update the stack. Deleting the stack keeps the zone, on purpose: a new zone would have different nameservers.
+
+**Certificates.** The two sites share one free AWS certificate for `africangamehub.com` and `*.africangamehub.com`. It is in `us-east-1` (the only Region CloudFront reads certificates from) and renews itself as long as its check record stays in the zone. Each site's stack takes the names it answers to (`SiteDomain`, `Aliases`) and the certificate (`CertificateArn`) as parameters. `deploy.sh` builds each site for the address in its stack's `SiteUrl` output, and the player site's game server address is that same host with `/ws`.
+
+**The hop to the game server is encrypted.** CloudFront reaches the machine as `https://origin.africangamehub.com` on port 443. On the machine, nginx holds a Let's Encrypt certificate for that name and hands `/ws`, and nothing else, to the server on `127.0.0.1:8080` (`infra/game-server/agh-tls.sh`, run by every `npm run deploy:server`). The certificate is proved by a DNS record, so no port is open to the world; certbot's own timer renews it, and the alarm `agh-game-server-certificate` emails if fewer than 20 days are left. The machine's firewall admits CloudFront on port 443 only.
+
+**The old addresses** (`d2xirivzgoo9lw.cloudfront.net`, `d2hp5w4slz51xb.cloudfront.net`) still work. Setting `RedirectOldAddress=true` on a site's stack sends its old address to the new one.
+
+**Two things that replace the game server machine** if changed in `infra/game-server.yaml`: the list of firewall groups on the machine, and its image. Both carry a warning in the file. A replaced machine is empty until `npm run deploy:server` has been run.
 
 ## 5. Before real players arrive
 

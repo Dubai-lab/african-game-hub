@@ -16,6 +16,23 @@ Parameters:
     Default: 'true'
     AllowedValues: ['true', 'false']
     Description: The kill switch. false takes the site offline (CloudFront stops serving it, so it stops costing anything) without deleting it. See infra/kill-switch.ps1.
+  SiteDomain:
+    Type: String
+    Default: ''
+    Description: The site's own address, for example africangamehub.com. Empty for none (the site then lives on its cloudfront.net address only). Any other name the site is reached by is redirected to this one.
+  Aliases:
+    Type: CommaDelimitedList
+    Default: ''
+    Description: Every custom name this site answers to, SiteDomain included, for example "africangamehub.com,www.africangamehub.com". Each needs a record in infra/dns.yaml.
+  CertificateArn:
+    Type: String
+    Default: ''
+    Description: The certificate for those names. CloudFront only accepts one from us-east-1.
+  RedirectOldAddress:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: true also sends visitors of the old cloudfront.net address to SiteDomain. false keeps the old address working as it is.
   GameServerOrigin:
     Type: String
     Default: ''
@@ -25,10 +42,17 @@ Parameters:
     Default: ''
     NoEcho: true
     Description: Sent to the game server as the X-Origin-Secret header, so it can tell CloudFront from anyone else. The same value as the parameter /agh/game-server/ORIGIN_SECRET in af-south-1.
+  GameServerEncryption:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: true reaches the game server over HTTPS on port 443 (GameServerOrigin must then be the name its certificate is for). false is the old unencrypted port 8080.
 
 Conditions:
   IsHardened: !Equals [!Ref Hardened, 'true']
   HasGameServer: !Not [!Equals [!Ref GameServerOrigin, '']]
+  HasDomain: !Not [!Equals [!Ref SiteDomain, '']]
+  GameServerEncrypted: !Equals [!Ref GameServerEncryption, 'true']
 
 Resources:
   # The files live here. The bucket is private: nobody can read it directly, only CloudFront can.
@@ -73,6 +97,24 @@ Resources:
         function handler(event) {
           var request = event.request;
           var uri = request.uri;
+          // One address only: www (and, once switched on, the old cloudfront.net address) is
+          // sent to the site's own name, keeping the page and anything after the question mark.
+          var site = '${SiteDomain}';
+          var host = request.headers.host ? request.headers.host.value : '';
+          var old = host.slice(-15) === '.cloudfront.net';
+          if (site && host && host !== site && (!old || ${RedirectOldAddress})) {
+            var query = [];
+            for (var key in request.querystring) {
+              var entry = request.querystring[key];
+              var values = entry.multiValue ? entry.multiValue : [entry];
+              for (var i = 0; i < values.length; i++) query.push(values[i].value === '' ? key : key + '=' + values[i].value);
+            }
+            return {
+              statusCode: 301,
+              statusDescription: 'Moved Permanently',
+              headers: { location: { value: 'https://' + site + uri + (query.length ? '?' + query.join('&') : '') } }
+            };
+          }
           if (uri === '/' || uri.indexOf('.') !== -1) return request;
           if (/^\/(assets|engine|sounds|landing)\//.test(uri)) return request;
           request.uri = '${ShellPath}';
@@ -80,7 +122,8 @@ Resources:
         }
 
   # Admin site only: nothing may be loaded from anywhere but the site itself and Supabase,
-  # it may not be framed, and search engines are told to stay away.
+  # it may not be framed, and search engines are told to stay away. The one exception is the
+  # human check on sign-in (Cloudflare Turnstile): its script, and the frame it draws itself in.
   HardenedHeaders:
     Type: AWS::CloudFront::ResponseHeadersPolicy
     Condition: IsHardened
@@ -89,7 +132,7 @@ Resources:
         Name: !Sub ${AWS::StackName}-headers
         SecurityHeadersConfig:
           ContentSecurityPolicy:
-            ContentSecurityPolicy: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+            ContentSecurityPolicy: "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
             Override: true
           ContentTypeOptions:
             Override: true
@@ -116,6 +159,13 @@ Resources:
         Enabled: !Ref Enabled
         Comment: !Sub ${AWS::StackName} African Game Hub
         DefaultRootObject: index.html
+        Aliases: !If [HasDomain, !Ref Aliases, !Ref AWS::NoValue]
+        ViewerCertificate: !If
+          - HasDomain
+          - AcmCertificateArn: !Ref CertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - !Ref AWS::NoValue
         HttpVersion: http2and3
         IPV6Enabled: true
         # Includes the edge locations in South Africa, Kenya and Nigeria.
@@ -135,7 +185,9 @@ Resources:
               DomainName: !Ref GameServerOrigin
               CustomOriginConfig:
                 HTTPPort: 8080
-                OriginProtocolPolicy: http-only
+                HTTPSPort: 443
+                OriginProtocolPolicy: !If [GameServerEncrypted, https-only, http-only]
+                OriginSSLProtocols: [TLSv1.2]
                 # The server pings every 25 seconds; these are comfortably above that.
                 OriginReadTimeout: 60
                 OriginKeepaliveTimeout: 60
@@ -195,5 +247,8 @@ Outputs:
     Description: CloudFront distribution ID (used to clear the cache)
     Value: !Ref SiteDistribution
   SiteUrl:
-    Description: Public HTTPS address of the site
-    Value: !Sub https://${SiteDistribution.DomainName}
+    Description: Public HTTPS address of the site (the deploy script builds the site for this address)
+    Value: !If [HasDomain, !Sub 'https://${SiteDomain}', !Sub 'https://${SiteDistribution.DomainName}']
+  DistributionDomain:
+    Description: The distribution's own cloudfront.net address (what the DNS records point at)
+    Value: !GetAtt SiteDistribution.DomainName

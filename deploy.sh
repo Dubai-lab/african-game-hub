@@ -51,13 +51,20 @@ if [ "$skip_build" = 0 ]; then
   # A variable set here wins over the same line in .env.local, so link previews carry the real
   # address instead of localhost. The Supabase URL and anon key still come from .env.local.
   export VITE_SITE_URL="$site_url"
+  # Both sites: the human check on sign-up and sign-in (Cloudflare Turnstile). This is the public
+  # half of the key; the secret half is in Supabase (Authentication > Attack Protection). Also
+  # not in .env.local, so the site on a developer's machine has no check to get past. The admin
+  # site's Content-Security-Policy (infra/site.yaml) names Cloudflare for the same reason.
+  export VITE_TURNSTILE_SITE_KEY='0x4AAAAAAFS23OxQyaz4AT07'
   if [ "$site" = admin ]; then
     npm --prefix "$root/admin" run build
   else
     # Player site only: live games use the game server in Cape Town (see server/README.md). It is
     # set here and not in .env.local, so the site on a developer's machine keeps using the Edge
     # Functions. To switch the game server off for players, remove this line and deploy again.
-    export VITE_GAME_SERVER_URL='wss://d2xirivzgoo9lw.cloudfront.net/ws'
+    # Its address is the /ws path of the player site itself (see infra/site.yaml).
+    host=${site_url#*://}; host=${host%%/*}
+    export VITE_GAME_SERVER_URL="wss://$host/ws"
     npm --prefix "$root" run build
   fi
 fi
@@ -81,15 +88,24 @@ step 'Uploading'
 # Old hashed files are left in place on purpose: a phone still running yesterday's page can
 # finish loading it. They cost nothing measurable.
 aws s3 sync "$dist/assets" "$s3/assets" --cache-control "$forever" "${common[@]}"
+# Every other folder in the build (sounds, engine, landing, fonts, games, and any added later)
+# holds files whose names do not change with their content: kept for a month.
+folders=()
+for path in "$dist"/*/; do
+  name=$(basename "$path")
+  [ "$name" != assets ] && folders+=("$name")
+done
 if [ "$site" = player ]; then
-  for folder in sounds engine landing; do
+  for folder in "${folders[@]}"; do
     aws s3 sync "$dist/$folder" "$s3/$folder" --cache-control "$month" --exclude '*.wasm' --delete "${common[@]}"
   done
   # Browsers only compile WebAssembly quickly when it is labelled as such.
   aws s3 cp "$dist/engine" "$s3/engine" --recursive --exclude '*' --include '*.wasm' --content-type 'application/wasm' --cache-control "$month" "${common[@]}"
 fi
 # Everything at the top level: the entry pages, the service worker, the icons.
-aws s3 sync "$dist" "$s3" --cache-control "$recheck" --delete --exclude 'assets/*' --exclude 'sounds/*' --exclude 'engine/*' --exclude 'landing/*' --exclude '*.webmanifest' "${common[@]}"
+skip=(--exclude 'assets/*' --exclude '*.webmanifest')
+for folder in "${folders[@]}"; do skip+=(--exclude "$folder/*"); done
+aws s3 sync "$dist" "$s3" --cache-control "$recheck" --delete "${skip[@]}" "${common[@]}"
 if [ "$site" = player ]; then
   aws s3 cp "$dist/manifest.webmanifest" "$s3/manifest.webmanifest" --content-type 'application/manifest+json' --cache-control "$recheck" "${common[@]}"
 fi
@@ -97,7 +113,7 @@ fi
 # --- 5. Tell CloudFront the entry files changed -------------------------------------------------
 # Only the few files without a hash in their name. The first 1,000 paths a month are free.
 step 'Refreshing CloudFront'
-if [ "$site" = admin ]; then paths=(/ /index.html); else paths=(/ /index.html /app.html /sw.js /registerSW.js /manifest.webmanifest); fi
+if [ "$site" = admin ]; then paths=(/ /index.html); else paths=(/ /index.html /app.html /sw.js /push-sw.js /registerSW.js /manifest.webmanifest); fi
 invalidation=$(aws cloudfront create-invalidation --distribution-id "$dist_id" --paths "${paths[@]}" --profile "$profile" --query 'Invalidation.Id' --output text)
 echo "Invalidation $invalidation started (takes about a minute)"
 
