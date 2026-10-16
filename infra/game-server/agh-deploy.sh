@@ -1,5 +1,5 @@
 #!/bin/bash
-# Runs ON the game server machine (installed there by deploy-server.ps1 as /usr/local/bin/agh-deploy).
+# Runs ON the game server machine (installed there by deploy-server.sh as /usr/local/bin/agh-deploy).
 #
 #   agh-deploy <commit>
 #

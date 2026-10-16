@@ -1,5 +1,5 @@
 #!/bin/bash
-# Runs ON the game server machine, once a night (installed by deploy-server.ps1 as
+# Runs ON the game server machine, once a night (installed by deploy-server.sh as
 # /usr/local/bin/agh-backup, started by agh-backup.timer).
 #
 # Takes the nightly copy of the books with server/backup.mjs, puts the file in the private S3

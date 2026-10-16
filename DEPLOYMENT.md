@@ -134,7 +134,7 @@ Both sites are also hosted on AWS, in account profile `myprofile`, Region `eu-no
 
 **How it is built.** `infra/site.yaml` describes one site: a private S3 bucket that holds the files, and a CloudFront distribution in front of it that provides HTTPS, compression and caching close to the player. Only CloudFront may read the bucket. A small CloudFront Function sends app addresses such as `/lobby` to the entry file (`app.html` for players, `index.html` for admin). The same template is deployed twice; the admin copy has `Hardened=true`, which adds the strict security headers.
 
-**Publishing.** `deploy.ps1` reads the bucket and address from the stack, builds with that address, refuses to continue if a server-side secret from `.env.local` is found in the built files, uploads, and refreshes the few files whose names never change. If AWS reports an expired session, run `aws login --profile myprofile` first.
+**Publishing.** `deploy.sh` reads the bucket and address from the stack, builds with that address, refuses to continue if a server-side secret from `.env.local` is found in the built files, uploads, and refreshes the few files whose names never change. If AWS reports an expired session, run `aws login --profile myprofile` first.
 
 **Caching.** Files in `/assets/` have their content's fingerprint in their name, so they are kept for a year. Sounds, the chess engine and landing pictures are kept for 30 days. The entry pages and the service worker are always re-checked, which is how a new version reaches everyone. Files from earlier versions are left in the bucket so that a phone part-way through loading yesterday's version can finish.
 
@@ -142,7 +142,7 @@ Both sites are also hosted on AWS, in account profile `myprofile`, Region `eu-no
 
 **Cost.** Expected to be $0 a month: CloudFront's free allowance is 1 TB and 10 million requests a month across the whole account, and the two sites store under 4 MB. The budget `portfolio-monthly-1usd` covers the whole account and emails at 50% and 100% of $1 spent, and when the forecast passes $1. An alert only warns; it does not stop anything.
 
-**Kill switch.** `npm run aws:off` takes both sites offline without deleting them (`npm run aws:on` brings them back; add `-- -Site player` or `-- -Site admin` for one). An offline distribution serves nothing and costs nothing.
+**Kill switch.** `npm run aws:off` takes both sites offline without deleting them (`npm run aws:on` brings them back; add `-- --site player` or `-- --site admin` for one). An offline distribution serves nothing and costs nothing.
 
 **Removing everything.** Empty each bucket, then delete each stack:
 
@@ -161,7 +161,7 @@ The game server (`server/`, see its README) runs on one small machine in `af-sou
 | --- | --- |
 | Address players use | `wss://d2xirivzgoo9lw.cloudfront.net/ws` (the `/ws` path on the player site's CloudFront distribution) |
 | Machine | one `t4g.micro`, Amazon Linux, Docker; fixed address `13.245.60.78` |
-| Publish a new version | `npm run deploy:server` (the commit on `origin/main`), or `npm run deploy:server -- -Commit abc1234` |
+| Publish a new version | `npm run deploy:server` (the commit on `origin/main`), or `npm run deploy:server -- --commit abc1234` |
 | Logs | CloudWatch log group `/agh/game-server` in `af-south-1` (kept 14 days) |
 
 **How it is reached.** Browsers connect to CloudFront over `wss://`, which is what gives the server an encrypted address without a domain of its own. CloudFront passes `/ws` to the machine over plain HTTP on port 8080 and adds a secret header (`X-Origin-Secret`). The machine's firewall accepts connections from CloudFront's addresses only, and the server refuses any request without the header. There is no SSH; the machine is managed through AWS Systems Manager.
@@ -178,7 +178,7 @@ The game server (`server/`, see its README) runs on one small machine in `af-sou
 
 **Cost.** About $12.50 a month: the machine ($7.88), its public address ($3.65) and a 10 GB disk (about $1). The budget `account-monthly-15usd-before-credit` emails at 50%, 80% and 100% of $15.
 
-**Stopping it in an emergency.** Stop the machine (`aws ec2 stop-instances --instance-ids <id> --region af-south-1 --profile myprofile`): the app falls back to the Edge Functions by itself. `npm run aws:off -- -Site player` also cuts it off, along with the player site.
+**Stopping it in an emergency.** Stop the machine (`aws ec2 stop-instances --instance-ids <id> --region af-south-1 --profile myprofile`): the app falls back to the Edge Functions by itself. `npm run aws:off -- --site player` also cuts it off, along with the player site.
 
 **Removing it.** First update the `agh-player` stack with `GameServerOrigin` set to empty, then delete the `agh-game-server` stack and the four parameters.
 
