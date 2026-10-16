@@ -22,7 +22,7 @@ export default function AboutPage() {
 
   return (
     <div className="overflow-x-clip">
-      <section className="bg-primary text-surface">
+      <section className="rounded-none bg-primary text-fg">
         <div className={shell}>
           <header className="flex items-center justify-between gap-3 py-4">
             <Link to="/" className="font-display text-lg font-extrabold">
@@ -42,18 +42,18 @@ export default function AboutPage() {
       <main>
         {/* The mission, on its own, large. */}
         <section className={`${shell} py-14 lg:py-20`}>
-          <h2 className={`${heading} text-primary`}>{t('about.mission.title')}</h2>
+          <h2 className={`${heading} text-accent`}>{t('about.mission.title')}</h2>
           <p className="mt-5 max-w-3xl text-xl font-semibold leading-relaxed lg:text-2xl">{t('about.mission.body')}</p>
         </section>
 
         {/* What the hub is, in three. */}
-        <section className="bg-panel">
+        <section className="rounded-none bg-panel">
           <div className={`${shell} py-14 lg:py-20`}>
-            <h2 className={`${heading} text-primary`}>{t('about.built.title')}</h2>
+            <h2 className={`${heading} text-accent`}>{t('about.built.title')}</h2>
             <ul className="mt-8 grid gap-4 lg:grid-cols-3">
               {pillars.map((item, index) => (
-                <li key={item.title} className="border-2 border-ink bg-surface p-5">
-                  <span className={`inline-block px-2 py-0.5 text-sm font-extrabold ${index === 1 ? 'bg-brand text-brand-ink' : index === 2 ? 'bg-hibiscus text-white' : 'bg-primary text-surface'}`}>
+                <li key={item.title} className="border border-edge bg-surface p-5">
+                  <span className={`inline-block px-2 py-0.5 text-sm font-extrabold ${index === 1 ? 'bg-brand text-brand-ink' : index === 2 ? 'bg-hibiscus text-white' : 'bg-primary text-fg'}`}>
                     {String(index + 1).padStart(2, '0')}
                   </span>
                   <h3 className="mt-3 font-display text-2xl font-extrabold leading-tight">{item.title}</h3>
@@ -68,7 +68,7 @@ export default function AboutPage() {
         <Games playHref={playHref} />
 
         {/* What we hold ourselves to. */}
-        <section className="bg-primary text-surface">
+        <section className="rounded-none bg-primary text-fg">
           <div className={`${shell} py-14 lg:py-20`}>
             <h2 className={`${heading} text-brand`}>{t('about.promises.title')}</h2>
             <ol className="mt-6">
@@ -89,18 +89,18 @@ export default function AboutPage() {
 
         {FOUNDER.name && (
           <section className={`${shell} py-14 lg:py-20`} data-testid="about-founder">
-            <h2 className={`${heading} text-primary`}>{t('about.founder.title')}</h2>
+            <h2 className={`${heading} text-accent`}>{t('about.founder.title')}</h2>
             <figure className="mt-8 flex max-w-3xl flex-col gap-6 sm:flex-row sm:items-center">
               {FOUNDER.photo ? (
-                <img src={FOUNDER.photo} alt={FOUNDER.name} width={220} height={220} loading="lazy" className="size-44 shrink-0 border-4 border-ink object-cover sm:size-56" />
+                <img src={FOUNDER.photo} alt={FOUNDER.name} width={220} height={220} loading="lazy" className="size-44 shrink-0 border-4 border-edge object-cover sm:size-56" />
               ) : (
-                <span aria-hidden="true" className="flex size-44 shrink-0 items-center justify-center border-4 border-ink bg-brand font-display text-6xl font-extrabold text-brand-ink sm:size-56">
+                <span aria-hidden="true" className="flex size-44 shrink-0 items-center justify-center border-4 border-edge bg-brand font-display text-6xl font-extrabold text-brand-ink sm:size-56">
                   {FOUNDER.name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2)}
                 </span>
               )}
               <figcaption>
-                <p className="font-display text-3xl font-extrabold text-primary">{FOUNDER.name}</p>
-                <p className="mt-1 inline-block bg-primary px-2 py-0.5 text-sm font-bold text-surface">{t('about.founder.role')}</p>
+                <p className="font-display text-3xl font-extrabold text-accent">{FOUNDER.name}</p>
+                <p className="mt-1 inline-block bg-primary px-2 py-0.5 text-sm font-bold text-fg">{t('about.founder.role')}</p>
                 <p className="mt-4 text-lg text-muted">{t('about.founder.body')}</p>
               </figcaption>
             </figure>
@@ -108,7 +108,7 @@ export default function AboutPage() {
         )}
 
         {/* Last: the one thing to do next. */}
-        <section className="bg-brand text-brand-ink">
+        <section className="rounded-none bg-brand text-brand-ink">
           <div className={`${shell} flex flex-col items-start gap-5 py-14 lg:flex-row lg:items-center lg:justify-between lg:py-20`}>
             <div>
               <h2 className={heading}>{t('about.cta.title')}</h2>
@@ -124,7 +124,7 @@ export default function AboutPage() {
             </div>
             <Link
               to={playHref}
-              className="flex min-h-14 w-full items-center justify-center rounded-lg border-2 border-ink bg-ink px-8 text-lg font-bold text-surface hover:bg-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink sm:w-auto"
+              className="flex min-h-14 w-full items-center justify-center rounded-lg border border-edge bg-ink px-8 text-lg font-bold text-fg hover:bg-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edge sm:w-auto"
             >
               {signedIn ? t('landing.goToLobby') : t('about.cta.button')}
             </Link>

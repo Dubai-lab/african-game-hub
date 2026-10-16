@@ -4,7 +4,7 @@ import { type ToastKind, useToastStore } from './toast'
 const kindClass: Record<ToastKind, string> = {
   error: 'bg-danger text-white',
   success: 'bg-palm text-white',
-  info: 'bg-ink text-surface',
+  info: 'glass border border-line text-fg',
 }
 
 export function Toaster() {
@@ -24,7 +24,7 @@ export function Toaster() {
           role={item.kind === 'error' ? 'alert' : 'status'}
           aria-label={`${item.message} (${t('common.dismiss')})`}
           onClick={() => dismiss(item.id)}
-          className={`toast-in pointer-events-auto w-full max-w-sm rounded-lg px-4 py-3 text-start text-sm font-medium shadow-lg ${kindClass[item.kind]}`}
+          className={`toast-in pointer-events-auto w-full max-w-sm rounded-2xl px-4 py-3 text-start text-sm font-medium shadow-lg ${kindClass[item.kind]}`}
         >
           {item.message}
         </button>

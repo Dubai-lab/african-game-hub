@@ -20,7 +20,7 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-8 lg:max-w-2xl">
-      <h1 className="font-display text-3xl font-extrabold text-primary lg:text-4xl">{t('settings.title')}</h1>
+      <h1 className="font-display text-3xl font-extrabold text-accent lg:text-4xl">{t('settings.title')}</h1>
 
       <section aria-labelledby="settings-general">
         <h2 id="settings-general" className={sectionTitle}>
@@ -80,7 +80,7 @@ export default function SettingsPage() {
         </section>
       )}
 
-      <nav aria-label={t('settings.about')} className="flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-primary">
+      <nav aria-label={t('settings.about')} className="flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-accent">
         <Link to="/about" className="underline underline-offset-4">
           {t('about.link')}
         </Link>

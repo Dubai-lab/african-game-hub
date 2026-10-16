@@ -199,7 +199,7 @@ export function MatchChat({ matchId, names, gameId, onQuickSent, ended = false, 
           className="pointer-events-none fixed inset-x-0 top-16 z-40 flex justify-center px-4"
           data-testid="chat-pop"
         >
-          <p className="toast-in max-w-sm border-2 border-ink bg-panel px-4 py-2 text-center shadow-lg">
+          <p className="toast-in max-w-sm border border-edge bg-panel px-4 py-2 text-center shadow-lg">
             <span className="block text-xs font-semibold text-muted">{names[pop.senderId] ?? ''}</span>
             <span className={pop.kind === 'emoji' ? 'text-5xl leading-tight' : 'break-words font-semibold'}>{said(pop)}</span>
           </p>
@@ -210,13 +210,13 @@ export function MatchChat({ matchId, names, gameId, onQuickSent, ended = false, 
         <h2 className="text-sm font-semibold text-muted">{t('chat.matchTitle')}</h2>
         <div className="flex items-center gap-4">
           {opponentIds.map((id) => (
-            <button key={id} type="button" className="min-h-8 text-sm font-semibold text-primary underline underline-offset-4" onClick={() => setReporting(id)}>
+            <button key={id} type="button" className="min-h-8 text-sm font-semibold text-accent underline underline-offset-4" onClick={() => setReporting(id)}>
               {opponentIds.length > 1 ? t('safety.reportNamed', { name: names[id] }) : t('safety.report')}
             </button>
           ))}
           <button
             type="button"
-            className="min-h-8 text-sm font-semibold text-primary underline underline-offset-4"
+            className="min-h-8 text-sm font-semibold text-accent underline underline-offset-4"
             onClick={() => void setting.set(!mine)}
           >
             {mine ? t('chat.turnOff') : t('chat.turnOn')}
@@ -243,7 +243,7 @@ export function MatchChat({ matchId, names, gameId, onQuickSent, ended = false, 
                 role="tab"
                 aria-selected={tab === name}
                 onClick={() => setTab(name)}
-                className={`-mb-0.5 min-h-10 border-b-4 text-sm font-bold ${tab === name ? 'border-primary text-primary' : 'border-transparent text-muted'}`}
+                className={`-mb-0.5 min-h-10 border-b-4 text-sm font-bold ${tab === name ? 'border-accent text-accent' : 'border-transparent text-muted'}`}
               >
                 {t(`chat.tab.${name}`)}
               </button>

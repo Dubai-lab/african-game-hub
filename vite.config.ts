@@ -54,8 +54,8 @@ export default defineConfig({
         start_url: '/lobby',
         display: 'standalone',
         orientation: 'portrait',
-        background_color: '#eef0fa',
-        theme_color: '#1f2a7a',
+        background_color: '#0b1036',
+        theme_color: '#0b1036',
         icons: [
           { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },

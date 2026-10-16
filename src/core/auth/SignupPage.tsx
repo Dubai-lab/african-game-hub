@@ -151,7 +151,7 @@ export default function SignupPage() {
             onChange={(e) => setChosenCountry(e.target.value)}
             disabled={countries.length === 0}
             aria-invalid={errors.countryCode ? true : undefined}
-            className={`mt-1 block min-h-12 w-full rounded-lg border bg-panel px-3 text-base text-ink outline-none focus:border-primary focus:ring-2 focus:ring-primary/30 ${errors.countryCode ? 'border-danger' : 'border-line'}`}
+            className={`mt-1 block min-h-12 w-full rounded-lg border bg-panel px-3 text-base text-fg outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 ${errors.countryCode ? 'border-danger' : 'border-line'}`}
           >
             <option value="">{countriesLoading ? t('auth.countryLoading') : t('auth.countryPlaceholder')}</option>
             {countries.map((c) => (
@@ -161,14 +161,14 @@ export default function SignupPage() {
             ))}
           </select>
           {countriesFailed ? (
-            <p className="mt-1 text-sm text-danger">
+            <p className="mt-1 text-sm text-alert">
               {t('auth.countryLoadFailed')}{' '}
               <button type="button" onClick={() => void reloadCountries()} className="font-semibold underline">
                 {t('common.retry')}
               </button>
             </p>
           ) : errors.countryCode ? (
-            <p className="mt-1 text-sm text-danger">{t(errors.countryCode)}</p>
+            <p className="mt-1 text-sm text-alert">{t(errors.countryCode)}</p>
           ) : (
             <p className="mt-1 text-sm text-muted">{t('auth.countryHint')}</p>
           )}
@@ -186,7 +186,7 @@ export default function SignupPage() {
               }}
             />
           </div>
-          {errors.gender && <p className="mt-1 text-sm text-danger">{t(errors.gender)}</p>}
+          {errors.gender && <p className="mt-1 text-sm text-alert">{t(errors.gender)}</p>}
         </fieldset>
         <TextField
           label={t('auth.email')}
@@ -214,18 +214,18 @@ export default function SignupPage() {
               checked={isAdult}
               onChange={(e) => setIsAdult(e.target.checked)}
               aria-invalid={errors.isAdult ? true : undefined}
-              className="size-5 shrink-0 accent-primary"
+              className="size-5 shrink-0 accent-brand"
             />
             <span>{t('auth.ageConfirm')}</span>
           </label>
-          {errors.isAdult && <p className="mt-1 text-sm text-danger">{t(errors.isAdult)}</p>}
+          {errors.isAdult && <p className="mt-1 text-sm text-alert">{t(errors.isAdult)}</p>}
         </div>
         <p className="text-sm text-muted">
           <Trans
             i18nKey="auth.consent"
             components={{
-              terms: <Link to="/terms" target="_blank" className="font-semibold text-primary underline" />,
-              privacy: <Link to="/privacy" target="_blank" className="font-semibold text-primary underline" />,
+              terms: <Link to="/terms" target="_blank" className="font-semibold text-accent underline" />,
+              privacy: <Link to="/privacy" target="_blank" className="font-semibold text-accent underline" />,
             }}
           />
         </p>
@@ -236,7 +236,7 @@ export default function SignupPage() {
       </form>
       <p className="mt-6 text-sm text-muted">
         {t('auth.haveAccount')}{' '}
-        <Link to="/login" state={location.state} className="font-semibold text-primary underline">
+        <Link to="/login" state={location.state} className="font-semibold text-accent underline">
           {t('auth.loginButton')}
         </Link>
       </p>

@@ -79,7 +79,7 @@ export default function FriendPage() {
     await queryClient.invalidateQueries({ queryKey: ['my-challenge'] })
   }
 
-  const pick = (on: boolean) => `flex min-h-12 items-center border-2 px-3 text-start font-bold ${on ? 'border-ink bg-brand text-brand-ink' : 'border-line bg-panel'}`
+  const pick = (on: boolean) => `flex min-h-12 items-center border px-3 text-start font-bold ${on ? 'border-edge bg-brand text-brand-ink' : 'border-line bg-panel'}`
 
   return (
     <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-x-10">
@@ -90,12 +90,12 @@ export default function FriendPage() {
         <WalletSummary profile={profile.data} />
       </div>
 
-      <div className="flex flex-col gap-6 lg:border-2 lg:border-line lg:bg-panel lg:p-6">
+      <div className="flex flex-col gap-6 lg:border lg:border-line lg:bg-panel lg:p-6">
         {waiting ? (
           <section aria-live="polite" className="flex flex-col gap-4" data-testid="challenge-waiting">
             <div className="flex items-center gap-3">
-              <span className="size-8 shrink-0 animate-spin rounded-full border-4 border-line border-t-primary motion-reduce:animate-none" aria-hidden="true" />
-              <h2 className="font-display text-xl font-extrabold text-primary">{challenge.toName ? t('challenge.waitingFor', { name: challenge.toName }) : t('challenge.waitingLink')}</h2>
+              <span className="size-8 shrink-0 animate-spin rounded-full border-4 border-line border-t-accent motion-reduce:animate-none" aria-hidden="true" />
+              <h2 className="font-display text-xl font-extrabold text-accent">{challenge.toName ? t('challenge.waitingFor', { name: challenge.toName }) : t('challenge.waitingLink')}</h2>
             </div>
             <p className="text-sm text-muted">{t('challenge.expires')}</p>
             <ShareLink path={`/challenge/${challenge.id}`} text={t('challenge.shareText', { game: gameName })} />
@@ -120,7 +120,7 @@ export default function FriendPage() {
               <p className="mt-2 text-sm text-muted">
                 {chosen === null ? t('challenge.anyoneHint') : t('challenge.friendHint')}{' '}
                 {friends.length === 0 && (
-                  <Link to="/friends" className="font-semibold text-primary underline underline-offset-4">
+                  <Link to="/friends" className="font-semibold text-accent underline underline-offset-4">
                     {t('play.home.findFriends')}
                   </Link>
                 )}

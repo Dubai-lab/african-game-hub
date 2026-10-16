@@ -31,8 +31,8 @@ export type TablePlayer = { seat: Seat; name: string; countryCode?: string | nul
 export function Sheet({ title, children, onClose }: { title: string; children: ReactNode; onClose?: () => void }) {
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center bg-ink/55 sm:items-center" onClick={onClose} role="presentation">
-      <div role="dialog" aria-modal="true" aria-label={title} onClick={(event) => event.stopPropagation()} className="max-h-[92dvh] w-full max-w-md overflow-y-auto border-t-4 border-brand bg-panel px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:border-4">
-        <h2 className="font-display text-2xl font-extrabold text-primary">{title}</h2>
+      <div role="dialog" aria-modal="true" aria-label={title} onClick={(event) => event.stopPropagation()} className="max-h-[92dvh] w-full max-w-md overflow-y-auto glass rounded-t-3xl border-t border-line px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:rounded-3xl sm:border">
+        <h2 className="font-display text-2xl font-extrabold text-accent">{title}</h2>
         {children}
       </div>
     </div>
@@ -393,7 +393,7 @@ export function WordsTable({ title, backTo, view, rack, players, mySeat, deadlin
     const gone = view.out.includes(seat)
     const toMove = !over && view.turn === seat
     return (
-      <div className={`flex shrink-0 items-center gap-2 border-2 px-1.5 py-1 ${toMove ? 'border-ink bg-panel' : 'border-transparent'} ${gone ? 'opacity-50' : ''}`} {...seatFacts(seat)}>
+      <div className={`flex shrink-0 items-center gap-2 border px-1.5 py-1 ${toMove ? 'border-edge bg-panel' : 'border-transparent'} ${gone ? 'opacity-50' : ''}`} {...seatFacts(seat)}>
         {figure(seat, 'size-9')}
         <div className="min-w-0">
           <p className="flex items-center gap-1 text-xs font-bold leading-tight">
@@ -402,7 +402,7 @@ export function WordsTable({ title, backTo, view, rack, players, mySeat, deadlin
             {toMove && deadline !== null && <TurnClock until={deadline} />}
           </p>
           <p className="flex items-baseline gap-1.5">
-            <span className="font-display text-xl font-extrabold tabular-nums leading-none text-primary">{view.scores[seat] ?? 0}</span>
+            <span className="font-display text-xl font-extrabold tabular-nums leading-none text-accent">{view.scores[seat] ?? 0}</span>
             <span className="truncate text-[0.65rem] text-muted">{gone ? t('words.out') : t('words.tiles', { count: view.counts[seat] ?? 0 })}</span>
           </p>
         </div>
@@ -418,13 +418,13 @@ export function WordsTable({ title, backTo, view, rack, players, mySeat, deadlin
     const gone = view.out.includes(seat)
     const toMove = !over && view.turn === seat
     return (
-      <div className={`flex w-9 shrink-0 flex-col items-center justify-center gap-0.5 border-2 py-1 ${toMove ? 'border-ink bg-panel' : 'border-transparent'} ${gone ? 'opacity-50' : ''}`} {...seatFacts(seat)}>
+      <div className={`flex w-9 shrink-0 flex-col items-center justify-center gap-0.5 border py-1 ${toMove ? 'border-edge bg-panel' : 'border-transparent'} ${gone ? 'opacity-50' : ''}`} {...seatFacts(seat)}>
         {figure(seat, 'size-7')}
         <p className="w-full truncate text-center text-[0.55rem] font-bold leading-tight">
           {who?.countryCode && <span aria-hidden="true">{flagEmoji(who.countryCode)} </span>}
           {who?.name ?? ''}
         </p>
-        <span className="font-display text-sm font-extrabold tabular-nums leading-none text-primary">{view.scores[seat] ?? 0}</span>
+        <span className="font-display text-sm font-extrabold tabular-nums leading-none text-accent">{view.scores[seat] ?? 0}</span>
         {toMove && deadline !== null && <TurnClock until={deadline} />}
         <div className="mt-0.5 flex flex-col gap-0.5" data-seat-place={seat} aria-hidden="true">
           {backs(seat, 'w-4')}
@@ -444,7 +444,7 @@ export function WordsTable({ title, backTo, view, rack, players, mySeat, deadlin
     <div ref={root} className="mx-auto flex h-(--app-h) w-full max-w-xl flex-col gap-1.5 overflow-hidden px-2 pb-[max(0.5rem,var(--safe-bottom))] pt-1 lg:max-w-2xl" data-testid="words-screen">
       <GameHeader title={title} over={over} backTo={backTo} />
       {notice && (
-        <div role="status" className="shrink-0 bg-ink px-3 py-1.5 text-center text-sm font-semibold text-surface">
+        <div role="status" className="shrink-0 bg-ink px-3 py-1.5 text-center text-sm font-semibold text-fg">
           {notice}
         </div>
       )}
@@ -456,7 +456,7 @@ export function WordsTable({ title, backTo, view, rack, players, mySeat, deadlin
         <div className="flex min-w-0 flex-1 justify-center">
           <div ref={boardBox} className="relative aspect-square w-full max-w-[min(100%,calc(var(--app-h)_-_20.5rem))] self-center">
             <div
-              className="grid size-full gap-px border-2 border-ink bg-ink"
+              className="grid size-full gap-px border border-edge bg-ink"
               style={{ gridTemplateColumns: `repeat(${SIZE}, minmax(0, 1fr))` }}
               role="grid"
               aria-label={t('words.boardLabel')}
@@ -512,7 +512,7 @@ export function WordsTable({ title, backTo, view, rack, players, mySeat, deadlin
 
       {/* The bottom of the table: the player holding the phone, what is happening, and the bag. */}
       <div className="flex min-h-0 flex-1 flex-col justify-center gap-1">
-        <div className={`flex items-center gap-2 border-2 px-1.5 py-1 ${bottomTurn ? 'border-ink bg-panel' : 'border-transparent'} ${view.out.includes(bottom) ? 'opacity-50' : ''}`} {...seatFacts(bottom)}>
+        <div className={`flex items-center gap-2 border px-1.5 py-1 ${bottomTurn ? 'border-edge bg-panel' : 'border-transparent'} ${view.out.includes(bottom) ? 'opacity-50' : ''}`} {...seatFacts(bottom)}>
           {figure(bottom, 'size-9')}
           <div className="min-w-0 shrink-0">
             <p className="flex items-center gap-1 text-xs font-bold leading-tight">
@@ -520,16 +520,16 @@ export function WordsTable({ title, backTo, view, rack, players, mySeat, deadlin
               <span className="max-w-24 truncate">{bottom === mySeat ? t('words.you') : (player(bottom)?.name ?? '')}</span>
               {bottomTurn && deadline !== null && <TurnClock until={deadline} />}
             </p>
-            <p className="font-display text-xl font-extrabold tabular-nums leading-none text-primary">{view.scores[bottom] ?? 0}</p>
+            <p className="font-display text-xl font-extrabold tabular-nums leading-none text-accent">{view.scores[bottom] ?? 0}</p>
           </div>
-          <p className="min-w-0 flex-1 text-center font-display text-base font-extrabold leading-tight text-primary" role="status" data-testid="words-status">
+          <p className="min-w-0 flex-1 text-center font-display text-base font-extrabold leading-tight text-accent" role="status" data-testid="words-status">
             {status}
           </p>
           <span data-bag-origin data-testid="words-bag" role="img" aria-label={t('words.bag', { count: view.bagCount })}>
             <Bag count={view.bagCount} />
           </span>
         </div>
-        <p className={`min-h-5 text-center text-sm leading-tight ${preview && !preview.ok ? 'font-semibold text-hibiscus' : 'text-muted'}`} data-testid="words-hint">
+        <p className={`min-h-5 text-center text-sm leading-tight ${preview && !preview.ok ? 'font-semibold text-alert' : 'text-muted'}`} data-testid="words-hint">
           {hint}
         </p>
       </div>

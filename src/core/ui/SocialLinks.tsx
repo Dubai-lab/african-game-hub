@@ -71,10 +71,10 @@ export function FollowButton({ className = '' }: { className?: string }) {
             aria-modal="true"
             aria-label={t('social.follow')}
             onClick={(event) => event.stopPropagation()}
-            className="w-full max-w-md border-t-4 border-brand bg-panel px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 text-ink sm:border-4"
+            className="w-full max-w-md glass rounded-t-3xl border-t border-line px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 text-fg sm:rounded-3xl sm:border"
             data-testid="follow-panel"
           >
-            <h2 className="font-display text-2xl font-extrabold text-primary">{t('social.follow')}</h2>
+            <h2 className="font-display text-2xl font-extrabold text-accent">{t('social.follow')}</h2>
             <p className="mt-1 text-muted">{t('social.hint')}</p>
             <ul className="mt-3 divide-y divide-line border-y border-line">
               {SOCIAL_LINKS.map((page) => (

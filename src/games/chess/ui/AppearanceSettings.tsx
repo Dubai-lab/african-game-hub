@@ -13,7 +13,7 @@ function PieceSetOption({ id, chosen, onChoose }: { id: PieceSetId; chosen: bool
       role="radio"
       aria-checked={chosen}
       onClick={onChoose}
-      className={`flex min-h-16 flex-1 items-center justify-center gap-1 border-2 px-2 ${chosen ? 'border-ink bg-brand' : 'border-line bg-surface'}`}
+      className={`flex min-h-16 flex-1 items-center justify-center gap-1 border px-2 ${chosen ? 'border-edge bg-brand' : 'border-line bg-surface'}`}
     >
       {set ? (
         <>
@@ -51,7 +51,7 @@ export default function AppearanceSettings() {
               aria-checked={chosen}
               aria-label={t(`chess.settings.theme.${id}`)}
               onClick={() => settings.set({ chessBoardTheme: id })}
-              className={`aspect-square max-h-24 flex-1 border-4 ${chosen ? 'border-brand outline-2 outline-ink' : 'border-transparent'}`}
+              className={`aspect-square max-h-24 flex-1 border-4 ${chosen ? 'border-brand outline-2 outline-edge' : 'border-transparent'}`}
               style={{ background: `repeating-conic-gradient(${theme.light} 0 25%, ${theme.dark} 0 50%) 0 0 / 100% 100%` }}
             />
           )

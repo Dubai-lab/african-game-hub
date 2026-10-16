@@ -76,14 +76,14 @@ export function PlayerCard({ name, color, flag, rating, ratingChange, avatarUrl,
   const sorted = [...captured].sort((a, b) => VALUE_ORDER.indexOf(a) - VALUE_ORDER.indexOf(b))
   return (
     <div className="flex items-center gap-3" data-testid={`player-${color}`}>
-      <Avatar url={avatarUrl} name={name} className="size-11 border-2 border-ink text-lg" tileClassName={color === 'w' ? 'bg-panel text-ink' : 'bg-ink text-surface'} />
+      <Avatar url={avatarUrl} name={name} className="size-11 border border-edge text-lg" tileClassName={color === 'w' ? 'bg-panel text-fg' : 'bg-ink text-fg'} />
       <div className="min-w-0 flex-1">
         <p className="flex items-baseline gap-2 truncate font-bold">
           {flag && <span aria-hidden="true">{flag}</span>}
           <span className="truncate">{name}</span>
           {rating !== undefined && <span className="text-sm font-semibold tabular-nums text-muted">{rating}</span>}
           {ratingChange !== undefined && (
-            <span className={`text-sm font-bold tabular-nums ${ratingChange > 0 ? 'text-palm' : ratingChange < 0 ? 'text-hibiscus' : 'text-muted'}`}>
+            <span className={`text-sm font-bold tabular-nums ${ratingChange > 0 ? 'text-good' : ratingChange < 0 ? 'text-alert' : 'text-muted'}`}>
               {ratingChange > 0 ? `+${ratingChange}` : ratingChange < 0 ? `−${Math.abs(ratingChange)}` : '±0'}
             </span>
           )}
@@ -130,7 +130,7 @@ export function MoveList({ played, viewPly, onView, grades }: MoveListProps) {
     // (On a computer the list always keeps room for a few rows, however much else the panel holds.)
     <div className="flex shrink-0 items-center lg:min-h-48 lg:flex-1 lg:items-stretch">
       <ol
-        className="flex min-h-11 flex-1 items-center gap-x-1 overflow-x-auto whitespace-nowrap border-2 border-line bg-panel px-2 lg:grid lg:min-h-0 lg:grid-cols-2 lg:content-start lg:items-stretch lg:gap-x-3 lg:gap-y-0.5 lg:overflow-y-auto lg:overflow-x-hidden lg:bg-surface lg:p-2"
+        className="flex min-h-11 flex-1 items-center gap-x-1 overflow-x-auto whitespace-nowrap border border-line bg-panel px-2 lg:grid lg:min-h-0 lg:grid-cols-2 lg:content-start lg:items-stretch lg:gap-x-3 lg:gap-y-0.5 lg:overflow-y-auto lg:overflow-x-hidden lg:bg-surface lg:p-2"
         aria-label={t('chess.moves.title')}
       >
         {played.length === 0 && <li className="text-sm text-muted lg:col-span-2">{t('chess.moves.none')}</li>}
@@ -142,7 +142,7 @@ export function MoveList({ played, viewPly, onView, grades }: MoveListProps) {
               ref={move.ply === viewPly ? current : undefined}
               aria-current={move.ply === viewPly ? 'step' : undefined}
               onClick={() => onView(move.ply)}
-              className={`min-h-9 px-1.5 text-base font-semibold lg:flex-1 lg:text-start ${move.ply === viewPly ? 'bg-primary text-surface' : 'lg:hover:bg-line/60'}`}
+              className={`min-h-9 px-1.5 text-base font-semibold lg:flex-1 lg:text-start ${move.ply === viewPly ? 'bg-primary text-fg' : 'lg:hover:bg-line/60'}`}
             >
               {move.san}
               {grades?.[move.ply - 1] && grades[move.ply - 1] !== 'good' && grades[move.ply - 1] !== 'excellent' && grades[move.ply - 1] !== 'best' && (
@@ -171,9 +171,9 @@ export function Sheet({ title, children, onClose }: { title: string; children: R
         aria-modal="true"
         aria-label={title}
         onClick={(event) => event.stopPropagation()}
-        className="w-full max-w-md border-t-4 border-brand bg-panel px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:border-4"
+        className="w-full max-w-md glass rounded-t-3xl border-t border-line px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:rounded-3xl sm:border"
       >
-        <h2 className="font-display text-2xl font-extrabold text-primary">{title}</h2>
+        <h2 className="font-display text-2xl font-extrabold text-accent">{title}</h2>
         {children}
       </div>
     </div>

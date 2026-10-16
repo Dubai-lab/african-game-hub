@@ -23,7 +23,7 @@ function TablePicker({ schema, value, onChange }: LobbyOptionsProps) {
         {parseSizes(schema).map((players) => (
           <label
             key={players}
-            className={`flex min-h-14 cursor-pointer items-center justify-center border-2 px-3 py-1 text-center font-bold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary ${players === current.players ? 'border-ink bg-brand text-brand-ink' : 'border-line bg-panel text-ink'}`}
+            className={`flex min-h-14 cursor-pointer items-center justify-center border px-3 py-1 text-center font-bold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent ${players === current.players ? 'border-edge bg-brand text-brand-ink' : 'border-line bg-panel text-fg'}`}
           >
             <input type="radio" name="words-players" className="sr-only" checked={players === current.players} onChange={() => onChange({ players })} />
             {t('words.playersCount', { count: players })}

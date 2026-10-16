@@ -8,6 +8,7 @@ import { GenderPrompt } from '@/core/profile/GenderPrompt'
 import { useMyProfile } from '@/core/profile/useMyProfile'
 import { useSocialBadge } from '@/core/social/social'
 import { RouteErrorBoundary } from './ErrorBoundary'
+import { TAB_ICONS } from './icons'
 import { OfflineBanner } from './OfflineBanner'
 import { PAGE_DOCK_ID } from './PageDock'
 
@@ -45,7 +46,7 @@ export function AppShell() {
 
   return (
     <div className="h-(--app-h) overflow-hidden lg:grid lg:h-auto lg:min-h-(--app-h) lg:grid-cols-[15rem_minmax(0,1fr)] lg:overflow-visible">
-      <aside className="sticky top-0 hidden h-(--app-h) flex-col bg-primary px-4 py-6 text-surface lg:flex">
+      <aside className="glass sticky top-0 hidden h-(--app-h) flex-col border-e border-line px-4 py-6 text-fg lg:flex">
         <div className="flex items-center justify-between">
           <Link to="/lobby" className="px-3 font-display text-xl font-extrabold">
             {t('app.name')}
@@ -59,9 +60,13 @@ export function AppShell() {
                 <NavLink
                   to={`/${tab}`}
                   className={({ isActive }) =>
-                    `flex min-h-12 items-center px-3 font-display text-lg font-extrabold ${isActive || (tab === 'lobby' && inGame) ? 'bg-brand text-brand-ink' : 'hover:bg-primary-soft'}`
+                    `flex min-h-12 items-center gap-3 rounded-xl px-3 font-display text-lg font-extrabold transition-colors ${isActive || (tab === 'lobby' && inGame) ? 'glow-brand bg-brand text-brand-ink' : 'hover:bg-panel'}`
                   }
                 >
+                  {(() => {
+                    const TabIcon = TAB_ICONS[tab]
+                    return <TabIcon className="size-5 shrink-0" />
+                  })()}
                   {t(`nav.${tab}`)}
                   {badge(tab)}
                 </NavLink>
@@ -77,14 +82,14 @@ export function AppShell() {
         {/* Players who joined before gender was asked for are asked once, here. */}
         <GenderPrompt />
         {/* The top bar: fixed, closed by a line the page scrolls under. */}
-        <header className="shrink-0 border-b-2 border-line bg-surface lg:hidden" data-testid="top-bar">
+        <header className="glass relative z-10 shrink-0 rounded-b-3xl border-b border-line lg:hidden" data-testid="top-bar">
           <div className="relative mx-auto flex w-full max-w-md flex-col gap-1 px-5 pb-2 pt-2">
             {/* What the player should know of, at the end of the bar. */}
             <div className="absolute end-3 top-0.5">
-              <NotificationBell className="text-primary" />
+              <NotificationBell className="text-fg" />
             </div>
             {/* The hub's name, in the middle. */}
-            <Link to="/lobby" className="self-center text-base font-display font-extrabold text-primary">
+            <Link to="/lobby" className="self-center text-base font-display font-extrabold text-fg">
               {t('app.name')}
             </Link>
             {/* Who is signed in: part of the bar, so it stays in place on every page. */}
@@ -108,25 +113,39 @@ export function AppShell() {
           </div>
         </main>
         {/* The page's own bar (see PageDock): empty, and so not there, on most pages. */}
-        <div id={PAGE_DOCK_ID} className="shrink-0 border-t-2 border-line bg-surface px-5 py-2.5 empty:hidden lg:hidden" data-testid="page-dock" />
+        <div id={PAGE_DOCK_ID} className="glass relative z-10 shrink-0 rounded-t-3xl border-t border-line px-5 pb-2 pt-3 empty:hidden lg:hidden" data-testid="page-dock" />
         <nav
           aria-label={t('nav.label')}
-          className="shrink-0 border-t-2 border-ink bg-panel pb-[var(--safe-bottom)] lg:hidden"
+          className="glass relative z-10 shrink-0 border-t border-line pb-[var(--safe-bottom)] lg:hidden"
         >
-          <ul className="mx-auto grid h-14 max-w-md grid-cols-6">
-            {TABS.map((tab) => (
-              <li key={tab}>
-                <NavLink
-                  to={`/${tab}`}
-                  className={({ isActive }) =>
-                    `flex h-full items-center justify-center px-0.5 text-center font-display text-[0.7rem] font-extrabold leading-tight ${isActive || (tab === 'lobby' && inGame) ? 'bg-primary text-surface' : 'text-primary'}`
-                  }
-                >
-                  {t(`nav.${tab}`)}
-                  {badge(tab)}
-                </NavLink>
-              </li>
-            ))}
+          <ul className="mx-auto grid h-16 max-w-md grid-cols-6 px-1">
+            {TABS.map((tab) => {
+              const TabIcon = TAB_ICONS[tab]
+              return (
+                <li key={tab}>
+                  <NavLink
+                    to={`/${tab}`}
+                    className={({ isActive }) =>
+                      `group relative flex h-full flex-col items-center justify-center gap-0.5 px-0.5 text-center font-display text-[0.68rem] font-extrabold leading-tight transition-colors ${isActive || (tab === 'lobby' && inGame) ? 'text-brand' : 'text-muted'}`
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        {/* The chosen tab: lit in Maize, with a soft glow behind its sign. */}
+                        {(isActive || (tab === 'lobby' && inGame)) && (
+                          <span className="absolute top-1.5 size-9 rounded-full bg-brand/20 blur-md" aria-hidden="true" />
+                        )}
+                        <span className="relative flex items-center">
+                          <TabIcon className="size-6" />
+                          {badge(tab) && <span className="absolute -end-3 -top-1.5">{badge(tab)}</span>}
+                        </span>
+                        <span className="relative">{t(`nav.${tab}`)}</span>
+                      </>
+                    )}
+                  </NavLink>
+                </li>
+              )
+            })}
           </ul>
         </nav>
       </div>

@@ -106,7 +106,7 @@ export function ReviewPanel({ review, played, shownPly }: PanelProps) {
   if (review.status === 'failed') {
     return (
       <div className="flex flex-col gap-2" role="alert">
-        <p className="text-sm font-semibold text-hibiscus">{t('chess.review.failed')}</p>
+        <p className="text-sm font-semibold text-alert">{t('chess.review.failed')}</p>
         <Button variant="ghost" onClick={review.start}>
           {t('common.retry')}
         </Button>
@@ -125,7 +125,7 @@ export function ReviewPanel({ review, played, shownPly }: PanelProps) {
 
       {/* Who is better in the position on the board: the light part is White's share. */}
       <div className="flex items-center gap-2">
-        <div className="relative h-4 flex-1 border-2 border-ink bg-ink" role="img" aria-label={t('chess.review.balance', { score: position ? formatEval(position) : '…' })}>
+        <div className="relative h-4 flex-1 border border-edge bg-ink" role="img" aria-label={t('chess.review.balance', { score: position ? formatEval(position) : '…' })}>
           <div className="h-full bg-panel transition-[width] duration-300" style={{ width: `${whiteShare}%` }} />
         </div>
         <span className="w-12 text-end text-sm font-bold tabular-nums" data-testid="review-eval">

@@ -42,7 +42,7 @@ export default function CheckEmailPage() {
             {busy ? t('auth.working') : t('auth.resend')}
           </Button>
         )}
-        <Link to="/login" className="text-center text-sm font-semibold text-primary underline">
+        <Link to="/login" className="text-center text-sm font-semibold text-accent underline">
           {t('auth.backToLogin')}
         </Link>
       </div>

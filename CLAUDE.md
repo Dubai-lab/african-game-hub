@@ -251,3 +251,7 @@ Rwanda launches first, but never hard-code anything to Rwanda, and never hard-co
 - **Time:** store all times in UTC; display in the user's local time zone.
 - **Identity:** players should see where their opponent is from (country flag) and there should be per-country leaderboards; national pride is a big motivator.
 - **Matchmaking:** default to matching across all of Africa for fast pairing, with an option to prefer opponents in the same country or with low latency.
+
+## 15. Design V2.0 (glass)
+
+Since 16 October 2026 the player site uses the glass design: frosted panels on a night indigo ground, in the same palette. Every new screen and every change follows `DESIGN.md` (colour names, soft corners, 1px borders, where the blur may go). Read it before touching any UI.

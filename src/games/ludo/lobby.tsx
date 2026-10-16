@@ -35,7 +35,7 @@ export function readOptions(value: GameOptions | null): LudoOptions {
 }
 
 const option = (chosen: boolean) =>
-  `flex min-h-14 cursor-pointer flex-col justify-center border-2 px-3 py-1 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary ${chosen ? 'border-ink bg-brand text-brand-ink' : 'border-line bg-panel text-ink'}`
+  `flex min-h-14 cursor-pointer flex-col justify-center border px-3 py-1 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent ${chosen ? 'border-edge bg-brand text-brand-ink' : 'border-line bg-panel text-fg'}`
 
 function TablePicker({ schema, value, onChange }: LobbyOptionsProps) {
   const { t } = useTranslation()

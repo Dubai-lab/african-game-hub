@@ -71,7 +71,7 @@ export default function LoginPage() {
           error={errors.password && t(errors.password)}
         />
         <p className="-mt-1 text-end text-sm">
-          <Link to="/forgot-password" className="font-semibold text-primary underline">
+          <Link to="/forgot-password" className="font-semibold text-accent underline">
             {t('auth.forgot.link')}
           </Link>
         </p>
@@ -82,7 +82,7 @@ export default function LoginPage() {
       </form>
       <p className="mt-6 text-sm text-muted">
         {t('auth.noAccount')}{' '}
-        <Link to="/signup" state={location.state} className="font-semibold text-primary underline">
+        <Link to="/signup" state={location.state} className="font-semibold text-accent underline">
           {t('auth.createAccount')}
         </Link>
       </p>

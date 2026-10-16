@@ -23,7 +23,7 @@ export function OfflineBanner() {
   const online = useOnline()
   if (online) return null
   return (
-    <p role="status" className="bg-ink px-4 py-2 text-center text-sm text-surface">
+    <p role="status" className="bg-ink px-4 py-2 text-center text-sm text-fg">
       {t('app.offline')}
     </p>
   )

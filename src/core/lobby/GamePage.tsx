@@ -43,11 +43,11 @@ export function StakePicker({
           return (
             <label
               key={level}
-              className={`flex min-h-14 flex-col items-center justify-center border-2 px-1 text-center has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary ${
+              className={`flex min-h-14 flex-col items-center justify-center border px-1 text-center has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent ${
                 tooMuch
                   ? 'cursor-not-allowed border-line bg-surface text-muted'
                   : chosen
-                    ? 'cursor-pointer border-ink bg-brand text-brand-ink'
+                    ? 'cursor-pointer border-edge bg-brand text-brand-ink'
                     : 'cursor-pointer border-line bg-panel'
               }`}
             >
@@ -92,9 +92,9 @@ function Searching({ gameName, stake, startedAt, onCancel }: { gameName: string;
   }, [startedAt])
 
   return (
-    <section aria-live="polite" className="flex flex-col items-center gap-4 border-2 border-ink bg-panel px-5 py-8 text-center">
-      <span className="size-10 animate-spin rounded-full border-4 border-line border-t-primary motion-reduce:animate-none" aria-hidden="true" />
-      <h2 className="font-display text-2xl font-extrabold text-primary">{t('lobby.searching.title')}</h2>
+    <section aria-live="polite" className="flex flex-col items-center gap-4 border border-edge bg-panel px-5 py-8 text-center">
+      <span className="size-10 animate-spin rounded-full border-4 border-line border-t-accent motion-reduce:animate-none" aria-hidden="true" />
+      <h2 className="font-display text-2xl font-extrabold text-accent">{t('lobby.searching.title')}</h2>
       <p className="font-semibold">
         {gameName} · {stake === 0 ? t('lobby.free') : t('lobby.searching.stake', { stake: format.tokens(stake) })}
       </p>
@@ -112,7 +112,7 @@ function Searching({ gameName, stake, startedAt, onCancel }: { gameName: string;
 /** A row that opens to show a choice: what is chosen now on the row itself, the choices underneath. */
 function Dropdown({ id, label, value, open, onToggle, children }: { id: string; label: string; value: string; open: boolean; onToggle: () => void; children: ReactNode }) {
   return (
-    <div className="border-2 border-line bg-panel">
+    <div className="border border-line bg-panel">
       <button type="button" aria-expanded={open} aria-controls={`${id}-panel`} data-testid={`${id}-toggle`} onClick={onToggle} className="flex min-h-14 w-full items-center gap-3 px-4 text-start">
         <span className="text-sm font-semibold text-muted">{label}</span>
         <span className="min-w-0 flex-1 truncate text-center text-lg font-bold" data-testid={`${id}-value`}>
@@ -131,7 +131,7 @@ function Dropdown({ id, label, value, open, onToggle, children }: { id: string; 
   )
 }
 
-const row = 'flex min-h-14 w-full items-center justify-center border-2 border-line bg-panel px-4 text-center text-lg font-bold hover:bg-brand active:bg-brand'
+const row = 'flex min-h-14 w-full items-center justify-center border border-line bg-panel px-4 text-center text-lg font-bold hover:bg-brand active:bg-brand'
 
 /**
  * Play: one column of choices. How to play and the stake each open from their own row; then
@@ -156,11 +156,11 @@ export default function GamePage() {
   const tokensLine = (
     <p className="text-center text-sm text-muted">
       {t('play.new.tokens')}{' '}
-      <span className="font-bold tabular-nums text-ink" data-testid="balance-bonus">
+      <span className="font-bold tabular-nums text-fg" data-testid="balance-bonus">
         {wallet.data ? format.tokens(wallet.data.bonus) : '…'}
       </span>{' '}
       {t('lobby.bonus').toLowerCase()} ·{' '}
-      <span className="font-bold tabular-nums text-ink" data-testid="balance-cash">
+      <span className="font-bold tabular-nums text-fg" data-testid="balance-cash">
         {wallet.data ? format.tokens(wallet.data.cash) : '…'}
       </span>{' '}
       {t('lobby.cash').toLowerCase()}
@@ -176,9 +176,9 @@ export default function GamePage() {
       />
 
       {activeMatch.data && !matchmaking.search && (
-        <section className="flex flex-wrap items-center justify-between gap-3 border-2 border-ink bg-brand p-4 text-brand-ink">
+        <section className="flex flex-wrap items-center justify-between gap-3 border border-edge bg-brand p-4 text-brand-ink">
           <p className="font-bold">{t('lobby.gameInProgress')}</p>
-          <Link to={`/play/${activeMatch.data.gameId}/match/${activeMatch.data.matchId}`} className={buttonClass('ghost', 'border-ink bg-panel')}>
+          <Link to={`/play/${activeMatch.data.gameId}/match/${activeMatch.data.matchId}`} className={buttonClass('ghost', 'border-edge bg-panel')}>
             {t('lobby.returnToGame')}
           </Link>
         </section>

@@ -199,13 +199,13 @@ function Chat({ id, canWrite }: { id: string; canWrite: boolean }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <ol ref={list} className="flex max-h-80 min-h-32 flex-col gap-1.5 overflow-y-auto border-2 border-line bg-panel p-3" role="log" data-testid="tournament-chat">
+      <ol ref={list} className="flex max-h-80 min-h-32 flex-col gap-1.5 overflow-y-auto border border-line bg-panel p-3" role="log" data-testid="tournament-chat">
         {count === 0 ? (
           <li className="text-muted">{t('tournament.chat.empty')}</li>
         ) : (
           chat.data!.map((line) => (
             <li key={line.id} className="break-words">
-              <span className={`font-bold ${line.senderId === user?.id ? 'text-primary' : ''}`}>{line.name}</span> <span>{line.body}</span>
+              <span className={`font-bold ${line.senderId === user?.id ? 'text-accent' : ''}`}>{line.name}</span> <span>{line.body}</span>
             </li>
           ))
         )}
@@ -264,7 +264,7 @@ export default function TournamentPage() {
     return (
       <div className="flex flex-col items-start gap-3">
         <p>{t('tournament.page.notFound')}</p>
-        <Link to="/lobby" className="font-semibold text-primary underline underline-offset-4">
+        <Link to="/lobby" className="font-semibold text-accent underline underline-offset-4">
           {t('lobby.allGames')}
         </Link>
       </div>
@@ -321,7 +321,7 @@ export default function TournamentPage() {
               ? t('tournament.page.waiting')
               : t('tournament.page.pressNext')
 
-  const tabClass = (on: boolean) => `min-h-11 flex-1 border-2 px-2 text-sm font-bold ${on ? 'border-ink bg-brand text-brand-ink' : 'border-line bg-panel'}`
+  const tabClass = (on: boolean) => `min-h-11 flex-1 border px-2 text-sm font-bold ${on ? 'border-edge bg-brand text-brand-ink' : 'border-line bg-panel'}`
   const gamesCount = liveGames.data?.length ?? 0
 
   return (
@@ -331,12 +331,12 @@ export default function TournamentPage() {
       </div>
 
       <div className="flex flex-col gap-5">
-        <section className="border-2 border-ink bg-panel p-4" data-testid="tournament-info" data-status={data.status} data-round={data.round}>
+        <section className="border border-edge bg-panel p-4" data-testid="tournament-info" data-status={data.status} data-round={data.round}>
           <p className="font-semibold">{[gameName, termsText(game, data.pool, data.options), byRounds ? t('tournament.roundsCount', { count: data.rounds ?? 0 }) : t('tournament.byTime')].filter(Boolean).join(' · ')}</p>
-          <p className="mt-1 font-display text-2xl font-extrabold text-primary" role="timer">
+          <p className="mt-1 font-display text-2xl font-extrabold text-accent" role="timer">
             {whenText(data, now)}
           </p>
-          <p className={`mt-1 font-bold tabular-nums ${data.prize > 0 ? 'text-palm' : 'text-muted'}`} data-testid="tournament-prize">
+          <p className={`mt-1 font-bold tabular-nums ${data.prize > 0 ? 'text-good' : 'text-muted'}`} data-testid="tournament-prize">
             {data.prize > 0 ? t('tournament.prize', { amount: format.tokens(data.prize) }) : t('tournament.noPrize')}
           </p>
           <p className="mt-1 text-sm text-muted">{t('tournament.page.by', { name: data.creator })}</p>
@@ -352,9 +352,9 @@ export default function TournamentPage() {
         {!joined && live && byRounds && data.status !== 'scheduled' && <p className="text-sm text-muted">{t('tournament.page.closed')}</p>}
 
         {joined && live && (
-          <section aria-live="polite" className="flex flex-col gap-3 border-2 border-line bg-panel p-4" data-testid="tournament-room" data-room={presence.room}>
+          <section aria-live="polite" className="flex flex-col gap-3 border border-line bg-panel p-4" data-testid="tournament-room" data-room={presence.room}>
             <p className="flex items-center gap-3 font-semibold">
-              {running && !dropped && (byRounds ? myPairing?.result === null : asking) && <span className="size-5 shrink-0 animate-spin rounded-full border-4 border-line border-t-primary motion-reduce:animate-none" aria-hidden="true" />}
+              {running && !dropped && (byRounds ? myPairing?.result === null : asking) && <span className="size-5 shrink-0 animate-spin rounded-full border-4 border-line border-t-accent motion-reduce:animate-none" aria-hidden="true" />}
               {roomText}
             </p>
             {/* By time: the player asks for each game. By rounds: the system pairs; there is nothing to press. */}
@@ -364,13 +364,13 @@ export default function TournamentPage() {
               </Button>
             )}
             {myGame && (
-              <Link to={`/play/${data.gameId}/match/${myGame.matchId}`} className="font-semibold text-primary underline underline-offset-4">
+              <Link to={`/play/${data.gameId}/match/${myGame.matchId}`} className="font-semibold text-accent underline underline-offset-4">
                 {t('lobby.returnToGame')}
               </Link>
             )}
           </section>
         )}
-        {data.status === 'finished' && me && me.prize > 0 && <p className="border-2 border-ink bg-brand p-4 font-bold text-brand-ink">{t('tournament.page.youWon', { amount: format.tokens(me.prize) })}</p>}
+        {data.status === 'finished' && me && me.prize > 0 && <p className="border border-edge bg-brand p-4 font-bold text-brand-ink">{t('tournament.page.youWon', { amount: format.tokens(me.prize) })}</p>}
 
         {live && (
           <section aria-labelledby="tournament-share">
@@ -422,7 +422,7 @@ export default function TournamentPage() {
                         {row.dropped && ` · ${t('tournament.page.out')}`}
                       </span>
                     </span>
-                    {row.prize > 0 && <span className="shrink-0 text-sm font-bold tabular-nums text-palm">+{format.tokens(row.prize)}</span>}
+                    {row.prize > 0 && <span className="shrink-0 text-sm font-bold tabular-nums text-good">+{format.tokens(row.prize)}</span>}
                     <span className="w-10 shrink-0 text-end font-display text-xl font-extrabold tabular-nums" aria-label={t('tournament.page.points', { count: row.points })}>
                       {row.points}
                     </span>
@@ -444,7 +444,7 @@ export default function TournamentPage() {
                     <Link to={`/play/${data.gameId}/match/${row.matchId}`} className="flex items-center gap-3 px-2 py-3">
                       <span className="size-2.5 shrink-0 animate-pulse rounded-full bg-hibiscus motion-reduce:animate-none" aria-hidden="true" />
                       <span className="min-w-0 flex-1 truncate font-semibold">{row.players.join(' – ')}</span>
-                      <span className="shrink-0 text-sm font-semibold text-primary underline underline-offset-4">{t('tournament.page.watch')}</span>
+                      <span className="shrink-0 text-sm font-semibold text-accent underline underline-offset-4">{t('tournament.page.watch')}</span>
                     </Link>
                   </li>
                 ))}

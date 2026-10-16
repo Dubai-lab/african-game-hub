@@ -47,7 +47,7 @@ export function Games({ playHref }: { playHref: string }) {
 
   return (
     <section className={`${shell} py-14 lg:py-20`}>
-      <h2 className={`${heading} text-primary`}>{t('landing.games.title')}</h2>
+      <h2 className={`${heading} text-accent`}>{t('landing.games.title')}</h2>
       <p className="mt-3 max-w-prose text-muted">{t('landing.games.sub')}</p>
 
       <ul className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 lg:gap-4">
@@ -55,10 +55,10 @@ export function Games({ playHref }: { playHref: string }) {
           const blurb = t(`landing.games.${game.id}Blurb`, { defaultValue: '' })
           return (
             <li key={game.id} className="flex">
-              <Link to={playHref} className="flex w-full flex-col overflow-hidden border-2 border-ink bg-panel text-ink outline-offset-2 hover:bg-brand focus-visible:outline-2 focus-visible:outline-primary active:bg-brand">
+              <Link to={playHref} className="flex w-full flex-col overflow-hidden border border-edge bg-panel text-fg outline-offset-2 hover:bg-brand focus-visible:outline-2 focus-visible:outline-accent active:bg-brand">
                 <GameArt gameId={game.id} className="block aspect-[6/5] w-full" />
                 <span className="flex flex-1 flex-col items-start gap-1.5 p-3">
-                  <h3 className="max-w-full font-display text-2xl font-extrabold leading-none text-primary">{gameName(t, game)}</h3>
+                  <h3 className="max-w-full font-display text-2xl font-extrabold leading-none text-accent">{gameName(t, game)}</h3>
                   <span className="flex items-center gap-2 bg-hibiscus px-2 py-0.5 text-xs font-bold text-white">
                     <span className="size-1.5 rounded-full bg-white" aria-hidden="true" />
                     {t('landing.games.live')}
@@ -72,11 +72,11 @@ export function Games({ playHref }: { playHref: string }) {
         })}
         {soon.map((game) => (
           <li key={game.id} className="flex">
-            <div className="flex w-full flex-col overflow-hidden border-2 border-line bg-panel text-muted">
+            <div className="flex w-full flex-col overflow-hidden border border-line bg-panel text-muted">
               <GameArt gameId={game.id} className="block aspect-[6/5] w-full opacity-45 grayscale" />
               <span className="flex flex-1 flex-col items-start gap-1.5 p-3">
                 <h3 className="max-w-full font-display text-2xl font-extrabold leading-none">{gameName(t, game)}</h3>
-                <span className="bg-ink px-2 py-0.5 text-xs font-bold text-surface">{t('landing.games.soon')}</span>
+                <span className="bg-ink px-2 py-0.5 text-xs font-bold text-fg">{t('landing.games.soon')}</span>
               </span>
             </div>
           </li>
@@ -105,9 +105,9 @@ export function HowItWorks() {
   const steps = t('landing.how.steps', { returnObjects: true, ...values }) as { title: string; body: string }[]
 
   return (
-    <section className="bg-panel">
+    <section className="rounded-none bg-panel">
       <div className={`${shell} py-14 lg:py-20`}>
-        <h2 className={`${heading} text-primary`}>{t('landing.how.title')}</h2>
+        <h2 className={`${heading} text-accent`}>{t('landing.how.title')}</h2>
         {/* Numbered because the order is real: each step needs the one before it. */}
         <ol className="mt-8 grid gap-0 lg:grid-cols-4 lg:gap-8">
           {steps.map((step, index) => (
@@ -124,7 +124,7 @@ export function HowItWorks() {
                 />
               )}
               <span
-                className={`relative flex size-11 shrink-0 items-center justify-center font-display text-xl font-extrabold ${index % 2 === 0 ? 'bg-primary text-surface' : 'bg-brand text-brand-ink'}`}
+                className={`relative flex size-11 shrink-0 items-center justify-center font-display text-xl font-extrabold ${index % 2 === 0 ? 'bg-primary text-fg' : 'bg-brand text-brand-ink'}`}
               >
                 {index + 1}
               </span>
@@ -158,12 +158,12 @@ export function LiveNumbers() {
 
   return (
     <section className={`${shell} py-14 lg:py-20`}>
-      <h2 className={`${heading} text-primary`}>{t('landing.numbers.title')}</h2>
+      <h2 className={`${heading} text-accent`}>{t('landing.numbers.title')}</h2>
       <dl className="mt-8 flex flex-wrap gap-x-14 gap-y-8">
         {figures.map((figure) => (
           <div key={figure.key} className="flex flex-col-reverse">
             <dt className="font-semibold text-muted">{t(`landing.numbers.${figure.key}`)}</dt>
-            <dd className="font-display text-6xl font-extrabold tabular-nums text-primary lg:text-7xl">
+            <dd className="font-display text-6xl font-extrabold tabular-nums text-accent lg:text-7xl">
               {format.format(figure.value)}
             </dd>
           </div>
@@ -177,7 +177,7 @@ export function FairPlay() {
   const { t } = useTranslation()
   const items = t('landing.fair.items', { returnObjects: true }) as { title: string; body: string }[]
   return (
-    <section className="bg-primary text-surface">
+    <section className="rounded-none bg-primary text-fg">
       <div className={`${shell} py-14 lg:py-20`}>
         <h2 className={`${heading} text-brand`}>{t('landing.fair.title')}</h2>
         <ul className="mt-6">
@@ -214,7 +214,7 @@ export function Countries() {
 
   return (
     <section className={`${shell} py-14 lg:py-20`}>
-      <h2 className={`${heading} text-primary`}>{t('landing.countries.title')}</h2>
+      <h2 className={`${heading} text-accent`}>{t('landing.countries.title')}</h2>
       <p className="mt-3 text-muted">{t('landing.countries.sub', { count: list.length })}</p>
       <ul className="mt-7 flex flex-wrap gap-x-5 gap-y-2.5 text-lg leading-snug">
         {list.map((country) => (
@@ -235,7 +235,7 @@ export function Footer() {
   const { t } = useTranslation()
   const link = 'underline underline-offset-4'
   return (
-    <footer className="bg-ink text-surface">
+    <footer className="rounded-none bg-ink text-fg">
       {/* The hub's own matters on one side; where to follow it on the other (under them on a phone). */}
       <div className={`${shell} flex flex-col gap-10 py-12 md:flex-row md:items-start md:justify-between`}>
        <div className="flex min-w-0 flex-col gap-8">

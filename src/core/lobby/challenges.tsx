@@ -168,7 +168,7 @@ export function ShareLink({ path, text }: { path: string; text: string }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <input readOnly value={url} aria-label={t('share.link')} data-testid="share-link" onFocus={(event) => event.currentTarget.select()} className="min-h-11 w-full border-2 border-line bg-surface px-3 text-sm" />
+      <input readOnly value={url} aria-label={t('share.link')} data-testid="share-link" onFocus={(event) => event.currentTarget.select()} className="min-h-11 w-full border border-line bg-surface px-3 text-sm" />
       <div className="grid grid-cols-2 gap-2">
         <Button variant="ghost" onClick={() => void copy()}>
           {t(copied ? 'share.copied' : 'share.copy')}

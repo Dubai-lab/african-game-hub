@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { useAuth } from '@/core/auth/AuthContext'
@@ -107,17 +108,18 @@ export function NotificationBell({ className = '' }: { className?: string }) {
         )}
       </button>
 
-      {open && (
+      {/* Drawn at the top of the page, not inside the bar: a glass bar would hold it inside itself. */}
+      {open && createPortal(
         <div className="fixed inset-0 z-40 flex items-end justify-center bg-ink/55 sm:items-center" onClick={close} role="presentation">
           <div
             role="dialog"
             aria-modal="true"
             aria-label={t('notifications.title')}
             onClick={(event) => event.stopPropagation()}
-            className="flex max-h-[85dvh] w-full max-w-md flex-col border-t-4 border-brand bg-panel text-ink sm:border-4"
+            className="flex max-h-[85dvh] w-full max-w-md flex-col glass rounded-t-3xl border-t border-line text-fg sm:rounded-3xl sm:border"
             data-testid="notification-panel"
           >
-            <h2 className="px-5 pt-5 font-display text-2xl font-extrabold text-primary">{t('notifications.title')}</h2>
+            <h2 className="px-5 pt-5 font-display text-2xl font-extrabold text-accent">{t('notifications.title')}</h2>
             {list.length === 0 ? (
               <p className="px-5 py-6 text-muted">{t('notifications.none')}</p>
             ) : (
@@ -132,7 +134,7 @@ export function NotificationBell({ className = '' }: { className?: string }) {
                     </>
                   )
                   return (
-                    <li key={n.id} className={`border-b border-line ${n.read_at === null ? 'bg-primary-tint/40' : ''}`} data-kind={n.kind}>
+                    <li key={n.id} className={`border-b border-line ${n.read_at === null ? 'bg-primary-soft/25' : ''}`} data-kind={n.kind}>
                       {to ? (
                         <Link to={to} onClick={close} className="block px-5 py-3">
                           {body}
@@ -151,7 +153,8 @@ export function NotificationBell({ className = '' }: { className?: string }) {
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   )

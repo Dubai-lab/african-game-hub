@@ -80,13 +80,13 @@ export default function SupportPage() {
   return (
     <div className="flex flex-col gap-8 lg:max-w-2xl">
       <div>
-        <h1 className="font-display text-3xl font-extrabold text-primary lg:text-4xl">{t('support.title')}</h1>
+        <h1 className="font-display text-3xl font-extrabold text-accent lg:text-4xl">{t('support.title')}</h1>
         <p className="mt-2 text-muted">{t('support.intro')}</p>
       </div>
 
       {sent !== null ? (
-        <section role="status" className="border-2 border-ink bg-panel p-5" data-testid="support-sent">
-          <h2 className="font-display text-2xl font-extrabold text-primary">{t('support.sentTitle')}</h2>
+        <section role="status" className="border border-edge bg-panel p-5" data-testid="support-sent">
+          <h2 className="font-display text-2xl font-extrabold text-accent">{t('support.sentTitle')}</h2>
           <p className="mt-2">{t('support.sentBody', { reference: sent })}</p>
           {user?.email && <p className="mt-2 text-muted">{t('support.sentEmail', { email: user.email })}</p>}
           <Button variant="ghost" className="mt-4" onClick={() => setSent(null)}>
@@ -101,7 +101,7 @@ export default function SupportPage() {
               {CATEGORIES.map((option) => (
                 <label
                   key={option}
-                  className={`flex min-h-12 cursor-pointer items-center border-2 px-3 py-1 font-semibold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary ${option === category ? 'border-ink bg-brand text-brand-ink' : 'border-line bg-panel text-ink'}`}
+                  className={`flex min-h-12 cursor-pointer items-center border px-3 py-1 font-semibold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent ${option === category ? 'border-edge bg-brand text-brand-ink' : 'border-line bg-panel text-fg'}`}
                 >
                   <input type="radio" name="support-category" className="sr-only" checked={option === category} onChange={() => setCategory(option)} />
                   {t(`support.category.${option}`)}
@@ -126,9 +126,9 @@ export default function SupportPage() {
               }}
               aria-invalid={problem ? true : undefined}
               aria-describedby={`${messageId}-hint`}
-              className={`mt-2 block w-full rounded-lg border bg-panel p-3 text-base text-ink outline-none focus:border-primary focus:ring-2 focus:ring-primary/30 ${problem ? 'border-danger' : 'border-line'}`}
+              className={`mt-2 block w-full rounded-lg border bg-panel p-3 text-base text-fg outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 ${problem ? 'border-danger' : 'border-line'}`}
             />
-            <p id={`${messageId}-hint`} className={`mt-1 flex justify-between gap-3 text-sm ${problem ? 'text-danger' : 'text-muted'}`}>
+            <p id={`${messageId}-hint`} className={`mt-1 flex justify-between gap-3 text-sm ${problem ? 'text-alert' : 'text-muted'}`}>
               <span>{problem ?? t('support.messageHint')}</span>
               <span className="shrink-0 tabular-nums">
                 {message.length} / {LONGEST}
@@ -154,7 +154,7 @@ export default function SupportPage() {
         ) : mine.data && mine.data.length > 0 ? (
           <ul className="mt-3 flex flex-col gap-2" data-testid="support-list">
             {mine.data.map((request) => (
-              <li key={request.id} className="flex items-center justify-between gap-3 border-2 border-line bg-panel px-3 py-2">
+              <li key={request.id} className="flex items-center justify-between gap-3 border border-line bg-panel px-3 py-2">
                 <span className="min-w-0">
                   <span className="block truncate font-semibold">
                     {t('support.number', { reference: request.id })} · {t(`support.category.${request.category}`, { defaultValue: request.category })}
@@ -173,7 +173,7 @@ export default function SupportPage() {
       {contact && (
         <p className="text-sm text-muted">
           {t('support.orEmail')}{' '}
-          <a href={`mailto:${contact}`} className="font-semibold text-primary underline underline-offset-4">
+          <a href={`mailto:${contact}`} className="font-semibold text-accent underline underline-offset-4">
             {contact}
           </a>
         </p>

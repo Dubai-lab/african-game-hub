@@ -42,9 +42,9 @@ export function Sheet({ title, children, onClose }: { title: string; children: R
         aria-modal="true"
         aria-label={title}
         onClick={(event) => event.stopPropagation()}
-        className="w-full max-w-md border-t-4 border-brand bg-panel px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:border-4"
+        className="w-full max-w-md glass rounded-t-3xl border-t border-line px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:rounded-3xl sm:border"
       >
-        <h2 className="font-display text-2xl font-extrabold text-primary">{title}</h2>
+        <h2 className="font-display text-2xl font-extrabold text-accent">{title}</h2>
         {children}
       </div>
     </div>
@@ -71,7 +71,7 @@ function Chip({ n }: { n: number }) {
   const color = BALL_HEX[n > 8 ? n - 8 : n]!
   return (
     <span
-      className="flex size-5 items-center justify-center rounded-full border border-ink text-[0.6rem] font-extrabold leading-none"
+      className="flex size-5 items-center justify-center rounded-full border border-edge text-[0.6rem] font-extrabold leading-none"
       style={{ background: n > 8 ? `linear-gradient(#f7f5ec 0 22%, ${color} 22% 78%, #f7f5ec 78%)` : color, color: n === 1 || n === 9 ? '#16161a' : '#ffffff' }}
     >
       {n}
@@ -86,7 +86,7 @@ function PlayerCard({ player, seat, toShoot, clock, label, left, compact = false
     // What there is no room to write (their group, their wins) is still said to a screen reader.
     const spoken = [player?.name, label, player?.wins != null ? t('pool.wins', { count: player.wins }) : ''].filter(Boolean).join(', ')
     return (
-      <div role="group" aria-label={spoken} className={`flex min-w-0 flex-1 items-center gap-1.5 px-2 ${toShoot ? 'bg-panel text-ink outline-2 -outline-offset-2 outline-brand' : 'bg-white/10 text-white'}`} data-testid={`pool-player-${seat}`} data-to-shoot={toShoot}>
+      <div role="group" aria-label={spoken} className={`flex min-w-0 flex-1 items-center gap-1.5 px-2 ${toShoot ? 'bg-panel text-fg outline-2 -outline-offset-2 outline-brand' : 'bg-white/10 text-white'}`} data-testid={`pool-player-${seat}`} data-to-shoot={toShoot}>
         <span className="truncate text-sm font-bold">{player?.name ?? ''}</span>
         <span className="flex min-w-0 flex-1 items-center gap-0.5 overflow-hidden text-xs">
           {left.length === 0 && <span className="truncate opacity-80">{label}</span>}
@@ -99,7 +99,7 @@ function PlayerCard({ player, seat, toShoot, clock, label, left, compact = false
     )
   }
   return (
-    <div className={`flex items-center gap-2 p-1.5 ${toShoot ? 'bg-panel outline-2 outline-ink' : ''}`} data-testid={`pool-player-${seat}`} data-to-shoot={toShoot}>
+    <div className={`flex items-center gap-2 p-1.5 ${toShoot ? 'bg-panel outline-2 outline-edge' : ''}`} data-testid={`pool-player-${seat}`} data-to-shoot={toShoot}>
       <div className="min-w-0 flex-1">
         <p className="flex items-baseline gap-1.5 truncate font-bold">
           {player?.countryCode && <span aria-hidden="true">{flagEmoji(player.countryCode)}</span>}
@@ -170,10 +170,10 @@ function Panel({ title, open, onClose, children }: { title: string; open: boolea
   return (
     // Kept in the page while closed (hidden), so that what is inside, the chat above all, stays alive.
     <div className={`fixed inset-0 z-30 items-center justify-center bg-ink/60 p-2 ${open ? 'flex' : 'hidden'}`} onClick={onClose} role="presentation">
-      <div role="dialog" aria-label={title} onClick={(event) => event.stopPropagation()} className="flex max-h-full w-full max-w-sm flex-col gap-2 overflow-y-auto border-2 border-ink bg-panel p-3 text-ink">
+      <div role="dialog" aria-label={title} onClick={(event) => event.stopPropagation()} className="flex max-h-full w-full max-w-sm flex-col gap-2 overflow-y-auto border border-edge bg-panel p-3 text-fg">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="font-display text-lg font-extrabold text-primary">{title}</h2>
-          <button type="button" onClick={onClose} className="min-h-9 border-2 border-line px-3 text-sm font-semibold">
+          <h2 className="font-display text-lg font-extrabold text-accent">{title}</h2>
+          <button type="button" onClick={onClose} className="min-h-9 border border-line px-3 text-sm font-semibold">
             {t('pool.tools.close')}
           </button>
         </div>
@@ -487,7 +487,7 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
     <button
       type="button"
       aria-label={t('pool.spin')}
-      className={`relative shrink-0 rounded-full border-2 border-ink bg-[#f7f5ec] shadow-[inset_-6px_-8px_14px_rgba(0,0,0,0.18)] ${size}`}
+      className={`relative shrink-0 rounded-full border border-edge bg-[#f7f5ec] shadow-[inset_-6px_-8px_14px_rgba(0,0,0,0.18)] ${size}`}
       onPointerDown={(event) => {
         const [across, down] = touchIn(event.currentTarget, event.clientX, event.clientY, turned)
         const x = across * 2 - 1
@@ -519,7 +519,7 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
   const cuePicker = (
     <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('pool.settings.cueStyle')}>
       {CUE_IDS.map((id) => (
-        <button key={id} type="button" role="radio" aria-checked={settings.poolCue === id} onClick={() => settings.set({ poolCue: id })} className={`flex flex-col gap-1.5 border-2 p-2 text-start text-sm font-bold ${settings.poolCue === id ? 'border-ink bg-brand text-brand-ink' : 'border-line bg-surface'}`}>
+        <button key={id} type="button" role="radio" aria-checked={settings.poolCue === id} onClick={() => settings.set({ poolCue: id })} className={`flex flex-col gap-1.5 border p-2 text-start text-sm font-bold ${settings.poolCue === id ? 'border-edge bg-brand text-brand-ink' : 'border-line bg-surface'}`}>
           <span className="block h-2 w-full rounded-full" style={{ background: cueGradient(id, 'to right') }} aria-hidden="true" />
           {t(`pool.cue.${id}`)}
         </button>
@@ -527,7 +527,7 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
     </div>
   )
   const soundButton = (className: string) => (
-    <button type="button" className={`flex items-center border-2 border-line bg-panel font-semibold text-ink ${className}`} aria-pressed={settings.soundOn} onClick={() => settings.set({ soundOn: !settings.soundOn })}>
+    <button type="button" className={`flex items-center border border-line bg-panel font-semibold text-fg ${className}`} aria-pressed={settings.soundOn} onClick={() => settings.set({ soundOn: !settings.soundOn })}>
       {t(settings.soundOn ? 'pool.soundOn' : 'pool.soundOff')}
     </button>
   )
@@ -590,14 +590,14 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
     </Panel>
   )
   const offline = !decided && !connected && (
-    <div role="status" className="bg-ink px-3 py-1.5 text-center text-sm font-semibold text-surface">
+    <div role="status" className="bg-ink px-3 py-1.5 text-center text-sm font-semibold text-fg">
       {t('app.reconnecting')}
     </div>
   )
 
   if (tight) {
     // A phone on its side: the table is the screen.
-    const tool = 'flex size-11 items-center justify-center rounded-full border-2 border-[#0b0f24] bg-[#f3f1e7] text-ink shadow-[0_2px_4px_rgba(0,0,0,0.5)] disabled:opacity-40'
+    const tool = 'flex size-11 items-center justify-center rounded-full border border-[#0b0f24] bg-[#f3f1e7] text-fg shadow-[0_2px_4px_rgba(0,0,0,0.5)] disabled:opacity-40'
     // Turned: the screen is as wide as the phone is tall and as high as the phone is wide,
     // hung from the top right corner of the glass and swung down a quarter turn. Its left end is
     // then at the top of the phone (where the camera is) and its right end at the bottom.
@@ -615,7 +615,7 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
         data-layout={layout}
       >
         <header className="col-span-3 flex min-w-0 items-stretch gap-1.5">
-          <button type="button" aria-label={t('pool.tools.menu')} onClick={() => setPanel('menu')} className="flex w-11 shrink-0 items-center justify-center border-2 border-[#0b0f24] bg-brand text-xl font-extrabold leading-none text-brand-ink">
+          <button type="button" aria-label={t('pool.tools.menu')} onClick={() => setPanel('menu')} className="flex w-11 shrink-0 items-center justify-center border border-[#0b0f24] bg-brand text-xl font-extrabold leading-none text-brand-ink">
             ≡
           </button>
           {cardFor(bottomSeat)}
@@ -656,7 +656,7 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
                 <path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H10l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="currentColor" opacity={chatClosed ? 0.4 : 1} />
                 {chatClosed && <path d="M8.5 7l7 7M15.5 7l-7 7" stroke="#f3f1e7" strokeWidth="2.4" strokeLinecap="round" fill="none" />}
               </svg>
-              {chatNews && !chatClosed && <span className="absolute end-0.5 top-0.5 size-3 rounded-full border-2 border-[#f3f1e7] bg-hibiscus" aria-hidden="true" />}
+              {chatNews && !chatClosed && <span className="absolute end-0.5 top-0.5 size-3 rounded-full border border-[#f3f1e7] bg-hibiscus" aria-hidden="true" />}
             </button>
           )}
           <button type="button" aria-label={t('pool.aimLeft')} onClick={() => nudge(-0.25)} disabled={!myShot} className={`${tool} text-xl font-extrabold`}>
@@ -687,7 +687,7 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
           <div className="flex flex-wrap items-center gap-2">
             {/* While the game is on there is no way out but through it (resign, below). */}
             {decided && (
-              <Link to="/play/pool" className="flex min-h-11 items-center font-semibold text-primary underline underline-offset-4" data-testid="game-back">
+              <Link to="/play/pool" className="flex min-h-11 items-center font-semibold text-accent underline underline-offset-4" data-testid="game-back">
                 {t('pool.backToPool')}
               </Link>
             )}
@@ -717,13 +717,13 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
     >
       <header className={`flex items-center justify-between gap-2 ${desktop ? 'col-start-2 row-start-1' : ''}`}>
         {decided ? (
-          <Link to="/play/pool" className="flex min-h-11 items-center font-semibold text-primary underline underline-offset-4" data-testid="game-back">
+          <Link to="/play/pool" className="flex min-h-11 items-center font-semibold text-accent underline underline-offset-4" data-testid="game-back">
             {t('pool.backToPool')}
           </Link>
         ) : (
           <span aria-hidden="true" />
         )}
-        <p className="truncate font-display text-lg font-extrabold text-primary">{title}</p>
+        <p className="truncate font-display text-lg font-extrabold text-accent">{title}</p>
         {soundButton('min-h-11 px-3 text-sm')}
       </header>
 
@@ -740,9 +740,9 @@ export function PoolTable({ title, game, players, mySeat, decided, busy = false,
         </div>
       </div>
 
-      <aside className={`flex flex-col gap-3 ${desktop ? 'col-start-2 row-start-2 min-h-0 overflow-y-auto border-2 border-line bg-panel p-4' : ''}`}>
+      <aside className={`flex flex-col gap-3 ${desktop ? 'col-start-2 row-start-2 min-h-0 overflow-y-auto border border-line bg-panel p-4' : ''}`}>
         <div>
-          <p className={`min-h-7 font-display font-extrabold text-primary ${desktop ? 'text-lg' : 'text-base'}`} role="status">
+          <p className={`min-h-7 font-display font-extrabold text-accent ${desktop ? 'text-lg' : 'text-base'}`} role="status">
             {status}
           </p>
           <p className="min-h-5 text-sm text-muted" data-testid="pool-last">

@@ -39,7 +39,7 @@ export default function ResetPasswordPage() {
         <Link to="/forgot-password" className={buttonClass('primary', 'mt-8 w-full')}>
           {t('auth.reset.askAgain')}
         </Link>
-        <Link to="/login" className="mt-4 block text-center text-sm font-semibold text-primary underline">
+        <Link to="/login" className="mt-4 block text-center text-sm font-semibold text-accent underline">
           {t('auth.backToLogin')}
         </Link>
       </AuthLayout>

@@ -97,16 +97,16 @@ export default function PoolComputerPage() {
     return () => clearTimeout(timer)
   }, [computerToShoot, shotNo, level, take])
 
-  const pick = (chosen: boolean) => `min-h-12 border-2 px-3 font-bold ${chosen ? 'border-ink bg-brand text-brand-ink' : 'border-line bg-panel'}`
+  const pick = (chosen: boolean) => `min-h-12 border px-3 font-bold ${chosen ? 'border-edge bg-brand text-brand-ink' : 'border-line bg-panel'}`
 
   if (!game) {
     return (
       <div className="mx-auto flex min-h-(--app-h) w-full max-w-md flex-col gap-6 px-4 py-6">
-        <Link to="/play/pool" className="font-semibold text-primary underline underline-offset-4">
+        <Link to="/play/pool" className="font-semibold text-accent underline underline-offset-4">
           {t('pool.back')}
         </Link>
         <div>
-          <h1 className="font-display text-3xl font-extrabold text-primary">{t('pool.computer.title')}</h1>
+          <h1 className="font-display text-3xl font-extrabold text-accent">{t('pool.computer.title')}</h1>
           <p className="mt-1 text-muted">{t('pool.computer.intro')}</p>
         </div>
         <fieldset>

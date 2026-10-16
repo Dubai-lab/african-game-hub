@@ -17,7 +17,7 @@ import { GameHeader, GameNotOpen, useMatchSetup } from './setup'
 // and one big button to play. Setting up a match is on the next page (Play).
 
 const sectionTitle = 'font-display text-xl font-semibold'
-const outcomeStyle = { win: 'bg-palm text-white', loss: 'bg-hibiscus text-white', draw: 'bg-line text-ink' } as const
+const outcomeStyle = { win: 'bg-palm text-white', loss: 'bg-hibiscus text-white', draw: 'bg-line text-fg' } as const
 
 type Recent = { matchId: string; outcome: 'win' | 'loss' | 'draw'; pool: string; finishedAt: string; opponent: { name: string; countryCode: string | null } | null; change: number | null }
 
@@ -102,7 +102,7 @@ export default function GameHomePage() {
     <div className="flex w-full flex-col gap-6 lg:max-w-4xl">
       <GameHeader gameId={game.id} title={name} back={{ to: '/lobby', label: t('lobby.allGames') }}>
         {module?.SettingsSection && (
-          <Link to={`/play/${game.id}/settings`} className="flex min-h-11 shrink-0 items-center text-sm font-semibold text-primary underline underline-offset-4">
+          <Link to={`/play/${game.id}/settings`} className="flex min-h-11 shrink-0 items-center text-sm font-semibold text-accent underline underline-offset-4">
             {t('play.home.settings')}
           </Link>
         )}
@@ -110,9 +110,9 @@ export default function GameHomePage() {
 
       <div className="flex flex-col gap-6">
         {activeMatch.data && (
-          <section className="flex flex-wrap items-center justify-between gap-3 border-2 border-ink bg-brand p-4 text-brand-ink">
+          <section className="flex flex-wrap items-center justify-between gap-3 border border-edge bg-brand p-4 text-brand-ink">
             <p className="font-bold">{t('lobby.gameInProgress')}</p>
-            <Link to={`/play/${activeMatch.data.gameId}/match/${activeMatch.data.matchId}`} className={buttonClass('ghost', 'border-ink bg-panel')}>
+            <Link to={`/play/${activeMatch.data.gameId}/match/${activeMatch.data.matchId}`} className={buttonClass('ghost', 'border-edge bg-panel')}>
               {t('lobby.returnToGame')}
             </Link>
           </section>
@@ -126,9 +126,9 @@ export default function GameHomePage() {
             {game.ratingPools.map((pool) => {
               const row = ratings.data?.find((r) => r.pool === pool)
               return (
-                <div key={pool} className="border-2 border-line bg-panel p-3" data-testid={`stat-${pool}`}>
+                <div key={pool} className="border border-line bg-panel p-3" data-testid={`stat-${pool}`}>
                   <dt className="text-sm font-semibold text-muted">{pool === 'default' ? t(byWins ? 'profile.wins' : 'profile.rating') : t(`ratingPools.${pool}`, { defaultValue: pool })}</dt>
-                  <dd className="font-display text-3xl font-extrabold tabular-nums text-primary">{byWins ? (row?.wins ?? 0) : (row?.rating ?? DEFAULT_RATING)}</dd>
+                  <dd className="font-display text-3xl font-extrabold tabular-nums text-accent">{byWins ? (row?.wins ?? 0) : (row?.rating ?? DEFAULT_RATING)}</dd>
                   <dd className="text-xs tabular-nums text-muted">{row ? t('profile.record', { wins: row.wins, losses: row.losses, draws: row.draws }) : t('profile.noGames')}</dd>
                 </div>
               )
@@ -141,7 +141,7 @@ export default function GameHomePage() {
             <h2 id="game-friends" className={sectionTitle}>
               {t('play.home.friends')}
             </h2>
-            <Link to="/friends" className="text-sm font-semibold text-primary underline underline-offset-4">
+            <Link to="/friends" className="text-sm font-semibold text-accent underline underline-offset-4">
               {t('play.home.findFriends')}
             </Link>
           </div>
@@ -151,8 +151,8 @@ export default function GameHomePage() {
             // A row to swipe through on a phone.
             <ul className="-mx-5 mt-3 flex gap-2 overflow-x-auto px-5 pb-1 lg:mx-0 lg:px-0" data-testid="game-friends">
               {friends.map((friend) => (
-                <li key={friend.userId} className="flex w-36 shrink-0 flex-col items-center gap-2 border-2 border-line bg-panel p-3 text-center">
-                  <span className="flex size-12 items-center justify-center rounded-full bg-primary font-display text-xl font-extrabold text-surface" aria-hidden="true">
+                <li key={friend.userId} className="flex w-36 shrink-0 flex-col items-center gap-2 border border-line bg-panel p-3 text-center">
+                  <span className="flex size-12 items-center justify-center rounded-full bg-primary font-display text-xl font-extrabold text-fg" aria-hidden="true">
                     {friend.name.slice(0, 1).toUpperCase()}
                   </span>
                   <span className="w-full truncate font-bold">
@@ -176,7 +176,7 @@ export default function GameHomePage() {
             <h2 id="game-history" className={sectionTitle}>
               {t('play.home.history')}
             </h2>
-            <Link to="/profile" className="text-sm font-semibold text-primary underline underline-offset-4">
+            <Link to="/profile" className="text-sm font-semibold text-accent underline underline-offset-4">
               {t('play.home.viewAll')}
             </Link>
           </div>
@@ -218,7 +218,7 @@ export default function GameHomePage() {
 
       {/* Within thumb reach on a phone: in the bar above the tabs, which the page scrolls
           behind and never under. On a computer, at the foot of the page. */}
-      <PageDock className="sticky bottom-0 bg-surface/95 pb-3 pt-3 backdrop-blur-sm">{play}</PageDock>
+      <PageDock className="glass sticky bottom-0 rounded-3xl border border-line p-3">{play}</PageDock>
     </div>
   )
 }

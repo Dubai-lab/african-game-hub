@@ -59,7 +59,7 @@ function Choice<T extends number>({ legend, name, value, options, onChange }: { 
         {options.map((option) => (
           <label
             key={option.value}
-            className={`flex min-h-12 min-w-28 flex-1 cursor-pointer items-center justify-center border-2 px-4 text-center font-bold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary ${option.value === value ? 'border-ink bg-brand text-brand-ink' : 'border-line bg-panel'}`}
+            className={`flex min-h-12 min-w-28 flex-1 cursor-pointer items-center justify-center border px-4 text-center font-bold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent ${option.value === value ? 'border-edge bg-brand text-brand-ink' : 'border-line bg-panel'}`}
           >
             <input type="radio" name={name} className="sr-only" checked={option.value === value} onChange={() => onChange(option.value)} />
             {option.label}
@@ -196,11 +196,11 @@ export default function LudoComputerPage() {
 
   return (
     <main className="mx-auto flex min-h-(--app-h) w-full max-w-md flex-col gap-6 px-5 py-6">
-      <Link to="/play/ludo" className="flex min-h-11 items-center self-start font-semibold text-primary underline underline-offset-4">
+      <Link to="/play/ludo" className="flex min-h-11 items-center self-start font-semibold text-accent underline underline-offset-4">
         {t('ludo.back')}
       </Link>
       <div>
-        <h1 className="font-display text-3xl font-extrabold text-primary">{t('ludo.computer.heading')}</h1>
+        <h1 className="font-display text-3xl font-extrabold text-accent">{t('ludo.computer.heading')}</h1>
         <p className="mt-2 text-muted">{t('ludo.computer.intro')}</p>
       </div>
       <Choice

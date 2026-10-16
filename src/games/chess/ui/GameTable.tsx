@@ -295,7 +295,7 @@ export function GameTable({
             as high as the window. The player cards line up with its edges. */}
         <div className="mx-auto flex w-full max-w-[min(100%,calc(var(--app-h)_-_16.5rem))] flex-col gap-1.5 lg:max-w-full lg:gap-2">
           {notice && (
-            <div role="status" className="bg-ink px-3 py-1.5 text-center text-sm font-semibold text-surface">
+            <div role="status" className="bg-ink px-3 py-1.5 text-center text-sm font-semibold text-fg">
               {notice}
             </div>
           )}
@@ -330,7 +330,7 @@ export function GameTable({
       </div>
 
       {/* What is under the board. If it holds more than fits, it scrolls by itself. */}
-      <aside className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto lg:col-start-2 lg:row-start-2 lg:border-2 lg:border-line lg:bg-panel lg:p-4">
+      <aside className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto lg:col-start-2 lg:row-start-2 lg:border lg:border-line lg:bg-panel lg:p-4">
         {status && (
           <div className="min-h-6 text-center text-sm font-semibold text-muted" role="status">
             {status}
@@ -347,7 +347,7 @@ export function GameTable({
 
         {/* The player's own line, when they are trying one: what they have played, and the way back. */}
         {trial && tried && (
-          <div className="flex flex-col gap-2 border-2 border-brand bg-brand/15 p-3" data-testid="trial" role="status">
+          <div className="flex flex-col gap-2 border border-brand bg-brand/15 p-3" data-testid="trial" role="status">
             <p className="text-sm font-bold">{t('chess.trial.title')}</p>
             <p className="font-semibold tabular-nums" data-testid="trial-line">
               {tried.played.slice(trial.ply).map((move) => `${move.color === 'w' ? `${(move.ply + 1) / 2}. ` : move.ply === trial.ply + 1 ? `${move.ply / 2}… ` : ''}${move.san}`).join(' ')}

@@ -20,15 +20,15 @@ export function TextField({ label, hint, error, success, ...rest }: Props) {
         id={id}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
-        className={`mt-1 block min-h-12 w-full rounded-lg border bg-panel px-3 text-base text-ink outline-none focus:border-primary focus:ring-2 focus:ring-primary/30 ${error ? 'border-danger' : 'border-line'}`}
+        className={`mt-1 block min-h-12 w-full rounded-lg border bg-panel px-3 text-base text-fg outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 ${error ? 'border-danger' : 'border-line'}`}
         {...rest}
       />
       {error ? (
-        <p id={`${id}-error`} className="mt-1 text-sm font-semibold text-danger" role="alert">
+        <p id={`${id}-error`} className="mt-1 text-sm font-semibold text-alert" role="alert">
           {error}
         </p>
       ) : success ? (
-        <p id={`${id}-hint`} className="mt-1 text-sm font-semibold text-palm" role="status">
+        <p id={`${id}-hint`} className="mt-1 text-sm font-semibold text-good" role="status">
           {success}
         </p>
       ) : hint ? (

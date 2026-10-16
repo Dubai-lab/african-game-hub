@@ -110,7 +110,7 @@ function PhotoEditor({ profile }: { profile: PublicProfile }) {
   const queryClient = useQueryClient()
   const picker = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
-  const link = 'min-h-11 font-semibold text-primary underline underline-offset-4 disabled:opacity-60'
+  const link = 'min-h-11 font-semibold text-accent underline underline-offset-4 disabled:opacity-60'
 
   async function chosen(file: File | undefined) {
     if (!file || busy) return
@@ -187,7 +187,7 @@ function DisplayNameEditor({ profile }: { profile: PublicProfile }) {
 
   if (!editing) {
     return (
-      <button type="button" onClick={() => setEditing(true)} className="min-h-10 text-sm font-semibold text-primary underline underline-offset-4">
+      <button type="button" onClick={() => setEditing(true)} className="min-h-10 text-sm font-semibold text-accent underline underline-offset-4">
         {t('profile.editName')}
       </button>
     )
@@ -268,7 +268,7 @@ function FriendActions({ profile }: { profile: PublicProfile }) {
 const outcomeStyle: Record<HistoryItem['outcome'], string> = {
   win: 'bg-palm text-white',
   loss: 'bg-hibiscus text-white',
-  draw: 'bg-line text-ink',
+  draw: 'bg-line text-fg',
 }
 
 export default function ProfilePage() {
@@ -307,9 +307,9 @@ export default function ProfilePage() {
     <div className="flex flex-col gap-7 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-x-10">
       <div className="flex flex-col gap-7">
       <header className="flex items-start gap-4">
-        <Avatar url={target.avatarUrl} name={target.displayName ?? target.username} className="size-20 border-2 border-ink text-4xl" />
+        <Avatar url={target.avatarUrl} name={target.displayName ?? target.username} className="size-20 border border-edge text-4xl" />
         <div className="min-w-0 flex-1">
-          <h1 className="truncate font-display text-3xl font-extrabold text-primary">{target.displayName ?? target.username}</h1>
+          <h1 className="truncate font-display text-3xl font-extrabold text-accent">{target.displayName ?? target.username}</h1>
           <p className="text-muted">
             @{target.username}
             {target.countryCode && (
@@ -399,7 +399,7 @@ export default function ProfilePage() {
                       )}
                       {/* A player's token results are their own business. */}
                       {isMe && match.stake > 0 && match.tokensChange !== null && (
-                        <span className={`block text-xs font-semibold ${match.tokensChange >= 0 ? 'text-palm' : 'text-hibiscus'}`}>
+                        <span className={`block text-xs font-semibold ${match.tokensChange >= 0 ? 'text-good' : 'text-alert'}`}>
                           {t('profile.tokens', { amount: format.signedTokens(match.tokensChange) })}
                         </span>
                       )}

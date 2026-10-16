@@ -40,7 +40,7 @@ export default function FriendsPage() {
 
   return (
     <div className="flex flex-col gap-7 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-x-10">
-      <h1 className="font-display text-3xl font-extrabold text-primary lg:col-span-2 lg:text-4xl">{t('friends.title')}</h1>
+      <h1 className="font-display text-3xl font-extrabold text-accent lg:col-span-2 lg:text-4xl">{t('friends.title')}</h1>
 
       <div className="flex flex-col gap-7">
         <section aria-labelledby="friends-add">

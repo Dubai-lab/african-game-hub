@@ -18,7 +18,7 @@ export function GenderChoice({ value, onChange, name, invalid = false }: { value
       {GENDERS.map((gender, index) => (
         <label
           key={gender}
-          className={`flex min-h-14 cursor-pointer items-center justify-center gap-2 border-2 px-3 py-1 font-bold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary ${gender === value ? 'border-ink bg-brand text-brand-ink' : invalid ? 'border-danger bg-panel text-ink' : 'border-line bg-panel text-ink'}`}
+          className={`flex min-h-14 cursor-pointer items-center justify-center gap-2 border px-3 py-1 font-bold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent ${gender === value ? 'border-edge bg-brand text-brand-ink' : invalid ? 'border-danger bg-panel text-fg' : 'border-line bg-panel text-fg'}`}
         >
           <input type="radio" name={name} className="sr-only" checked={gender === value} onChange={() => onChange(gender)} aria-invalid={invalid ? true : undefined} />
           <PlayerFigure kind={gender} seatIndex={index} className="size-9" />
@@ -60,8 +60,8 @@ export function GenderPrompt() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/55 sm:items-center" role="presentation">
-      <div role="dialog" aria-modal="true" aria-labelledby="gender-prompt-title" className="w-full max-w-md border-t-4 border-brand bg-panel px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:border-4" data-testid="gender-prompt">
-        <h2 id="gender-prompt-title" className="font-display text-2xl font-extrabold text-primary">
+      <div role="dialog" aria-modal="true" aria-labelledby="gender-prompt-title" className="w-full max-w-md glass rounded-t-3xl border-t border-line px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:rounded-3xl sm:border" data-testid="gender-prompt">
+        <h2 id="gender-prompt-title" className="font-display text-2xl font-extrabold text-accent">
           {t('auth.gender.promptTitle')}
         </h2>
         <p className="mt-1 text-muted">{t('auth.gender.promptBody')}</p>

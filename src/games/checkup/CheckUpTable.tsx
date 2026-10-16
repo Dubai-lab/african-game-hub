@@ -21,8 +21,8 @@ export type TablePlayer = { seat: Seat; name: string; countryCode?: string | nul
 export function Sheet({ title, children, onClose }: { title: string; children: ReactNode; onClose?: () => void }) {
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center bg-ink/55 sm:items-center" onClick={onClose} role="presentation">
-      <div role="dialog" aria-modal="true" aria-label={title} onClick={(event) => event.stopPropagation()} className="max-h-[92dvh] w-full max-w-md overflow-y-auto border-t-4 border-brand bg-panel px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:border-4">
-        <h2 className="font-display text-2xl font-extrabold text-primary">{title}</h2>
+      <div role="dialog" aria-modal="true" aria-label={title} onClick={(event) => event.stopPropagation()} className="max-h-[92dvh] w-full max-w-md overflow-y-auto glass rounded-t-3xl border-t border-line px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:rounded-3xl sm:border">
+        <h2 className="font-display text-2xl font-extrabold text-accent">{title}</h2>
         {children}
       </div>
     </div>
@@ -212,7 +212,7 @@ export function CheckUpTable({ title, backTo, view, hand, players, mySeat, deadl
     const gone = view.out.includes(seat)
     const toMove = !over && view.turn === seat
     return (
-      <div key={seat} className={`flex min-w-0 flex-1 items-center gap-2 border-2 px-2 py-1.5 ${toMove ? 'border-ink bg-panel' : 'border-transparent'} ${gone ? 'opacity-50' : ''}`} data-testid={`checkup-player-${seat}`} data-to-move={toMove} data-cards={count}>
+      <div key={seat} className={`flex min-w-0 flex-1 items-center gap-2 border px-2 py-1.5 ${toMove ? 'border-edge bg-panel' : 'border-transparent'} ${gone ? 'opacity-50' : ''}`} data-testid={`checkup-player-${seat}`} data-to-move={toMove} data-cards={count}>
         {/* Their photo when they have one; otherwise their figure, wearing the colour of their seat. */}
         <Avatar url={who?.avatarUrl ?? null} name={who?.name ?? '?'} className="size-9" fallback={<PlayerFigure kind={who?.computer ? 'computer' : who?.gender} seatIndex={Math.max(0, view.seats.indexOf(seat))} className="size-9" />} />
         <div className="min-w-0 flex-1">
@@ -246,7 +246,7 @@ export function CheckUpTable({ title, backTo, view, hand, players, mySeat, deadl
       ))}
       <GameHeader title={title} over={over} backTo={backTo} />
       {notice && (
-        <div role="status" className="shrink-0 bg-ink px-3 py-1.5 text-center text-sm font-semibold text-surface">
+        <div role="status" className="shrink-0 bg-ink px-3 py-1.5 text-center text-sm font-semibold text-fg">
           {notice}
         </div>
       )}
@@ -290,7 +290,7 @@ export function CheckUpTable({ title, backTo, view, hand, players, mySeat, deadl
             </span>
           </div>
         </div>
-        <p className="min-h-6 text-center font-display text-base font-extrabold text-primary" role="status" data-testid="checkup-status">
+        <p className="min-h-6 text-center font-display text-base font-extrabold text-accent" role="status" data-testid="checkup-status">
           {status}
         </p>
         <p className="min-h-5 text-center text-sm text-muted" data-testid="checkup-last">
@@ -364,7 +364,7 @@ export function CheckUpTable({ title, backTo, view, hand, players, mySeat, deadl
                 }}
                 aria-label={shapeName(shape)}
                 data-shape={shape}
-                className={`flex aspect-square flex-col items-center justify-center gap-1 border-2 bg-surface ${shape === leading ? 'border-line' : 'border-ink'}`}
+                className={`flex aspect-square flex-col items-center justify-center gap-1 border bg-surface ${shape === leading ? 'border-line' : 'border-edge'}`}
               >
                 <svg viewBox="0 0 30 30" className="size-9" aria-hidden="true">
                   <ShapeMark shape={shape} cx={15} cy={15} size={22} />

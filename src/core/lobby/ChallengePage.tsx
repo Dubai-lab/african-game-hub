@@ -35,9 +35,9 @@ function Invitation({ challenge, onDone }: { challenge: Challenge; onDone?: () =
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
-        <GameArt gameId={challenge.gameId} className="h-14 w-16 shrink-0 border-2 border-ink" />
+        <GameArt gameId={challenge.gameId} className="h-14 w-16 shrink-0 border border-edge" />
         <div className="min-w-0">
-          <p className="font-display text-xl font-extrabold text-primary">{t('challenge.incomingTitle', { name: challenge.fromName })}</p>
+          <p className="font-display text-xl font-extrabold text-accent">{t('challenge.incomingTitle', { name: challenge.fromName })}</p>
           <p className="font-semibold">{[gameName, termsText(game, challenge.pool, challenge.options)].filter(Boolean).join(' · ')}</p>
         </div>
       </div>
@@ -76,7 +76,7 @@ export default function ChallengePage() {
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-5 lg:mx-0">
-      <h1 className="font-display text-3xl font-extrabold text-primary">{t('challenge.title')}</h1>
+      <h1 className="font-display text-3xl font-extrabold text-accent">{t('challenge.title')}</h1>
       {closed ? (
         <>
           {/* An invitation that has been taken up can no longer be read by anyone else: the same words either way. */}
@@ -86,7 +86,7 @@ export default function ChallengePage() {
               {t('lobby.returnToGame')}
             </Link>
           )}
-          <Link to="/lobby" className="font-semibold text-primary underline underline-offset-4">
+          <Link to="/lobby" className="font-semibold text-accent underline underline-offset-4">
             {t('lobby.allGames')}
           </Link>
         </>
@@ -98,7 +98,7 @@ export default function ChallengePage() {
           </Link>
         </>
       ) : (
-        <div className="border-2 border-ink bg-panel p-4">
+        <div className="border border-edge bg-panel p-4">
           <Invitation challenge={c} />
         </div>
       )}
@@ -117,9 +117,9 @@ export function ChallengeInbox() {
 
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center bg-ink/55 sm:items-center" role="presentation" onClick={later}>
-      <div role="dialog" aria-modal="true" aria-label={t('challenge.incomingTitle', { name: challenge.fromName })} onClick={(event) => event.stopPropagation()} className="w-full max-w-md border-t-4 border-brand bg-panel px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:border-4">
+      <div role="dialog" aria-modal="true" aria-label={t('challenge.incomingTitle', { name: challenge.fromName })} onClick={(event) => event.stopPropagation()} className="w-full max-w-md glass rounded-t-3xl border-t border-line px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:rounded-3xl sm:border">
         <Invitation challenge={challenge} onDone={later} />
-        <button type="button" onClick={later} className="mt-2 min-h-11 w-full font-semibold text-primary underline underline-offset-4">
+        <button type="button" onClick={later} className="mt-2 min-h-11 w-full font-semibold text-accent underline underline-offset-4">
           {t('challenge.later')}
         </button>
       </div>

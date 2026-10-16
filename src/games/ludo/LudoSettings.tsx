@@ -22,7 +22,7 @@ export default function LudoSettings() {
       ...(patch.ludoLay !== undefined ? { lay: patch.ludoLay } : {}),
     })
   }
-  const pick = (chosen: boolean) => `min-h-12 border-2 px-3 font-bold ${chosen ? 'border-ink bg-brand text-brand-ink' : 'border-line bg-surface'}`
+  const pick = (chosen: boolean) => `min-h-12 border px-3 font-bold ${chosen ? 'border-edge bg-brand text-brand-ink' : 'border-line bg-surface'}`
 
   return (
     <div className="flex flex-col gap-5">
@@ -32,7 +32,7 @@ export default function LudoSettings() {
           {BOARD_IDS.map((id) => {
             const board = BOARDS[id]
             return (
-              <button key={id} type="button" role="radio" aria-checked={settings.ludoBoard === id} onClick={() => settings.set({ ludoBoard: id })} className={`flex flex-col items-center gap-1 border-2 p-2 ${settings.ludoBoard === id ? 'border-ink bg-brand' : 'border-line bg-surface'}`}>
+              <button key={id} type="button" role="radio" aria-checked={settings.ludoBoard === id} onClick={() => settings.set({ ludoBoard: id })} className={`flex flex-col items-center gap-1 border p-2 ${settings.ludoBoard === id ? 'border-edge bg-brand' : 'border-line bg-surface'}`}>
                 {/* A thumbnail of the board: its frame, surface and four houses. */}
                 <span className="grid size-14 grid-cols-2 gap-1 p-1.5" style={{ background: board.frame[0] }} aria-hidden="true">
                   {(['red', 'green', 'blue', 'yellow'] as const).map((seat) => (

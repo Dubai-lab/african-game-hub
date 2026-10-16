@@ -22,9 +22,9 @@ export function Sheet({ title, children, onClose }: { title: string; children: R
         aria-modal="true"
         aria-label={title}
         onClick={(event) => event.stopPropagation()}
-        className="w-full max-w-md border-t-4 border-brand bg-panel px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:border-4"
+        className="w-full max-w-md glass rounded-t-3xl border-t border-line px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:rounded-3xl sm:border"
       >
-        <h2 className="font-display text-2xl font-extrabold text-primary">{title}</h2>
+        <h2 className="font-display text-2xl font-extrabold text-accent">{title}</h2>
         {children}
       </div>
     </div>
@@ -69,7 +69,7 @@ function PlayerCard({ player, seat, colors, shades, home, total, toMove, clock, 
   const { t } = useTranslation()
   return (
     <div
-      className={`flex min-w-0 items-center gap-2 ${toMove ? 'bg-panel outline-2 outline-ink' : ''} ${compact ? 'p-1' : 'p-1.5'} ${left ? 'opacity-55' : ''}`}
+      className={`flex min-w-0 items-center gap-2 ${toMove ? 'bg-panel outline-2 outline-edge' : ''} ${compact ? 'p-1' : 'p-1.5'} ${left ? 'opacity-55' : ''}`}
       data-testid={`ludo-player-${seat}`}
       data-to-move={toMove}
     >
@@ -78,7 +78,7 @@ function PlayerCard({ player, seat, colors, shades, home, total, toMove, clock, 
       {/* One disc for each house, when the player holds more than the one their figure wears (or has no figure). */}
       <span className="flex shrink-0 -space-x-2 empty:hidden" aria-hidden="true">
         {(player && colors.length === 1 ? [] : colors).map((color) => (
-          <span key={color} className={`${compact ? 'size-6' : 'size-9'} rounded-full border-2 border-ink`} style={{ backgroundColor: shades[color] }} />
+          <span key={color} className={`${compact ? 'size-6' : 'size-9'} rounded-full border border-edge`} style={{ backgroundColor: shades[color] }} />
         ))}
       </span>
       <div className="min-w-0 flex-1">
@@ -299,7 +299,7 @@ export function LudoTable({ title, state, players, mySeat, deadline, busy, notic
   const thrownTotal = shown.rolled.reduce((sum, value) => sum + value, 0)
   const showThrow = shown.phase === 'move' && shown.rolled.length > 0 && !rolling
   const round = (size: string, color: string, on: boolean, usable: boolean, dim: boolean) =>
-    `flex ${size} shrink-0 items-center justify-center rounded-full border-4 font-display font-extrabold tabular-nums text-white shadow-[inset_0_-6px_10px_rgba(0,0,0,0.28),inset_0_5px_8px_rgba(255,255,255,0.35),0_3px_6px_rgba(0,0,0,0.35)] transition-transform ${color} ${on ? 'scale-110 border-ink' : 'border-[#3a2a1c]'} ${dim ? 'opacity-35' : usable ? '' : 'opacity-70'}`
+    `flex ${size} shrink-0 items-center justify-center rounded-full border-4 font-display font-extrabold tabular-nums text-white shadow-[inset_0_-6px_10px_rgba(0,0,0,0.28),inset_0_5px_8px_rgba(255,255,255,0.35),0_3px_6px_rgba(0,0,0,0.35)] transition-transform ${color} ${on ? 'scale-110 border-edge' : 'border-[#3a2a1c]'} ${dim ? 'opacity-35' : usable ? '' : 'opacity-70'}`
   const dieButton = (index: number, color: string) => {
     const die = dice[index]
     if (!die || die.value === null) return null
@@ -333,7 +333,7 @@ export function LudoTable({ title, state, players, mySeat, deadline, busy, notic
       <div className="flex shrink-0 flex-col lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:justify-center">
         <div className="mx-auto flex w-full max-w-[min(100%,calc(var(--app-h)_-_21rem))] flex-col gap-1.5 lg:max-w-full">
           {notice && (
-            <div role="status" className="bg-ink px-3 py-1.5 text-center text-sm font-semibold text-surface">
+            <div role="status" className="bg-ink px-3 py-1.5 text-center text-sm font-semibold text-fg">
               {notice}
             </div>
           )}
@@ -382,7 +382,7 @@ export function LudoTable({ title, state, players, mySeat, deadline, busy, notic
               </div>
             ) : null}
           </div>
-          <p className="text-center font-display text-base font-extrabold text-primary lg:text-lg" role="status">
+          <p className="text-center font-display text-base font-extrabold text-accent lg:text-lg" role="status">
             {note}
           </p>
 
@@ -391,7 +391,7 @@ export function LudoTable({ title, state, players, mySeat, deadline, busy, notic
       </div>
 
       {/* What is under the board. If it holds more than fits, it scrolls by itself. */}
-      <aside className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto lg:col-start-2 lg:row-start-2 lg:border-2 lg:border-line lg:bg-panel lg:p-4">
+      <aside className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto lg:col-start-2 lg:row-start-2 lg:border lg:border-line lg:bg-panel lg:p-4">
         {/* The game so far, newest first: every throw and what it did. */}
         <section aria-label={t('ludo.logTitle')} className="flex min-h-0 flex-col lg:flex-1">
           <h2 className="text-sm font-semibold text-muted">{t('ludo.logTitle')}</h2>

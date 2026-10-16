@@ -50,7 +50,7 @@ export default function ChatPage() {
   }
 
   const back = (
-    <Link to="/friends" className="flex min-h-11 items-center font-semibold text-primary underline underline-offset-4">
+    <Link to="/friends" className="flex min-h-11 items-center font-semibold text-accent underline underline-offset-4">
       {t('friends.title')}
     </Link>
   )
@@ -69,7 +69,7 @@ export default function ChatPage() {
     <div className="flex h-[calc(var(--app-h)_-_11rem)] flex-col lg:h-[calc(var(--app-h)_-_7rem)] lg:max-w-3xl">
       <header className="flex items-center justify-between gap-3 border-b-2 border-line pb-2">
         {back}
-        <h1 className="truncate font-display text-xl font-extrabold text-primary">
+        <h1 className="truncate font-display text-xl font-extrabold text-accent">
           {friend.countryCode && <span aria-hidden="true">{flagEmoji(friend.countryCode)} </span>}
           {friend.name}
         </h1>
@@ -85,7 +85,7 @@ export default function ChatPage() {
             {messages.map((message) => (
               <li
                 key={message.id}
-                className={`max-w-[80%] px-3 py-2 ${message.mine ? 'self-end bg-primary text-surface' : 'self-start border border-line bg-panel'}`}
+                className={`max-w-[80%] px-3 py-2 ${message.mine ? 'self-end bg-primary text-fg' : 'self-start border border-line bg-panel'}`}
               >
                 <p className="whitespace-pre-wrap break-words">{message.body}</p>
                 <p className={`mt-0.5 text-xs ${message.mine ? 'text-primary-tint' : 'text-muted'}`}>{format.dateTime(message.createdAt)}</p>

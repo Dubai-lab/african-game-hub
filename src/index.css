@@ -1,16 +1,30 @@
 @import 'tailwindcss';
 
-/* The approved palette and typefaces (landing page design plan, step 3).
-   Components use these names only, never raw hex values. */
+/* Design V2.0, "glass": the approved palette (landing page design plan, step 3) on a night
+   ground, with frosted panels. Components use these names only, never raw hex values.
+
+   Each name has one job. Text names (fg, muted, accent, alert, good) are only ever used for
+   text; fill names (surface, panel, ink, primary, brand, hibiscus, palm) only for backgrounds;
+   line and edge only for borders. So a light word never ends up on a light fill, or a dark one
+   on the night ground. */
 @theme {
-  /* Limewash: main light ground. */
-  --color-surface: #eef0fa;
-  --color-panel: #ffffff;
-  /* Night Ink: text, dark pieces. */
-  --color-ink: #0d1130;
-  --color-muted: #4a5078;
-  --color-line: #c9ceea;
-  /* Indigo Vat: hero grounds, headings and links on light. */
+  /* Night: the ground everything sits on (the page, the bars). */
+  --color-surface: #0b1036;
+  /* Glass: a card or panel, see-through over the ground. */
+  --color-panel: rgb(255 255 255 / 0.075);
+  /* Night Ink: the deepest fill (dark chips, the board's shadow side). */
+  --color-ink: #070a26;
+  /* Text. */
+  --color-fg: #f4f5ff;
+  --color-muted: #b7bde6;
+  /* Headings, numbers and links: Indigo Vat's tint, readable on the night ground. */
+  --color-accent: #c5cbf2;
+  --color-alert: #ff7a98;
+  --color-good: #4fd69c;
+  /* Borders: the faint line of a glass edge, and a stronger one for what can be picked. */
+  --color-line: rgb(255 255 255 / 0.14);
+  --color-edge: rgb(255 255 255 / 0.26);
+  /* Indigo Vat: fills. */
   --color-primary: #1f2a7a;
   --color-primary-soft: #4455c7;
   --color-primary-tint: #c5cbf2;
@@ -24,8 +38,81 @@
   /* Palm: wins, gains, confirmations. */
   --color-palm: #0b7a55;
 
+  /* Glass is soft-cornered: nothing is a square box. */
+  --radius-sm: 0.5rem;
+  --radius: 0.75rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+  --radius-card: 1.25rem;
+
   --font-display: 'Ojuju Variable', 'Trebuchet MS', 'Segoe UI', sans-serif;
   --font-sans: 'Atkinson Hyperlegible Next Variable', 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+}
+
+/* Frosted glass, for what floats over the page: the top bar, the tabs, the page's own bar,
+   sheets, dialogs and toasts. Only there, because blurring what is behind costs a budget phone
+   real work; cards on the page are see-through without it (the ground behind them is already
+   soft). In data-saver mode, and for anyone who asked for less see-through, it is solid. */
+@utility glass {
+  background-color: rgb(20 26 78 / 0.62);
+  background-image: linear-gradient(150deg, rgb(255 255 255 / 0.12), rgb(255 255 255 / 0.03) 55%);
+  border-color: var(--color-line);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.14),
+    0 18px 40px -18px rgb(0 0 0 / 0.65);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+}
+/* The glow under the main button and anything else lit in Maize. */
+@utility glow-brand {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.45),
+    0 10px 28px -8px rgb(245 183 0 / 0.55);
+}
+
+@layer components {
+  /* A card's glass: a faint sheen from the top corner and a lit top edge, on whatever corner
+     the element asks for (soft by default). */
+  .bg-panel,
+  .bg-primary {
+    background-image: linear-gradient(150deg, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0) 60%);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1);
+  }
+  /* Small marks in a colour of their own (Live now, Won, Lost, a count): softly cornered. */
+  .bg-brand,
+  .bg-hibiscus,
+  .bg-palm,
+  .bg-danger,
+  .bg-ink,
+  .bg-line {
+    border-radius: var(--radius-sm);
+  }
+  /* Every box with a border all round, and every card, is a soft-cornered one. An element that
+     names its own corners keeps them (utilities come after this layer). */
+  .border,
+  .bg-panel,
+  .bg-primary {
+    border-radius: var(--radius-card);
+  }
+}
+
+:root {
+  /* The browser's own controls (lists, date pickers, scroll bars) in their dark form. */
+  color-scheme: dark;
+}
+html.data-saver .glass {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background-color: rgb(16 21 66 / 0.97);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background-color: rgb(16 21 66 / 0.97);
+  }
 }
 
 html {
@@ -94,10 +181,26 @@ html.screen-locked body {
 }
 
 body {
-  @apply bg-surface font-sans text-ink antialiased;
+  @apply bg-surface font-sans text-fg antialiased;
   -webkit-tap-highlight-color: transparent;
   /* The page starts below the phone's status bar and notch. */
   padding-top: var(--safe-top);
+}
+
+/* The ground: night indigo, lit from its corners by the palette's own colours, soft enough for
+   glass to sit on. Drawn once and held still behind the page (it never scrolls or repaints). */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(70% 45% at 8% 0%, rgb(68 85 199 / 0.6), transparent 70%),
+    radial-gradient(55% 40% at 100% 22%, rgb(209 38 79 / 0.3), transparent 70%),
+    radial-gradient(60% 45% at 0% 78%, rgb(11 122 85 / 0.38), transparent 70%),
+    radial-gradient(55% 40% at 100% 100%, rgb(245 183 0 / 0.2), transparent 70%),
+    linear-gradient(180deg, #0d1340 0%, #070a26 100%);
 }
 
 /* Behind the status bar: the page's own colour, so that what scrolls up the page passes under

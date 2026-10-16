@@ -43,7 +43,7 @@ function Setup({ onStart }: { onStart: (choices: Choices, control: TimeControl |
   const schema = useTimeControlSchema()
   const [choices, setChoices] = useState<Choices>(loadChoices)
   const tile = (chosen: boolean) =>
-    `flex cursor-pointer border-2 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary ${chosen ? 'border-ink bg-brand text-brand-ink' : 'border-line bg-panel'}`
+    `flex cursor-pointer border has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent ${chosen ? 'border-edge bg-brand text-brand-ink' : 'border-line bg-panel'}`
 
   const saved = choices.timeControl ? { time_control: choices.timeControl } : null
   const timeOptions = chessModule.isValidOptions(schema, saved) ? saved : chessModule.defaultOptions(schema)
@@ -52,12 +52,12 @@ function Setup({ onStart }: { onStart: (choices: Choices, control: TimeControl |
   return (
     <div className="mx-auto flex min-h-(--app-h) w-full max-w-md flex-col gap-6 px-5 pb-8 pt-4 lg:max-w-3xl lg:justify-center lg:py-12">
       <header>
-        <Link to="/play/chess" className="flex min-h-11 items-center font-semibold text-primary underline underline-offset-4">
+        <Link to="/play/chess" className="flex min-h-11 items-center font-semibold text-accent underline underline-offset-4">
           {t('chess.local.back')}
         </Link>
       </header>
       <div>
-        <h1 className="font-display text-3xl font-extrabold text-primary lg:text-4xl">{t('chess.computer.title')}</h1>
+        <h1 className="font-display text-3xl font-extrabold text-accent lg:text-4xl">{t('chess.computer.title')}</h1>
         <p className="mt-2 text-muted">{t('chess.computer.intro')}</p>
       </div>
 
@@ -266,7 +266,7 @@ function Table({ level, human, control, onNewGame }: TableProps) {
   const me = profile.data
   const status =
     engineState === 'failed' ? (
-      <span className="flex flex-wrap items-center justify-center gap-x-3 text-hibiscus">
+      <span className="flex flex-wrap items-center justify-center gap-x-3 text-alert">
         {t('chess.computer.failed')}
         <button type="button" className="min-h-10 font-bold underline" onClick={() => setAttempt((n) => n + 1)}>
           {t('common.retry')}

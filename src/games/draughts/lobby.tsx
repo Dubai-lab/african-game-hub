@@ -36,7 +36,7 @@ function TimeControlPicker({ schema, value, onChange }: LobbyOptionsProps) {
           return (
             <label
               key={control.id}
-              className={`flex min-h-12 min-w-20 cursor-pointer items-center justify-center border-2 px-3 text-base font-bold tabular-nums has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary ${on ? 'border-ink bg-brand text-brand-ink' : 'border-line bg-panel text-ink'}`}
+              className={`flex min-h-12 min-w-20 cursor-pointer items-center justify-center border px-3 text-base font-bold tabular-nums has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent ${on ? 'border-edge bg-brand text-brand-ink' : 'border-line bg-panel text-fg'}`}
             >
               <input
                 type="radio"

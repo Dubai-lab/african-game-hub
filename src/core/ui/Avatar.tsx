@@ -6,7 +6,7 @@ type Props = {
   url?: string | null
   /** Whose it is. Without a photo (or with data saver on) the first letter is shown instead. */
   name: string
-  /** Size and any frame: for example "size-11 border-2 border-ink". */
+  /** Size and any frame: for example "size-11 border border-edge". */
   className?: string
   /** Colours of the letter tile, when the screen has its own (a chess player's side, say). */
   tileClassName?: string
@@ -18,7 +18,7 @@ type Props = {
  * A player's picture. Decoration: the name is always written next to it, so it is hidden from
  * screen readers. With data saver on, no photo is fetched at all.
  */
-export function Avatar({ url, name, className = '', tileClassName = 'bg-primary text-surface', fallback }: Props) {
+export function Avatar({ url, name, className = '', tileClassName = 'bg-primary text-fg', fallback }: Props) {
   const dataSaver = useSettingsStore((state) => state.dataSaver)
   const [failed, setFailed] = useState(false)
   useEffect(() => setFailed(false), [url])

@@ -84,6 +84,13 @@ export const useSettingsStore = create<SettingsState>()(
   }),
 )
 
+// Data-saver mode reaches the page's own styles too: no frosted glass (see index.css).
+if (typeof document !== 'undefined') {
+  const mark = (on: boolean) => document.documentElement.classList.toggle('data-saver', on)
+  mark(useSettingsStore.getState().dataSaver)
+  useSettingsStore.subscribe((state) => mark(state.dataSaver))
+}
+
 function currentPreferences(): Preferences {
   const { soundOn, hapticsOn, dataSaver, chessBoardTheme, chessPieceSet, chessPremoves, ludoDice, ludoBoard3d, ludoBoard, ludoSides, ludoLay, poolCloth, poolGuide, poolCue, draughtsBoard, draughtsPieces, draughtsNumbers, draughtsHints } =
     useSettingsStore.getState()

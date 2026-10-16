@@ -47,7 +47,7 @@ function Clocks({ running }: { running: boolean }) {
   const chip = 'flex items-center gap-2 rounded-md px-2.5 py-1 text-sm font-bold tabular-nums'
   return (
     <div aria-hidden="true" className="pointer-events-none absolute left-5 right-5 top-2 flex justify-between lg:left-6 lg:right-36">
-      <span className={`${chip} bg-ink/55 text-surface`}>
+      <span className={`${chip} bg-ink/55 text-fg`}>
         {t('landing.hero.opponent')} <span>4:52</span>
       </span>
       <span className={`${chip} bg-brand text-brand-ink`}>

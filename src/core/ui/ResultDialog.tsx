@@ -9,9 +9,9 @@ export type ResultTone = 'win' | 'loss' | 'draw' | 'neutral'
 
 const HEAD: Record<ResultTone, string> = {
   win: 'bg-brand text-brand-ink',
-  loss: 'bg-ink text-surface',
-  draw: 'bg-primary text-surface',
-  neutral: 'bg-line text-ink',
+  loss: 'bg-ink text-fg',
+  draw: 'bg-primary text-fg',
+  neutral: 'bg-line text-fg',
 }
 
 /** Our own small marks: a star for a win, a lowered flag for a loss, level bars for a draw. */
@@ -56,7 +56,7 @@ export function ResultDialog({ title, tone, reason, children, onClose, closeLabe
         data-testid="game-over"
         data-tone={tone}
         onClick={(event) => event.stopPropagation()}
-        className="result-in flex max-h-[calc(var(--app-h)_-_2rem)] w-full max-w-sm flex-col overflow-hidden rounded-xl bg-panel shadow-[0_18px_50px_rgba(13,17,48,0.45)]"
+        className="result-in flex max-h-[calc(var(--app-h)_-_2rem)] w-full max-w-sm flex-col overflow-hidden glass rounded-3xl border border-line"
       >
         <div className={`relative flex flex-col items-center gap-1 px-12 pb-4 pt-5 text-center ${HEAD[tone]}`}>
           <button
@@ -76,7 +76,7 @@ export function ResultDialog({ title, tone, reason, children, onClose, closeLabe
         <div className="band shrink-0" aria-hidden="true" />
         <div className="flex flex-col gap-4 overflow-y-auto px-5 pb-[max(1rem,var(--safe-bottom))] pt-4">
           {children}
-          <button type="button" onClick={onClose} className="-mt-1 min-h-11 w-full font-semibold text-primary underline underline-offset-4">
+          <button type="button" onClick={onClose} className="-mt-1 min-h-11 w-full font-semibold text-accent underline underline-offset-4">
             {closeLabel}
           </button>
         </div>
@@ -91,7 +91,7 @@ export function ResultStats({ children }: { children: ReactNode }) {
 }
 
 const signed = (value: number) => (value > 0 ? `+${value}` : value < 0 ? `−${Math.abs(value)}` : '±0')
-const toneOf = (value: number) => (value > 0 ? 'text-palm' : value < 0 ? 'text-hibiscus' : 'text-muted')
+const toneOf = (value: number) => (value > 0 ? 'text-good' : value < 0 ? 'text-alert' : 'text-muted')
 
 type StatProps = {
   label: string

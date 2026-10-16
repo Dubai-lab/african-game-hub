@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run deploy:player*)",
+      "Bash(npm run deploy:admin*)",
+      "Bash(npm run deploy:server*)",
+      "Bash(git pull*)"
+    ]
+  }
+}

@@ -63,7 +63,7 @@ export function PowerCue({ ready, blocked, label, onPull, onShoot, className = '
       aria-valuenow={Math.round(level * 100)}
       aria-disabled={!usable}
       data-testid={ready ? 'pool-power' : undefined}
-      className={`relative w-11 shrink-0 touch-none select-none overflow-hidden rounded-xl border-2 border-ink bg-[#161a2e] outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary ${usable ? 'cursor-grab active:cursor-grabbing' : 'opacity-45'} ${className}`}
+      className={`relative w-11 shrink-0 touch-none select-none overflow-hidden rounded-xl border border-edge bg-[#161a2e] outline-offset-2 focus-visible:outline-2 focus-visible:outline-accent ${usable ? 'cursor-grab active:cursor-grabbing' : 'opacity-45'} ${className}`}
       onPointerDown={(event) => {
         if (!usable) return
         event.currentTarget.setPointerCapture(event.pointerId)

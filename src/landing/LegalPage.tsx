@@ -39,14 +39,14 @@ export default function LegalPage({ doc }: { doc: Doc }) {
   return (
     <div className="mx-auto flex min-h-(--app-h) w-full max-w-2xl flex-col px-5 pb-12 pt-4">
       <header className="flex items-center justify-between">
-        <Link to="/" className="font-display text-lg font-extrabold text-primary">
+        <Link to="/" className="font-display text-lg font-extrabold text-accent">
           {t('app.name')}
         </Link>
         <LanguageSwitcher />
       </header>
       <main className="mt-10">
         <p className="inline-block bg-brand px-2.5 py-1 text-sm font-bold text-brand-ink">{t('legal.draft')}</p>
-        <h1 className="mt-4 font-display text-4xl font-extrabold text-primary">{t(`legal.${doc}.title`)}</h1>
+        <h1 className="mt-4 font-display text-4xl font-extrabold text-accent">{t(`legal.${doc}.title`)}</h1>
         <p className="mt-2 text-sm text-muted">{t('legal.updated')}</p>
         <div className="mt-8 flex flex-col gap-7">
           {sections.map((section) => (
@@ -65,12 +65,12 @@ export default function LegalPage({ doc }: { doc: Doc }) {
           {(Object.keys(LEGAL_DOCS) as Doc[])
             .filter((other) => other !== doc)
             .map((other) => (
-              <Link key={other} to={LEGAL_DOCS[other]} className="text-primary underline underline-offset-4">
+              <Link key={other} to={LEGAL_DOCS[other]} className="text-accent underline underline-offset-4">
                 {t(`legal.${other}.title`)}
               </Link>
             ))}
         </nav>
-        <Link to="/" className="mt-6 inline-block font-semibold text-primary underline underline-offset-4">
+        <Link to="/" className="mt-6 inline-block font-semibold text-accent underline underline-offset-4">
           {t('common.backHome')}
         </Link>
       </main>

@@ -148,8 +148,8 @@ export default function TournamentsPage() {
     }
   }
 
-  const tabClass = (on: boolean) => `min-h-11 flex-1 border-2 px-2 text-sm font-bold ${on ? 'border-ink bg-brand text-brand-ink' : 'border-line bg-panel'}`
-  const pick = (on: boolean) => `min-h-11 border-2 px-3 text-sm font-bold ${on ? 'border-ink bg-brand text-brand-ink' : 'border-line bg-panel'}`
+  const tabClass = (on: boolean) => `min-h-11 flex-1 border px-2 text-sm font-bold ${on ? 'border-edge bg-brand text-brand-ink' : 'border-line bg-panel'}`
+  const pick = (on: boolean) => `min-h-11 border px-3 text-sm font-bold ${on ? 'border-edge bg-brand text-brand-ink' : 'border-line bg-panel'}`
 
   return (
     <div className="flex flex-col gap-5 lg:max-w-3xl">
@@ -184,7 +184,7 @@ export default function TournamentsPage() {
                   </span>
                   <span className="shrink-0 text-end text-sm">
                     <span className="block font-semibold">{whenText(row, now)}</span>
-                    <span className={`block font-bold tabular-nums ${row.prize > 0 ? 'text-palm' : 'text-muted'}`}>{row.prize > 0 ? t('tournament.prize', { amount: format.tokens(row.prize) }) : t('tournament.noPrize')}</span>
+                    <span className={`block font-bold tabular-nums ${row.prize > 0 ? 'text-good' : 'text-muted'}`}>{row.prize > 0 ? t('tournament.prize', { amount: format.tokens(row.prize) }) : t('tournament.noPrize')}</span>
                   </span>
                 </Link>
               </li>
@@ -192,14 +192,14 @@ export default function TournamentsPage() {
           </ul>
         )
       ) : (
-        <form onSubmit={(event) => void create(event)} className="flex flex-col gap-6 lg:border-2 lg:border-line lg:bg-panel lg:p-6">
+        <form onSubmit={(event) => void create(event)} className="flex flex-col gap-6 lg:border lg:border-line lg:bg-panel lg:p-6">
           <label className="flex flex-col gap-1.5">
             <span className={sectionTitle}>{t('tournament.form.name')}</span>
             <input value={name} onChange={(event) => setName(event.target.value)} maxLength={60} placeholder={t('tournament.form.namePlaceholder')} className="min-h-12 w-full rounded-lg border border-line bg-panel px-3 text-base" />
           </label>
 
           <module.OptionsPicker schema={game.optionsSchema} value={options} onChange={setOptions} />
-          {!twoPlayers && <p className="text-sm font-semibold text-hibiscus">{t('tournament.form.twoPlayers')}</p>}
+          {!twoPlayers && <p className="text-sm font-semibold text-alert">{t('tournament.form.twoPlayers')}</p>}
 
           <fieldset>
             <legend className={sectionTitle}>{t('tournament.form.when')}</legend>
@@ -264,7 +264,7 @@ export default function TournamentsPage() {
             {prizeOn && (
               <>
                 <input type="number" inputMode="numeric" min={1} step={1} value={prize} onChange={(event) => setPrize(event.target.value)} aria-label={t('tournament.form.prizeAmount')} placeholder="500" className="mt-2 min-h-12 w-full rounded-lg border border-line bg-panel px-3 text-base tabular-nums" />
-                <p className={`mt-1 text-sm ${tooMuch ? 'font-semibold text-hibiscus' : 'text-muted'}`}>{tooMuch ? t('tournament.form.tooMuch') : balance !== null && t('tournament.form.balance', { amount: format.tokens(balance) })}</p>
+                <p className={`mt-1 text-sm ${tooMuch ? 'font-semibold text-alert' : 'text-muted'}`}>{tooMuch ? t('tournament.form.tooMuch') : balance !== null && t('tournament.form.balance', { amount: format.tokens(balance) })}</p>
                 <p className="mt-1 text-sm text-muted">{t('tournament.form.prizeHint')}</p>
               </>
             )}

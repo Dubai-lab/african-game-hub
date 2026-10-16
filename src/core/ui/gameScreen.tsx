@@ -32,7 +32,7 @@ export function useLockedScreen() {
   }, [])
 }
 
-const square = 'flex size-11 shrink-0 items-center justify-center border-2 border-line bg-panel text-ink focus-visible:outline-2 focus-visible:outline-primary'
+const square = 'flex size-11 shrink-0 items-center justify-center border border-line bg-panel text-fg focus-visible:outline-2 focus-visible:outline-accent'
 
 /** The top of a playing screen: the title, and (once the game is over) the arrow back. */
 export function GameHeader({ title, over, backTo, className = '', children }: { title: string; over: boolean; backTo: string; className?: string; children?: ReactNode }) {
@@ -48,7 +48,7 @@ export function GameHeader({ title, over, backTo, className = '', children }: { 
       ) : (
         <span className="size-11 shrink-0" aria-hidden="true" />
       )}
-      <p className="min-w-0 flex-1 truncate text-center font-display text-lg font-extrabold tabular-nums text-primary">{title}</p>
+      <p className="min-w-0 flex-1 truncate text-center font-display text-lg font-extrabold tabular-nums text-accent">{title}</p>
       {children ?? <span className="size-11 shrink-0" aria-hidden="true" />}
     </header>
   )
@@ -90,7 +90,7 @@ export function GearIcon() {
   )
 }
 
-const barButton = 'flex h-12 w-full items-center justify-center border-2 border-line bg-panel text-ink disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-primary'
+const barButton = 'flex h-12 w-full items-center justify-center border border-line bg-panel text-fg disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-accent'
 
 type BarProps = {
   onMenu: () => void
@@ -129,7 +129,7 @@ export function GameBar({ onMenu, chat, review, steps, className = '' }: BarProp
         <span aria-hidden="true" />
       )}
       {review ? (
-        <button type="button" className="flex h-12 w-full items-center justify-center border-2 border-ink bg-brand text-brand-ink focus-visible:outline-2 focus-visible:outline-primary" aria-label={review.label} onClick={review.onOpen} data-testid="open-review">
+        <button type="button" className="flex h-12 w-full items-center justify-center border border-edge bg-brand text-brand-ink focus-visible:outline-2 focus-visible:outline-accent" aria-label={review.label} onClick={review.onOpen} data-testid="open-review">
           <span aria-hidden="true" className="text-2xl leading-none">
             ★
           </span>
@@ -174,9 +174,9 @@ export function GameMenu({ onClose, children }: { onClose: () => void; children?
         aria-modal="true"
         aria-label={t('gameMenu.title')}
         onClick={(event) => event.stopPropagation()}
-        className="max-h-full w-full max-w-md overflow-y-auto border-t-4 border-brand bg-panel px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:border-4"
+        className="max-h-full w-full max-w-md overflow-y-auto glass rounded-t-3xl border-t border-line px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:rounded-3xl sm:border"
       >
-        <h2 className="font-display text-2xl font-extrabold text-primary">{t('gameMenu.title')}</h2>
+        <h2 className="font-display text-2xl font-extrabold text-accent">{t('gameMenu.title')}</h2>
         <div className="mt-3 flex flex-col gap-2" data-testid="game-menu-list">
           {children}
           <Button variant="ghost" aria-pressed={settings.soundOn} onClick={() => settings.set({ soundOn: !settings.soundOn })} data-testid="menu-sound">
@@ -219,7 +219,7 @@ export function ChatFold({ open, onClose, children }: { open: boolean; onClose: 
             <button type="button" onClick={onClose} aria-label={t('common.close')} className="flex size-11 items-center justify-center text-2xl font-bold leading-none" data-testid="chat-close">
               <span aria-hidden="true">×</span>
             </button>
-            <p className="text-center font-display text-lg font-extrabold text-primary">{t('chat.title')}</p>
+            <p className="text-center font-display text-lg font-extrabold text-accent">{t('chat.title')}</p>
           </div>
         )}
         {children}

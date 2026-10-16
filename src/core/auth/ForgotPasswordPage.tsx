@@ -57,7 +57,7 @@ export default function ForgotPasswordPage() {
           <Button variant="ghost" onClick={() => setSentTo(null)}>
             {t('auth.forgot.again')}
           </Button>
-          <Link to="/login" className="text-center text-sm font-semibold text-primary underline">
+          <Link to="/login" className="text-center text-sm font-semibold text-accent underline">
             {t('auth.backToLogin')}
           </Link>
         </div>
@@ -85,7 +85,7 @@ export default function ForgotPasswordPage() {
         </Button>
       </form>
       <p className="mt-6 text-sm">
-        <Link to="/login" className="font-semibold text-primary underline">
+        <Link to="/login" className="font-semibold text-accent underline">
           {t('auth.backToLogin')}
         </Link>
       </p>

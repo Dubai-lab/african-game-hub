@@ -29,7 +29,7 @@ function WatcherBar({ matchId }: { matchId: string }) {
     <Link
       to={`/tournaments/${watching.data}`}
       data-testid="watching-back"
-      className="fixed bottom-[max(0.75rem,var(--safe-bottom))] left-1/2 z-30 -translate-x-1/2 whitespace-nowrap border-2 border-ink bg-brand px-4 py-2 text-sm font-bold text-brand-ink shadow-[0_3px_8px_rgba(0,0,0,0.4)]"
+      className="fixed bottom-[max(0.75rem,var(--safe-bottom))] left-1/2 z-30 -translate-x-1/2 whitespace-nowrap border border-edge bg-brand px-4 py-2 text-sm font-bold text-brand-ink shadow-[0_3px_8px_rgba(0,0,0,0.4)]"
     >
       {t('tournament.watching')}
     </Link>

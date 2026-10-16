@@ -27,7 +27,7 @@ export default function LandingPage() {
 
   return (
     <div className="overflow-x-clip">
-      <section className="relative overflow-hidden bg-primary text-surface">
+      <section className="relative overflow-hidden rounded-none bg-primary text-fg">
         <div className="mx-auto w-full max-w-6xl px-5">
           <header className="flex items-center justify-between gap-3 py-4">
             <span className="font-display text-lg font-extrabold">{t('app.name')}</span>

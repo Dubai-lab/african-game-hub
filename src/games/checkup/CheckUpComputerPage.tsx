@@ -210,11 +210,11 @@ export default function CheckUpComputerPage() {
 
   return (
     <main className="mx-auto flex min-h-(--app-h) w-full max-w-md flex-col gap-6 px-5 py-6">
-      <Link to="/play/checkup" className="flex min-h-11 items-center self-start font-semibold text-primary underline underline-offset-4">
+      <Link to="/play/checkup" className="flex min-h-11 items-center self-start font-semibold text-accent underline underline-offset-4">
         {t('checkup.back')}
       </Link>
       <div>
-        <h1 className="font-display text-3xl font-extrabold text-primary">{t('checkup.computer.heading')}</h1>
+        <h1 className="font-display text-3xl font-extrabold text-accent">{t('checkup.computer.heading')}</h1>
         <p className="mt-2 text-muted">{t('checkup.computer.intro')}</p>
       </div>
       <fieldset>
@@ -223,7 +223,7 @@ export default function CheckUpComputerPage() {
           {[1, 2, 3].map((count) => (
             <label
               key={count}
-              className={`flex min-h-12 cursor-pointer items-center justify-center border-2 px-2 text-center font-bold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary ${count === setup.opponents ? 'border-ink bg-brand text-brand-ink' : 'border-line bg-panel'}`}
+              className={`flex min-h-12 cursor-pointer items-center justify-center border px-2 text-center font-bold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent ${count === setup.opponents ? 'border-edge bg-brand text-brand-ink' : 'border-line bg-panel'}`}
             >
               <input type="radio" name="checkup-opponents" className="sr-only" checked={count === setup.opponents} onChange={() => change({ opponents: count })} />
               {t('checkup.computer.opponentsCount', { count })}

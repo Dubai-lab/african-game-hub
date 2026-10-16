@@ -38,9 +38,9 @@ export function ReportDialog({ target, matchId, onClose }: { target: Target; mat
         aria-label={t('safety.reportTitle', { name: target.name })}
         onClick={(event) => event.stopPropagation()}
         onSubmit={submit}
-        className="flex w-full max-w-md flex-col gap-4 border-t-4 border-brand bg-panel px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:border-4"
+        className="flex w-full max-w-md flex-col gap-4 glass rounded-t-3xl border-t border-line px-5 pb-[max(1.25rem,var(--safe-bottom))] pt-5 sm:rounded-3xl sm:border"
       >
-        <h2 className="font-display text-2xl font-extrabold text-primary">{t('safety.reportTitle', { name: target.name })}</h2>
+        <h2 className="font-display text-2xl font-extrabold text-accent">{t('safety.reportTitle', { name: target.name })}</h2>
         <p className="text-sm text-muted">{t(matchId ? 'safety.explainMatch' : 'safety.explain')}</p>
 
         <label className="text-sm font-semibold">
@@ -95,7 +95,7 @@ export function SafetyActions({ target }: { target: Target }) {
   const blocking = useBlocking()
   const [reporting, setReporting] = useState(false)
   const blocked = blocking.isBlocked(target.userId)
-  const link = 'min-h-10 text-sm font-semibold text-primary underline underline-offset-4'
+  const link = 'min-h-10 text-sm font-semibold text-accent underline underline-offset-4'
 
   return (
     <div className="mt-1 flex flex-wrap items-center gap-x-5" data-testid="safety-actions">

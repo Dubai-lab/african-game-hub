@@ -26,7 +26,7 @@ export default function DraughtsSettings() {
               aria-checked={chosen}
               aria-label={t(`draughts.settings.theme.${id}`)}
               onClick={() => settings.set({ draughtsBoard: id })}
-              className={`aspect-square max-h-24 flex-1 border-4 ${chosen ? 'border-brand outline-2 outline-ink' : 'border-transparent'}`}
+              className={`aspect-square max-h-24 flex-1 border-4 ${chosen ? 'border-brand outline-2 outline-edge' : 'border-transparent'}`}
               style={{ background: `repeating-conic-gradient(${theme.light} 0 25%, ${theme.dark} 0 50%) 0 0 / 100% 100%` }}
             />
           )
@@ -47,7 +47,7 @@ export default function DraughtsSettings() {
               aria-checked={chosen}
               aria-label={t(`draughts.settings.pieceSet.${id}`)}
               onClick={() => settings.set({ draughtsPieces: id })}
-              className={`flex min-h-16 flex-1 items-center justify-center gap-2 border-2 px-2 ${chosen ? 'border-ink bg-brand' : 'border-line bg-surface'}`}
+              className={`flex min-h-16 flex-1 items-center justify-center gap-2 border px-2 ${chosen ? 'border-edge bg-brand' : 'border-line bg-surface'}`}
             >
               {(['w', 'b'] as const).map((side) => (
                 <span key={side} className="size-10 rounded-full border-4" style={{ background: DRAUGHTS_PIECES[id][side].top, borderColor: DRAUGHTS_PIECES[id][side].edge }} aria-hidden="true" />

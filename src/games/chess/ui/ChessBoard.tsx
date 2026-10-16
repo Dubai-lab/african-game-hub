@@ -216,7 +216,7 @@ export function ChessBoard({
           <div
             role="dialog"
             aria-label={t('chess.promotion.title')}
-            className="flex gap-1 border-2 border-ink bg-panel p-2 shadow-xl"
+            className="flex gap-1 border border-edge bg-panel p-2 shadow-xl"
             onClick={(event) => event.stopPropagation()}
           >
             {PROMOTIONS.map((piece) => (
@@ -224,7 +224,7 @@ export function ChessBoard({
                 key={piece}
                 type="button"
                 aria-label={t(`chess.piece.${piece}`)}
-                className="size-16 bg-surface active:bg-brand focus-visible:outline-2 focus-visible:outline-primary"
+                className="size-16 bg-surface active:bg-brand focus-visible:outline-2 focus-visible:outline-accent"
                 onClick={() => {
                   const { from, to } = promotion
                   setPromotion(null)

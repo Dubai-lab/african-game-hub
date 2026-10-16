@@ -3,11 +3,12 @@ import type { ButtonHTMLAttributes } from 'react'
 type Variant = 'primary' | 'ghost'
 
 const base =
-  'inline-flex min-h-12 items-center justify-center rounded-md px-5 text-base font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60'
+  'inline-flex min-h-12 items-center justify-center rounded-2xl px-5 text-base font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.98] disabled:opacity-60'
 
+// Design V2.0: the main button is lit Maize with a glow under it; the other is a pane of glass.
 const variants: Record<Variant, string> = {
-  primary: 'bg-brand text-brand-ink active:bg-brand-strong',
-  ghost: 'border border-line bg-transparent text-ink active:bg-line/50',
+  primary: 'glow-brand bg-linear-to-b from-[#ffd23f] to-brand text-brand-ink active:to-brand-strong',
+  ghost: 'border border-edge bg-panel text-fg active:bg-line',
 }
 
 /** Shared so router links can look like buttons without nesting a button in a link. */

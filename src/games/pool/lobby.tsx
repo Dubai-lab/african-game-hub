@@ -20,7 +20,7 @@ function VariantPicker({ schema, value, onChange }: LobbyOptionsProps) {
         {parseVariants(schema).map((variant) => (
           <label
             key={variant}
-            className={`flex min-h-16 cursor-pointer flex-col justify-center border-2 px-3 py-1 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary ${variant === current ? 'border-ink bg-brand text-brand-ink' : 'border-line bg-panel text-ink'}`}
+            className={`flex min-h-16 cursor-pointer flex-col justify-center border px-3 py-1 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent ${variant === current ? 'border-edge bg-brand text-brand-ink' : 'border-line bg-panel text-fg'}`}
           >
             <input type="radio" name="pool-variant" className="sr-only" checked={variant === current} onChange={() => onChange({ variant })} />
             <span className="font-bold">{t(`pool.variant.${variant}`)}</span>

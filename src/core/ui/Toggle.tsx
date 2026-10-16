@@ -6,7 +6,7 @@ export function Toggle({ label, hint, on, onChange }: { label: string; hint?: st
         <span className="block font-semibold">{label}</span>
         {hint && <span className="block text-sm text-muted">{hint}</span>}
       </span>
-      <input type="checkbox" checked={on} onChange={(event) => onChange(event.target.checked)} className="size-6 shrink-0 accent-primary" />
+      <input type="checkbox" checked={on} onChange={(event) => onChange(event.target.checked)} className="size-6 shrink-0 accent-brand" />
     </label>
   )
 }

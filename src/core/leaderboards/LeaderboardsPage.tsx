@@ -116,7 +116,7 @@ export default function LeaderboardsPage() {
 
   return (
     <div className="flex flex-col gap-5 lg:max-w-3xl">
-      <h1 className="font-display text-3xl font-extrabold text-primary lg:text-4xl">{t('leaderboards.title')}</h1>
+      <h1 className="font-display text-3xl font-extrabold text-accent lg:text-4xl">{t('leaderboards.title')}</h1>
 
       {/* Which game, and which of its rankings (for chess: bullet, blitz or rapid). */}
       <div className="grid gap-2 sm:grid-cols-2">

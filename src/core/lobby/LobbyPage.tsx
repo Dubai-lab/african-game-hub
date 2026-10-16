@@ -40,7 +40,7 @@ function CountryPrompt() {
   }
 
   return (
-    <section aria-labelledby="lobby-country" className="border-2 border-ink bg-panel p-4">
+    <section aria-labelledby="lobby-country" className="border border-edge bg-panel p-4">
       <h2 id="lobby-country" className={sectionTitle}>
         {t('lobby.countryPrompt.title')}
       </h2>
@@ -83,18 +83,18 @@ function GameCard({ game }: { game: GameType }) {
             {t('landing.games.live')}
           </span>
         ) : (
-          <span className="bg-ink px-2 py-0.5 text-xs font-bold text-surface">{t('landing.games.soon')}</span>
+          <span className="bg-ink px-2 py-0.5 text-xs font-bold text-fg">{t('landing.games.soon')}</span>
         )}
       </span>
     </>
   )
   // A game that is not open yet is shown, but leads nowhere.
   return live ? (
-    <Link to={`/play/${game.id}`} data-testid={`game-${game.id}`} className="flex flex-col overflow-hidden border-2 border-ink bg-panel text-ink outline-offset-2 hover:bg-brand focus-visible:outline-2 focus-visible:outline-primary active:bg-brand">
+    <Link to={`/play/${game.id}`} data-testid={`game-${game.id}`} className="flex flex-col overflow-hidden border border-edge bg-panel text-fg outline-offset-2 hover:bg-brand focus-visible:outline-2 focus-visible:outline-accent active:bg-brand">
       {inside}
     </Link>
   ) : (
-    <div aria-disabled="true" data-testid={`game-${game.id}`} className="flex flex-col overflow-hidden border-2 border-line bg-panel text-muted">
+    <div aria-disabled="true" data-testid={`game-${game.id}`} className="flex flex-col overflow-hidden border border-line bg-panel text-muted">
       {inside}
     </div>
   )
@@ -126,9 +126,9 @@ export default function LobbyPage() {
         <WalletSummary profile={profile.data} />
         {profile.data && !profile.data.country && <CountryPrompt />}
         {activeMatch.data && (
-          <section className="flex flex-wrap items-center justify-between gap-3 border-2 border-ink bg-brand p-4 text-brand-ink">
+          <section className="flex flex-wrap items-center justify-between gap-3 border border-edge bg-brand p-4 text-brand-ink">
             <p className="font-bold">{t('lobby.gameInProgress')}</p>
-            <Link to={`/play/${activeMatch.data.gameId}/match/${activeMatch.data.matchId}`} className={buttonClass('ghost', 'border-ink bg-panel')}>
+            <Link to={`/play/${activeMatch.data.gameId}/match/${activeMatch.data.matchId}`} className={buttonClass('ghost', 'border-edge bg-panel')}>
               {t('lobby.returnToGame')}
             </Link>
           </section>

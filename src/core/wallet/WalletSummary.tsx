@@ -12,7 +12,7 @@ export function WalletSummary({ profile }: { profile: MyProfile | undefined }) {
   const country = profile?.country
 
   return (
-    <section aria-labelledby="wallet-summary" className="bg-primary p-4 text-surface">
+    <section aria-labelledby="wallet-summary" className="bg-primary p-4 text-fg">
       <h2 id="wallet-summary" className="text-sm font-semibold text-primary-tint">
         {t('lobby.walletTitle')}
       </h2>

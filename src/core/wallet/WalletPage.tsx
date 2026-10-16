@@ -54,7 +54,7 @@ export default function WalletPage() {
 
   return (
     <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-x-10">
-      <h1 className="font-display text-3xl font-extrabold text-primary lg:col-span-2 lg:text-4xl">{t('wallet.title')}</h1>
+      <h1 className="font-display text-3xl font-extrabold text-accent lg:col-span-2 lg:text-4xl">{t('wallet.title')}</h1>
       <div className="flex flex-col gap-6">
       <WalletSummary profile={profile.data} />
       <p className="text-sm text-muted">{t('wallet.explain')}</p>
@@ -104,7 +104,7 @@ export default function WalletPage() {
                     </p>
                   </div>
                   <div className="shrink-0 text-end">
-                    <p className={`text-lg font-bold tabular-nums ${entry.amount > 0 ? 'text-palm' : 'text-hibiscus'}`}>
+                    <p className={`text-lg font-bold tabular-nums ${entry.amount > 0 ? 'text-good' : 'text-alert'}`}>
                       {format.signedTokens(entry.amount)}
                     </p>
                     <p className="text-xs tabular-nums text-muted">

@@ -253,7 +253,7 @@ export function AfterMatchActions({ state, opponent, newGameLabel }: { state: Af
             {t('afterMatch.accept')}
           </Button>
         </div>
-        <button type="button" onClick={state.findNew} disabled={state.starting} className="min-h-10 text-sm font-semibold text-primary underline underline-offset-4">
+        <button type="button" onClick={state.findNew} disabled={state.starting} className="min-h-10 text-sm font-semibold text-accent underline underline-offset-4">
           {newGameLabel}
         </button>
       </div>

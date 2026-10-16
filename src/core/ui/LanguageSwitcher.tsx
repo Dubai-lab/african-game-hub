@@ -19,7 +19,7 @@ export function LanguageSwitcher() {
       <select
         value={i18n.resolvedLanguage ?? 'en'}
         onChange={(e) => void onChange(e.target.value as LanguageCode)}
-        className="min-h-10 rounded-lg border border-line bg-surface px-2 text-ink"
+        className="min-h-10 rounded-lg border border-line bg-surface px-2 text-fg"
       >
         {LANGUAGES.map((l) => (
           <option key={l.code} value={l.code}>

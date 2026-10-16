@@ -54,13 +54,13 @@ export function useMatchSetup(gameId: string | undefined) {
 export function GameHeader({ gameId, title, back, children }: { gameId: string | undefined; title: string; back: { to: string; label: string }; children?: ReactNode }) {
   return (
     <header className="flex flex-wrap items-center gap-x-3 gap-y-1">
-      <Link to={back.to} className="flex min-h-11 shrink-0 items-center font-semibold text-primary underline underline-offset-4">
+      <Link to={back.to} className="flex min-h-11 shrink-0 items-center font-semibold text-accent underline underline-offset-4">
         {back.label}
       </Link>
       <span className="ms-auto flex min-w-0 items-center gap-3">
         {children}
-        {gameId && <GameArt gameId={gameId} className="h-11 w-14 shrink-0 border-2 border-ink" />}
-        <h1 className="truncate font-display text-3xl font-extrabold text-primary">{title}</h1>
+        {gameId && <GameArt gameId={gameId} className="h-11 w-14 shrink-0 border border-edge" />}
+        <h1 className="truncate font-display text-3xl font-extrabold text-accent">{title}</h1>
       </span>
     </header>
   )
@@ -72,7 +72,7 @@ export function GameNotOpen() {
   return (
     <div className="flex flex-col items-start gap-3">
       <p>{t('lobby.gameNotOpen')}</p>
-      <Link to="/lobby" className="font-semibold text-primary underline underline-offset-4">
+      <Link to="/lobby" className="font-semibold text-accent underline underline-offset-4">
         {t('lobby.allGames')}
       </Link>
     </div>
