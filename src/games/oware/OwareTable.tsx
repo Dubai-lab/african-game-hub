@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSettingsStore } from '@/core/settings/settingsStore'
 import { Avatar } from '@/core/ui/Avatar'
@@ -8,7 +8,7 @@ import { ResultDialog, ResultStat, ResultStats, type ResultTone } from '@/core/u
 import { Toggle } from '@/core/ui/Toggle'
 import { type ClockState, formatClock, LOW_TIME_MS, remainingMs, TENTHS_BELOW_MS } from '@/games/chess/engine/clock'
 import { legalPits, type Played, type Side, START, TO_WIN } from '../../../supabase/functions/_shared/oware'
-import { OwareBoard } from './OwareBoard'
+import { type BoardMove, OwareBoard } from './OwareBoard'
 import { feedback, preloadSounds } from './sound'
 import { clockColor, type OwareController } from './useLocalOwareGame'
 
@@ -165,12 +165,14 @@ type Props = {
   status?: ReactNode
   /** Where the back arrow goes. */
   backTo?: string
+  /** True while the board is playing a move out (the computer waits for it before answering). */
+  onBusyChange?: (busy: boolean) => void
 }
 
 const SPLIT_ENDINGS = new Set(['no_moves', 'repetition', 'no_captures'])
 
 /** The whole Oware screen: both player cards, the board, the moves and the controls. */
-export function OwareTable({ title, game, players, movable, perspective, timed, onlineDraws, canAbort, chat, chatClosed = false, chatHeard = 0, chatSent = 0, overActionsPinned = false, notice, overActions, tokensChange, rating, ratingChange, onUndo, canUndo, status, backTo = '/play/oware' }: Props) {
+export function OwareTable({ title, game, players, movable, perspective, timed, onlineDraws, canAbort, chat, chatClosed = false, chatHeard = 0, chatSent = 0, overActionsPinned = false, notice, overActions, tokensChange, rating, ratingChange, onUndo, canUndo, status, backTo = '/play/oware', onBusyChange }: Props) {
   const { t } = useTranslation()
   const settings = useSettingsStore()
   const [flipped, setFlipped] = useState(false)
@@ -189,16 +191,33 @@ export function OwareTable({ title, game, players, movable, perspective, timed, 
   const livePly = played.length
   const shownPly = Math.min(viewPly ?? livePly, livePly)
   const atLive = shownPly === livePly
-  // The board as the move left it (before any end-of-game share-out, which the cards show).
+  // The board as the move left it, what each player had taken by then, and the move itself.
   const pits = shownPly === 0 ? START : played[shownPly - 1]!.pitsAfter
-  const lastMove = shownPly > 0 ? { ...played[shownPly - 1]!, from: shownPly === 1 ? START : played[shownPly - 2]!.pitsAfter, ply: shownPly } : null
-  const taken = useMemo(() => {
-    // At the end of a game decided by sharing out the seeds, the cards show the share-out too.
-    if (atLive && outcome && SPLIT_ENDINGS.has(outcome.reason)) return state.stores
-    const counts: Record<Side, number> = { s: 0, n: 0 }
-    for (const move of played.slice(0, shownPly)) counts[move.side] += move.taken
-    return counts
-  }, [atLive, outcome, state.stores, played, shownPly])
+  const storesAt = useCallback(
+    (ply: number) => {
+      const counts: Record<Side, number> = { s: 0, n: 0 }
+      for (const move of played.slice(0, ply)) counts[move.side] += move.taken
+      return counts
+    },
+    [played],
+  )
+  const stores = useMemo(() => storesAt(shownPly), [storesAt, shownPly])
+  const lastMove = useMemo<BoardMove | null>(
+    () => (shownPly > 0 ? { ...played[shownPly - 1]!, from: shownPly === 1 ? START : played[shownPly - 2]!.pitsAfter, storesBefore: storesAt(shownPly - 1), ply: shownPly } : null),
+    [played, shownPly, storesAt],
+  )
+  // At the end of a game decided by sharing out the seeds, the board shares them out.
+  const shareOut = atLive && outcome && SPLIT_ENDINGS.has(outcome.reason) ? state.stores : null
+  // What the cards show follows the board, seed by seed, as the stores fill.
+  const [taken, setTaken] = useState<Record<Side, number>>(stores)
+  const [boardBusy, setBoardBusy] = useState(false)
+  const busyChanged = useCallback(
+    (busy: boolean) => {
+      setBoardBusy(busy)
+      onBusyChange?.(busy)
+    },
+    [onBusyChange],
+  )
 
   // The pits on offer to this player, worked out with the same rules the server judges by.
   const playable = useMemo(() => (atLive && !outcome && movable === turn ? legalPits(state) : []), [atLive, outcome, movable, turn, state])
@@ -212,6 +231,19 @@ export function OwareTable({ title, game, players, movable, perspective, timed, 
   useEffect(() => {
     if (!over) setResultClosed(false)
   }, [over])
+  // The result comes once the last seeds are in the stores, with the closing sound.
+  const resultReady = over && !boardBusy
+  const [sounded, setSounded] = useState(false)
+  useEffect(() => {
+    if (!resultReady) {
+      if (!over) setSounded(false)
+      return
+    }
+    if (!sounded) {
+      setSounded(true)
+      feedback('gameEnd')
+    }
+  }, [resultReady, over, sounded])
 
   const card = (side: Side) => <PlayerCard player={players[side]} side={side} taken={taken[side]} clock={timed ? game.clock : undefined} toMove={!outcome && turn === side} />
   const view = (ply: number) => setViewPly(ply >= livePly ? null : Math.max(0, ply))
@@ -261,8 +293,13 @@ export function OwareTable({ title, game, players, movable, perspective, timed, 
             onPlay={(pit) => {
               if (!game.tryMove(pit)) feedback('illegal')
             }}
+            stores={stores}
             lastMove={lastMove}
+            collector={movable === 'none' ? null : movable}
+            shareOut={shareOut}
             animate={!settings.dataSaver && !reducedMotion}
+            onBusyChange={busyChanged}
+            onStoresShown={setTaken}
           />
           {card(bottom)}
         </div>
@@ -273,9 +310,9 @@ export function OwareTable({ title, game, players, movable, perspective, timed, 
           {status ??
             (mustFeed ? (
               t('oware.mustFeed')
-            ) : atLive && lastPlayed?.grandSlam ? (
+            ) : atLive && !boardBusy && lastPlayed?.grandSlam ? (
               t('oware.grandSlam')
-            ) : atLive && lastPlayed && lastPlayed.taken > 0 ? (
+            ) : atLive && !boardBusy && lastPlayed && lastPlayed.taken > 0 ? (
               t('oware.justTook', { name: players[lastPlayed.side].name, count: lastPlayed.taken })
             ) : (
               <span aria-hidden="true">&nbsp;</span>
@@ -404,7 +441,7 @@ export function OwareTable({ title, game, players, movable, perspective, timed, 
         </Sheet>
       )}
 
-      {outcome && !resultClosed && (
+      {outcome && resultReady && !resultClosed && (
         <ResultDialog
           title={resultTitle}
           tone={resultTone}

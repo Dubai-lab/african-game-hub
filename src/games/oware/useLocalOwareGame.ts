@@ -85,7 +85,6 @@ export function useLocalOwareGame(config: Config) {
       const current = live.current
       if (current.outcome) return
       commit({ ...current, outcome, clock: stopClock(current.clock, Date.now()) })
-      feedback('gameEnd')
     },
     [commit],
   )
@@ -100,9 +99,8 @@ export function useLocalOwareGame(config: Config) {
 
       const now = Date.now()
       const clock = timed ? pressClock(before.clock, clockColor(step.move.side), now) : before.clock
+      // The board plays the move out, with its sounds; the table sounds the end of the game.
       commit({ moves: [...before.moves, pit], clock: step.result ? stopClock(clock, now) : clock, outcome: step.result })
-      feedback(step.move.taken > 0 ? 'capture' : 'move')
-      if (step.result) setTimeout(() => feedback('gameEnd'), 260)
       return true
     },
     [commit, timed],

@@ -1644,7 +1644,13 @@
     "board": {
       "label": "Oware board",
       "pit_one": "Pit {{pit}}, {{count}} seed",
-      "pit_other": "Pit {{pit}}, {{count}} seeds"
+      "pit_other": "Pit {{pit}}, {{count}} seeds",
+      "gather_one": "Pit {{pit}}: tap to collect {{count}} seed",
+      "gather_other": "Pit {{pit}}: tap to collect {{count}} seeds",
+      "tapToGather_one": "Tap the glowing pit: {{count}} seed won",
+      "tapToGather_other": "Tap the glowing pits: {{count}} seeds won",
+      "store_one": "{{count}} seed won",
+      "store_other": "{{count}} seeds won"
     },
     "moves": {
       "title": "Moves",

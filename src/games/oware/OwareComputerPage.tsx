@@ -18,8 +18,9 @@ type SideChoice = 's' | 'n' | 'random'
 type Choices = { level: LevelId; side: SideChoice; clock: boolean; timeControl: string | null }
 
 const STORAGE_KEY = 'agh.oware.computer'
-// The sowing is drawn before the computer answers: give the player a beat to see it.
-const MIN_THINK_MS = 900
+// The computer waits until the player's move has been played out on the board (and their seeds
+// gathered), then takes a moment, as a person would, before it answers.
+const MIN_THINK_MS = 800
 
 // Used when the games registry cannot be reached: practice must work offline.
 const OFFLINE_SCHEMA = {
@@ -214,7 +215,8 @@ function Table({ level, human, control, onNewGame }: TableProps) {
   thinker.current = think
 
   const { state, turn, outcome, tryMove, clock } = game
-  const computerToMove = !outcome && turn === computer
+  const [boardBusy, setBoardBusy] = useState(false)
+  const computerToMove = !outcome && turn === computer && !boardBusy
   const clockNow = useRef(clock)
   clockNow.current = clock
 
@@ -263,6 +265,7 @@ function Table({ level, human, control, onNewGame }: TableProps) {
       onUndo={() => game.undo(undoCount)}
       canUndo={canUndo}
       status={computerToMove ? t('oware.computer.thinking') : undefined}
+      onBusyChange={setBoardBusy}
       overActions={
         <div className="grid grid-cols-2 gap-2">
           <Button

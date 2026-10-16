@@ -371,3 +371,20 @@ body::before {
 [data-testid='chess-board'][data-shaded='true'] [data-piece] > * {
   filter: drop-shadow(0 0.09rem 0.06rem rgba(13, 17, 48, 0.42));
 }
+
+/* Oware: the pits whose seeds the player is to gather pulse gently, and so does the line that
+   says so. Still, for anyone who asked for less motion. */
+@keyframes oware-gather {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.oware-gather,
+.oware-gather-hint {
+  animation: oware-gather 1.1s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .oware-gather,
+  .oware-gather-hint {
+    animation: none;
+  }
+}

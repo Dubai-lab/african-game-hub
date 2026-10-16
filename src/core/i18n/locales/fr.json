@@ -1644,7 +1644,13 @@
     "board": {
       "label": "Plateau d’awalé",
       "pit_one": "Trou {{pit}}, {{count}} graine",
-      "pit_other": "Trou {{pit}}, {{count}} graines"
+      "pit_other": "Trou {{pit}}, {{count}} graines",
+      "gather_one": "Trou {{pit}} : touchez pour ramasser {{count}} graine",
+      "gather_other": "Trou {{pit}} : touchez pour ramasser {{count}} graines",
+      "tapToGather_one": "Touchez le trou qui brille : {{count}} graine gagnée",
+      "tapToGather_other": "Touchez les trous qui brillent : {{count}} graines gagnées",
+      "store_one": "{{count}} graine gagnée",
+      "store_other": "{{count}} graines gagnées"
     },
     "moves": {
       "title": "Coups",

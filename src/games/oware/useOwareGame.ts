@@ -217,19 +217,6 @@ export function useOwareGame(matchId: string) {
     return by ? (snapshot.players.find((p) => p.userId === by)?.side ?? null) : null
   }, [snapshot])
 
-  // Sounds for the opponent's moves and for the end of the game (our own moves sound at once).
-  const heard = useRef<{ match: string; plies: number; over: boolean } | null>(null)
-  useEffect(() => {
-    if (status !== 'ready') return
-    const over = outcome !== null
-    const previous = heard.current
-    heard.current = { match: matchId, plies: played.length, over }
-    if (!previous || previous.match !== matchId) return
-    const last = played.at(-1)
-    if (played.length > previous.plies && last && last.side !== mySide) feedback(last.taken > 0 ? 'capture' : 'move')
-    if (over && !previous.over) setTimeout(() => feedback('gameEnd'), 250)
-  }, [status, matchId, played, outcome, mySide])
-
   // ---- What the player can do ----
 
   const tryMove = useCallback(
@@ -244,8 +231,8 @@ export function useOwareGame(matchId: string) {
 
       // Shown immediately; the server has the final say.
       const ply = current.moves.length + 1
+      // The board plays the move out, with its sounds.
       setPending({ pit, ply })
-      feedback(step.move.taken > 0 ? 'capture' : 'move')
 
       const takeBack = (message: string) => {
         setPending((p) => (p && p.ply === ply ? null : p))
