@@ -138,7 +138,8 @@
       "poolBlurb": "8-ball and 9-ball on a full table. Every shot is played out on the server, so the table you see is the table that counts.",
       "draughtsBlurb": "International draughts on a 10 by 10 board. Capturing is compulsory, and every move is checked by the server.",
       "checkupBlurb": "The shape-matching card game played across Nigeria, for two to four players. The cards are dealt on the server and your hand is never sent to anyone else.",
-      "wordsBlurb": "The crossword board game for two to four players: make words with your tiles and outscore the table. Words are judged on the server and your tiles are never sent to anyone else."
+      "wordsBlurb": "The crossword board game for two to four players: make words with your tiles and outscore the table. Words are judged on the server and your tiles are never sent to anyone else.",
+      "owareBlurb": "The sowing game of Ghana and the wider region, Abapa rules. Sow your seeds, take two or three at a time, and be the first to 25. Every move is checked by the server."
     },
     "how": {
       "title": "How it works",
@@ -314,7 +315,8 @@
     "pool": "Pool",
     "penalty": "Penalty Shootout",
     "checkup": "Check Up",
-    "words": "Word Battle"
+    "words": "Word Battle",
+    "oware": "Oware"
   },
   "about": {
     "link": "About us",
@@ -1604,6 +1606,152 @@
       "color": "Play as",
       "random": "Random",
       "whiteFirst": "White moves first.",
+      "clock": "Play with a clock",
+      "clockHint": "Both you and the computer are on the clock. Leave off for relaxed practice.",
+      "start": "Start game",
+      "you": "You",
+      "name": "Computer",
+      "tableTitle": "Computer · {{level}}",
+      "thinking": "The computer is thinking…",
+      "again": "Play again",
+      "change": "Change game"
+    }
+  },
+  "oware": {
+    "south": "South",
+    "north": "North",
+    "back": "Back",
+    "backToLobby": "Back to the lobby",
+    "notFound": "This game could not be found.",
+    "loadFailed": "We could not load this game.",
+    "stake": "{{stake}} tokens",
+    "clockSouth": "South’s clock",
+    "clockNorth": "North’s clock",
+    "taken_one": "{{count}} seed",
+    "taken_other": "{{count}} seeds",
+    "mustFeed": "Your opponent has no seeds left: you must play a pit that gives them some.",
+    "grandSlam": "That would have taken every seed your opponent had, so nothing was taken.",
+    "justTook_one": "{{name}} took {{count}} seed.",
+    "justTook_other": "{{name}} took {{count}} seeds.",
+    "moveRejected": "That pit cannot be played. The move was taken back.",
+    "moveNotSent": "Your move could not be sent. Check your connection.",
+    "lobby": {
+      "timeControl": "Time control",
+      "timeControlHint": "Minutes for each player. “5 | 3” adds 3 seconds after every move.",
+      "timePlain": "{{minutes}} minutes each",
+      "timeWithIncrement": "{{minutes}} minutes each, plus {{increment}} seconds per move"
+    },
+    "board": {
+      "label": "Oware board",
+      "pit_one": "Pit {{pit}}, {{count}} seed",
+      "pit_other": "Pit {{pit}}, {{count}} seeds"
+    },
+    "moves": {
+      "title": "Moves",
+      "none": "No moves yet",
+      "previous": "Previous move",
+      "next": "Next move",
+      "backToGame": "Back to the current position"
+    },
+    "actions": {
+      "draw": "Offer draw",
+      "drawOffered": "Draw offered",
+      "undo": "Take back",
+      "abort": "Abort",
+      "resign": "Resign",
+      "flip": "Turn the board round"
+    },
+    "abort": {
+      "title": "Abort this game?",
+      "body": "The game has not really started, so it will be called off with no result.",
+      "confirm": "Abort"
+    },
+    "resign": {
+      "title": "Resign this game?",
+      "body": "{{opponent}} wins.",
+      "cancel": "Keep playing",
+      "confirm": "Resign"
+    },
+    "drawOffer": {
+      "title": "{{name}} offers a draw",
+      "body": "If you accept, the game ends as a draw.",
+      "accept": "Accept draw",
+      "decline": "Decline"
+    },
+    "online": {
+      "yourFirstMove": "Make your first move. Seconds left:",
+      "theirFirstMove": "Waiting for {{name}}’s first move. Seconds left:",
+      "drawSent": "Draw offered. Waiting for an answer."
+    },
+    "over": {
+      "draw": "Draw",
+      "wins": "{{name}} wins",
+      "youWon": "You won",
+      "youLost": "You lost",
+      "aborted": "Game aborted",
+      "seeds": "Seeds",
+      "tokens": "Tokens",
+      "rating": "Rating",
+      "close": "Look at the board",
+      "showResult": "Show result",
+      "reason": {
+        "majority": "More than half the seeds were taken.",
+        "no_moves": "An empty row could not be fed: each player took the seeds left in their own row.",
+        "repetition": "The same position came up three times: each player took the seeds left in their own row.",
+        "no_captures": "100 moves went by with nothing taken: each player took the seeds left in their own row.",
+        "resignation": "By resignation.",
+        "agreement": "Both players agreed to a draw.",
+        "timeout": "On time.",
+        "aborted": "The game was called off before both players had moved. No result.",
+        "called_off": "The game was called off by our team. No result; any stake was returned in full.",
+        "other": "The game is over.",
+        "no_show": "A player did not make their first move in time, and loses the game."
+      }
+    },
+    "settings": {
+      "title": "Oware settings",
+      "sound": "Sounds",
+      "haptics": "Vibration",
+      "done": "Done"
+    },
+    "rules": {
+      "title": "How to play",
+      "board": "Oware (Abapa) is played on two rows of six pits, with four seeds in each: 48 seeds. Your row is the one nearest you. The first player moves first.",
+      "sow": "On your turn, pick one of your pits that has seeds. All its seeds are sown one by one into the pits that follow, going round the board anticlockwise.",
+      "lap": "A pit with twelve seeds or more goes all the way round the board: the pit it was emptied from is skipped.",
+      "capture": "If your last seed lands in an opponent’s pit and makes it two or three, you take those seeds, and the seeds of the pits just before it on their side, for as long as they also hold two or three.",
+      "grandSlam": "A move that would take every seed your opponent has is played, but takes nothing.",
+      "feed": "If your opponent’s row is empty, you must play a pit that gives them seeds, if you have one.",
+      "win": "The first to take 25 seeds wins. At 24 each the game is a draw. Running out of time loses.",
+      "end": "If an empty row cannot be fed, if the same position comes round three times, or after 100 moves without a capture, each player takes the seeds left in their own row, and the one with more wins."
+    },
+    "computer": {
+      "link": "Play Oware against the computer",
+      "title": "Oware against the computer",
+      "intro": "Practice with no tokens and no rating. Take a move back whenever you like.",
+      "level": "Level",
+      "levels": {
+        "easy": {
+          "name": "Easy",
+          "hint": "Still learning. Often leaves seeds to be taken."
+        },
+        "medium": {
+          "name": "Medium",
+          "hint": "A steady opponent that takes what you leave open."
+        },
+        "hard": {
+          "name": "Hard",
+          "hint": "Plans several moves ahead and rarely slips."
+        },
+        "expert": {
+          "name": "Expert",
+          "hint": "Strong and patient. Looks far ahead."
+        }
+      },
+      "side": "Who starts",
+      "first": "I start",
+      "second": "Computer starts",
+      "random": "Random",
       "clock": "Play with a clock",
       "clockHint": "Both you and the computer are on the clock. Leave off for relaxed practice.",
       "start": "Start game",

@@ -86,6 +86,17 @@ No chess.com piece art, board graphics, sounds or branding is used anywhere. The
 | Computer opponent | Written for this project (`src/games/draughts/computer.ts`). No third-party engine. | Ours |
 | Rules | The official rules of international draughts (World Draughts Federation, FMJD), implemented from the rule text in `supabase/functions/_shared/draughts.ts`. Rules of a game are not copyrightable; no code or wording was copied. | n/a |
 
+## Oware
+
+| Asset | Source | License |
+| --- | --- | --- |
+| Board, pits and seeds | Drawn in code for this project (`src/games/oware/OwareBoard.tsx`): a carved wooden board, its pits, and seeds in the grey and brown of nicker seeds. | Ours |
+| Lobby picture | Drawn in code (`Oware` in `src/core/lobby/GameArt.tsx`). | Ours |
+| Sounds | The hub's own wood recordings and synthesised sounds, shared with chess (see above), through `src/games/oware/sound.ts`. | As listed for chess |
+| Rules | Abapa, the traditional rules of the game, which belong to nobody; the rule book (`supabase/functions/_shared/oware.ts`) and its wording are our own. | Ours |
+| Computer opponent | Written for this project (`src/games/oware/computer.ts`). No third-party engine. | Ours |
+| Tab icons (all games) | Line icons drawn for this project (`src/core/ui/icons.tsx`). No icon set copied. | Ours |
+
 ## Word Battle
 
 | Asset | Source | License |

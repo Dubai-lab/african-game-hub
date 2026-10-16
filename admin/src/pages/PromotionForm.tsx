@@ -4,7 +4,7 @@ import type { Promotion } from '../lib/types'
 import { Button, inputClass } from '../ui'
 
 // The games on the hub. (The server refuses a name it does not know.)
-export const GAMES: Record<string, string> = { chess: 'Chess', ludo: 'Ludo', draughts: 'Draughts', pool: 'Pool', checkup: 'Check Up', words: 'Word Battle' }
+export const GAMES: Record<string, string> = { chess: 'Chess', ludo: 'Ludo', draughts: 'Draughts', pool: 'Pool', checkup: 'Check Up', words: 'Word Battle', oware: 'Oware' }
 
 /** For a date-and-time box, which speaks the admin's own time zone and no other. */
 const toBox = (iso: string) => {

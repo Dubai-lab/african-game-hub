@@ -19,6 +19,7 @@ const FALLBACK_GAMES: LandingGame[] = [
   { id: 'chess', name: 'Chess', status: 'live', stakeLevels: STAKES, minutes: [1, 10] },
   { id: 'ludo', name: 'Ludo', status: 'live', stakeLevels: STAKES, minutes: null },
   { id: 'draughts', name: 'Draughts', status: 'live', stakeLevels: STAKES, minutes: [3, 15] },
+  { id: 'oware', name: 'Oware', status: 'live', stakeLevels: STAKES, minutes: [3, 10] },
   { id: 'pool', name: 'Pool', status: 'live', stakeLevels: STAKES, minutes: null },
   { id: 'checkup', name: 'Check Up', status: 'live', stakeLevels: STAKES, minutes: null },
   { id: 'words', name: 'Word Battle', status: 'live', stakeLevels: STAKES, minutes: null },

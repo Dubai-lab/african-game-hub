@@ -159,6 +159,41 @@ function Words() {
   )
 }
 
+function Oware() {
+  // Two rows of six pits in a wooden board, with seeds in them: a few more in one pit, being sown.
+  const counts = [4, 4, 5, 3, 4, 2, 4, 6, 4, 3, 4, 4]
+  const seeds = (cx: number, cy: number, count: number, key: string) =>
+    Array.from({ length: count }, (_, k) => {
+      const a = k * 2.4
+      const r = Math.min(4.2, 1.6 * Math.sqrt(k + 0.5))
+      return <ellipse key={`${key}-${k}`} cx={cx + r * Math.cos(a)} cy={cy + r * Math.sin(a)} rx="2" ry="1.6" fill={k % 2 === 0 ? '#c9c1b1' : '#9c8f7d'} stroke="#4f4335" strokeWidth="0.5" />
+    })
+  return (
+    <>
+      <rect width="120" height="100" fill="#1f2a7a" />
+      <circle cx="60" cy="50" r="44" fill="#2c3a9e" />
+      <rect x="8" y="28" width="104" height="44" rx="14" fill="#7a4320" stroke="#0b0f24" strokeWidth="2" />
+      <rect x="11" y="30" width="98" height="3" rx="1.5" fill="#a5642e" />
+      {counts.map((count, i) => {
+        const cx = 18 + (i % 6) * 16.8
+        const cy = i < 6 ? 41 : 60
+        return (
+          <g key={i}>
+            <circle cx={cx} cy={cy} r="7.2" fill="#3a1c0b" />
+            {seeds(cx, cy, count, String(i))}
+          </g>
+        )
+      })}
+      {/* A hand's worth of seeds, falling into the next pit. */}
+      <g stroke="#4f4335" strokeWidth="0.5">
+        <ellipse cx="88" cy="20" rx="2.4" ry="1.9" fill="#c9c1b1" />
+        <ellipse cx="94" cy="15" rx="2.4" ry="1.9" fill="#9c8f7d" />
+      </g>
+      <path d="M84 24 q4 4 0 8" fill="none" stroke="#f6b800" strokeWidth="1.6" strokeLinecap="round" />
+    </>
+  )
+}
+
 function Token() {
   return (
     <>
@@ -169,7 +204,7 @@ function Token() {
   )
 }
 
-const ART: Record<string, () => React.JSX.Element> = { chess: Chess, ludo: Ludo, pool: Pool, draughts: Draughts, checkup: CheckUp, words: Words, penalty: Penalty, penalty_shootout: Penalty }
+const ART: Record<string, () => React.JSX.Element> = { chess: Chess, ludo: Ludo, pool: Pool, draughts: Draughts, checkup: CheckUp, words: Words, oware: Oware, penalty: Penalty, penalty_shootout: Penalty }
 
 /** Games that have an illustration in public/games/. (Made by `npm run game-art`.) */
 const ILLUSTRATED = new Set(['chess', 'draughts', 'ludo', 'pool', 'penalty', 'penalty_shootout'])

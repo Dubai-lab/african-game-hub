@@ -24,6 +24,8 @@ Word Battle (the crossword board game with letter tiles, for two to four players
 - **The app fetches its own copy only for practice.** `public/words/en.txt` is not part of the app's download and is not precached: it is fetched the first time someone plays the computer, then kept on the phone (a `CacheFirst` rule in `vite.config.ts`). It is read in a Web Worker (`computer.worker.ts`), which also does the computer's thinking.
 - **Another language is another list.** Add `wordlist.<lang>.ts` and `public/words/<lang>.txt`, a tile set for that language in the rule book, and an option in `options_schema` so players are seated with others who chose the same list.
 
+Oware (Abapa, the sowing game of Ghana and the wider region) is the seventh: `supabase/migrations/20261016120000_oware.sql`, `supabase/functions/oware-action/`, `supabase/functions/_shared/oware.ts`, `src/games/oware/`, `supabase/tests/oware.test.ts`, `src/games/oware/rules.test.ts` and `e2e/oware.spec.ts`. It is built exactly as draughts is, and is the smallest complete example of the pattern. It adds one guard worth copying for any game that moves counters about: the database itself counts them. A check on `oware_games` keeps every one of the 48 seeds on the board or in a store at all times, and `oware_apply_move` refuses a move whose board does not add up or whose store goes down, so even a fault in the rule book cannot make or lose a seed. It talks to the server through its Edge Function only (it has no game-server road yet). Remember that `core-join-queue`, `core-challenge` and `core-tournament` bundle `_shared/games.ts`: deploy them again when a game is added, or Find match will not know it.
+
 ## What the core does for you
 
 You do not write any of this again:

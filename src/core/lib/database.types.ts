@@ -1197,6 +1197,104 @@ export type Database = {
           },
         ]
       }
+      oware_games: {
+        Row: {
+          draw_offer_by: string | null
+          increment_ms: number
+          last_move_at: string
+          match_id: string
+          north_time_ms: number
+          pits: number[]
+          ply: number
+          south_time_ms: number
+          store_north: number
+          store_south: number
+          turn: string
+        }
+        Insert: {
+          draw_offer_by?: string | null
+          increment_ms?: number
+          last_move_at?: string
+          match_id: string
+          north_time_ms: number
+          pits: number[]
+          ply?: number
+          south_time_ms: number
+          store_north?: number
+          store_south?: number
+          turn?: string
+        }
+        Update: {
+          draw_offer_by?: string | null
+          increment_ms?: number
+          last_move_at?: string
+          match_id?: string
+          north_time_ms?: number
+          pits?: number[]
+          ply?: number
+          south_time_ms?: number
+          store_north?: number
+          store_south?: number
+          turn?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oware_games_draw_offer_by_fkey"
+            columns: ["draw_offer_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oware_games_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: true
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      oware_moves: {
+        Row: {
+          created_at: string
+          match_id: string
+          notation: string
+          pit: number
+          pits_after: number[]
+          ply: number
+          taken: number
+          time_left_ms: number
+        }
+        Insert: {
+          created_at?: string
+          match_id: string
+          notation: string
+          pit: number
+          pits_after: number[]
+          ply: number
+          taken?: number
+          time_left_ms: number
+        }
+        Update: {
+          created_at?: string
+          match_id?: string
+          notation?: string
+          pit?: number
+          pits_after?: number[]
+          ply?: number
+          taken?: number
+          time_left_ms?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oware_moves_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           country_code: string
@@ -1577,6 +1675,166 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "countries"
             referencedColumns: ["country_code"]
+          },
+        ]
+      }
+      promotion_emails: {
+        Row: {
+          created_at: string
+          id: number
+          note: string | null
+          place: number
+          prize: string
+          promotion_id: number
+          sent_by: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          note?: string | null
+          place: number
+          prize: string
+          promotion_id: number
+          sent_by: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          note?: string | null
+          place?: number
+          prize?: string
+          promotion_id?: number
+          sent_by?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_emails_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_emails_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_emails_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotion_payouts: {
+        Row: {
+          note: string | null
+          paid_at: string
+          paid_by: string
+          promotion_id: number
+          user_id: string
+        }
+        Insert: {
+          note?: string | null
+          paid_at?: string
+          paid_by: string
+          promotion_id: number
+          user_id: string
+        }
+        Update: {
+          note?: string | null
+          paid_at?: string
+          paid_by?: string
+          promotion_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_payouts_paid_by_fkey"
+            columns: ["paid_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_payouts_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_payouts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotions: {
+        Row: {
+          created_at: string
+          created_by: string
+          ends_at: string
+          game_types: string[] | null
+          games_needed: number
+          id: number
+          max_per_opponent: number
+          min_seconds: number
+          name: string
+          new_players_only: boolean
+          reward: string | null
+          starts_at: string
+          updated_at: string
+          winners: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          ends_at: string
+          game_types?: string[] | null
+          games_needed: number
+          id?: never
+          max_per_opponent?: number
+          min_seconds?: number
+          name: string
+          new_players_only?: boolean
+          reward?: string | null
+          starts_at: string
+          updated_at?: string
+          winners: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          ends_at?: string
+          game_types?: string[] | null
+          games_needed?: number
+          id?: never
+          max_per_opponent?: number
+          min_seconds?: number
+          name?: string
+          new_players_only?: boolean
+          reward?: string | null
+          starts_at?: string
+          updated_at?: string
+          winners?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2307,6 +2565,52 @@ export type Database = {
       }
       admin_overview: { Args: never; Returns: Json }
       admin_player: { Args: { p_user_id: string }; Returns: Json }
+      admin_promotion: { Args: { p_promotion_id: number }; Returns: Json }
+      admin_promotion_email: {
+        Args: {
+          p_admin_id: string
+          p_note: string
+          p_prize: string
+          p_promotion_id: number
+          p_user_ids: string[]
+        }
+        Returns: Json
+      }
+      admin_promotion_mark_paid: {
+        Args: {
+          p_admin_id: string
+          p_note: string
+          p_paid: boolean
+          p_promotion_id: number
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      admin_promotion_player: {
+        Args: { p_promotion_id: number; p_user_id: string }
+        Returns: Json
+      }
+      admin_promotion_save: {
+        Args: {
+          p_admin_id: string
+          p_ends_at: string
+          p_game_types: string[]
+          p_games_needed: number
+          p_id: number
+          p_max_per_opponent: number
+          p_min_seconds: number
+          p_name: string
+          p_new_players_only: boolean
+          p_reward: string
+          p_starts_at: string
+          p_winners: number
+        }
+        Returns: Json
+      }
+      admin_promotions: {
+        Args: { p_limit: number; p_offset: number }
+        Returns: Json
+      }
       admin_reports: {
         Args: { p_limit: number; p_offset: number; p_status: string }
         Returns: Json
@@ -2467,6 +2771,30 @@ export type Database = {
         Returns: undefined
       }
       match_chat_status: { Args: { p_match_id: string }; Returns: Json }
+      oware_apply_move: {
+        Args: {
+          p_end_reason: string
+          p_expected_ply: number
+          p_match_id: string
+          p_notation: string
+          p_pit: number
+          p_pits_after: number[]
+          p_store_north: number
+          p_store_south: number
+          p_taken: number
+          p_user_id: string
+          p_winner: string
+        }
+        Returns: Json
+      }
+      oware_game_action: {
+        Args: { p_action: string; p_match_id: string; p_user_id: string }
+        Returns: Json
+      }
+      oware_move_context: {
+        Args: { p_match_id: string; p_user_id: string }
+        Returns: Json
+      }
       pool_apply_shot: {
         Args: {
           p_match_id: string

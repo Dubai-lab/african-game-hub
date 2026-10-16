@@ -5,8 +5,8 @@
 export type NotificationKind = 'friend_request' | 'friend_accepted' | 'challenge' | 'tournament_started' | 'support_answered' | 'announcement'
 export type PushMessage = { title: string; body: string; url: string; tag: string }
 
-const GAMES: Record<string, string> = { chess: 'Chess', ludo: 'Ludo', draughts: 'Draughts', pool: 'Pool', checkup: 'Check Up', words: 'Word Battle' }
-const GAMES_FR: Record<string, string> = { chess: 'Échecs', ludo: 'Ludo', draughts: 'Dames', pool: 'Billard', checkup: 'Check Up', words: 'Word Battle' }
+const GAMES: Record<string, string> = { chess: 'Chess', ludo: 'Ludo', draughts: 'Draughts', pool: 'Pool', checkup: 'Check Up', words: 'Word Battle', oware: 'Oware' }
+const GAMES_FR: Record<string, string> = { chess: 'Échecs', ludo: 'Ludo', draughts: 'Dames', pool: 'Billard', checkup: 'Check Up', words: 'Word Battle', oware: 'Awalé' }
 const short = (value: unknown, max: number) => {
   const words = String(value ?? '').trim()
   return words.length > max ? `${words.slice(0, max - 1)}…` : words

@@ -100,4 +100,12 @@ const words: GameAdapter = {
   },
 }
 
-export const games: Record<string, GameAdapter> = { chess, ludo, pool, draughts, checkup, words }
+const oware: GameAdapter = {
+  queueChoice: (optionsSchema, requested) => {
+    const control = timeControls(optionsSchema).find((c) => c.id === requested.time_control)
+    // One rating for Oware, whatever the clock.
+    return control ? { options: { time_control: control.id }, ratingPool: 'default' } : null
+  },
+}
+
+export const games: Record<string, GameAdapter> = { chess, ludo, pool, draughts, checkup, words, oware }

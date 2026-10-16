@@ -89,6 +89,8 @@ export async function resetTestAccounts() {
          pg as (delete from public.pool_games where match_id in (select match_id from gone)),
          dm as (delete from public.draughts_moves where match_id in (select match_id from gone)),
          dg as (delete from public.draughts_games where match_id in (select match_id from gone)),
+         om as (delete from public.oware_moves where match_id in (select match_id from gone)),
+         og as (delete from public.oware_games where match_id in (select match_id from gone)),
          lm as (delete from public.ludo_moves where match_id in (select match_id from gone)),
          lg as (delete from public.ludo_games where match_id in (select match_id from gone)),
          b as (delete from public.chess_games where match_id in (select match_id from gone)),

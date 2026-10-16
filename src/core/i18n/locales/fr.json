@@ -138,7 +138,8 @@
       "poolBlurb": "Jeu de la 8 et jeu de la 9 sur une vraie table. Chaque coup est calculé par le serveur : la table que vous voyez est celle qui compte.",
       "draughtsBlurb": "Les dames internationales sur un damier de 10 sur 10. La prise est obligatoire, et chaque coup est vérifié par le serveur.",
       "checkupBlurb": "Le jeu de cartes à formes joué dans tout le Nigeria, pour deux à quatre joueurs. Les cartes sont distribuées par le serveur et votre main n’est jamais envoyée à personne d’autre.",
-      "wordsBlurb": "Le jeu de lettres sur plateau pour deux à quatre joueurs : formez des mots avec vos lettres et marquez plus que la table. Les mots sont jugés par le serveur et vos lettres ne sont jamais envoyées à personne d’autre. Mots anglais pour l’instant."
+      "wordsBlurb": "Le jeu de lettres sur plateau pour deux à quatre joueurs : formez des mots avec vos lettres et marquez plus que la table. Les mots sont jugés par le serveur et vos lettres ne sont jamais envoyées à personne d’autre. Mots anglais pour l’instant.",
+      "owareBlurb": "Le jeu de semailles du Ghana et de toute la région, aux règles abapa. Semez vos graines, prenez-les par deux ou trois, et soyez le premier à 25. Chaque coup est vérifié par le serveur."
     },
     "how": {
       "title": "Comment ça marche",
@@ -314,7 +315,8 @@
     "pool": "Billard",
     "penalty": "Tirs au but",
     "checkup": "Check Up",
-    "words": "Word Battle"
+    "words": "Word Battle",
+    "oware": "Oware (awalé)"
   },
   "about": {
     "link": "À propos",
@@ -1604,6 +1606,152 @@
       "color": "Jouer avec",
       "random": "Au hasard",
       "whiteFirst": "Les Blancs commencent.",
+      "clock": "Jouer avec une pendule",
+      "clockHint": "Vous et l’ordinateur jouez au temps. Laissez éteint pour un entraînement tranquille.",
+      "start": "Commencer",
+      "you": "Vous",
+      "name": "Ordinateur",
+      "tableTitle": "Ordinateur · {{level}}",
+      "thinking": "L’ordinateur réfléchit…",
+      "again": "Rejouer",
+      "change": "Changer de partie"
+    }
+  },
+  "oware": {
+    "south": "Sud",
+    "north": "Nord",
+    "back": "Retour",
+    "backToLobby": "Retour au salon",
+    "notFound": "Cette partie est introuvable.",
+    "loadFailed": "Nous n’avons pas pu charger cette partie.",
+    "stake": "{{stake}} jetons",
+    "clockSouth": "Pendule du Sud",
+    "clockNorth": "Pendule du Nord",
+    "taken_one": "{{count}} graine",
+    "taken_other": "{{count}} graines",
+    "mustFeed": "Votre adversaire n’a plus de graines : vous devez jouer un trou qui lui en donne.",
+    "grandSlam": "Ce coup aurait pris toutes les graines de votre adversaire : rien n’a été pris.",
+    "justTook_one": "{{name}} a pris {{count}} graine.",
+    "justTook_other": "{{name}} a pris {{count}} graines.",
+    "moveRejected": "Ce trou ne peut pas être joué. Le coup a été annulé.",
+    "moveNotSent": "Votre coup n’a pas pu être envoyé. Vérifiez votre connexion.",
+    "lobby": {
+      "timeControl": "Cadence",
+      "timeControlHint": "Minutes pour chaque joueur. « 5 | 3 » ajoute 3 secondes après chaque coup.",
+      "timePlain": "{{minutes}} minutes chacun",
+      "timeWithIncrement": "{{minutes}} minutes chacun, plus {{increment}} secondes par coup"
+    },
+    "board": {
+      "label": "Plateau d’awalé",
+      "pit_one": "Trou {{pit}}, {{count}} graine",
+      "pit_other": "Trou {{pit}}, {{count}} graines"
+    },
+    "moves": {
+      "title": "Coups",
+      "none": "Aucun coup pour l’instant",
+      "previous": "Coup précédent",
+      "next": "Coup suivant",
+      "backToGame": "Revenir à la position actuelle"
+    },
+    "actions": {
+      "draw": "Proposer nulle",
+      "drawOffered": "Nulle proposée",
+      "undo": "Reprendre",
+      "abort": "Annuler",
+      "resign": "Abandonner",
+      "flip": "Tourner le plateau"
+    },
+    "abort": {
+      "title": "Annuler cette partie ?",
+      "body": "La partie n’a pas vraiment commencé : elle sera annulée, sans résultat.",
+      "confirm": "Annuler la partie"
+    },
+    "resign": {
+      "title": "Abandonner cette partie ?",
+      "body": "{{opponent}} gagne.",
+      "cancel": "Continuer",
+      "confirm": "Abandonner"
+    },
+    "drawOffer": {
+      "title": "{{name}} propose la nulle",
+      "body": "Si vous acceptez, la partie se termine par une nulle.",
+      "accept": "Accepter la nulle",
+      "decline": "Refuser"
+    },
+    "online": {
+      "yourFirstMove": "Jouez votre premier coup. Secondes restantes :",
+      "theirFirstMove": "En attente du premier coup de {{name}}. Secondes restantes :",
+      "drawSent": "Nulle proposée. En attente d’une réponse."
+    },
+    "over": {
+      "draw": "Partie nulle",
+      "wins": "{{name}} gagne",
+      "youWon": "Vous avez gagné",
+      "youLost": "Vous avez perdu",
+      "aborted": "Partie annulée",
+      "seeds": "Graines",
+      "tokens": "Jetons",
+      "rating": "Classement",
+      "close": "Voir le plateau",
+      "showResult": "Voir le résultat",
+      "reason": {
+        "majority": "Plus de la moitié des graines ont été prises.",
+        "no_moves": "Une rangée vide ne pouvait pas être nourrie : chaque joueur a pris les graines restées dans sa rangée.",
+        "repetition": "La même position est revenue trois fois : chaque joueur a pris les graines restées dans sa rangée.",
+        "no_captures": "100 coups sont passés sans prise : chaque joueur a pris les graines restées dans sa rangée.",
+        "resignation": "Par abandon.",
+        "agreement": "Les deux joueurs ont convenu de la nulle.",
+        "timeout": "Au temps.",
+        "aborted": "La partie a été annulée avant que les deux joueurs aient joué. Pas de résultat.",
+        "called_off": "La partie a été annulée par notre équipe. Pas de résultat ; toute mise a été rendue en entier.",
+        "other": "La partie est terminée.",
+        "no_show": "Un joueur n’a pas joué son premier coup à temps et perd la partie."
+      }
+    },
+    "settings": {
+      "title": "Réglages de l’awalé",
+      "sound": "Sons",
+      "haptics": "Vibration",
+      "done": "Terminé"
+    },
+    "rules": {
+      "title": "Comment jouer",
+      "board": "L’oware (abapa), aussi appelé awalé, se joue sur deux rangées de six trous, avec quatre graines dans chacun : 48 graines. Votre rangée est la plus proche de vous. Le premier joueur commence.",
+      "sow": "À votre tour, choisissez un de vos trous qui contient des graines. Toutes ses graines sont semées une par une dans les trous suivants, en tournant dans le sens inverse des aiguilles d’une montre.",
+      "lap": "Un trou de douze graines ou plus fait tout le tour du plateau : le trou vidé est sauté.",
+      "capture": "Si votre dernière graine tombe dans un trou adverse et le porte à deux ou trois, vous prenez ces graines, ainsi que celles des trous juste avant, de son côté, tant qu’ils en contiennent aussi deux ou trois.",
+      "grandSlam": "Un coup qui prendrait toutes les graines de votre adversaire est joué, mais ne prend rien.",
+      "feed": "Si la rangée de votre adversaire est vide, vous devez jouer un trou qui lui donne des graines, si vous en avez un.",
+      "win": "Le premier à prendre 25 graines gagne. À 24 partout, la partie est nulle. Le temps écoulé fait perdre.",
+      "end": "Si une rangée vide ne peut pas être nourrie, si la même position revient trois fois, ou après 100 coups sans prise, chaque joueur prend les graines restées dans sa rangée, et celui qui en a le plus gagne."
+    },
+    "computer": {
+      "link": "Jouer à l’awalé contre l’ordinateur",
+      "title": "L’awalé contre l’ordinateur",
+      "intro": "Entraînement sans jetons ni classement. Reprenez un coup quand vous voulez.",
+      "level": "Niveau",
+      "levels": {
+        "easy": {
+          "name": "Facile",
+          "hint": "Apprend encore. Laisse souvent des graines à prendre."
+        },
+        "medium": {
+          "name": "Moyen",
+          "hint": "Un adversaire régulier, qui prend ce que vous laissez ouvert."
+        },
+        "hard": {
+          "name": "Difficile",
+          "hint": "Prévoit plusieurs coups à l’avance et se trompe rarement."
+        },
+        "expert": {
+          "name": "Expert",
+          "hint": "Fort et patient. Voit loin."
+        }
+      },
+      "side": "Qui commence",
+      "first": "Je commence",
+      "second": "L’ordinateur commence",
+      "random": "Au hasard",
       "clock": "Jouer avec une pendule",
       "clockHint": "Vous et l’ordinateur jouez au temps. Laissez éteint pour un entraînement tranquille.",
       "start": "Commencer",

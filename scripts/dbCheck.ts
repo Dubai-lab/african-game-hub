@@ -42,7 +42,7 @@ const [counts] = await runSql<Record<string, number>>(`
 console.log('      ', JSON.stringify(counts))
 report(counts!.countries === 54 && counts!.real_money_countries === 0, '54 countries, real money off everywhere')
 report(counts!.countries_without_rate === 0, 'every country has a token rate')
-report(counts!.games === 7 && counts!.live_games === 6, 'games registry: chess, ludo, draughts, pool, Check Up and Word Battle live, one switched off')
+report(counts!.games === 8 && counts!.live_games === 7, 'games registry: chess, ludo, draughts, Oware, pool, Check Up and Word Battle live, one switched off')
 report(counts!.settings_rows === 1, 'exactly one platform settings row')
 report(counts!.users === counts!.profiles && counts!.users === counts!.wallets, 'every account has a profile and a wallet')
 

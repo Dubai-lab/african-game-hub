@@ -12,6 +12,7 @@ export const QUICK_COMMON = ['hello', 'good_luck', 'good_game', 'well_played', '
 export const QUICK_BY_GAME: Record<string, readonly string[]> = {
   chess: ['good_move', 'close_game'],
   draughts: ['good_move', 'nice_capture', 'close_game'],
+  oware: ['good_move', 'nice_capture', 'close_game'],
   ludo: ['nice_roll', 'lucky', 'so_close'],
   pool: ['nice_shot', 'great_break', 'unlucky', 'so_close'],
   checkup: ['good_move', 'lucky', 'so_close'],
