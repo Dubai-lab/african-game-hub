@@ -56,6 +56,35 @@ describe('the notice to our own team', () => {
   })
 })
 
+describe('the email to a promotion winner', () => {
+  const data = { name: 'Amina', promotion: 'Register and Play 5 Games', place: 2, prize: '1.000 RWF by Mobile Money', note: null }
+
+  it('gives the place and the prize, and asks for the mobile money details by reply', () => {
+    const mail = renderMail('promotion_won', 'en', data, context)
+    expect(mail.subject).toBe('Congratulations, you won: Register and Play 5 Games')
+    for (const part of ['Hello Amina,', 'You finished in 2nd place in our promotion "Register and Play 5 Games" and you have won: 1.000 RWF by Mobile Money.', 'reply to this email', 'mobile money number', 'full name registered', 'never ask for your password or a PIN'])
+      expect(mail.text).toContain(part)
+    expect(mail.text).not.toContain('> ')
+  })
+
+  it('says the place the right way in each language, and quotes our team’s own words when there are some', () => {
+    expect(renderMail('promotion_won', 'en', { ...data, place: 1 }, context).text).toContain('1st place')
+    expect(renderMail('promotion_won', 'en', { ...data, place: 3 }, context).text).toContain('3rd place')
+    expect(renderMail('promotion_won', 'en', { ...data, place: 11 }, context).text).toContain('11th place')
+    expect(renderMail('promotion_won', 'en', { ...data, place: 22 }, context).text).toContain('22nd place')
+    const french = renderMail('promotion_won', 'fr', { ...data, place: 1, note: 'Les prix partent vendredi.' }, context)
+    expect(french.text).toContain('à la 1re place')
+    expect(french.text).toContain('> Les prix partent vendredi.')
+    expect(renderMail('promotion_won', 'fr', data, context).text).toContain('à la 2e place')
+  })
+
+  it('shows the promotion and prize as text, never as markup', () => {
+    const mail = renderMail('promotion_won', 'en', { ...data, promotion: '<b>Promo</b>', prize: '<img src=x onerror=alert(1)>' }, context)
+    expect(mail.html).not.toContain('<img src=x')
+    expect(mail.html).toContain('&lt;b&gt;Promo&lt;/b&gt;')
+  })
+})
+
 describe('an email of a kind nobody has written', () => {
   it('is never sent empty: it is an error', () => {
     expect(() => renderMail('nonsense' as never, 'en', {}, context)).toThrow(/Unknown email template/)

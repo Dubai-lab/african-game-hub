@@ -5,7 +5,7 @@
 // claim that tokens can be turned into money. Anything a player wrote is shown as text, never
 // as markup.
 
-export type MailTemplate = 'welcome' | 'support_received' | 'support_notice' | 'support_answered' | 'account_suspended' | 'account_restored' | 'password_changed' | 'announcement'
+export type MailTemplate = 'welcome' | 'support_received' | 'support_notice' | 'support_answered' | 'account_suspended' | 'account_restored' | 'password_changed' | 'announcement' | 'promotion_won'
 export type MailData = Record<string, unknown>
 export type Rendered = { subject: string; html: string; text: string }
 export type MailContext = { siteUrl: string; supportAddress: string }
@@ -26,6 +26,12 @@ export function escapeHtml(value: unknown): string {
 }
 const text = (value: unknown) => String(value ?? '').trim()
 const lang = (language: string): 'en' | 'fr' => (language === 'fr' ? 'fr' : 'en')
+/** 1st, 2nd, 3rd, 4th, 11th, 21st... */
+const ordinal = (n: number) => {
+  const tens = n % 100
+  const suffix = tens >= 11 && tens <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ?? 'th'
+  return `${n}${suffix}`
+}
 
 type Body = {
   subject: string
@@ -256,6 +262,49 @@ export function renderMail(template: MailTemplate, language: string, data: MailD
             ? 'Vous recevez cet e-mail parce que vous avez un compte African Game Hub. Pour ne plus recevoir nos nouvelles, ouvrez Réglages dans l’application et désactivez « E-mails de nouvelles ».'
             : 'You are receiving this because you have an African Game Hub account. To stop our news emails, open Settings in the app and switch off "News emails".',
       },
+      context,
+      l,
+    )
+  }
+  if (template === 'promotion_won') {
+    // A winner of a promotion: their place, the prize, and what to send us to receive it.
+    const promotion = text(data.promotion)
+    const prize = text(data.prize)
+    const place = Number(data.place)
+    const placeWords = l === 'fr' ? (place === 1 ? '1re' : `${place}e`) : ordinal(place)
+    const note = text(data.note)
+    return page(
+      l === 'fr'
+        ? {
+            subject: `Félicitations, vous avez gagné : ${promotion}`,
+            heading: 'Félicitations, vous avez gagné !',
+            paragraphs: [
+              `Bonjour ${name},`,
+              `Vous avez terminé à la ${placeWords} place de notre promotion « ${promotion} » et vous avez gagné : ${prize}.`,
+              'Pour recevoir votre prix, répondez à cet e-mail en nous indiquant :',
+              '1. le numéro mobile money sur lequel envoyer le prix, avec l’indicatif du pays ;',
+              '2. le nom complet enregistré sur ce compte mobile money ;',
+              '3. le réseau (par exemple MTN MoMo ou Airtel Money).',
+            ],
+            ...(note ? { quote: note } : {}),
+            footnote:
+              'Nous ne vous demanderons jamais votre mot de passe ni votre code PIN. Ne répondez qu’à cet e-mail, et n’envoyez votre numéro à personne d’autre qui dirait venir de notre part.',
+          }
+        : {
+            subject: `Congratulations, you won: ${promotion}`,
+            heading: 'Congratulations, you won!',
+            paragraphs: [
+              `Hello ${name},`,
+              `You finished in ${placeWords} place in our promotion "${promotion}" and you have won: ${prize}.`,
+              'To receive your prize, reply to this email with:',
+              '1. the mobile money number the prize should be sent to, with its country code;',
+              '2. the full name registered on that mobile money account;',
+              '3. the network (for example MTN MoMo or Airtel Money).',
+            ],
+            ...(note ? { quote: note } : {}),
+            footnote:
+              'We will never ask for your password or a PIN. Only reply to this email, and do not send your number to anyone else who says they are from us.',
+          },
       context,
       l,
     )

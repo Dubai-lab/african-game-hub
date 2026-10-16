@@ -195,6 +195,8 @@ export type PromotionPlayer = {
   country_code: string | null
   registered_at: string
   email: string | null
+  /** Whether that address has been confirmed: only a confirmed one can be emailed. */
+  email_confirmed: boolean
   phone: string | null
   banned: boolean
   /** Games that count towards the promotion, and all the games finished in the period. */
@@ -207,8 +209,11 @@ export type PromotionPlayer = {
   paid_at: string | null
   paid_note: string | null
   paid_by: string | null
+  /** When they were last emailed that they had won. */
+  emailed_at: string | null
 }
-export type PromotionBoard = { promotion: Promotion; qualified: number; playing: number; paid: number; registered: number; rows: PromotionPlayer[] }
+export type PromotionBoard = { promotion: Promotion; qualified: number; playing: number; paid: number; emailed: number; registered: number; rows: PromotionPlayer[] }
+export type PromotionEmailResult = { emailed: number; no_address: number; recent: number }
 export type PromotionGame = {
   match_id: string
   game_type: string

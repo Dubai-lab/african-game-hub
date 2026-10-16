@@ -19,8 +19,8 @@ if (existsSync(envFile)) {
   for (const line of readFileSync(envFile, 'utf8').split(/\r?\n/)) {
     const m = line.match(/^\s*(SUPABASE_SERVICE_ROLE_KEY|SUPABASE_ACCESS_TOKEN|SMTP_PASS|GAME_SERVER_KEY|LEDGER_BACKUP_KEY)\s*=\s*(.+)$/)
     if (!m) continue
-    const value = m[2].trim().replace(/^["']|["']$/g, '')
-    if (value.length >= 8) secrets.set(m[1], value)
+    const value = m[2]!.trim().replace(/^["']|["']$/g, '')
+    if (value.length >= 8) secrets.set(m[1]!, value)
   }
 }
 
@@ -47,7 +47,7 @@ for (const file of files) {
   }
   if (/sb_secret_[A-Za-z0-9_-]{16,}/.test(text)) stop(`a Supabase secret key is inside ${file}`)
   for (const m of text.matchAll(/eyJ[A-Za-z0-9_-]{10,}\.(eyJ[A-Za-z0-9_-]{10,})\.[A-Za-z0-9_-]{10,}/g)) {
-    const payload = Buffer.from(m[1], 'base64url').toString('utf8')
+    const payload = Buffer.from(m[1]!, 'base64url').toString('utf8')
     // The only key a website may carry is the public one. Any other role is a server's key.
     const role = payload.match(/"role"\s*:\s*"(service_role|game_server|ledger_backup)"/)
     if (role) stop(`a ${role[1]} key is inside ${file}`)

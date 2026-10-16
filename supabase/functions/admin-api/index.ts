@@ -167,6 +167,21 @@ const ACTIONS: Record<string, Action<any>> = {
     }),
   ),
 
+  // Tells winners by email that they have won and asks for their mobile money details. No
+  // userIds: every winner not yet told and not yet paid.
+  'promotions.email': action(
+    z.object({
+      promotionId: z.int().min(1),
+      userIds: z.optional(z.array(uuid).min(1).max(100)),
+      prize: z.optional(z.string().trim().max(200)),
+      note: z.optional(z.string().trim().max(1000)),
+    }),
+    (p, adminId) => ({
+      fn: 'admin_promotion_email',
+      args: { p_admin_id: adminId, p_promotion_id: p.promotionId, p_user_ids: p.userIds ?? null, p_prize: p.prize || null, p_note: p.note || null },
+    }),
+  ),
+
   revenue: action(z.object({ days: z.optional(z.int().min(1).max(90)) }), (p) => ({ fn: 'admin_revenue', args: { p_days: p.days ?? 14 } })),
   integrity: action(z.object({}), () => ({ fn: 'admin_integrity', args: {} })),
   audit: action(z.object(page), (p) => ({ fn: 'admin_audit', args: { p_limit: p.limit ?? 50, p_offset: p.offset ?? 0 } })),

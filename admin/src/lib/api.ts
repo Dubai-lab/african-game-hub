@@ -29,6 +29,8 @@ const MESSAGES: Record<string, string> = {
   NOT_A_WINNER: 'This player is not among the winners of the promotion.',
   ALREADY_PAID: 'This player is already marked as paid.',
   NOT_MARKED_PAID: 'This player is not marked as paid.',
+  PRIZE_REQUIRED: 'Write what the prize is, so the email can say it.',
+  PLAYER_BANNED: 'This player is banned. Lift the ban first if they should still get the prize.',
   NETWORK: 'Could not reach the server. Check the connection and try again.',
   SERVER_ERROR: 'Something went wrong on the server. Nothing was changed.',
 }

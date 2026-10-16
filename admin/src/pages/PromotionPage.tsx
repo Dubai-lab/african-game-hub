@@ -2,8 +2,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Fragment, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { api, useApi } from '../lib/api'
-import type { PromotionBoard, PromotionGame, PromotionPlayer } from '../lib/types'
-import { ActionDialog, Badge, Button, Card, Failure, Loading, PageTitle, Stat, Table, When } from '../ui'
+import type { Promotion, PromotionBoard, PromotionEmailResult, PromotionGame, PromotionPlayer } from '../lib/types'
+import { ActionDialog, Badge, Button, Card, Failure, inputClass, Loading, PageTitle, Stat, Table, When } from '../ui'
 import { GAMES, PromotionForm } from './PromotionForm'
 import { PromotionState } from './PromotionsPage'
 
@@ -43,6 +43,55 @@ function Games({ promotionId, player }: { promotionId: number; player: Promotion
   )
 }
 
+/**
+ * Emails winners that they have won: their place, the prize, and a request to reply with their
+ * mobile money details. Given no players, it writes to every winner not yet told and not yet paid.
+ */
+function EmailWinners({ promotion, players, everyone, onClose, onSent }: { promotion: Promotion; players: PromotionPlayer[]; everyone: boolean; onClose: () => void; onSent: (result: PromotionEmailResult) => void }) {
+  const [prize, setPrize] = useState(promotion.reward ?? '')
+  const again = !everyone && players[0]?.emailed_at
+  return (
+    <ActionDialog
+      title={everyone ? `Email ${players.length} ${players.length === 1 ? 'winner' : 'winners'} that they won?` : `${again ? 'Email again' : 'Email'} ${players[0]?.username} that they won?`}
+      explain={
+        <>
+          <p>
+            Each gets an email in their own language with their place, the prize below, and a request to reply with the mobile money number to send it to, the name on that account and the network. Replies come to the
+            hub’s support mailbox. Once the prize is sent, use “Mark as paid”.
+          </p>
+          <ul className="mt-2 list-disc pl-5">
+            {players.map((p) => (
+              <li key={p.user_id}>
+                {p.place}. {p.username} <span className="break-all">({p.email})</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      }
+      confirmLabel="Send the email"
+      reasonLabel="A few words of your own, added to the email (optional)"
+      reasonRequired={false}
+      onClose={onClose}
+      onConfirm={async (note) => {
+        const result = await api<PromotionEmailResult>('promotions.email', {
+          promotionId: promotion.id,
+          ...(everyone ? {} : { userIds: players.map((p) => p.user_id) }),
+          prize: prize.trim(),
+          ...(note ? { note } : {}),
+        })
+        onSent(result)
+      }}
+    >
+      <label className="grid gap-1 text-sm font-semibold">
+        The prize, as the email will say it
+        <input value={prize} onChange={(e) => setPrize(e.target.value)} required maxLength={200} placeholder="1000 RWF by mobile money" className={`${inputClass} font-normal`} />
+      </label>
+    </ActionDialog>
+  )
+}
+
+const canEmail = (r: PromotionPlayer) => r.winner && !r.banned && Boolean(r.email) && r.email_confirmed
+
 export default function PromotionPage() {
   const promotionId = Number(useParams().promotionId)
   const queryClient = useQueryClient()
@@ -50,12 +99,16 @@ export default function PromotionPage() {
   const [editing, setEditing] = useState(false)
   const [open, setOpen] = useState<string | null>(null)
   const [paying, setPaying] = useState<{ player: PromotionPlayer; paid: boolean } | null>(null)
+  const [emailing, setEmailing] = useState<{ players: PromotionPlayer[]; everyone: boolean } | null>(null)
+  const [sent, setSent] = useState<string | null>(null)
 
   if (board.isPending) return <Loading />
   if (board.isError) return <Failure error={board.error} retry={() => void board.refetch()} />
   if (!board.data) return <p className="text-sm">No such promotion.</p>
   const { promotion, rows } = board.data
   const winners = rows.filter((r) => r.winner)
+  // Who "Email all winners" writes to: the same choice the server makes.
+  const notTold = winners.filter((r) => canEmail(r) && !r.emailed_at && !r.paid_at)
 
   return (
     <>
@@ -87,7 +140,20 @@ export default function PromotionPage() {
           <Stat label="Registered in the period" value={board.data.registered} />
           <Stat label="Still playing towards it" value={board.data.playing} />
           <Stat label="Qualified" value={board.data.qualified} note={`${winners.length} of ${promotion.winners} winning places taken`} tone={winners.length >= promotion.winners ? 'ok' : undefined} />
-          <Stat label="Marked as paid" value={board.data.paid} note={`of ${winners.length} winners`} />
+          <Stat label="Marked as paid" value={board.data.paid} note={`of ${winners.length} winners · ${board.data.emailed} emailed`} />
+        </div>
+
+        {sent && (
+          <p role="status" className="rounded border border-ok/40 bg-ok/10 px-3 py-2 text-sm">
+            {sent}
+          </p>
+        )}
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="primary" disabled={notTold.length === 0} onClick={() => setEmailing({ players: notTold, everyone: true })}>
+            Email the winners not yet told ({notTold.length})
+          </Button>
+          <span className="text-sm text-muted">Tells each winner their place and prize, and asks them to reply with their mobile money number.</span>
         </div>
 
         <Card title="Players, the first to qualify first">
@@ -121,6 +187,30 @@ export default function PromotionPage() {
                     <When at={r.qualified_at} />
                   </td>
                   <td className="whitespace-nowrap">
+                    {r.winner && (
+                      <span className="mb-1 block text-xs">
+                        {r.emailed_at ? (
+                          <>
+                            emailed <When at={r.emailed_at} />
+                            {canEmail(r) && (
+                              <>
+                                {' '}
+                                ·{' '}
+                                <button type="button" className="underline" onClick={() => setEmailing({ players: [r], everyone: false })}>
+                                  email again
+                                </button>
+                              </>
+                            )}
+                          </>
+                        ) : canEmail(r) ? (
+                          <button type="button" className="font-semibold text-indigo underline" onClick={() => setEmailing({ players: [r], everyone: false })}>
+                            Email winner
+                          </button>
+                        ) : (
+                          <span className="text-muted">{r.banned ? 'banned: not emailed' : 'no confirmed email'}</span>
+                        )}
+                      </span>
+                    )}
                     {r.paid_at ? (
                       <>
                         <Badge tone="ok">paid</Badge>{' '}
@@ -155,6 +245,22 @@ export default function PromotionPage() {
           </Table>
         </Card>
       </div>
+
+      {emailing && (
+        <EmailWinners
+          promotion={promotion}
+          players={emailing.players}
+          everyone={emailing.everyone}
+          onClose={() => setEmailing(null)}
+          onSent={async (result) => {
+            const parts = [`Email on its way to ${result.emailed} ${result.emailed === 1 ? 'winner' : 'winners'} (sent within a few minutes).`]
+            if (result.recent > 0) parts.push(`${result.recent} emailed less than ten minutes ago, so not again yet.`)
+            if (result.no_address > 0) parts.push(`${result.no_address} without a confirmed email address.`)
+            setSent(parts.join(' '))
+            await queryClient.invalidateQueries()
+          }}
+        />
+      )}
 
       {paying && (
         <ActionDialog
