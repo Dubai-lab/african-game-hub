@@ -69,7 +69,9 @@ try {
     "img-src 'self' data: blob: https://*.supabase.co",
     "font-src 'self' data:",
     "media-src 'self' blob:",
-    `connect-src 'self' https://*.supabase.co wss://*.supabase.co${gameServer}`,
+    // blob: is the pictures inside a 3D model (street basketball): the model loader unpacks each
+    // into a blob: address and reads it back with fetch(). Without it every model draws white.
+    `connect-src 'self' blob: https://*.supabase.co wss://*.supabase.co${gameServer}`,
     "manifest-src 'self'",
     ...(turnstile ? [`frame-src${turnstile}`] : []),
     "object-src 'none'",

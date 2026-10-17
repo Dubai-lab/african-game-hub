@@ -120,7 +120,7 @@ test('the security policy is in both entry pages and the app works under it, che
     await page.goto(origin + path)
     const policy = await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute('content')
     expect(policy).toContain("script-src 'self'")
-    expect(policy).toContain("connect-src 'self' https://*.supabase.co wss://*.supabase.co")
+    expect(policy).toContain("connect-src 'self' blob: https://*.supabase.co wss://*.supabase.co")
     expect(policy).not.toContain("'unsafe-eval'")
   }
   // An injected inline script does not run.
