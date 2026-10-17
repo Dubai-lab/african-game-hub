@@ -17,7 +17,8 @@ type BarsPlugin = {
   show?: (options?: { bar?: 'StatusBar' | 'NavigationBar' }) => Promise<void>
   setStyle?: (options: { style: 'DARK' | 'LIGHT' | 'DEFAULT' }) => Promise<void>
 }
-type NativeWindow = Window & { Capacitor?: { Plugins?: { App?: AppPlugin; SystemBars?: BarsPlugin } } }
+type OrientationPlugin = { lock?: (options: { orientation: 'portrait' | 'landscape' }) => Promise<void> }
+type NativeWindow = Window & { Capacitor?: { Plugins?: { App?: AppPlugin; SystemBars?: BarsPlugin; ScreenOrientation?: OrientationPlugin } } }
 
 /** The shell's version, as [major, minor], or null in a browser. */
 export function shellVersion(userAgent: string = navigator.userAgent): [number, number] | null {
@@ -70,6 +71,10 @@ export function startNativeApp() {
   // light ground: dark, whatever the phone's own light or dark setting.
   else void plugins()?.SystemBars?.setStyle?.({ style: 'LIGHT' })?.catch(() => {})
 
+  // The app stands upright; only a game played sideways turns it (see setLandscape). From shell
+  // 1.2 the phone itself would turn every page, so the app holds itself upright.
+  void plugins()?.ScreenOrientation?.lock?.({ orientation: 'portrait' })?.catch(() => {})
+
   // Android's Back button. Without this it would do nothing on the app's first page, and on the
   // lobby it would walk back through pages the player has already left. Going back through the
   // browser's own history keeps every in-app rule that hangs on it (the "Leave this game?"
@@ -98,5 +103,28 @@ export function setPlayingFullScreen(playing: boolean) {
     void (playing ? bars?.hide : bars?.show)?.call(bars, { bar: 'StatusBar' })?.catch(() => {})
   } catch {
     // A shell without it: the status bar simply stays.
+  }
+}
+
+/** True inside a shell that can turn itself to landscape (1.2 and later). */
+export function canTurnToLandscape(): boolean {
+  return isNativeApp() && typeof plugins()?.ScreenOrientation?.lock === 'function'
+}
+
+/**
+ * A game played sideways (street basketball): the app turns to landscape and puts the phone's
+ * bars away, as a game does; back upright, with the bars, when the player leaves. Does nothing
+ * in a browser or an older shell.
+ */
+export function setLandscape(on: boolean) {
+  if (!canTurnToLandscape()) return
+  void plugins()?.ScreenOrientation?.lock?.({ orientation: on ? 'landscape' : 'portrait' })?.catch(() => {})
+  const bars = plugins()?.SystemBars
+  for (const bar of ['StatusBar', 'NavigationBar'] as const) {
+    try {
+      void (on ? bars?.hide : bars?.show)?.call(bars, { bar })?.catch(() => {})
+    } catch {
+      // That bar stays.
+    }
   }
 }

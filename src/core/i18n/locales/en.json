@@ -1810,7 +1810,8 @@
       "shoot": "Shoot",
       "block": "Block",
       "cross": "Cross",
-      "steal": "Steal"
+      "steal": "Steal",
+      "dunk": "Dunk"
     },
     "call": {
       "check": "Check ball",
@@ -1825,7 +1826,8 @@
       "early": "Off the mark",
       "off": "Way off",
       "swish": "Swish! +{{points}}",
-      "score": "+{{points}}"
+      "score": "+{{points}}",
+      "dunk": "DUNK!"
     },
     "pause": {
       "open": "Pause",

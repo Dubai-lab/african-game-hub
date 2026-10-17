@@ -1,7 +1,7 @@
 # Builds the street basketball court for the game, in Blender, without its window:
 #
 #   blender -b --factory-startup --python scripts/makeBasketballCourt.py -- \
-#       art-src/basketball/player1 public/basketball/court.v1.glb art-src/basketball/court-preview.png
+#       art-src/basketball/player1 public/basketball/court.v2.glb art-src/basketball/court-preview.png
 #
 # Everything is made here, from code: the textures (worn asphalt and its paint, brick, lit
 # windows, chain link, concrete, the mural) and the scene around the court (the fence, the
@@ -9,9 +9,11 @@
 # from the folder given (Mixamo downloads, see makeBasketballCharacter.py), copied in different
 # poses and frozen into one light mesh, so that it costs a phone almost nothing to draw.
 #
-# The court's measurements are the game's own (supabase/functions/_shared/basketball.ts): the
-# court is 15 m across and 11 m deep, the baseline at z = 0, the basket at the baseline. The
-# basket itself is not here: the game draws it, exactly where its physics has it.
+# The court's measurements are the game's own (supabase/functions/_shared/basketball.ts): a full
+# court 15 m across and 28 m long, the baseline at z = 0, the half-court line at z = 14, the far
+# baseline at z = 28. Play is in the near half (street rules); the game's camera stands on the
+# open side (+x), so nothing is built there between it and the court. The baskets are not here:
+# the game draws them, exactly where its physics has them.
 import bpy, bmesh, math, os, random, sys
 import numpy as np
 
@@ -20,7 +22,8 @@ CHARACTER_DIR, OUT_GLB, OUT_PNG = args[0], args[1], args[2]
 random.seed(7)
 rng = np.random.default_rng(7)
 
-HALF_W, DEPTH = 7.5, 11.0
+HALF_W, DEPTH = 7.5, 14.0
+LENGTH = DEPTH * 2
 RIM_Z, ARC = 1.575, 6.75
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -63,18 +66,20 @@ def image(name, rgba):
 
 
 def court_texture():
-    """The court: asphalt, a blue playing surface, the key in indigo, worn white lines."""
-    scale = 120  # pixels a metre
-    W, H = int(17 * scale), int(13 * scale)
+    """The court: asphalt, a blue playing surface, the keys in indigo, worn white lines."""
+    scale = 80  # pixels a metre
+    W, H = int(17 * scale), int((LENGTH + 2) * scale)
     xs = (np.arange(W) + 0.5) / scale - 8.5
     zs = (np.arange(H) + 0.5) / scale - 1.0
-    X, Z = np.meshgrid(xs, zs)
+    X, Zfull = np.meshgrid(xs, zs)
+    # Each half is drawn the same, measured from its own baseline.
+    Z = np.minimum(Zfull, LENGTH - Zfull)
     grain = noise(H, W, 1) * 0.5 + noise(H, W, 6) * 0.5
     wear = noise(H, W, 40)
     img = np.zeros((H, W, 3))
     asphalt = hexrgb('#2b2f3a')
     img[:] = asphalt * (0.8 + grain[..., None] * 0.45)
-    inside = (np.abs(X) <= HALF_W) & (Z >= 0) & (Z <= DEPTH)
+    inside = (np.abs(X) <= HALF_W) & (Zfull >= 0) & (Zfull <= LENGTH)
     surface = hexrgb('#2e4a7a') * (0.85 + grain[..., None] * 0.3) * (0.85 + wear[..., None] * 0.3)
     img[inside] = surface[inside]
     key = (np.abs(X) <= 2.45) & (Z >= 0) & (Z <= 5.8)
@@ -85,7 +90,8 @@ def court_texture():
     # Lines, 5 cm wide, white, worn away in places.
     t = 0.025
     lines = np.zeros((H, W), bool)
-    lines |= inside & ((np.abs(np.abs(X) - HALF_W) < t) | (np.abs(Z) < t) | (np.abs(Z - DEPTH) < t))
+    lines |= inside & ((np.abs(np.abs(X) - HALF_W) < t) | (np.abs(Z) < t) | (np.abs(Zfull - DEPTH) < t))
+    lines |= np.abs(np.hypot(X, Zfull - DEPTH) - 1.8) < t
     lines |= (np.abs(np.abs(X) - 2.45) < t) & (Z <= 5.8)
     lines |= (np.abs(Z - 5.8) < t) & (np.abs(X) <= 2.45)
     lines |= np.abs(np.hypot(X, Z - 5.8) - 1.8) < t
@@ -97,8 +103,8 @@ def court_texture():
     painted = lines & (noise(H, W, 3) > 0.42)
     img[painted] = hexrgb('#e9ecf5') * (0.85 + grain[painted][..., None] * 0.2)
     # Cracks across the asphalt.
-    for _ in range(26):
-        x, z = random.uniform(-8.5, 8.5), random.uniform(-1, 12)
+    for _ in range(50):
+        x, z = random.uniform(-8.5, 8.5), random.uniform(-1, LENGTH + 1)
         a = random.uniform(0, math.pi * 2)
         for _ in range(random.randint(30, 90)):
             a += random.uniform(-0.5, 0.5)
@@ -300,59 +306,53 @@ m_wood = material('bench_wood', colour='#7a5232', roughness=0.8)
 m_lamp = material('lamp', colour='#fff4d6', emission='#ffd98a', emission_strength=12, roughness=0.3)
 m_concrete = material('concrete', colour='#6e6c70', roughness=0.95)
 
-# The ground: the court, paving around it, a street beyond.
-plane('court', 0, 5.5, 17, 13, 0.0, m_court)
-plane('paving', 0, 7, 40, 26, -0.006, m_paving, uv=(40 / 2, 26 / 2))
-plane('street', 0, 26, 70, 14, -0.008, m_street, uv=(70 / 6, 14 / 6))
-box('kerb', 0, 0.06, 19.8, 40, 0.12, 0.3, m_concrete)
+# The ground: the court, paving around it, a street past each end.
+plane('court', 0, DEPTH, 17, LENGTH + 2, 0.0, m_court)
+plane('paving', 0, DEPTH, 44, LENGTH + 14, -0.006, m_paving, uv=(44 / 2, (LENGTH + 14) / 2))
 
-# The wall behind the basket, with its mural, and buildings behind it and to the sides.
-box('back_wall', 0, 4.5, -2.4, 26, 9, 0.5, m_brick, uv=(8, 3))
+# A brick wall behind each basket, a mural on the near one, and buildings behind both.
+for end, z in ((0, -2.4), (1, LENGTH + 2.4)):
+    box(f'end_wall_{end}', 0, 4.5, z, 26, 9, 0.5, m_brick, uv=(8, 3))
+    behind = -9 if end == 0 else LENGTH + 9
+    face = -4.99 if end == 0 else LENGTH + 4.99
+    for i, (cx, w, hgt, mat) in enumerate([(-15, 10, 16, m_brick2), (0, 14, 22, m_brick), (15, 10, 14, m_brick2)]):
+        box(f'building_{end}_{i}', cx, hgt / 2, behind, w, hgt, 8, mat, uv=(w / 4, hgt / 4))
+        wall(f'facade_{end}_{i}', cx - w / 2 + 0.6, face, cx + w / 2 - 0.6, face, hgt - 10, m_windows, uv=(w / 4, (hgt - 10) / 4), y0=9.5)
 wall('mural', -9, -2.14, 9, -2.14, 5.0, m_mural, y0=3.4)
-for i, (cx, w, hgt, mat) in enumerate([(-15, 10, 16, m_brick2), (0, 14, 22, m_brick), (15, 10, 14, m_brick2)]):
-    box(f'building_{i}', cx, hgt / 2, -9, w, hgt, 8, mat, uv=(w / 4, hgt / 4))
-    wall(f'facade_{i}', cx - w / 2 + 0.6, -4.99, cx + w / 2 - 0.6, -4.99, hgt - 10, m_windows, uv=(w / 4, (hgt - 10) / 4), y0=9.5)
-for i, (cz, w, hgt) in enumerate([(4, 9, 12), (14, 10, 15)]):
-    box(f'side_building_{i}', 21, hgt / 2, cz, 8, hgt, w, m_brick2, uv=(w / 4, hgt / 4))
-    wall(f'side_facade_{i}', 16.99, cz - w / 2 + 0.5, 16.99, cz + w / 2 - 0.5, hgt - 3, m_windows, uv=(w / 4, (hgt - 3) / 4), y0=2.5)
-box('left_building', -22, 7, 6, 8, 14, 22, m_brick, uv=(5, 3.5))
-wall('left_facade', -17.99, -4, -17.99, 16, 10, m_windows, uv=(5, 2.5), y0=3)
+wall('mural_far', 9, LENGTH + 2.14, -9, LENGTH + 2.14, 5.0, m_mural, y0=3.4)
 
-# The fence down both sides, with its posts and rails.
+# The far side, the background of the camera's picture: a fence, the bleachers and their crowd,
+# street lights, and a long building behind.
 FENCE_X = HALF_W + 1.6
-for side in (-1, 1):
-    x = side * FENCE_X
-    wall(f'fence_{side}', x, -2.1, x, 12.5, 3.6, m_fence, uv=(14.6 / 1.4, 3.6 / 1.4))
-    for i in range(7):
-        z = -2.1 + i * (14.6 / 6)
-        cylinder(f'post_{side}_{i}', x, z, 0, 3.7, 0.045, m_dark_metal)
-    rail(f'rail_top_{side}', x, -2.1, x, 12.5, 3.65, 0.03, m_dark_metal)
-    rail(f'rail_mid_{side}', x, -2.1, x, 12.5, 1.2, 0.025, m_dark_metal)
+x = -FENCE_X
+wall('fence', x, -2.1, x, LENGTH + 2.1, 3.6, m_fence, uv=((LENGTH + 4.2) / 1.4, 3.6 / 1.4))
+for i in range(13):
+    z = -2.1 + i * ((LENGTH + 4.2) / 12)
+    cylinder(f'post_{i}', x, z, 0, 3.7, 0.045, m_dark_metal)
+rail('rail_top', x, -2.1, x, LENGTH + 2.1, 3.65, 0.03, m_dark_metal)
+rail('rail_mid', x, -2.1, x, LENGTH + 2.1, 1.2, 0.025, m_dark_metal)
+box('far_building', -24, 8, DEPTH, 8, 16, LENGTH + 10, m_brick, uv=((LENGTH + 10) / 4, 4))
+wall('far_facade', -19.99, -4, -19.99, LENGTH + 4, 12, m_windows, uv=((LENGTH + 8) / 4, 3), y0=3)
 
-# Bleachers on the left: three steps of aluminium planks on a frame.
+# Bleachers behind the fence: four steps of aluminium planks on a frame, along the near half
+# and a little past it.
 BL_X = -FENCE_X - 1.2
-for step in range(3):
+BL_Z, BL_LEN = 8.0, 16.0
+for step in range(4):
     x = BL_X - step * 0.8
     y = 0.45 + step * 0.45
-    box(f'bleacher_seat_{step}', x, y, 5.5, 0.6, 0.06, 9, m_metal)
-    box(f'bleacher_foot_{step}', x + 0.35, y - 0.3, 5.5, 0.08, 0.04, 9, m_metal)
-for z in (1.2, 5.5, 9.8):
-    for step in range(3):
+    box(f'bleacher_seat_{step}', x, y, BL_Z, 0.6, 0.06, BL_LEN, m_metal)
+    box(f'bleacher_foot_{step}', x + 0.35, y - 0.3, BL_Z, 0.08, 0.04, BL_LEN, m_metal)
+for z in (BL_Z - BL_LEN / 2 + 0.3, BL_Z - 4, BL_Z, BL_Z + 4, BL_Z + BL_LEN / 2 - 0.3):
+    for step in range(4):
         cylinder(f'bleacher_leg_{z}_{step}', BL_X - step * 0.8, z, 0, 0.45 + step * 0.45, 0.04, m_dark_metal, 6)
 
-# Benches on the right, outside the fence.
-for i, z in enumerate((2.5, 7.5)):
-    box(f'bench_seat_{i}', FENCE_X + 1.4, 0.45, z, 0.45, 0.06, 2.2, m_wood)
-    box(f'bench_back_{i}', FENCE_X + 1.62, 0.75, z, 0.06, 0.4, 2.2, m_wood)
-    for dz in (-0.9, 0.9):
-        box(f'bench_leg_{i}_{dz}', FENCE_X + 1.4, 0.22, z + dz, 0.4, 0.44, 0.06, m_dark_metal)
-
-# Street lights at the four corners, leaning over the court.
-for i, (x, z) in enumerate([(-FENCE_X - 0.5, -0.5), (FENCE_X + 0.5, -0.5), (-FENCE_X - 0.5, 12), (FENCE_X + 0.5, 12)]):
-    cylinder(f'lamp_post_{i}', x, z, 0, 7.2, 0.08, m_dark_metal)
-    toward = -1 if x > 0 else 1
-    rail(f'lamp_arm_{i}', x, z, x + toward * 1.4, z, 7.2, 0.05, m_dark_metal)
-    box(f'lamp_head_{i}', x + toward * 1.4, 7.1, z, 0.7, 0.12, 0.35, m_lamp)
+# Street lights along the far side, leaning over the court.
+for i, z in enumerate((-0.5, DEPTH / 2, DEPTH + 3, LENGTH + 0.5)):
+    lx = -FENCE_X - 0.5
+    cylinder(f'lamp_post_{i}', lx, z, 0, 7.2, 0.08, m_dark_metal)
+    rail(f'lamp_arm_{i}', lx, z, lx + 1.4, z, 7.2, 0.05, m_dark_metal)
+    box(f'lamp_head_{i}', lx + 1.4, 7.1, z, 0.7, 0.12, 0.35, m_lamp)
 
 # ---- The crowd ---------------------------------------------------------------------------------
 
@@ -421,20 +421,20 @@ def frozen(pose, frame, at, facing):
 
 crowd = []
 # On the bleachers.
-for step in range(3):
-    for k in range(5):
-        if random.random() < 0.4:
+for step in range(4):
+    for k in range(9):
+        if random.random() < 0.45:
             continue
-        z = 1.6 + k * 1.9 + random.uniform(-0.3, 0.3)
+        z = BL_Z - BL_LEN / 2 + 1 + k * 1.75 + random.uniform(-0.3, 0.3)
         y = 0.45 + step * 0.45 + 0.03
         pose = random.choice(POSES)
         crowd.append(frozen(pose[0], pose[1] + random.randint(0, 8), (BL_X - step * 0.8, y, z), math.radians(-90 + random.uniform(-20, 20))))
-# Leaning on the fence on the right, and by the benches.
-for k in range(5):
-    z = 0.8 + k * 2.4 + random.uniform(-0.4, 0.4)
+# Standing along the fence, past the bleachers.
+for k in range(4):
+    z = BL_Z + BL_LEN / 2 + 0.8 + k * 1.6 + random.uniform(-0.3, 0.3)
     pose = random.choice(POSES)
-    crowd.append(frozen(pose[0], pose[1] + random.randint(0, 8), (FENCE_X + 0.55 + random.uniform(0, 0.8), 0, z), math.radians(90 + random.uniform(-25, 25))))
-# A few along the far end, past the court.
+    crowd.append(frozen(pose[0], pose[1] + random.randint(0, 8), (-FENCE_X - 0.6 - random.uniform(0, 0.6), 0, z), math.radians(-90 + random.uniform(-25, 25))))
+# A few behind the basket.
 for k in range(3):
     x = -4 + k * 4 + random.uniform(-0.5, 0.5)
     pose = random.choice(POSES)
@@ -458,9 +458,9 @@ print('GLB', os.path.getsize(OUT_GLB))
 # A picture to check by eye, from where the game's camera stands.
 cam = bpy.data.objects.new('cam', bpy.data.cameras.new('cam'))
 scene.collection.objects.link(cam)
-cam.location = P(0, 4.3, 11.5)
-cam.data.lens = 24
-direction = (lambda a, b: (b[0] - a[0], b[1] - a[1], b[2] - a[2]))(P(0, 4.3, 11.5), P(0, 1.7, 3.5))
+cam.location = P(12.5, 7.2, 7.5)
+cam.data.lens = 22
+direction = (lambda a, b: (b[0] - a[0], b[1] - a[1], b[2] - a[2]))(P(12.5, 7.2, 7.5), P(-1, 0.9, 7))
 import mathutils
 cam.rotation_euler = mathutils.Vector(direction).to_track_quat('-Z', 'Y').to_euler()
 scene.camera = cam

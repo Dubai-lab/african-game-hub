@@ -16,7 +16,9 @@ const config: CapacitorConfig = {
   // The number is the shell's own version: the site behaves a little differently for each
   // (see shellKeepsPageClear in nativeApp.ts). Raise it whenever the shell changes how it
   // shows the page.
-  appendUserAgent: 'AfricanGameHubApp/1.1',
+  // 1.2: the shell can turn to landscape (the screen-orientation plugin) and hide the phone's
+  // bars, for the games played sideways (street basketball); the rest of the app stays upright.
+  appendUserAgent: 'AfricanGameHubApp/1.2',
   backgroundColor: '#1f2a7a',
   server: {
     // Straight to the lobby: a signed-out player is sent to the log-in page from there. The

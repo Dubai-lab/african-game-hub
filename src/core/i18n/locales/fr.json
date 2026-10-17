@@ -1810,7 +1810,8 @@
       "shoot": "Tirer",
       "block": "Contrer",
       "cross": "Crossover",
-      "steal": "Intercepter"
+      "steal": "Intercepter",
+      "dunk": "Dunk"
     },
     "call": {
       "check": "Check",
@@ -1825,7 +1826,8 @@
       "early": "Pas au bon moment",
       "off": "Bien trop tôt ou trop tard",
       "swish": "Ficelle ! +{{points}}",
-      "score": "+{{points}}"
+      "score": "+{{points}}",
+      "dunk": "DUNK !"
     },
     "pause": {
       "open": "Pause",

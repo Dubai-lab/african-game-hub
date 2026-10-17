@@ -8,10 +8,11 @@ import { Link } from 'react-router'
 import { useLockedScreen } from '@/core/ui/gameScreen'
 import { Button, buttonClass } from '@/core/ui/Button'
 import { ResultDialog, ResultStat, ResultStats } from '@/core/ui/ResultDialog'
-import { type Game, type GameEvent, type Input, newGame, PERFECT_RELEASE, step, TICK, TO_WIN } from '../../../supabase/functions/_shared/basketball'
+import { DUNK_RANGE, fromRim, type Game, type GameEvent, type Input, newGame, PERFECT_RELEASE, step, TICK, TO_WIN } from '../../../supabase/functions/_shared/basketball'
+import { isNativeApp, setLandscape } from '@/core/lib/nativeApp'
 import { type Level, levelById, type LevelId, LEVELS, type Mind, newMind, think } from './ai'
 import { Controls, type Pad } from './Controls'
-import { Court3D, type World } from './Court3D'
+import { Court3D, screenToCourt, type World } from './Court3D'
 import { boardSound, bounceSound, hornSound, rimSound, slapSound, swishSound } from './sound'
 
 const STORAGE_KEY = 'agh.basketball.practice'
@@ -22,6 +23,8 @@ type Hud = {
   shotClock: number
   phase: Game['phase']
   attacking: boolean
+  /** With the ball, close enough to the basket to dunk. */
+  canDunk: boolean
   mustClear: boolean
   shootT: number | null
   winner: Game['winner']
@@ -35,6 +38,7 @@ const hudOf = (game: Game): Hud => {
     shotClock: game.shotClock,
     phase: game.phase,
     attacking: game.ball.holder === HUMAN,
+    canDunk: game.ball.holder === HUMAN && !game.mustClear && me.shootT === null && fromRim(me.x, me.z) < DUNK_RANGE,
     mustClear: game.mustClear && game.offense === me.team,
     shootT: me.shootT,
     winner: game.winner,
@@ -89,6 +93,10 @@ function Setup({ onStart }: { onStart: (level: LevelId) => void }) {
           } catch {
             // Not kept; the game still starts.
           }
+          // Android, in a browser or added to the home screen: the tap that starts the game also
+          // turns it to landscape and puts the phone's bars away. (The app does this itself; an
+          // iPhone browser cannot without a banner, so it keeps the game drawn turned.)
+          void playSideways()
           onStart(level)
         }}
       >
@@ -134,7 +142,7 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
           swishSound()
           swish.current = performance.now()
           const mine = e.team === world.current.game.players[HUMAN]!.team
-          call(e.swish ? t('basketball.call.swish', { points: e.points }) : t('basketball.call.score', { points: e.points }), mine ? 'good' : 'bad')
+          call(e.dunk ? t('basketball.call.dunk') : e.swish ? t('basketball.call.swish', { points: e.points }) : t('basketball.call.score', { points: e.points }), mine ? 'good' : 'bad')
         } else if (e.type === 'block') {
           slapSound()
           call(t('basketball.call.block'), e.by === HUMAN ? 'good' : 'bad')
@@ -148,7 +156,7 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
         }
         else if (e.type === 'crossover' && e.broke) call(t('basketball.call.ankles'), e.by === HUMAN ? 'good' : 'bad')
         else if (e.type === 'turnover') call(t(e.reason === 'out' ? 'basketball.call.out' : 'basketball.call.shotClock'))
-        else if (e.type === 'shot' && e.by === HUMAN) {
+        else if (e.type === 'shot' && e.by === HUMAN && !e.dunk) {
           const q = e.quality
           call(q > 0.85 ? t('basketball.call.perfect') : q > 0.55 ? t('basketball.call.good') : t(q > 0.25 ? 'basketball.call.early' : 'basketball.call.off'), q > 0.55 ? 'good' : 'plain')
         } else if (e.type === 'over') hornSound()
@@ -174,7 +182,9 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
           carry -= TICK
           const holding = game.ball.holder === HUMAN
           const p = pad.current
-          const mine: Input = { mx: p.mx, mz: p.mz, shoot: holding && p.main, jump: !holding && p.main, action: p.second }
+          // The stick and the arrows push in the screen's directions; the court is seen from the side.
+          const toward = screenToCourt(p.mx, p.mz)
+          const mine: Input = { mx: toward.x, mz: toward.z, shoot: holding && p.main, jump: !holding && p.main, action: p.second }
           const inputs = game.players.map((player) => (player.id === HUMAN ? mine : think(game, player.id, level, mind.current)))
           step(game, inputs)
           if (game.events.length) hear(game.events)
@@ -208,14 +218,19 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
     setPaused(false)
   }
 
-  const fullScreen = async () => {
-    try {
-      await document.documentElement.requestFullscreen?.()
-      await (screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> }).lock?.('landscape')
-    } catch {
-      // Not every phone allows it; the game plays either way.
-    }
-  }
+  // In the app (shell 1.2 and later): turned to landscape, the phone's bars put away, for as
+  // long as the game is open. The app then needs no turning of its own and no full screen.
+  useEffect(() => {
+    setLandscape(true)
+    return () => setLandscape(false)
+  }, [])
+  // Leaving the game gives the phone its bars back.
+  useEffect(
+    () => () => {
+      if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {})
+    },
+    [],
+  )
 
   const [mine, theirs] = hud.score
   const meter = hud.shootT !== null ? Math.min(1, hud.shootT / 1.2) : null
@@ -261,11 +276,6 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
             {c.text}
           </p>
         ))}
-        {screenSize.turned && (
-          <button type="button" className="glass pointer-events-auto mt-1 rounded-full border border-line px-3 py-1 text-xs font-semibold" onClick={() => void fullScreen()}>
-            {t('basketball.fullScreen')}
-          </button>
-        )}
       </div>
 
       {/* The shot meter: let go when it reaches the gold mark. */}
@@ -276,7 +286,7 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
         </div>
       )}
 
-      {hud.phase !== 'over' && <Controls pad={pad} attacking={hud.attacking} turned={screenSize.turned} />}
+      {hud.phase !== 'over' && <Controls pad={pad} attacking={hud.attacking} canDunk={hud.canDunk} turned={screenSize.turned} />}
 
       {paused && hud.phase !== 'over' && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-ink/60 p-4" role="presentation">
@@ -316,6 +326,17 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
 }
 
 /** Street basketball against the computer. No tokens, no rating. */
+/** Full screen and landscape, where a browser allows it quietly (Android). */
+async function playSideways() {
+  if (isNativeApp() || /iPhone|iPad|iPod/.test(navigator.userAgent) || !document.fullscreenEnabled) return
+  try {
+    await document.documentElement.requestFullscreen?.({ navigationUI: 'hide' })
+    await (screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> }).lock?.('landscape')
+  } catch {
+    // Not every phone allows it; the game plays either way.
+  }
+}
+
 export default function BasketballPracticePage() {
   const [level, setLevel] = useState<Level | null>(null)
   const [round, setRound] = useState(0)

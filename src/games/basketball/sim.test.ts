@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   ARC,
   CHECK,
+  DUNK_RANGE,
   cloneGame,
   fromRim,
   type Game,
@@ -136,6 +137,38 @@ describe('shooting', () => {
     expect(game!.offense).toBe(1)
     expect(game!.players.find((p) => p.id === game!.ball.holder)!.team).toBe(1)
     expect(game!.score[0]).toBeGreaterThan(0)
+  })
+})
+
+describe('dunks', () => {
+  it('close to the basket with the ball, Shoot is a dunk, and it goes through at the top of the jump', () => {
+    const game = alone(0.3, RIM.z + DUNK_RANGE - 0.4)
+    const events = shoot(game, 0.1)
+    expect(events.find((e) => e.type === 'shot')).toMatchObject({ dunk: true, points: 1 })
+    expect(events.find((e) => e.type === 'score')).toMatchObject({ team: 0, points: 1, dunk: true })
+  })
+
+  it('a defender up in the air beside the rim can stop some of them', () => {
+    let blocked = 0
+    for (let seed = 1; seed <= 30; seed++) {
+      const game = alone(0.3, RIM.z + 1.2, seed)
+      const defender = game.players[1]!
+      let t = 0
+      const events = run(
+        game,
+        (g) => {
+          t += TICK
+          // The defender jumps with the dunker, right beside the rim.
+          defender.x = 0.5
+          defender.z = RIM.z + 0.7
+          return g.players.map((p) => (p.id === 0 ? { ...NO_INPUT, shoot: t < 0.1 } : { ...NO_INPUT, jump: t > 0.05 && t < 0.1 }))
+        },
+        (g) => g.phase !== 'live' || t > 3,
+      )
+      if (events.some((e) => e.type === 'block')) blocked++
+    }
+    expect(blocked).toBeGreaterThan(3)
+    expect(blocked).toBeLessThan(25)
   })
 })
 

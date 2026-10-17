@@ -16,11 +16,12 @@
 //   * A 12-second shot clock. It starts again when a shot touches the rim, or the ball changes hands.
 //
 // Units are metres and seconds. The court lies on the ground (y up). x runs across the court;
-// z runs from the baseline (z = 0) out to the top of the half court.
+// z runs from the baseline (z = 0) to the half-court line (z = 14): street rules, one basket,
+// on a full court.
 
 export const TICK = 1 / 60
 export const G = 9.81
-export const COURT = { halfWidth: 7.5, depth: 11 } as const
+export const COURT = { halfWidth: 7.5, depth: 14 } as const
 export const BALL_R = 0.12
 export const RIM = { x: 0, y: 3.05, z: 1.575, r: 0.229, tube: 0.012 } as const
 export const BOARD = { z: 1.2, halfWidth: 0.9, bottom: 2.9, top: 3.95 } as const
@@ -34,6 +35,12 @@ export const SHOT_CLOCK = 12
 export const PERFECT_RELEASE = 0.55
 /** A jump shot is gathered for this long before the shooter rises (a layup goes straight up). */
 export const GATHER = 0.22
+/** Closer than this to the basket with the ball, Shoot is a dunk. */
+export const DUNK_RANGE = 1.6
+/** A layup from closer than this (and further than a dunk). */
+export const LAYUP_RANGE = 2.2
+/** The ball goes through the rim this long after the dunk begins: the top of the jump. */
+export const DUNK_SLAM = 0.46
 export const PLAYER_R = 0.38
 
 export type Team = 0 | 1
@@ -61,11 +68,13 @@ export type Player = {
   stumble: number
   /** Seconds left of the burst of speed after a crossover. */
   burst: number
+  /** On the way up for a dunk. */
+  dunk: boolean
   /** The buttons as they were last tick, to tell a press from a hold. */
   held: { shoot: boolean; action: boolean; jump: boolean }
 }
 
-export type Shot = { by: number; team: Team; points: 1 | 2; touchedRim: boolean; quality: number }
+export type Shot = { by: number; team: Team; points: 1 | 2; touchedRim: boolean; quality: number; dunk?: boolean }
 
 export type Ball = {
   x: number
@@ -90,8 +99,8 @@ export type GameEvent =
   | { type: 'bounce'; speed: number }
   | { type: 'rim'; speed: number }
   | { type: 'board' }
-  | { type: 'shot'; by: number; quality: number; points: 1 | 2 }
-  | { type: 'score'; team: Team; points: 1 | 2; swish: boolean }
+  | { type: 'shot'; by: number; quality: number; points: 1 | 2; dunk?: boolean }
+  | { type: 'score'; team: Team; points: 1 | 2; swish: boolean; dunk?: boolean }
   | { type: 'block'; by: number }
   | { type: 'steal'; by: number }
   | { type: 'reach'; by: number }
@@ -142,7 +151,7 @@ export const fromRim = (x: number, z: number) => hypot(x - RIM.x, z - RIM.z)
 const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v)
 
 function newPlayer(id: number, team: Team): Player {
-  return { id, team, x: 0, z: 0, vx: 0, vz: 0, face: 0, y: 0, vy: 0, shootT: null, cooldown: 0, stumble: 0, burst: 0, held: { shoot: false, action: false, jump: false } }
+  return { id, team, x: 0, z: 0, vx: 0, vz: 0, face: 0, y: 0, vy: 0, shootT: null, cooldown: 0, stumble: 0, burst: 0, dunk: false, held: { shoot: false, action: false, jump: false } }
 }
 
 /** A new game for `teamSize` players a side (1 or 2). Players 0..teamSize-1 are team 0. */
@@ -194,6 +203,7 @@ function place(p: Player, x: number, z: number) {
   p.z = z
   p.vx = p.vz = p.y = p.vy = 0
   p.shootT = null
+  p.dunk = false
   p.stumble = p.burst = 0
   // Facing the basket.
   p.face = Math.atan2(-(RIM.x - x), -(RIM.z - z)) || 0
@@ -273,6 +283,14 @@ function movePlayer(game: Game, p: Player, input: Input) {
     p.stumble = Math.max(0, p.stumble - TICK)
     mx = mz = 0
   }
+  // On the way up for a dunk the player is carried at the basket by the jump: no steering.
+  if (p.dunk) {
+    p.x = clamp(p.x + p.vx * TICK, -COURT.halfWidth - 0.6, COURT.halfWidth + 0.6)
+    p.z = clamp(p.z + p.vz * TICK, 0.35, COURT.depth + 0.6)
+    landPlayer(p)
+    p.face = Math.atan2(-(RIM.x - p.x), -(RIM.z - p.z))
+    return
+  }
   // Rising into a shot, a player all but stops.
   const speed = (holding ? 4.7 : 5.3) * (p.shootT !== null ? 0.15 : 1) + (p.burst > 0 ? 2.6 : 0)
   const grip = p.y > 0 ? 1.5 : 11
@@ -338,12 +356,18 @@ function act(game: Game, p: Player, input: Input) {
   const holding = ball.holder === p.id
 
   if (holding) {
+    if (p.shootT !== null && p.dunk) {
+      p.shootT += TICK
+      // At the top of the jump the ball goes through, whatever the button.
+      if (p.shootT >= DUNK_SLAM) slam(game, p)
+      return
+    }
     if (p.shootT !== null) {
       const before = p.shootT
       p.shootT += TICK
       // The ball gathered, the shooter rises: the top of the jump comes about when a perfect
       // shot is let go.
-      if (before < GATHER && p.shootT >= GATHER && p.y === 0 && fromRim(p.x, p.z) >= 1.8) {
+      if (before < GATHER && p.shootT >= GATHER && p.y === 0 && fromRim(p.x, p.z) >= LAYUP_RANGE) {
         p.vy = 2.6
         p.y = 0.001
       }
@@ -355,8 +379,20 @@ function act(game: Game, p: Player, input: Input) {
       // Taking it back is the rule after the defence wins the ball.
       if (game.mustClear) return
       p.shootT = 0
+      const distance = fromRim(p.x, p.z)
+      if (distance < DUNK_RANGE) {
+        // A dunk: up, and carried to the rim so as to arrive just in front of it at the top.
+        p.dunk = true
+        p.vy = 4.6
+        p.y = 0.001
+        const aimX = RIM.x + ((p.x - RIM.x) / Math.max(distance, 0.01)) * 0.35
+        const aimZ = RIM.z + ((p.z - RIM.z) / Math.max(distance, 0.01)) * 0.35
+        p.vx = (aimX - p.x) / DUNK_SLAM
+        p.vz = (aimZ - p.z) / DUNK_SLAM
+        return
+      }
       // A layup goes straight up; a jump shot is gathered first (above).
-      if (fromRim(p.x, p.z) < 1.8) {
+      if (distance < LAYUP_RANGE) {
         p.vy = 3.3
         p.y = 0.001
       }
@@ -409,7 +445,11 @@ function holdBall(game: Game, p: Player) {
   const rz = -Math.sin(p.face)
   const fx = -Math.sin(p.face)
   const fz = -Math.cos(p.face)
-  if (p.shootT !== null) {
+  if (p.dunk) {
+    ball.x = p.x + fx * 0.3
+    ball.z = p.z + fz * 0.3
+    ball.y = 2.4 + p.y
+  } else if (p.shootT !== null) {
     ball.x = p.x + fx * 0.2
     ball.z = p.z + fz * 0.2
     ball.y = 2.0 + p.y + Math.min(p.shootT, 0.4) * 0.6
@@ -433,7 +473,7 @@ function release(game: Game, shooter: Player) {
   const held = shooter.shootT ?? 0
   shooter.shootT = null
   const distance = fromRim(shooter.x, shooter.z)
-  const layup = distance < 1.8
+  const layup = distance < LAYUP_RANGE
   const points: 1 | 2 = distance > ARC ? 2 : 1
   // How well the release was timed: 1 at the perfect moment, 0 a long way off it.
   const quality = clamp(1 - Math.abs(held - PERFECT_RELEASE) / 0.35, 0, 1)
@@ -491,6 +531,42 @@ function release(game: Game, shooter: Player) {
   ball.releasedBy = shooter.id
   ball.sinceRelease = 0
   game.events.push({ type: 'shot', by: shooter.id, quality, points })
+}
+
+/** The dunk at the top of the jump: through the rim, unless a defender up there gets a hand to it. */
+function slam(game: Game, dunker: Player) {
+  const ball = game.ball
+  dunker.shootT = null
+  dunker.dunk = false
+  for (const d of game.players) {
+    if (d.team === dunker.team) continue
+    if (hypot(d.x - dunker.x, d.z - dunker.z) < 1 && d.y > 0.4 && chance(game) < 0.4) {
+      game.events.push({ type: 'block', by: d.id })
+      ball.holder = null
+      ball.shot = null
+      ball.x = RIM.x
+      ball.z = RIM.z + 0.6
+      ball.y = RIM.y
+      ball.vx = (chance(game) - 0.5) * 3
+      ball.vz = 3.5
+      ball.vy = 1
+      ball.lastTouch = d.team
+      ball.releasedBy = d.id
+      ball.sinceRelease = 0
+      return
+    }
+  }
+  ball.holder = null
+  ball.x = RIM.x
+  ball.z = RIM.z
+  ball.y = RIM.y + 0.16
+  ball.vx = ball.vz = 0
+  ball.vy = -3
+  ball.shot = { by: dunker.id, team: dunker.team, points: 1, touchedRim: true, quality: 1, dunk: true }
+  ball.lastTouch = dunker.team
+  ball.releasedBy = dunker.id
+  ball.sinceRelease = 0
+  game.events.push({ type: 'shot', by: dunker.id, quality: 1, points: 1, dunk: true })
 }
 
 /** The ball in the air or rolling: gravity, the floor, the board, the rim, and the basket. */
@@ -580,7 +656,7 @@ function score(game: Game) {
   const team = shot?.team ?? ball.lastTouch
   const points: 1 | 2 = shot?.points ?? 1
   game.score[team] += points
-  game.events.push({ type: 'score', team, points, swish: shot !== null && !shot.touchedRim })
+  game.events.push({ type: 'score', team, points, swish: shot !== null && !shot.touchedRim, dunk: shot?.dunk ?? false })
   ball.shot = null
   if (game.score[team] >= TO_WIN) {
     game.winner = team
@@ -600,7 +676,10 @@ function turnover(game: Game, reason: 'out' | 'shot_clock', to?: Team) {
   game.offense = to ?? (game.offense === 0 ? 1 : 0)
   game.ball.holder = null
   game.ball.shot = null
-  for (const p of game.players) p.shootT = null
+  for (const p of game.players) {
+    p.shootT = null
+    p.dunk = false
+  }
   game.phase = 'dead'
   game.phaseT = 0
 }

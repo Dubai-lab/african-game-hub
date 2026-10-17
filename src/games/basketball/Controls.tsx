@@ -22,7 +22,7 @@ function local(event: { clientX: number; clientY: number }, element: Element, tu
   return turned ? { x: event.clientY - box.top, y: box.right - event.clientX } : { x: event.clientX - box.left, y: event.clientY - box.top }
 }
 
-export function Controls({ pad, attacking, turned = false }: { pad: RefObject<Pad>; attacking: boolean; turned?: boolean }) {
+export function Controls({ pad, attacking, canDunk = false, turned = false }: { pad: RefObject<Pad>; attacking: boolean; canDunk?: boolean; turned?: boolean }) {
   const { t } = useTranslation()
   const [stick, setStick] = useState<{ x: number; y: number; dx: number; dy: number } | null>(null)
   const pointer = useRef<number | null>(null)
@@ -90,7 +90,7 @@ export function Controls({ pad, attacking, turned = false }: { pad: RefObject<Pa
     else setSecond(on)
   }
 
-  const button = (which: 'main' | 'second', label: string, big: boolean) => (
+  const button = (which: 'main' | 'second', label: string, big: boolean, hot = false) => (
     <button
       type="button"
       data-testid={`pad-${which}`}
@@ -102,7 +102,7 @@ export function Controls({ pad, attacking, turned = false }: { pad: RefObject<Pa
       onPointerUp={() => hold(which, false)}
       onPointerCancel={() => hold(which, false)}
       onContextMenu={(event) => event.preventDefault()}
-      className={`flex select-none items-center justify-center rounded-full border border-edge font-display font-extrabold shadow-lg transition-transform ${big ? 'size-24 text-lg' : 'size-16 text-sm'} ${(which === 'main' ? main : second) ? 'scale-95 bg-brand text-brand-ink' : big ? 'glow-brand bg-brand/85 text-brand-ink' : 'glass text-fg'}`}
+      className={`flex select-none items-center justify-center rounded-full border border-edge font-display font-extrabold shadow-lg transition-transform ${big ? 'size-24 text-lg' : 'size-16 text-sm'} ${(which === 'main' ? main : second) ? 'scale-95 bg-brand text-brand-ink' : hot ? 'animate-pulse bg-hibiscus text-white shadow-[0_0_24px_rgba(209,38,79,0.8)]' : big ? 'glow-brand bg-brand/85 text-brand-ink' : 'glass text-fg'}`}
       style={{ touchAction: 'none' }}
     >
       {label}
@@ -150,7 +150,7 @@ export function Controls({ pad, attacking, turned = false }: { pad: RefObject<Pa
       {/* The right thumb's buttons. */}
       <div className="pointer-events-auto absolute bottom-6 right-5 flex items-end gap-3 pb-[var(--safe-bottom)]">
         {button('second', attacking ? t('basketball.controls.cross') : t('basketball.controls.steal'), false)}
-        {button('main', attacking ? t('basketball.controls.shoot') : t('basketball.controls.block'), true)}
+        {button('main', attacking ? (canDunk ? t('basketball.controls.dunk') : t('basketball.controls.shoot')) : t('basketball.controls.block'), true, canDunk)}
       </div>
     </div>
   )

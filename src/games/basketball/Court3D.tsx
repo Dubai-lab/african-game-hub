@@ -202,6 +202,11 @@ function Scenery() {
         <planeGeometry args={[COURT.halfWidth * 2 + 2, COURT.depth + 2]} />
         <meshStandardMaterial map={court} roughness={0.92} />
       </mesh>
+      {/* The far half, plain: play is in the near half. */}
+      <mesh rotation-x={-Math.PI / 2} position={[0, -0.002, COURT.depth * 1.5]} receiveShadow>
+        <planeGeometry args={[COURT.halfWidth * 2, COURT.depth]} />
+        <meshStandardMaterial color="#2e4a7a" roughness={0.92} />
+      </mesh>
       <mesh rotation-x={-Math.PI / 2} position={[0, -0.01, 6]}>
         <planeGeometry args={[80, 60]} />
         <meshStandardMaterial color="#252b3e" roughness={1} />
@@ -215,15 +220,13 @@ function Scenery() {
         <planeGeometry args={[18, 5.6]} />
         <meshStandardMaterial map={mural} roughness={0.9} />
       </mesh>
-      {/* The fence along both sides. */}
-      {[-1, 1].map((side) => (
-        <mesh key={side} position={[side * (COURT.halfWidth + 1.4), 2, 5.5]} rotation-y={Math.PI / 2}>
-          <planeGeometry args={[16, 4]} />
-          <meshStandardMaterial map={fence} transparent opacity={0.9} side={2} depthWrite={false} />
-        </mesh>
-      ))}
+      {/* The fence along the far side (the camera stands on the near side). */}
+      <mesh position={[-(COURT.halfWidth + 1.6), 2, COURT.depth]} rotation-y={Math.PI / 2}>
+        <planeGeometry args={[COURT.depth * 2 + 4, 4]} />
+        <meshStandardMaterial map={fence} transparent opacity={0.9} side={2} depthWrite={false} />
+      </mesh>
       {/* Street lights. */}
-      {[-1, 1].map((side) => (
+      {[-1].map((side) => (
         <group key={side} position={[side * (COURT.halfWidth + 2.2), 0, 1.5]}>
           <mesh position={[0, 3.5, 0]}>
             <cylinderGeometry args={[0.07, 0.09, 7, 8]} />
@@ -244,7 +247,7 @@ function Scenery() {
 }
 
 /** The court made in Blender (scripts/makeBasketballCourt.py): the court, fence, bleachers, buildings, lights and crowd. */
-export const COURT_URL = '/basketball/court.v1.glb'
+export const COURT_URL = '/basketball/court.v2.glb'
 
 function CourtModel() {
   const gltf = useLoader(GLTFLoader, COURT_URL)
@@ -510,6 +513,7 @@ class Fallback extends Component<{ children: ReactNode; fallback: ReactNode }, {
 }
 
 const handAt = new Vector3()
+const noSwish = { current: 0 }
 
 function Ball({ world }: { world: RefObject<World> }) {
   const mesh = useRef<Mesh>(null)
@@ -549,20 +553,36 @@ function Ball({ world }: { world: RefObject<World> }) {
   )
 }
 
-/** The camera stays behind the play, looking at the basket, and drifts with the ball. */
+/**
+ * The camera of a television broadcast: high on the near sideline, looking across the court,
+ * following the play along it, the basket to the right. Up the screen is away from the camera.
+ * (The controls follow the screen: see screenToCourt.)
+ */
+export const CAMERA_X = 10.5
 function Follow({ world }: { world: RefObject<World> }) {
   const { camera, size } = useThree()
-  const look = useRef(new Vector3(0, 1.6, 4))
+  const look = useRef(new Vector3(-1, 0.9, 6))
   useFrame((_, dt) => {
-    const ball = world.current!.game.ball
+    const { game, human } = world.current!
+    const ball = game.ball
+    const me = game.players.find((p) => p.id === human)
+    // Mostly the ball, a little the player at this screen; never past the ends of the play.
+    const along = Math.min(Math.max(ball.z * 0.75 + (me?.z ?? ball.z) * 0.25, 2.2), COURT.depth - 1)
     const portrait = size.height > size.width
-    const goal = new Vector3(ball.x * 0.45, portrait ? 7.6 : 4.3, portrait ? 15.5 : Math.max(10.2, ball.z + 4.6))
-    const k = Math.min(1, dt * 3)
+    const goal = new Vector3(portrait ? CAMERA_X + 2.5 : CAMERA_X, portrait ? 8.5 : 6, along + 0.6)
+    const k = Math.min(1, dt * 2.6)
     camera.position.lerp(goal, k)
-    look.current.lerp(new Vector3(ball.x * 0.55, 1.7, Math.min(Math.max(ball.z, 2), 9) * 0.45 + 1.1), k)
+    look.current.lerp(new Vector3(-1 + ball.x * 0.2, 0.9, along), k)
     camera.lookAt(look.current)
   })
   return null
+}
+
+/** A direction pushed on the screen (right, down) as a direction on the court, for the broadcast camera. */
+export function screenToCourt(right: number, down: number): { x: number; z: number } {
+  // The camera looks across the court from the +x side: right on the screen is toward the
+  // basket (-z), down the screen is toward the camera (+x).
+  return { x: down, z: -right }
 }
 
 export function Court3D({ world, swish }: { world: RefObject<World>; swish: RefObject<number> }) {
@@ -572,7 +592,7 @@ export function Court3D({ world, swish }: { world: RefObject<World>; swish: RefO
       dpr={[1, 1.75]}
       // Measured by its own size, not as it appears on screen: the game may be drawn turned a quarter.
       resize={{ offsetSize: true }}
-      camera={{ fov: 50, near: 0.1, far: 120, position: [0, 4.3, 12] }}
+      camera={{ fov: 46, near: 0.1, far: 140, position: [CAMERA_X, 6, 7] }}
       gl={{ antialias: true, powerPreference: 'high-performance', toneMappingExposure: 1.3 }}
       onCreated={({ scene }) => {
         scene.background = null
@@ -586,13 +606,12 @@ export function Court3D({ world, swish }: { world: RefObject<World>; swish: RefO
       <ambientLight intensity={0.35} />
       <directionalLight position={[6, 12, 9]} intensity={1.6} color="#ffe2b0" castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={-12} shadow-camera-right={12} shadow-camera-top={14} shadow-camera-bottom={-4} />
       {/* A soft light from behind the camera, so the players' faces and clothes read on the dark court. */}
-      <directionalLight position={[0, 5, 18]} intensity={1.4} color="#f4f0ff" />
-      {/* The four street lamps over the court. */}
+      <directionalLight position={[18, 6, 8]} intensity={1.4} color="#f4f0ff" />
+      {/* The street lamps along the far side, over the court. */}
       {[
         [-8.2, -0.5],
-        [8.2, -0.5],
-        [-8.2, 12],
-        [8.2, 12],
+        [-8.2, 7],
+        [-8.2, 17],
       ].map(([x, z]) => (
         <pointLight key={`${x}:${z}`} position={[x!, 6.9, z!]} intensity={30} distance={24} decay={1.6} color="#ffd98a" />
       ))}
@@ -607,6 +626,10 @@ export function Court3D({ world, swish }: { world: RefObject<World>; swish: RefO
         </Fallback>
       )}
       <Hoop swish={swish} />
+      {/* The far basket, at the other end of the full court. Play is in this half (street rules). */}
+      <group position={[0, 0, COURT.depth * 2]} rotation-y={Math.PI}>
+        <Hoop swish={noSwish} />
+      </group>
       {/* The characters; the stand-ins while they download, in data-saver mode, or if they fail. */}
       {useSettingsStore.getState().dataSaver ? (
         <Players world={world} />
