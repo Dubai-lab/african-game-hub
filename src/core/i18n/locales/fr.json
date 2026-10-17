@@ -1769,6 +1769,78 @@
       "change": "Changer de partie"
     }
   },
+  "basketball": {
+    "back": "Retour",
+    "you": "Vous",
+    "computer": "Ordi",
+    "scoreLabel": "Vous {{mine}}, ordinateur {{theirs}}",
+    "shotClock": "Chrono des tirs",
+    "turnPhone": "Tournez votre téléphone pour mieux voir (touchez pour le plein écran)",
+    "practice": {
+      "title": "Basket de rue",
+      "intro": "Demi-terrain, un contre un, contre l’ordinateur. Sans jetons ni classement : travaillez vos gestes et votre tir.",
+      "level": "Niveau",
+      "levels": {
+        "easy": {
+          "name": "Facile",
+          "hint": "Lent en défense, rate souvent."
+        },
+        "medium": {
+          "name": "Moyen",
+          "hint": "Joue des deux côtés et marque quand il est seul."
+        },
+        "hard": {
+          "name": "Difficile",
+          "hint": "Contre, intercepte et rate rarement."
+        }
+      },
+      "start": "Commencer"
+    },
+    "rules": {
+      "score": "Un panier à l’intérieur de l’arc vaut 1 point, au-delà 2. Le premier à {{toWin}} gagne.",
+      "check": "Chaque possession commence par un « check » en haut de la raquette.",
+      "clear": "Quand vous récupérez le ballon, ressortez-le derrière l’arc avant de tirer.",
+      "clock": "12 secondes pour tirer.",
+      "shoot": "Maintenez Tirer et relâchez quand la jauge atteint la marque dorée."
+    },
+    "controls": {
+      "move": "Bouger",
+      "shoot": "Tirer",
+      "block": "Contrer",
+      "cross": "Crossover",
+      "steal": "Intercepter"
+    },
+    "call": {
+      "check": "Check",
+      "takeItBack": "Ressortez le ballon !",
+      "block": "Contré !",
+      "steal": "Intercepté !",
+      "ankles": "Il est dans le vent !",
+      "out": "Sortie",
+      "shotClock": "Fin du chrono !",
+      "perfect": "Tir parfait",
+      "good": "Bon tir",
+      "early": "Pas au bon moment",
+      "off": "Bien trop tôt ou trop tard",
+      "swish": "Ficelle ! +{{points}}",
+      "score": "+{{points}}"
+    },
+    "pause": {
+      "open": "Pause",
+      "title": "Pause",
+      "resume": "Reprendre",
+      "restart": "Recommencer",
+      "change": "Changer de niveau",
+      "leave": "Retour au salon"
+    },
+    "over": {
+      "won": "Vous avez gagné",
+      "lost": "Vous avez perdu",
+      "reason": "Le premier à {{toWin}}.",
+      "score": "Score",
+      "again": "Rejouer"
+    }
+  },
   "leaveGame": {
     "title": "Quitter cette partie ?",
     "body": "La partie continue sans vous et votre pendule tourne toujours. Si votre temps s’écoule, vous perdez.",

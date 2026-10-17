@@ -1769,6 +1769,78 @@
       "change": "Change game"
     }
   },
+  "basketball": {
+    "back": "Back",
+    "you": "You",
+    "computer": "CPU",
+    "scoreLabel": "You {{mine}}, computer {{theirs}}",
+    "shotClock": "Shot clock",
+    "turnPhone": "Turn your phone sideways for the best view (tap for full screen)",
+    "practice": {
+      "title": "Street basketball",
+      "intro": "Half court, one against one, against the computer. No tokens, no rating: practise your moves and your shot.",
+      "level": "Level",
+      "levels": {
+        "easy": {
+          "name": "Easy",
+          "hint": "Slow on defence and misses plenty."
+        },
+        "medium": {
+          "name": "Medium",
+          "hint": "Plays both ends and makes its open shots."
+        },
+        "hard": {
+          "name": "Hard",
+          "hint": "Blocks, steals and rarely misses."
+        }
+      },
+      "start": "Start game"
+    },
+    "rules": {
+      "score": "A basket from inside the arc is 1 point, from beyond it 2. First to {{toWin}} wins.",
+      "check": "Every possession starts with a check at the top of the key.",
+      "clear": "Win the ball back and you must take it beyond the arc before you shoot.",
+      "clock": "12 seconds to shoot.",
+      "shoot": "Hold Shoot and let go when the meter reaches the gold mark."
+    },
+    "controls": {
+      "move": "Move",
+      "shoot": "Shoot",
+      "block": "Block",
+      "cross": "Cross",
+      "steal": "Steal"
+    },
+    "call": {
+      "check": "Check ball",
+      "takeItBack": "Take it back!",
+      "block": "Blocked!",
+      "steal": "Stolen!",
+      "ankles": "Ankle breaker!",
+      "out": "Out of bounds",
+      "shotClock": "Shot clock!",
+      "perfect": "Perfect release",
+      "good": "Good release",
+      "early": "Off the mark",
+      "off": "Way off",
+      "swish": "Swish! +{{points}}",
+      "score": "+{{points}}"
+    },
+    "pause": {
+      "open": "Pause",
+      "title": "Paused",
+      "resume": "Resume",
+      "restart": "Start again",
+      "change": "Change level",
+      "leave": "Back to the lobby"
+    },
+    "over": {
+      "won": "You won",
+      "lost": "You lost",
+      "reason": "First to {{toWin}}.",
+      "score": "Score",
+      "again": "Play again"
+    }
+  },
   "leaveGame": {
     "title": "Leave this game?",
     "body": "The game goes on without you, and your clock keeps running. If your time runs out, you lose.",

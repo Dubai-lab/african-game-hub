@@ -26,13 +26,13 @@ The frontend is **React**. This is decided; do not propose another framework. Th
 - **Validation:** Zod for validating all inputs, both in the frontend and in Edge Functions.
 - **Translations:** `react-i18next`, with right-to-left layout support (for Arabic).
 - **Phone numbers:** `libphonenumber-js` for validating and formatting African phone numbers in international (E.164) format.
-- **3D (landing page):** `three`, `@react-three/fiber`, and `@react-three/drei`. Load them only on the landing page, lazily, never in the game screens.
+- **3D (landing page and 3D games):** `three`, `@react-three/fiber`, and `@react-three/drei`. Load them lazily, only on the landing page and in games drawn in 3D (street basketball), never in the other game screens.
 - **Landing page SEO:** prerender the landing page to static HTML (for example with a Vite prerender/SSG plugin) so search engines and WhatsApp/Facebook link previews see real content.
 - **Chess engine:** Stockfish compiled to WebAssembly, running in a Web Worker (for play-vs-computer and game review).
 - **Testing:** Vitest for unit tests, Playwright for end-to-end tests (including two-browser online games).
 - **Chess rules:** `chess.js`. Never write chess rule logic by hand.
 - **Board UI:** `react-chessboard` (MIT license). Do not use `chessground` (GPL license, incompatible with our commercial closed-source app).
-- **Backend:** Supabase, plus one game server (see `server/`). The game server exists only to make moves fast: players in a live game hold an open connection to it, and it passes each move to the opponent at once. It is not a second authority. It records every move through the same Postgres functions the Edge Functions use, never touches wallets, the ledger or escrow, and the app must keep working through the Edge Functions whenever the game server cannot be reached. (Decided by the owner on 9 October 2026; before that the rule was "Supabase only".)
+- **Backend:** Supabase, plus one game server (see `server/`). The game server exists only to make moves fast: players in a live game hold an open connection to it, and it passes each move to the opponent at once. It is not a second authority. It records every move through the same Postgres functions the Edge Functions use, never touches wallets, the ledger or escrow, and the app must keep working through the Edge Functions whenever the game server cannot be reached. (Decided by the owner on 9 October 2026; before that the rule was "Supabase only".) **Exception, decided by the owner on 17 October 2026:** every game may go through the game server, and real-time games (street basketball) run on it alone: there the game server simulates the match and decides baskets and the score, and the result is still recorded and settled through the database. When the game server cannot be reached, a real-time game says it is unavailable; every other game keeps working through the Edge Functions.
   - Supabase Auth for accounts
   - Postgres for all data
   - Supabase Realtime for live game updates
