@@ -14,10 +14,11 @@
 // Mixamo character works without one. It decides nothing about the game.
 import { useFrame, useLoader } from '@react-three/fiber'
 import { type RefObject, useMemo, useRef } from 'react'
-import { type AnimationAction, AnimationClip, AnimationMixer, type Bone, LoopOnce, LoopRepeat, type Object3D, Quaternion, Vector3 } from 'three'
+import { type AnimationAction, AnimationClip, AnimationMixer, type Bone, Color, LoopOnce, LoopRepeat, type Mesh, type Object3D, Quaternion, Vector3 } from 'three'
 import { type GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import type { World } from './Court3D'
+import { dyeClothes } from './clothes'
 
 // A new name for every new version: phones keep these files, and must not keep an old one.
 export const CHARACTER_URL = '/basketball/player1.v2.glb'
@@ -52,17 +53,26 @@ function aim(bone: Object3D | undefined, child: Object3D | undefined, direction:
   bone.updateMatrixWorld(true)
 }
 
+/** Each side's clothes: the hub's indigo and hibiscus. */
+const KIT = ['#3d4fd6', '#d1264f']
+
 function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id: number }) {
   const model = useMemo(() => {
     const copy = cloneSkinned(gltf.scene)
+    const team = world.current!.game.players.find((p) => p.id === id)?.team ?? 0
+    const kit = new Color(KIT[team]!)
     copy.traverse((o) => {
-      if ((o as { isMesh?: boolean }).isMesh) {
-        o.castShadow = true
-        o.frustumCulled = false
+      const mesh = o as Mesh
+      if (mesh.isMesh) {
+        mesh.castShadow = true
+        mesh.frustumCulled = false
+        // This player's own copy of the materials, the clothes in his side's colour.
+        mesh.material = Array.isArray(mesh.material) ? mesh.material.map((m) => m.clone()) : mesh.material.clone()
+        for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) dyeClothes(m, kit)
       }
     })
     return copy
-  }, [gltf])
+  }, [gltf, world, id])
   const bones = useMemo(() => {
     const find = (suffix: string) => {
       let found: Bone | undefined

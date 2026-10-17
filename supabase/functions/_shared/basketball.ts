@@ -24,7 +24,7 @@ export const G = 9.81
 export const COURT = { halfWidth: 7.5, depth: 14 } as const
 export const BALL_R = 0.12
 export const RIM = { x: 0, y: 3.05, z: 1.575, r: 0.229, tube: 0.012 } as const
-// The board's face, as on the court drawn (public/basketball/court.v3.glb).
+// The board's face, as on the court drawn (public/basketball/court.v4.glb).
 export const BOARD = { z: 1.25, halfWidth: 0.91, bottom: 2.75, top: 3.97 } as const
 /** The arc: further than this from the rim (along the ground), a basket is worth 2. */
 export const ARC = 6.75

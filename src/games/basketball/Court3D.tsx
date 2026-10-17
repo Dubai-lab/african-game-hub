@@ -14,6 +14,7 @@ import { useSettingsStore } from '@/core/settings/settingsStore'
 import { ARC, BALL_R, BOARD, COURT, type Game, RIM } from '../../../supabase/functions/_shared/basketball'
 import { Athletes } from './Athletes'
 import { PITCH, type View } from './camera'
+import { dyeClothes } from './clothes'
 
 export type World = {
   game: Game
@@ -255,7 +256,7 @@ function Scenery() {
  * and baskets, and around it the bleachers, buildings, lights and crowd. The nets are the
  * game's own, so that they move when the ball goes through.
  */
-export const COURT_URL = '/basketball/court.v3.glb'
+export const COURT_URL = '/basketball/court.v4.glb'
 
 function CourtModel() {
   const gltf = useLoader(GLTFLoader, COURT_URL)
@@ -266,6 +267,12 @@ function CourtModel() {
       // The ground takes the players' shadows; nothing else needs to cast or take any.
       mesh.receiveShadow = ['court', 'paving'].includes(mesh.name)
       const material = mesh.material as MeshStandardMaterial
+      // Every spectator in their own outfit (the crowd is the only mesh with colours on its
+      // vertices; see clothes.ts and makeBasketballCourt.py).
+      if (mesh.geometry.attributes.color) {
+        mesh.material = Array.isArray(mesh.material) ? mesh.material.map((m) => m.clone()) : material.clone()
+        for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) dyeClothes(m, 'vertex')
+      }
       if (material.name === 'fence') {
         // Wire seen from both sides, with clean holes.
         material.side = DoubleSide

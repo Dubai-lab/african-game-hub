@@ -1,7 +1,7 @@
 # Builds the street basketball court for the game, in Blender, without its window:
 #
 #   blender -b --factory-startup --python scripts/makeBasketballCourt.py -- \
-#       art-src/basketball/player1 public/basketball/court.v3.glb art-src/basketball/court-preview.png \
+#       art-src/basketball/player1 public/basketball/court.v4.glb art-src/basketball/court-preview.png \
 #       art-src/basketball/court/basket_20blend/Basket_2.0.blend
 #
 # The court itself, its fence and its baskets are a bought model (the last argument; "Street
@@ -514,6 +514,8 @@ for img in list(bpy.data.images):
     if img.size[0] > 512 and img.filepath and 'fbm' in img.filepath:
         img.scale(512, 512)
 
+# The crowd's clothes: bright, mixed, as at a real court on a weekend.
+OUTFITS = ['#d1264f', '#f5b700', '#0b7a55', '#3d4fd6', '#e8e8ee', '#ef6c1a', '#7a3db8', '#1c9fd6', '#2b2f3a', '#b8322a']
 POSES = [('idle', 1), ('idle', 30), ('victory', 40), ('victory', 120), ('victory', 200), ('defeated', 60), ('dribble', 10)]
 
 def frozen(pose, frame, at, facing):
@@ -535,6 +537,11 @@ def frozen(pose, frame, at, facing):
     o.location = P(*at)
     # The character faces Blender's -Y (glTF +Z): turned to face the court.
     o.rotation_euler = (0, 0, facing)
+    # An outfit of their own: the game paints the cloth in this colour (src/games/basketball/clothes.ts).
+    outfit = hexrgb(random.choice(OUTFITS))
+    tint = mesh.color_attributes.new('outfit', 'BYTE_COLOR', 'CORNER')
+    for item in tint.data:
+        item.color = (*[float(c) ** 2.2 for c in outfit], 1.0)  # stored linear
     return o
 
 crowd = []
@@ -570,7 +577,7 @@ for a in list(bpy.data.actions):
     bpy.data.actions.remove(a)
 print('CROWD', len(crowd), 'spectators,', len(bpy.context.object.data.polygons), 'faces')
 
-bpy.ops.export_scene.gltf(filepath=OUT_GLB, export_format='GLB', export_image_format='JPEG', export_image_quality=80, export_animations=False, export_lights=False, export_cameras=False, export_apply=True, export_yup=True)
+bpy.ops.export_scene.gltf(filepath=OUT_GLB, export_format='GLB', export_image_format='JPEG', export_image_quality=80, export_animations=False, export_lights=False, export_cameras=False, export_apply=True, export_yup=True, export_vertex_color='ACTIVE')
 print('GLB', os.path.getsize(OUT_GLB))
 
 # A picture to check by eye, from where the game's camera stands.
