@@ -42,6 +42,10 @@ export const DUNK_RANGE = 1.6
 export const LAYUP_RANGE = 2.2
 /** The ball goes through the rim this long after the dunk begins: the top of the jump. */
 export const DUNK_SLAM = 0.46
+/** After the slam the dunker hangs on the rim this long, then drops. */
+export const DUNK_HANG = 0.4
+/** How far out from the rim's centre the dunker's body is as the ball goes through. */
+const DUNK_REACH = 0.2
 export const PLAYER_R = 0.38
 
 export type Team = 0 | 1
@@ -71,6 +75,8 @@ export type Player = {
   burst: number
   /** On the way up for a dunk. */
   dunk: boolean
+  /** Seconds left hanging on the rim after a dunk. */
+  hang: number
   /** The buttons as they were last tick, to tell a press from a hold. */
   held: { shoot: boolean; action: boolean; jump: boolean }
 }
@@ -152,7 +158,7 @@ export const fromRim = (x: number, z: number) => hypot(x - RIM.x, z - RIM.z)
 const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v)
 
 function newPlayer(id: number, team: Team): Player {
-  return { id, team, x: 0, z: 0, vx: 0, vz: 0, face: 0, y: 0, vy: 0, shootT: null, cooldown: 0, stumble: 0, burst: 0, dunk: false, held: { shoot: false, action: false, jump: false } }
+  return { id, team, x: 0, z: 0, vx: 0, vz: 0, face: 0, y: 0, vy: 0, shootT: null, cooldown: 0, stumble: 0, burst: 0, dunk: false, hang: 0, held: { shoot: false, action: false, jump: false } }
 }
 
 /** A new game for `teamSize` players a side (1 or 2). Players 0..teamSize-1 are team 0. */
@@ -205,6 +211,7 @@ function place(p: Player, x: number, z: number) {
   p.vx = p.vz = p.y = p.vy = 0
   p.shootT = null
   p.dunk = false
+  p.hang = 0
   p.stumble = p.burst = 0
   // Facing the basket.
   p.face = Math.atan2(-(RIM.x - x), -(RIM.z - z)) || 0
@@ -284,6 +291,12 @@ function movePlayer(game: Game, p: Player, input: Input) {
     p.stumble = Math.max(0, p.stumble - TICK)
     mx = mz = 0
   }
+  // Hanging on the rim, no steering either.
+  if (p.hang > 0) {
+    p.vx = p.vz = 0
+    landPlayer(p)
+    return
+  }
   // On the way up for a dunk the player is carried at the basket by the jump: no steering.
   if (p.dunk) {
     p.x = clamp(p.x + p.vx * TICK, -COURT.halfWidth - 0.6, COURT.halfWidth + 0.6)
@@ -316,6 +329,12 @@ function movePlayer(game: Game, p: Player, input: Input) {
 }
 
 function landPlayer(p: Player) {
+  // Hanging on the rim: held up there by the hands.
+  if (p.hang > 0) {
+    p.hang = Math.max(0, p.hang - TICK)
+    p.vy = 0
+    return
+  }
   if (p.y > 0 || p.vy > 0) {
     p.vy -= G * TICK
     p.y += p.vy * TICK
@@ -386,8 +405,8 @@ function act(game: Game, p: Player, input: Input) {
         p.dunk = true
         p.vy = 4.6
         p.y = 0.001
-        const aimX = RIM.x + ((p.x - RIM.x) / Math.max(distance, 0.01)) * 0.35
-        const aimZ = RIM.z + ((p.z - RIM.z) / Math.max(distance, 0.01)) * 0.35
+        const aimX = RIM.x + ((p.x - RIM.x) / Math.max(distance, 0.01)) * DUNK_REACH
+        const aimZ = RIM.z + ((p.z - RIM.z) / Math.max(distance, 0.01)) * DUNK_REACH
         p.vx = (aimX - p.x) / DUNK_SLAM
         p.vz = (aimZ - p.z) / DUNK_SLAM
         return
@@ -557,6 +576,9 @@ function slam(game: Game, dunker: Player) {
       return
     }
   }
+  // Through, and he hangs on the rim a moment.
+  dunker.hang = DUNK_HANG
+  dunker.vx = dunker.vz = 0
   ball.holder = null
   ball.x = RIM.x
   ball.z = RIM.z

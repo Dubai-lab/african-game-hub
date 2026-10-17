@@ -148,6 +148,24 @@ describe('dunks', () => {
     expect(events.find((e) => e.type === 'score')).toMatchObject({ team: 0, points: 1, dunk: true })
   })
 
+  it('the dunker hangs on the rim a moment after the slam, then drops back to the floor', () => {
+    const game = alone(0.3, RIM.z + DUNK_RANGE - 0.4)
+    const dunker = game.players[0]!
+    let hungAt: number | null = null
+    let t = 0
+    run(
+      game,
+      (g) => {
+        t += TICK
+        if (hungAt === null && dunker.hang > 0) hungAt = dunker.y
+        return g.players.map((p) => (p.id === 0 ? { ...NO_INPUT, shoot: t < 0.1 } : NO_INPUT))
+      },
+      () => t > 3,
+    )
+    expect(hungAt).toBeGreaterThan(0.8)
+    expect(dunker.y).toBe(0)
+  })
+
   it('a defender up in the air beside the rim can stop some of them', () => {
     let blocked = 0
     for (let seed = 1; seed <= 30; seed++) {

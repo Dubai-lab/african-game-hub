@@ -18,21 +18,49 @@ from mathutils import Matrix, Quaternion, Vector
 
 FPS = 30
 
-# Manny bone -> Mixamo bone (without the 'mixamorig9:' prefix). Manny's extra spine bones are
-# simply skipped: every turn is taken in the world, so nothing between is lost.
-PAIRS = [('pelvis', 'Hips'), ('spine_02', 'Spine'), ('spine_04', 'Spine1'), ('spine_05', 'Spine2'), ('neck_01', 'Neck'), ('head', 'Head')]
-for side, s in (('l', 'Left'), ('r', 'Right')):
-    PAIRS += [(f'clavicle_{side}', f'{s}Shoulder'), (f'upperarm_{side}', f'{s}Arm'), (f'lowerarm_{side}', f'{s}ForeArm'), (f'hand_{side}', f'{s}Hand')]
-    for finger, F in (('thumb', 'Thumb'), ('index', 'Index'), ('middle', 'Middle'), ('ring', 'Ring'), ('pinky', 'Pinky')):
-        PAIRS += [(f'{finger}_0{i}_{side}', f'{s}Hand{F}{i}') for i in (1, 2, 3)]
-    PAIRS += [(f'thigh_{side}', f'{s}UpLeg'), (f'calf_{side}', f'{s}Leg'), (f'foot_{side}', f'{s}Foot'), (f'ball_{side}', f'{s}ToeBase')]
-# Where each bone points, for laying one rest pose along the other: toward the next joint.
-NEXT = {'pelvis': 'spine_02', 'spine_02': 'spine_04', 'spine_04': 'spine_05', 'spine_05': 'neck_01', 'neck_01': 'head'}
-for side in 'lr':
-    NEXT.update({f'clavicle_{side}': f'upperarm_{side}', f'upperarm_{side}': f'lowerarm_{side}', f'lowerarm_{side}': f'hand_{side}', f'hand_{side}': f'middle_01_{side}',
-                 f'thigh_{side}': f'calf_{side}', f'calf_{side}': f'foot_{side}', f'foot_{side}': f'ball_{side}'})
-    for finger in ('thumb', 'index', 'middle', 'ring', 'pinky'):
-        NEXT.update({f'{finger}_01_{side}': f'{finger}_02_{side}', f'{finger}_02_{side}': f'{finger}_03_{side}'})
+# The character's bones (Mixamo names, without the 'mixamorig9:' prefix) that take a move, and
+# where each points: toward the next joint (for laying one rest pose along the other).
+BONES = ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head']
+TOWARD = {'Hips': 'Spine', 'Spine': 'Spine1', 'Spine1': 'Spine2', 'Spine2': 'Neck', 'Neck': 'Head'}
+for s_ in ('Left', 'Right'):
+    BONES += [f'{s_}Shoulder', f'{s_}Arm', f'{s_}ForeArm', f'{s_}Hand']
+    TOWARD.update({f'{s_}Shoulder': f'{s_}Arm', f'{s_}Arm': f'{s_}ForeArm', f'{s_}ForeArm': f'{s_}Hand', f'{s_}Hand': f'{s_}HandMiddle1'})
+    for F in ('Thumb', 'Index', 'Middle', 'Ring', 'Pinky'):
+        BONES += [f'{s_}Hand{F}{i}' for i in (1, 2, 3)]
+        TOWARD.update({f'{s_}Hand{F}1': f'{s_}Hand{F}2', f'{s_}Hand{F}2': f'{s_}Hand{F}3'})
+    BONES += [f'{s_}UpLeg', f'{s_}Leg', f'{s_}Foot', f'{s_}ToeBase']
+    TOWARD.update({f'{s_}UpLeg': f'{s_}Leg', f'{s_}Leg': f'{s_}Foot', f'{s_}Foot': f'{s_}ToeBase'})
+
+
+def skeleton(source_of, armature=None, fps=30):
+    """A recorded skeleton: its bone for each of the character's (`source_of`), the armature in its
+    file (when there are several) and its frames a second."""
+    pairs = [(source_of(t), t) for t in BONES]
+    src = dict((t, s) for s, t in pairs)
+    return dict(pairs=pairs, toward={src[t]: src[n] for t, n in TOWARD.items()}, hips=src['Hips'],
+                thighs=(src['LeftUpLeg'], src['RightUpLeg']), armature=armature, fps=fps)
+
+
+# Unreal's Manny (the Ailive pack): its extra spine bones are simply skipped, since every turn is
+# taken in the world, so nothing between is lost.
+_MANNY = {'Hips': 'pelvis', 'Spine': 'spine_02', 'Spine1': 'spine_04', 'Spine2': 'spine_05', 'Neck': 'neck_01', 'Head': 'head'}
+
+
+def _manny(t):
+    if t in _MANNY:
+        return _MANNY[t]
+    side = 'l' if t.startswith('Left') else 'r'
+    t = t[4:] if t.startswith('Left') else t[5:]
+    plain = {'Shoulder': 'clavicle', 'Arm': 'upperarm', 'ForeArm': 'lowerarm', 'Hand': 'hand', 'UpLeg': 'thigh', 'Leg': 'calf', 'Foot': 'foot', 'ToeBase': 'ball'}
+    if t in plain:
+        return f'{plain[t]}_{side}'
+    finger, i = t[4:-1].lower(), t[-1]
+    return f'{finger}_0{i}_{side}'
+
+
+MANNY = skeleton(_manny, fps=120)
+# A Mixamo skeleton baked out of a Maya rig, every bone named 'Bind_' and the Mixamo name (the dunk).
+BIND = skeleton(lambda t: 'Bind_' + t, armature='Bind_Joint_GRP', fps=30)
 
 
 def rest_world(obj, bone):
@@ -42,19 +70,22 @@ def rest_world(obj, bone):
     return loc, rot
 
 
-def retarget(source_fbx, rig, name, prefix='mixamorig9:'):
-    """Bakes the move in `source_fbx` onto `rig` as an action called `name` (30 frames a second)."""
+def retarget(source_fbx, rig, name, prefix='mixamorig9:', recorded=MANNY, travel=True):
+    """Bakes the move in `source_fbx` onto `rig` as an action called `name` (30 frames a second).
+    Without `travel`, the hips keep no movement across the floor at all (only up and down)."""
     before, acts_before = set(bpy.data.objects), set(bpy.data.actions)
     # Importing the take sets the scene to its 120 frames a second; the scene is put back after,
     # or every movement in the character's file would play four times too fast.
     fps = (bpy.context.scene.render.fps, bpy.context.scene.render.fps_base)
     bpy.ops.import_scene.fbx(filepath=source_fbx)
     new = [o for o in bpy.data.objects if o not in before]
-    src = next(o for o in new if o.type == 'ARMATURE')
-    src_action = next(a for a in bpy.data.actions if a not in acts_before)
+    src = next(o for o in new if o.type == 'ARMATURE' and recorded['armature'] in (None, o.name))
+    src_action = src.animation_data.action
+    taken = [a for a in bpy.data.actions if a not in acts_before]
     scene = bpy.context.scene
     start, end = (int(v) for v in src_action.frame_range)
-    src_fps = 120
+    src_fps = recorded['fps']
+    PAIRS, NEXT, PELVIS, THIGHS = recorded['pairs'], recorded['toward'], recorded['hips'], recorded['thighs']
 
     tb = {p[1]: rig.data.bones[prefix + p[1]] for p in PAIRS}
     sb = {p[0]: src.data.bones[p[0]] for p in PAIRS}
@@ -71,7 +102,7 @@ def retarget(source_fbx, rig, name, prefix='mixamorig9:'):
         across = right - left
         return math.atan2(across.y, across.x)
     face_tgt = facing(tgt_rest[prefix + 'LeftUpLeg'][0], tgt_rest[prefix + 'RightUpLeg'][0])
-    align = Quaternion((0, 0, 1), face_tgt - facing(src_rest['thigh_l'][0], src_rest['thigh_r'][0]))
+    align = Quaternion((0, 0, 1), face_tgt - facing(src_rest[THIGHS[0]][0], src_rest[THIGHS[1]][0]))
     src_rest = {s: (align @ loc, align @ rot) for s, (loc, rot) in src_rest.items()}
     src_dir = {s: (src_rest[NEXT[s]][0] - src_rest[s][0]).normalized() for s in NEXT}
 
@@ -97,11 +128,11 @@ def retarget(source_fbx, rig, name, prefix='mixamorig9:'):
     # he faces the way the character stands at rest (from the hips, left to right, turned a
     # quarter forward).
     sp = lambda n: (src.matrix_world @ src.pose.bones[n].matrix).to_translation()
-    turn = Quaternion((0, 0, 1), face_tgt - facing(sp('thigh_l'), sp('thigh_r')))
+    turn = Quaternion((0, 0, 1), face_tgt - facing(sp(THIGHS[0]), sp(THIGHS[1])))
 
     # The character's size against Manny's.
     hips = prefix + 'Hips'
-    scale = tgt_rest[hips][0].z / src_rest['pelvis'][0].z
+    scale = tgt_rest[hips][0].z / src_rest[PELVIS][0].z
 
     action = bpy.data.actions.new(name)
     rig.animation_data_create()
@@ -139,10 +170,10 @@ def retarget(source_fbx, rig, name, prefix='mixamorig9:'):
             pb.rotation_quaternion = basis
             pb.keyframe_insert('rotation_quaternion', frame=frame, group=b.name)
         # The hips: Manny's height and sway, the character's size, kept on the spot.
-        pelvis = (src.matrix_world @ src.pose.bones['pelvis'].matrix).to_translation()
+        pelvis = (src.matrix_world @ src.pose.bones[PELVIS].matrix).to_translation()
         if first_pelvis is None:
             first_pelvis = pelvis.copy()
-        sway = turn @ Vector((pelvis.x - first_pelvis.x, pelvis.y - first_pelvis.y, 0))
+        sway = turn @ Vector((pelvis.x - first_pelvis.x, pelvis.y - first_pelvis.y, 0)) if travel else Vector()
         at = Vector((sway.x * scale, sway.y * scale, pelvis.z * scale))
         at.x += tgt_rest[hips][0].x
         at.y += tgt_rest[hips][0].y
@@ -155,7 +186,8 @@ def retarget(source_fbx, rig, name, prefix='mixamorig9:'):
 
     for o in new:
         bpy.data.objects.remove(o, do_unlink=True)
-    bpy.data.actions.remove(src_action)
+    for a in taken:
+        bpy.data.actions.remove(a)
     scene.render.fps, scene.render.fps_base = fps
     action.use_fake_user = True
     return action
@@ -224,15 +256,19 @@ def dribble_loop(take, rig, name, cycles=4, hand='mixamorig9:RightHand'):
 
 
 def strokes(take, rig, name, tops, each):
-    """A move cut from `take` between the hand-top frames in `tops`, every stroke between them
-    stretched or squeezed to `each` frames (so the game can time the ball by them). Played once,
-    not looped."""
+    """A move cut from `take` between the frames in `tops`, each stretch between them stretched or
+    squeezed to `each` frames (one number for all, or one for each stretch), so the game can time
+    the ball by them. Played once, not looped."""
     scene = bpy.context.scene
     use(rig, take)
+    lengths = each if isinstance(each, list) else [each] * (len(tops) - 1)
     poses = []
-    for i in range(each * (len(tops) - 1) + 1):
-        k, within = divmod(i, each)
-        at = float(tops[-1]) if k >= len(tops) - 1 else tops[k] + (tops[k + 1] - tops[k]) * within / each
+    for i in range(sum(lengths) + 1):
+        k, within = 0, i
+        while k < len(lengths) and within >= lengths[k]:
+            within -= lengths[k]
+            k += 1
+        at = float(tops[-1]) if k >= len(lengths) else tops[k] + (tops[k + 1] - tops[k]) * within / lengths[k]
         scene.frame_set(int(at), subframe=at - int(at))
         poses.append({pb.name: (pb.rotation_quaternion.copy(), pb.location.copy()) for pb in rig.pose.bones})
     out = bpy.data.actions.new(name)

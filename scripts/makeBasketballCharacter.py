@@ -1,7 +1,7 @@
 # Builds one basketball character for the game from Mixamo downloads.
 #
 #   blender -b --factory-startup --python scripts/makeBasketballCharacter.py -- \
-#       art-src/basketball/player1 public/basketball/player1.v5.glb art-src/basketball/player1/preview.png
+#       art-src/basketball/player1 public/basketball/player1.v6.glb art-src/basketball/player1/preview.png
 #
 # The folder holds the FBX files downloaded from Mixamo for one character (see CLIPS below for
 # the file names). The character itself is taken from "Happy Idle.fbx"; only the movement is
@@ -63,6 +63,17 @@ if os.path.isdir(MOVES):
     take = retarget(os.path.join(MOVES, 'Dribbling_in_Place_in_Basketball.FBX'), rig, 'cross_take')
     strokes(take, rig, 'crossover', [17, 40, 64], each)
     bpy.data.actions.remove(take)
+    # The dunk (bought by the owner: a Mixamo skeleton baked out of a Maya rig, in dunk/). In the
+    # take he loads down until frame 18, rises, puts the ball through the rim at frame 37, hangs
+    # on it and drops (found by following his hips, hands and the ball in its file). The rise is
+    # squeezed to the game's own (DUNK_SLAM, 0.46 s, 14 frames); the rest keeps its own pace.
+    # His height comes with it: the game does not lift him itself while he dunks.
+    from retargetBasketball import BIND
+    dunk_file = os.path.join(MOVES, 'dunk', 'smac.fbx')
+    if os.path.exists(dunk_file):
+        take = retarget(dunk_file, rig, 'dunk_take', recorded=BIND, travel=False)
+        strokes(take, rig, 'dunk', [18, 37, 70], [14, 33])
+        bpy.data.actions.remove(take)
 
 # Movements made to travel ("In Place" not ticked) are kept on the spot: the game moves the
 # player across the court itself. The drift of the hips from the first frame to the last is
@@ -74,6 +85,9 @@ def fcurves(action):
         return [fc for layer in action.layers for strip in layer.strips for bag in strip.channelbags for fc in bag.fcurves]
 
 for a in bpy.data.actions:
+    # Only Mixamo's: the motion-capture moves above are already on the spot, and the dunk's
+    # rise and the crossover's sway are part of them.
+    if a.name not in CLIPS.values(): continue
     for fc in fcurves(a):
         if not (fc.data_path.endswith('Hips"].location')): continue
         keys = fc.keyframe_points

@@ -22,7 +22,7 @@ import { BALL_R } from '../../../supabase/functions/_shared/basketball'
 import { dyeClothes } from './clothes'
 
 // A new name for every new version: phones keep these files, and must not keep an old one.
-export const CHARACTER_URL = '/basketball/player1.v5.glb'
+export const CHARACTER_URL = '/basketball/player1.v6.glb'
 /**
  * The dribble is motion capture: a loop of this many dribbles of the same length, the hand at
  * the top of its stroke at the start of each (scripts/makeBasketballCharacter.py). The ball is
@@ -44,7 +44,7 @@ const UPPER = /(Spine|Neck|Head|Shoulder|Arm|Hand)/
 const RUN_SPEED = 5.1
 const STRAFE_SPEED = 3.9
 
-type Pose = 'idle' | 'dribble' | 'run' | 'runDribble' | 'cross' | 'runCross' | 'strafe_left' | 'strafe_right' | 'stumble' | 'victory' | 'defeated'
+type Pose = 'idle' | 'dribble' | 'run' | 'runDribble' | 'cross' | 'runCross' | 'dunk' | 'strafe_left' | 'strafe_right' | 'stumble' | 'victory' | 'defeated'
 
 const up = new Vector3(0, 1, 0)
 const a = new Vector3()
@@ -129,7 +129,7 @@ function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id:
     if (legs) all.runLegs = mixer.clipAction(legs)
     if (arms) all.dribbleArms = mixer.clipAction(arms)
     if (crossArms) all.crossArms = mixer.clipAction(crossArms)
-    for (const name of ['jump', 'stumble', 'crossover', 'crossArms']) {
+    for (const name of ['jump', 'stumble', 'crossover', 'crossArms', 'dunk']) {
       const action = all[name]
       if (action) {
         action.setLoop(LoopOnce, 1)
@@ -142,6 +142,8 @@ function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id:
   const pose = useRef<Pose | null>(null)
   // A crossover under way: from the moment it is heard (World.crosses) until its two strokes end.
   const crossing = useRef({ seen: 0, on: false })
+  // A dunk under way: from the jump (the game's Player.dunk) until the clip, slam, hang and drop, ends.
+  const dunking = useRef({ was: false, on: false })
   const blend = useRef({ shoot: 0, block: 0, reach: 0, rebound: 0, knees: 0 })
 
   const play = (next: Pose) => {
@@ -156,7 +158,7 @@ function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id:
       if (!action) continue
       if (!leaving.includes(name)) action.reset()
       action.setEffectiveWeight(1).fadeIn(0.18).play()
-      if (!['jump', 'stumble', 'crossover', 'crossArms'].includes(name)) action.setLoop(LoopRepeat, Infinity)
+      if (!['jump', 'stumble', 'crossover', 'crossArms', 'dunk'].includes(name)) action.setLoop(LoopRepeat, Infinity)
     }
     pose.current = next
   }
@@ -166,7 +168,16 @@ function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id:
     const p = game.players.find((player) => player.id === id)
     if (!p) return
     const ball = game.ball
-    model.position.set(p.x, p.y, p.z)
+    if (p.dunk && !dunking.current.was) {
+      dunking.current.on = true
+      actions.dunk?.reset()
+    }
+    dunking.current.was = p.dunk
+    const dunkClip = actions.dunk
+    if (!dunkClip || game.phase === 'over' || (dunkClip.time >= dunkClip.getClip().duration - 1e-3 && p.y === 0 && p.hang === 0)) dunking.current.on = false
+    const dunkNow = dunking.current.on && Boolean(dunkClip)
+    // A dunk carries its own height (the motion capture's jump); otherwise the game's.
+    model.position.set(p.x, dunkNow ? 0 : p.y, p.z)
     // The model faces +z; in the game a player turned 0 faces the basket, along -z.
     model.rotation.y = p.face + Math.PI
 
@@ -189,7 +200,8 @@ function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id:
     if (!holding || (crossAction && crossAction.time >= crossAction.getClip().duration - 1e-3)) crossing.current.on = false
 
     let next: Pose
-    if (game.phase === 'over') next = game.winner === p.team ? 'victory' : 'defeated'
+    if (dunkNow) next = 'dunk'
+    else if (game.phase === 'over') next = game.winner === p.team ? 'victory' : 'defeated'
     else if (p.stumble > 0) next = 'stumble'
     // Shooting, or in the air: the body stands (the jump lifts it, and the arms and knees are
     // posed below), rather than Mixamo's big leap.
@@ -216,14 +228,15 @@ function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id:
     // On top of the movement: a shot, a block, a rebound, a reach, and bent knees in the air.
     const ease = (now: number, goal: number) => now + (goal - now) * Math.min(1, dt * 12)
     const reaching = (marks[id] ?? 0) > performance.now() - 280
-    const airborne = p.y > 0.03
-    const shooting = p.shootT !== null
+    const airborne = p.y > 0.03 && !dunkNow
+    const shooting = p.shootT !== null && !dunkNow
     blend.current.shoot = ease(blend.current.shoot, shooting ? 1 : 0)
     blend.current.block = ease(blend.current.block, !shooting && !holding && airborne && ball.holder !== null ? 1 : 0)
     blend.current.rebound = ease(blend.current.rebound, !shooting && airborne && ball.holder === null ? 1 : 0)
     blend.current.reach = ease(blend.current.reach, reaching ? 1 : 0)
     // Knees bend to gather a shot, and stay bent in the air.
     blend.current.knees = ease(blend.current.knees, airborne ? 0.8 : shooting ? 0.55 : 0)
+    if (dunkNow) blend.current.shoot = blend.current.block = blend.current.rebound = blend.current.reach = blend.current.knees = 0
     const forward = new Vector3(-Math.sin(p.face), 0, -Math.cos(p.face))
     const right = new Vector3(Math.cos(p.face), 0, -Math.sin(p.face))
     const dir = (f: number, u: number, r: number) => new Vector3().addScaledVector(forward, f).addScaledVector(up, u).addScaledVector(right, r).normalize()
@@ -271,6 +284,15 @@ function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id:
     if (bones.rightHand) world.current!.hands[id] = bones.rightHand
     // The ball in the dribble, as drawn: pushed down from under one palm at the top of a stroke,
     // to the floor half way, and up into the same palm (a dribble) or the other (a crossover).
+    if (dunkNow && holding && bones.rightHand && bones.rightMiddle && bones.leftHand && bones.leftMiddle) {
+      // Both hands on the ball, overhead, until it goes through.
+      bones.rightHand.getWorldPosition(palmA).lerp(bones.rightMiddle.getWorldPosition(handTip), 0.6)
+      bones.leftHand.getWorldPosition(palmB).lerp(bones.leftMiddle.getWorldPosition(handTip), 0.6)
+      const drawn = (world.current!.dribble[id] ??= { phase: 0, at: new Vector3() })
+      drawn.phase = 0
+      drawn.at.copy(palmA).add(palmB).multiplyScalar(0.5)
+      return
+    }
     const crossNow = pose.current === 'cross' || pose.current === 'runCross'
     const stroke = crossNow ? crossAction : pose.current === 'runDribble' ? actions.dribbleArms : pose.current === 'dribble' ? actions.dribble : undefined
     if (holding && !shooting && !airborne && stroke && bones.rightHand && bones.rightMiddle && bones.leftHand && bones.leftMiddle) {
