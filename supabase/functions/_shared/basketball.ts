@@ -32,6 +32,8 @@ export const TO_WIN = 11
 export const SHOT_CLOCK = 12
 /** How long the shoot button is best held for: release then for a perfect shot. */
 export const PERFECT_RELEASE = 0.55
+/** A jump shot is gathered for this long before the shooter rises (a layup goes straight up). */
+export const GATHER = 0.22
 export const PLAYER_R = 0.38
 
 export type Team = 0 | 1
@@ -337,7 +339,14 @@ function act(game: Game, p: Player, input: Input) {
 
   if (holding) {
     if (p.shootT !== null) {
+      const before = p.shootT
       p.shootT += TICK
+      // The ball gathered, the shooter rises: the top of the jump comes about when a perfect
+      // shot is let go.
+      if (before < GATHER && p.shootT >= GATHER && p.y === 0 && fromRim(p.x, p.z) >= 1.8) {
+        p.vy = 2.6
+        p.y = 0.001
+      }
       // Let go of the button, or hold it far too long: the ball goes up.
       if (!input.shoot || p.shootT >= 1.2) release(game, p)
       return
@@ -346,9 +355,11 @@ function act(game: Game, p: Player, input: Input) {
       // Taking it back is the rule after the defence wins the ball.
       if (game.mustClear) return
       p.shootT = 0
-      // A jump shot: off the ground as the shot is set.
-      p.vy = fromRim(p.x, p.z) < 1.8 ? 3.6 : 2.8
-      p.y = 0.001
+      // A layup goes straight up; a jump shot is gathered first (above).
+      if (fromRim(p.x, p.z) < 1.8) {
+        p.vy = 3.3
+        p.y = 0.001
+      }
       return
     }
     if (pressed.action && p.cooldown === 0) {
@@ -370,7 +381,7 @@ function act(game: Game, p: Player, input: Input) {
   }
 
   if (pressed.jump && p.y === 0 && p.stumble === 0) {
-    p.vy = 4.1
+    p.vy = 3.4
     p.y = 0.001
   }
   if (pressed.action && p.cooldown === 0 && p.stumble === 0 && ball.holder !== null) {

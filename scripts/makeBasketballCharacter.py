@@ -6,7 +6,8 @@
 # The folder holds the FBX files downloaded from Mixamo for one character (see CLIPS below for
 # the file names). The character itself is taken from "Happy Idle.fbx"; only the movement is
 # taken from the others. The result is one GLB with every movement in it as a named animation,
-# kept small for phones: half the triangles, pictures of 1024 pixels at most, WebP.
+# kept small for phones: half the triangles, pictures of 1024 pixels at most, in JPEG (which
+# every phone's browser reads; WebP alone left some phones drawing the character all white).
 # The downloads stay in art-src/ (never in the repository); only the GLB is published.
 # Builds one game file (GLB) for a basketball character from Mixamo downloads:
 # the character from one file, the movements from all of them.
@@ -85,6 +86,27 @@ for o in body:
     while o.modifiers[0].name != 'decimate': bpy.ops.object.modifier_move_up(modifier='decimate')
     bpy.ops.object.modifier_apply(modifier='decimate')
     o.data.calc_loop_triangles(); print('MESH', o.name, 'tris', len(o.data.loop_triangles))
+# Cloth and skin, not metal; solid, not see-through (only the eyelashes keep their cut-out).
+for mat in bpy.data.materials:
+    if not mat.use_nodes: continue
+    for node in mat.node_tree.nodes:
+        if node.type != 'BSDF_PRINCIPLED': continue
+        for name, value in (('Metallic', 0.0),):
+            socket = node.inputs.get(name)
+            if socket is None: continue
+            for link in list(socket.links): mat.node_tree.links.remove(link)
+            socket.default_value = value
+        if 'eyelash' not in mat.name.lower():
+            alpha = node.inputs.get('Alpha')
+            if alpha is not None:
+                for link in list(alpha.links): mat.node_tree.links.remove(link)
+                alpha.default_value = 1.0
+    if 'eyelash' not in mat.name.lower():
+        try: mat.surface_render_method = 'DITHERED'
+        except Exception: pass
+        try: mat.blend_method = 'OPAQUE'
+        except Exception: pass
+    print('MATERIAL', mat.name)
 for img in bpy.data.images:
     if img.size[0] > 1024:
         img.scale(1024 if '1001' in img.filepath else 512, 1024 if '1001' in img.filepath else 512)
@@ -97,7 +119,7 @@ for a in bpy.data.actions:
     try: strip.action_slot = a.slots[0]
     except Exception: pass
 
-bpy.ops.export_scene.gltf(filepath=out_glb, export_format='GLB', export_animation_mode='NLA_TRACKS', export_image_format='WEBP',
+bpy.ops.export_scene.gltf(filepath=out_glb, export_format='GLB', export_animation_mode='NLA_TRACKS', export_image_format='JPEG', export_image_quality=82,
                           export_optimize_animation_size=True, export_apply=False, export_yup=True)
 print('GLB', os.path.getsize(out_glb))
 

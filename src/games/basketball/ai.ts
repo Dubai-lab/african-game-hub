@@ -25,13 +25,20 @@ export const LEVELS: Level[] = [
 export const levelById = (id: unknown): Level => LEVELS.find((level) => level.id === id) ?? LEVELS[1]!
 
 /** What the computer remembers between ticks: when it means to let go of its shot. */
-export type Mind = { releaseAt: number | null; random: () => number; wasHolding: boolean }
+export type Mind = {
+  releaseAt: number | null
+  random: () => number
+  wasHolding: boolean
+  /** For the shot being taken now: whether it decided to go up and contest it (decided once). */
+  contest: boolean | null
+}
 
 export function newMind(seed: number): Mind {
   let state = seed | 0
   return {
     releaseAt: null,
     wasHolding: false,
+    contest: null,
     random: () => {
       state = (state + 0x6d2b79f5) | 0
       let t = Math.imul(state ^ (state >>> 15), state | 1)
@@ -94,8 +101,9 @@ export function think(game: Game, id: number, level: Level, mind: Mind): Input {
   if (ball.holder === null) {
     const leadX = ball.x + ball.vx * 0.35
     const leadZ = ball.z + ball.vz * 0.35
-    const near = Math.hypot(ball.x - me.x, ball.z - me.z) < 1.1
-    return { ...NO_INPUT, ...toward(me.x, me.z, leadX, leadZ, level.speed), jump: near && ball.y > 2.3 && ball.vy < 0 && me.y === 0 }
+    // Up for a rebound only when the ball is coming down within reach.
+    const near = Math.hypot(ball.x - me.x, ball.z - me.z) < 0.8
+    return { ...NO_INPUT, ...toward(me.x, me.z, leadX, leadZ, level.speed), jump: near && ball.y > 2.2 && ball.y < 3.1 && ball.vy < 0 && me.y === 0 }
   }
 
   const holder = game.players.find((p) => p.id === ball.holder)!
@@ -110,7 +118,11 @@ export function think(game: Game, id: number, level: Level, mind: Mind): Input {
   const d = Math.max(0.1, Math.hypot(dx, dz))
   const goal = toward(me.x, me.z, holder.x + (dx / d) * 1.05, holder.z + (dz / d) * 1.05, level.speed)
   const close = Math.hypot(holder.x - me.x, holder.z - me.z)
-  const jump = holder.shootT !== null && holder.shootT > 0.15 && close < 1.5 && me.y === 0 && mind.random() < level.blockChance * 6 * TICK
+  // A shot going up: decide once whether to go up with it, and only from close by; then leave
+  // the ground as the shooter does.
+  if (holder.shootT === null) mind.contest = null
+  else if (mind.contest === null) mind.contest = close < 1.4 && mind.random() < level.blockChance
+  const jump = mind.contest === true && holder.shootT !== null && holder.shootT >= 0.2 && me.y === 0
   const steal = holder.shootT === null && close < 1.1 && me.cooldown === 0 && mind.random() < level.stealRate * TICK
   return { ...NO_INPUT, ...goal, jump, action: steal }
 }

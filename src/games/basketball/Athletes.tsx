@@ -5,7 +5,8 @@
 //   standing ............ idle             with the ball, standing ... dribble
 //   running ............. run              with the ball, running .... run on the legs + dribble on the arms
 //   guarding, sliding ... strafe left/right
-//   in the air .......... jump, the arms raised by hand for a shot or a block
+//   rising to shoot ..... the body lifted by the jump, knees bent, in shooting form
+//   up to block ......... one arm high, the other out
 //   beaten by a crossover  stumble          game over ................ victory / defeated
 //
 // A shot, a block and a reach for the ball are made by turning the arm bones toward where the
@@ -27,7 +28,7 @@ const UPPER = /(Spine|Neck|Head|Shoulder|Arm|Hand)/
 const RUN_SPEED = 5.1
 const STRAFE_SPEED = 3.9
 
-type Pose = 'idle' | 'dribble' | 'run' | 'runDribble' | 'strafe_left' | 'strafe_right' | 'jump' | 'stumble' | 'victory' | 'defeated'
+type Pose = 'idle' | 'dribble' | 'run' | 'runDribble' | 'strafe_left' | 'strafe_right' | 'stumble' | 'victory' | 'defeated'
 
 const up = new Vector3(0, 1, 0)
 const a = new Vector3()
@@ -76,6 +77,12 @@ function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id:
       leftArm: find('LeftArm'),
       leftForeArm: find('LeftForeArm'),
       leftHand: find('LeftHand'),
+      leftUpLeg: find('LeftUpLeg'),
+      leftLeg: find('LeftLeg'),
+      leftFoot: find('LeftFoot'),
+      rightUpLeg: find('RightUpLeg'),
+      rightLeg: find('RightLeg'),
+      rightFoot: find('RightFoot'),
     }
   }, [model])
   const mixer = useMemo(() => new AnimationMixer(model), [model])
@@ -100,7 +107,7 @@ function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id:
   }, [gltf, mixer])
 
   const pose = useRef<Pose | null>(null)
-  const blend = useRef({ shoot: 0, block: 0, reach: 0 })
+  const blend = useRef({ shoot: 0, block: 0, reach: 0, rebound: 0, knees: 0 })
 
   const play = (next: Pose) => {
     if (pose.current === next) return
@@ -123,7 +130,7 @@ function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id:
     const p = game.players.find((player) => player.id === id)
     if (!p) return
     const ball = game.ball
-    model.position.set(p.x, p.y * 0.6, p.z)
+    model.position.set(p.x, p.y, p.z)
     // The model faces +z; in the game a player turned 0 faces the basket, along -z.
     model.rotation.y = p.face + Math.PI
 
@@ -138,7 +145,9 @@ function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id:
     let next: Pose
     if (game.phase === 'over') next = game.winner === p.team ? 'victory' : 'defeated'
     else if (p.stumble > 0) next = 'stumble'
-    else if (p.shootT !== null || p.y > 0.05) next = 'jump'
+    // Shooting, or in the air: the body stands (the jump lifts it, and the arms and knees are
+    // posed below), rather than Mixamo's big leap.
+    else if (p.shootT !== null || p.y > 0.03) next = 'idle'
     else if (holding) next = speed > 0.6 ? 'runDribble' : 'dribble'
     else if (speed > 0.6) next = guarding && Math.abs(across) > Math.abs(along) ? (across > 0 ? 'strafe_right' : 'strafe_left') : 'run'
     else next = 'idle'
@@ -150,34 +159,62 @@ function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id:
     pace('runLegs', Math.min(1.6, Math.max(0.6, speed / RUN_SPEED)))
     pace('strafe_left', Math.min(1.6, Math.max(0.6, Math.abs(across) / STRAFE_SPEED)))
     pace('strafe_right', Math.min(1.6, Math.max(0.6, Math.abs(across) / STRAFE_SPEED)))
-    pace('jump', 1.5)
     mixer.update(dt)
     model.updateMatrixWorld(true)
 
-    // The arms, on top of the movement: up to shoot, straight up to block, out to reach.
-    const ease = (now: number, goal: number) => now + (goal - now) * Math.min(1, dt * 14)
+    // On top of the movement: a shot, a block, a rebound, a reach, and bent knees in the air.
+    const ease = (now: number, goal: number) => now + (goal - now) * Math.min(1, dt * 12)
     const reaching = (marks[id] ?? 0) > performance.now() - 280
-    blend.current.shoot = ease(blend.current.shoot, p.shootT !== null ? 1 : 0)
-    blend.current.block = ease(blend.current.block, p.shootT === null && !holding && p.y > 0.05 ? 1 : 0)
+    const airborne = p.y > 0.03
+    const shooting = p.shootT !== null
+    blend.current.shoot = ease(blend.current.shoot, shooting ? 1 : 0)
+    blend.current.block = ease(blend.current.block, !shooting && !holding && airborne && ball.holder !== null ? 1 : 0)
+    blend.current.rebound = ease(blend.current.rebound, !shooting && airborne && ball.holder === null ? 1 : 0)
     blend.current.reach = ease(blend.current.reach, reaching ? 1 : 0)
+    // Knees bend to gather a shot, and stay bent in the air.
+    blend.current.knees = ease(blend.current.knees, airborne ? 0.8 : shooting ? 0.55 : 0)
     const forward = new Vector3(-Math.sin(p.face), 0, -Math.cos(p.face))
+    const right = new Vector3(Math.cos(p.face), 0, -Math.sin(p.face))
+    const dir = (f: number, u: number, r: number) => new Vector3().addScaledVector(forward, f).addScaledVector(up, u).addScaledVector(right, r).normalize()
+    if (blend.current.knees > 0.01) {
+      const w = blend.current.knees
+      for (const [thigh, shin, foot] of [
+        [bones.leftUpLeg, bones.leftLeg, bones.leftFoot],
+        [bones.rightUpLeg, bones.rightLeg, bones.rightFoot],
+      ] as const) {
+        aim(thigh, shin, dir(0.45, -0.9, 0), w)
+        aim(shin, foot, dir(-0.4, -0.9, 0), w)
+      }
+    }
     if (blend.current.shoot > 0.01) {
-      const lift = new Vector3().copy(up).multiplyScalar(0.92).addScaledVector(forward, 0.38).normalize()
-      aim(bones.rightArm, bones.rightForeArm, lift, blend.current.shoot)
-      aim(bones.rightForeArm, bones.rightHand, up, blend.current.shoot)
-      aim(bones.leftArm, bones.leftForeArm, lift, blend.current.shoot * 0.9)
-      aim(bones.leftForeArm, bones.leftHand, up, blend.current.shoot * 0.9)
+      // Shooting form: the shooting arm up with the elbow under the ball, the other hand guiding
+      // it from the side.
+      const w = blend.current.shoot
+      aim(bones.rightArm, bones.rightForeArm, dir(0.62, 0.78, 0.08), w)
+      aim(bones.rightForeArm, bones.rightHand, dir(0.25, 0.97, -0.05), w)
+      aim(bones.leftArm, bones.leftForeArm, dir(0.6, 0.55, -0.35), w)
+      aim(bones.leftForeArm, bones.leftHand, dir(0.2, 0.85, 0.45), w)
     }
     if (blend.current.block > 0.01) {
-      aim(bones.rightArm, bones.rightForeArm, up, blend.current.block)
-      aim(bones.rightForeArm, bones.rightHand, up, blend.current.block)
-      aim(bones.leftArm, bones.leftForeArm, up, blend.current.block)
-      aim(bones.leftForeArm, bones.leftHand, up, blend.current.block)
+      // A contest: one arm high toward the ball, the other out for balance.
+      const w = blend.current.block
+      aim(bones.rightArm, bones.rightForeArm, dir(0.3, 0.95, 0), w)
+      aim(bones.rightForeArm, bones.rightHand, dir(0.25, 0.97, 0), w)
+      aim(bones.leftArm, bones.leftForeArm, dir(0.25, 0.35, -0.9), w * 0.8)
+      aim(bones.leftForeArm, bones.leftHand, dir(0.3, 0.6, -0.7), w * 0.8)
+    }
+    if (blend.current.rebound > 0.01) {
+      // Both hands up and forward, for the ball coming down.
+      const w = blend.current.rebound
+      aim(bones.rightArm, bones.rightForeArm, dir(0.5, 0.85, 0.12), w)
+      aim(bones.rightForeArm, bones.rightHand, dir(0.4, 0.9, 0), w)
+      aim(bones.leftArm, bones.leftForeArm, dir(0.5, 0.85, -0.12), w)
+      aim(bones.leftForeArm, bones.leftHand, dir(0.4, 0.9, 0), w)
     }
     if (blend.current.reach > 0.01) {
-      const low = new Vector3().copy(forward).addScaledVector(up, -0.35).normalize()
-      aim(bones.rightArm, bones.rightForeArm, low, blend.current.reach)
-      aim(bones.rightForeArm, bones.rightHand, low, blend.current.reach)
+      const w = blend.current.reach
+      aim(bones.rightArm, bones.rightForeArm, dir(1, -0.35, 0.05), w)
+      aim(bones.rightForeArm, bones.rightHand, dir(1, -0.4, 0), w)
     }
     // Where the right hand is, for drawing the ball in it.
     if (bones.rightHand) world.current!.hands[id] = bones.rightHand
