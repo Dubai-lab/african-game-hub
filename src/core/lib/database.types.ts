@@ -79,6 +79,53 @@ export type Database = {
           },
         ]
       }
+      basketball_games: {
+        Row: {
+          created_at: string
+          finished_at: string | null
+          match_id: string
+          score_a: number
+          score_b: number
+          seed: number
+          seen_at: string | null
+          started_at: string | null
+          team_size: number
+          winning_side: string | null
+        }
+        Insert: {
+          created_at?: string
+          finished_at?: string | null
+          match_id: string
+          score_a?: number
+          score_b?: number
+          seed: number
+          seen_at?: string | null
+          started_at?: string | null
+          team_size: number
+          winning_side?: string | null
+        }
+        Update: {
+          created_at?: string
+          finished_at?: string | null
+          match_id?: string
+          score_a?: number
+          score_b?: number
+          seed?: number
+          seen_at?: string | null
+          started_at?: string | null
+          team_size?: number
+          winning_side?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "basketball_games_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: true
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blocks: {
         Row: {
           blocked_id: string
@@ -2645,6 +2692,28 @@ export type Database = {
       assert_ledger_integrity: { Args: never; Returns: undefined }
       backup_export: {
         Args: { p_after?: number; p_limit?: number; p_table: string }
+        Returns: Json
+      }
+      basketball_abort: {
+        Args: { p_match_id: string; p_reason: string }
+        Returns: Json
+      }
+      basketball_alive: {
+        Args: { p_match_id: string; p_started: boolean }
+        Returns: boolean
+      }
+      basketball_court_context: {
+        Args: { p_match_id: string; p_user_id: string }
+        Returns: Json
+      }
+      basketball_finish: {
+        Args: {
+          p_match_id: string
+          p_reason: string
+          p_score_a: number
+          p_score_b: number
+          p_winning_side: string
+        }
         Returns: Json
       }
       block_player: { Args: { p_user_id: string }; Returns: Json }

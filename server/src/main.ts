@@ -18,6 +18,7 @@
 import { createServer, type IncomingMessage } from 'node:http'
 import { createClient } from '@supabase/supabase-js'
 import { type WebSocket, WebSocketServer } from 'ws'
+import { type BasketballDb, BasketballCourts, type CourtContext } from './basketball.ts'
 import { type ChessContext, ChessGames, chessRequest } from './chess.ts'
 import { type DraughtsContext, DraughtsGames, draughtsRequest } from './draughts.ts'
 import { type Applied, describe, type Member } from './live.ts'
@@ -112,12 +113,27 @@ const ludo = new LudoTables({
     }),
 })
 
+// Street basketball is run here, not only passed on: see basketball.ts.
+const basketballDb: BasketballDb = {
+  context: (matchId, userId) => call<CourtContext | null>('basketball_court_context', { p_match_id: matchId, p_user_id: userId }),
+  alive: (matchId, started) => call('basketball_alive', { p_match_id: matchId, p_started: started }),
+  finish: (matchId, side, scoreA, scoreB, reason) =>
+    call<{ ok: boolean; code?: string }>('basketball_finish', { p_match_id: matchId, p_winning_side: side, p_score_a: scoreA, p_score_b: scoreB, p_reason: reason }),
+  abort: (matchId, reason) => call('basketball_abort', { p_match_id: matchId, p_reason: reason }),
+}
+const basketball = new BasketballCourts(basketballDb)
+basketball.log = (event, more = {}) => log('warn', event, more)
+// The courts play on sixty times a second; this asks them a little more often than that.
+const courtClock = setInterval(() => basketball.run(Date.now()), 5)
+
 /** Every game played here: how to join and leave it, and how to read and play a move. */
 type Table = {
   join: (member: Member, matchId: string) => Promise<{ ok: true; ply: number } | { ok: false; code: string }>
   leave: (member: Member, matchId: string) => void
   /** Null when the message does not describe a move of this game. */
   move: (member: Member, matchId: string, ply: number, message: Record<string, unknown>) => Promise<Record<string, unknown>> | null
+  /** A real-time game's buttons (basketball): no answer is sent. */
+  input?: (member: Member, matchId: string, message: Record<string, unknown>) => void
   live: () => number
   idle: () => Promise<void>
 }
@@ -163,6 +179,15 @@ const tables: Record<string, Table> = {
     live: () => ludo.live,
     idle: () => Promise.resolve(),
   },
+}
+tables.basketball = {
+  join: (member, matchId) => basketball.join(member, matchId),
+  leave: (member, matchId) => basketball.leave(member, matchId),
+  // Played with buttons, not moves.
+  move: () => null,
+  input: (member, matchId, message) => basketball.input(member, matchId, message),
+  live: () => basketball.live,
+  idle: () => basketball.idle(),
 }
 const liveGames = () => Object.values(tables).reduce((sum, table) => sum + table.live(), 0)
 
@@ -251,6 +276,8 @@ http.on('upgrade', (request, socket, head) => {
 const HELLO_WITHIN_MS = 10_000
 const WINDOW_MS = 10_000
 const MAX_MESSAGES = 40
+// A real-time game sends the buttons as they change: many more, each tiny.
+const MAX_INPUTS = 400
 // How long a player is taken at their word before the server asks again who they are. A ban, a
 // signed-out session or a deleted account is noticed within this long, in the middle of a game.
 const RECHECK_MS = 5 * 60_000
@@ -271,6 +298,7 @@ wss.on('connection', (ws: WebSocket, request: IncomingMessage) => {
     waiting = false
   }
   const recent: number[] = []
+  const inputs: number[] = []
   const send = (message: Record<string, unknown>) => {
     if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(message))
   }
@@ -286,17 +314,25 @@ wss.on('connection', (ws: WebSocket, request: IncomingMessage) => {
 
   ws.on('message', (raw) => {
     const now = Date.now()
-    while (recent.length > 0 && now - recent[0]! > WINDOW_MS) recent.shift()
-    recent.push(now)
-    // Far more than anyone playing sends: a script, not a player.
-    if (recent.length > MAX_MESSAGES) return ws.close(4008, 'too fast')
-
     let message: Record<string, unknown>
     try {
       message = JSON.parse(String(raw)) as Record<string, unknown>
     } catch {
       return ws.close(4000, 'bad message')
     }
+    // Buttons in a real-time game: counted on their own, handled at once.
+    if (message.t === 'in') {
+      while (inputs.length > 0 && now - inputs[0]! > WINDOW_MS) inputs.shift()
+      inputs.push(now)
+      if (inputs.length > MAX_INPUTS) return ws.close(4008, 'too fast')
+      if (joined?.table.input) joined.table.input(joined.member, joined.matchId, message)
+      return
+    }
+    while (recent.length > 0 && now - recent[0]! > WINDOW_MS) recent.shift()
+    recent.push(now)
+    // Far more than anyone playing sends: a script, not a player.
+    if (recent.length > MAX_MESSAGES) return ws.close(4008, 'too fast')
+
     void handle(message).catch((error) => {
       log('error', 'message_failed', { message: describe(error) })
       if (typeof message.id === 'number') send({ t: 'ack', id: message.id, ok: false, code: 'SERVER_ERROR' })
@@ -386,6 +422,7 @@ async function shutdown(signal: string) {
   // Whatever happens, be gone inside ten seconds.
   setTimeout(() => process.exit(0), 9000).unref()
   http.close()
+  clearInterval(courtClock)
   // Moves already accepted are answered first; nothing is held only in memory.
   await Promise.race([Promise.all(Object.values(tables).map((table) => table.idle())), new Promise((resolve) => setTimeout(resolve, 5000))])
   // The app reconnects by itself, and plays through the Edge Functions until we are back.

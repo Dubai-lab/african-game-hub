@@ -108,4 +108,15 @@ const oware: GameAdapter = {
   },
 }
 
-export const games: Record<string, GameAdapter> = { chess, ludo, pool, draughts, checkup, words, oware }
+const basketball: GameAdapter = {
+  queueChoice: (optionsSchema, requested) => {
+    const sizes = (optionsSchema as { players?: unknown } | null)?.players
+    // One against one unless the player asked for two against two.
+    const players = requested.players === undefined ? 2 : requested.players
+    if (!Array.isArray(sizes) || !sizes.includes(players)) return null
+    // One against one is rated; two against two is not yet (a side of two has two winners).
+    return { options: { players }, ratingPool: players === 2 ? 'default' : 'unrated', players: players as number }
+  },
+}
+
+export const games: Record<string, GameAdapter> = { chess, ludo, pool, draughts, checkup, words, oware, basketball }

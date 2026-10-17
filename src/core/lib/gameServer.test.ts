@@ -7,7 +7,7 @@ import { alreadyPlayed, type GameLink, sendMove } from './gameServer'
 // A move goes by the quick road when it is open. When that road lets the move down, the player
 // is not told: the move is sent again by the Edge Function, and the database decides.
 
-const link = (answer: () => Promise<unknown>, ready = true): GameLink => ({ ready, request: answer as GameLink['request'], close: () => undefined })
+const link = (answer: () => Promise<unknown>, ready = true): GameLink => ({ ready, request: answer as GameLink['request'], send: () => false, close: () => undefined })
 const byFunction = (reply: { ok: boolean; code?: string }) => vi.fn(async () => reply as never)
 
 describe('sending a move', () => {

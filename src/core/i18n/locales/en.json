@@ -1861,7 +1861,33 @@
       "again": "Play again"
     },
     "onlineSoon": "Online street basketball is coming soon",
-    "fullScreen": "Full screen"
+    "fullScreen": "Full screen",
+    "online": {
+      "modes": {
+        "2": {
+          "name": "1 on 1",
+          "hint": "You against one player"
+        },
+        "4": {
+          "name": "2 on 2",
+          "hint": "You and a teammate against two players"
+        }
+      },
+      "unavailable": "Online basketball is unavailable right now",
+      "unavailableHint": "The court could not be reached. Nothing was lost: this match will be called off without a result. You can practise against the computer meanwhile.",
+      "connecting": "Getting on court…",
+      "waiting": "Waiting for the other players…",
+      "reconnecting": "Reconnecting…",
+      "calledOff": "Match called off",
+      "again": "Find another match",
+      "reason": {
+        "played": "First to 11 wins.",
+        "abandoned": "A player left and did not come back in time.",
+        "no_show": "Not every player came on court.",
+        "server_lost": "The court went down. The match has no result.",
+        "called_off": "The match has no result."
+      }
+    }
   },
   "leaveGame": {
     "title": "Leave this game?",

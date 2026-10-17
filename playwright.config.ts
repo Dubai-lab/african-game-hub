@@ -20,6 +20,8 @@ export default defineConfig({
     baseURL: `http://localhost:${playerPort}`,
     locale: 'en-US',
     trace: 'retain-on-failure',
+    // A machine without Playwright's own browser can name an installed Chrome (AGH_CHROME).
+    ...(process.env.AGH_CHROME ? { launchOptions: { executablePath: process.env.AGH_CHROME } } : {}),
   },
   // A mid-range Android viewport: this is what most players use.
   projects: [{ name: 'mobile-chrome', use: { ...devices['Pixel 5'] } }],

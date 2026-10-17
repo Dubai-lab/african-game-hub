@@ -1861,7 +1861,33 @@
       "again": "Rejouer"
     },
     "onlineSoon": "Le basket de rue en ligne arrive bientôt",
-    "fullScreen": "Plein écran"
+    "fullScreen": "Plein écran",
+    "online": {
+      "modes": {
+        "2": {
+          "name": "1 contre 1",
+          "hint": "Vous contre un joueur"
+        },
+        "4": {
+          "name": "2 contre 2",
+          "hint": "Vous et un coéquipier contre deux joueurs"
+        }
+      },
+      "unavailable": "Le basket en ligne est indisponible pour le moment",
+      "unavailableHint": "Le terrain est injoignable. Rien n'est perdu : ce match sera annulé sans résultat. Vous pouvez vous entraîner contre l'ordinateur en attendant.",
+      "connecting": "Entrée sur le terrain…",
+      "waiting": "En attente des autres joueurs…",
+      "reconnecting": "Reconnexion…",
+      "calledOff": "Match annulé",
+      "again": "Trouver un autre match",
+      "reason": {
+        "played": "Le premier à 11 gagne.",
+        "abandoned": "Un joueur est parti et n'est pas revenu à temps.",
+        "no_show": "Tous les joueurs ne sont pas venus sur le terrain.",
+        "server_lost": "Le terrain s'est arrêté. Le match n'a pas de résultat.",
+        "called_off": "Le match n'a pas de résultat."
+      }
+    }
   },
   "leaveGame": {
     "title": "Quitter cette partie ?",

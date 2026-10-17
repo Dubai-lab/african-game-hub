@@ -823,3 +823,92 @@ export function cloneGame(game: Game): Game {
     events: [...game.events],
   }
 }
+
+// ---- Online: the court as the server sends it -------------------------------------------------
+//
+// Online, the game server runs the game and sends each player what they need to draw it, about
+// fifteen times a second: every player and the ball, the score and the clock. Small numbers,
+// rounded to the centimetre, in arrays: a few hundred bytes. The phone keeps a whole Game
+// object, filled in from these, for the same drawing code as practice.
+
+/** One player: x, z, y, vx, vz, face, shootT (-1 for none), then flags: dunk, hang, stumble, burst. */
+type PlayerRow = [number, number, number, number, number, number, number, number, number, number, number]
+/** The ball: x, y, z, vx, vy, vz, holder (-1 for none), dribble, then shot/pass flags. */
+type BallRow = [number, number, number, number, number, number, number, number, number]
+export type Snapshot = {
+  k: number
+  ph: Phase
+  pt: number
+  p: PlayerRow[]
+  b: BallRow
+  s: [number, number]
+  o: Team
+  mc: 0 | 1
+  sc: number
+  w: Team | -1
+}
+
+const r2 = (v: number) => Math.round(v * 100) / 100
+
+export function snapshot(game: Game): Snapshot {
+  const b = game.ball
+  return {
+    k: game.tick,
+    ph: game.phase,
+    pt: r2(game.phaseT),
+    p: game.players.map((p) => [r2(p.x), r2(p.z), r2(p.y), r2(p.vx), r2(p.vz), r2(p.face), p.shootT === null ? -1 : r2(p.shootT), p.dunk ? 1 : 0, r2(p.hang), r2(p.stumble), r2(p.burst)]),
+    b: [r2(b.x), r2(b.y), r2(b.z), r2(b.vx), r2(b.vy), r2(b.vz), b.holder ?? -1, r2(b.dribble), (b.shot ? 1 : 0) + (b.pass ? 2 : 0)],
+    s: [game.score[0], game.score[1]],
+    o: game.offense,
+    mc: game.mustClear ? 1 : 0,
+    sc: r2(game.shotClock),
+    w: game.winner ?? -1,
+  }
+}
+
+/** Fills `game` (a game of the same size) in from a snapshot. Only what drawing needs is filled. */
+export function applySnapshot(game: Game, s: Snapshot) {
+  game.tick = s.k
+  game.phase = s.ph
+  game.phaseT = s.pt
+  s.p.forEach((row, i) => {
+    const p = game.players[i]
+    if (!p) return
+    ;[p.x, p.z, p.y, p.vx, p.vz, p.face] = row
+    p.shootT = row[6] < 0 ? null : row[6]
+    p.dunk = row[7] === 1
+    p.hang = row[8]
+    p.stumble = row[9]
+    p.burst = row[10]
+  })
+  const b = game.ball
+  ;[b.x, b.y, b.z, b.vx, b.vy, b.vz] = s.b
+  b.holder = s.b[6] < 0 ? null : s.b[6]
+  b.dribble = s.b[7]
+  b.pass = (s.b[8] & 2) !== 0
+  b.shot = (s.b[8] & 1) !== 0 ? (b.shot ?? { by: -1, team: 0, points: 1, touchedRim: false, quality: 0 }) : null
+  game.score = [s.s[0], s.s[1]]
+  game.offense = s.o
+  game.mustClear = s.mc === 1
+  game.shotClock = s.sc
+  game.winner = s.w === -1 ? null : s.w
+}
+
+/** A player's buttons as sent to the server: [mx, mz, then shoot, action, jump, pass as bits]. */
+export type InputRow = [number, number, number]
+
+export function encodeInput(input: Input): InputRow {
+  return [r2(input.mx), r2(input.mz), (input.shoot ? 1 : 0) | (input.action ? 2 : 0) | (input.jump ? 4 : 0) | (input.pass ? 8 : 0)]
+}
+
+/** A player's buttons from what they sent, or null when it is not a well-formed input. */
+export function decodeInput(row: unknown): Input | null {
+  if (!Array.isArray(row) || row.length !== 3) return null
+  const [mx, mz, bits] = row as unknown[]
+  if (typeof mx !== 'number' || typeof mz !== 'number' || typeof bits !== 'number') return null
+  if (!Number.isFinite(mx) || !Number.isFinite(mz) || !Number.isInteger(bits) || bits < 0 || bits > 15) return null
+  // A stick pushed past its edge counts as the edge.
+  const length = Math.hypot(mx, mz)
+  const scale = length > 1 ? 1 / length : 1
+  return { mx: mx * scale, mz: mz * scale, shoot: (bits & 1) !== 0, action: (bits & 2) !== 0, jump: (bits & 4) !== 0, pass: (bits & 8) !== 0 }
+}

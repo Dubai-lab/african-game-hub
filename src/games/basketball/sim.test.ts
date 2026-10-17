@@ -3,7 +3,10 @@ import {
   ARC,
   CHECK,
   DUNK_RANGE,
+  applySnapshot,
   cloneGame,
+  decodeInput,
+  encodeInput,
   fromRim,
   type Game,
   type GameEvent,
@@ -12,6 +15,7 @@ import {
   NO_INPUT,
   PERFECT_RELEASE,
   RIM,
+  snapshot,
   step,
   TICK,
   TO_WIN,
@@ -334,5 +338,31 @@ describe('whole games', () => {
       step(copy, idle(copy))
     }
     expect(JSON.stringify(copy)).toBe(JSON.stringify(game))
+  })
+})
+
+describe('online: what the server sends and receives', () => {
+  it('a snapshot fills in a game that draws the same as the original', () => {
+    const game = newGame(9, 2)
+    const minds = game.players.map((p) => newMind(p.id + 3))
+    for (let i = 0; i < 60 * 20; i++) step(game, game.players.map((p) => think(game, p.id, levelById('hard'), minds[p.id]!)))
+    const copy = newGame(1, 2)
+    applySnapshot(copy, JSON.parse(JSON.stringify(snapshot(game))))
+    for (const [a, b] of game.players.map((p, i) => [p, copy.players[i]!] as const)) {
+      expect(b.x).toBeCloseTo(a.x, 1)
+      expect(b.z).toBeCloseTo(a.z, 1)
+      expect(b.shootT === null).toBe(a.shootT === null)
+    }
+    expect(copy.ball.holder).toBe(game.ball.holder)
+    expect(copy.score).toEqual(game.score)
+    expect(copy.phase).toBe(game.phase)
+    expect(JSON.stringify(snapshot(game)).length).toBeLessThan(700)
+  })
+
+  it('buttons go there and back, and nothing malformed is taken', () => {
+    const input = { mx: 0.6, mz: -0.8, shoot: true, action: false, jump: false, pass: true }
+    expect(decodeInput(JSON.parse(JSON.stringify(encodeInput(input))))).toEqual(input)
+    expect(decodeInput([5, 0, 0])!.mx).toBeCloseTo(1)
+    for (const bad of [null, [1, 2], [0, 0, 16], [0, 0, 1.5], ['x', 0, 0], [Infinity, 0, 0], { mx: 0 }]) expect(decodeInput(bad)).toBeNull()
   })
 })

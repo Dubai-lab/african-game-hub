@@ -16,3 +16,4 @@ supabase/.branches
 art-src
 backups
 email-preview
+__pycache__/

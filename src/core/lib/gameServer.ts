@@ -18,6 +18,8 @@ export type GameLink = {
   readonly ready: boolean
   /** Sends a request and resolves with the server's answer. Rejects if no answer comes. */
   request: <T>(message: Record<string, unknown>) => Promise<T>
+  /** Sends a message that wants no answer (a real-time game's buttons). False when not connected. */
+  send: (message: Record<string, unknown>) => boolean
   close: () => void
 }
 
@@ -183,6 +185,11 @@ export function openGameLink(game: string, matchId: string, handlers: Handlers):
         waiting.set(id, { resolve: resolve as (value: unknown) => void, reject, timer })
         socket.send(JSON.stringify({ ...message, id }))
       })
+    },
+    send(message: Record<string, unknown>) {
+      if (!ready || !socket || socket.readyState !== WebSocket.OPEN) return false
+      socket.send(JSON.stringify(message))
+      return true
     },
     close() {
       closed = true
