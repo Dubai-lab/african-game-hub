@@ -112,7 +112,10 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
   const [paused, setPaused] = useState(false)
   const pausedRef = useRef(false)
   pausedRef.current = paused
-  const [portrait, setPortrait] = useState(() => window.innerHeight > window.innerWidth)
+  // The game is played sideways. A phone held upright (or locked upright) has the game drawn
+  // turned a quarter, to fill the screen: the player only turns the phone.
+  const measure = () => ({ turned: window.innerHeight > window.innerWidth, width: window.innerWidth, height: window.innerHeight })
+  const [screenSize, setScreenSize] = useState(measure)
 
   const call = useCallback((text: string, tone: Callout['tone'] = 'plain') => {
     const id = Math.random()
@@ -188,7 +191,7 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
     // Away from the app: pause.
     const away = () => document.visibilityState === 'hidden' && setPaused(true)
     document.addEventListener('visibilitychange', away)
-    const turn = () => setPortrait(window.innerHeight > window.innerWidth)
+    const turn = () => setScreenSize(measure())
     window.addEventListener('resize', turn)
     return () => {
       cancelAnimationFrame(frame)
@@ -219,7 +222,12 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
   const sweet = PERFECT_RELEASE / 1.2
 
   return (
-    <div className="relative h-(--app-h) w-full overflow-hidden bg-[#141b45]" data-testid="basketball-practice">
+    <div
+      className={`overflow-hidden bg-[#141b45] ${screenSize.turned ? 'fixed left-0 top-0 origin-top-left' : 'relative h-(--app-h) w-full'}`}
+      style={screenSize.turned ? { width: screenSize.height, height: screenSize.width, transform: `translateX(${screenSize.width}px) rotate(90deg)` } : undefined}
+      data-testid="basketball-practice"
+      data-turned={screenSize.turned}
+    >
       <Court3D world={world} swish={swish} />
 
       {/* The scoreboard. */}
@@ -244,7 +252,8 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
       </div>
 
       {/* What is happening, in a word. */}
-      <div className="pointer-events-none absolute inset-x-0 top-20 flex flex-col items-center gap-1.5">
+      {/* Low in the middle of the screen, so they never cover the basket. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-24 flex flex-col-reverse items-center gap-1.5">
         {hud.phase === 'check' && <p className="glass rounded-full border border-line px-4 py-1 font-display font-extrabold">{t('basketball.call.check')}</p>}
         {hud.mustClear && hud.phase === 'live' && <p className="rounded-full bg-hibiscus px-4 py-1 font-display font-extrabold text-white">{t('basketball.call.takeItBack')}</p>}
         {callouts.map((c) => (
@@ -252,9 +261,9 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
             {c.text}
           </p>
         ))}
-        {portrait && (
-          <button type="button" className="glass pointer-events-auto mt-1 rounded-full border border-line px-3 py-1 text-sm font-semibold" onClick={() => void fullScreen()}>
-            {t('basketball.turnPhone')}
+        {screenSize.turned && (
+          <button type="button" className="glass pointer-events-auto mt-1 rounded-full border border-line px-3 py-1 text-xs font-semibold" onClick={() => void fullScreen()}>
+            {t('basketball.fullScreen')}
           </button>
         )}
       </div>
@@ -267,7 +276,7 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
         </div>
       )}
 
-      {hud.phase !== 'over' && <Controls pad={pad} attacking={hud.attacking} />}
+      {hud.phase !== 'over' && <Controls pad={pad} attacking={hud.attacking} turned={screenSize.turned} />}
 
       {paused && hud.phase !== 'over' && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-ink/60 p-4" role="presentation">

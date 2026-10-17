@@ -157,7 +157,9 @@ Two small line drawings written by hand in that file: a musical note beside the 
 | Asset | Source | License |
 | --- | --- | --- |
 | Player character (`public/basketball/player1.v2.glb`) and its movements (idle, dribble, running, jump, left and right strafe, stumble, victory, defeated) | Adobe Mixamo: the stock character "Ch06" and Mixamo animations, downloaded by the owner on 17 October 2026 and combined, slimmed and converted by `scripts/makeBasketballCharacter.py`. The downloads stay in `art-src/basketball/` and are not published on their own. | Mixamo's terms allow its characters and animations in commercial games, royalty-free, but not redistribution of the raw files on their own. Confirm against Adobe's current terms before launch. |
-| Court, hoop, mural, fence, ball and the stand-in players | Drawn in code for this project (`src/games/basketball/Court3D.tsx`). | Ours |
+| The court and its surroundings (`public/basketball/court.v1.glb`): the painted asphalt, fence, bleachers, benches, buildings, street lights and mural, every texture included | Made in code for this project in Blender by `scripts/makeBasketballCourt.py`. | Ours |
+| The crowd in that court | The Mixamo character above, frozen in poses from its Mixamo movements by the same script. | As for the Mixamo character above |
+| The hoop, ball, a simpler court and the stand-in players (shown while the court downloads, or in data-saver mode) | Drawn in code for this project (`src/games/basketball/Court3D.tsx`). | Ours |
 | Arm movements for the shot, block and steal | Made in code on top of the Mixamo movements (`src/games/basketball/Athletes.tsx`). | Ours |
 | Sounds (bounce, rim, board, net, horn) | Synthesised in the browser (`src/games/basketball/sound.ts`). No audio files. | Ours |
 

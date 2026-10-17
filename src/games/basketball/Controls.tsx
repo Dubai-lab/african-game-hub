@@ -12,7 +12,17 @@ export type Pad = { mx: number; mz: number; main: boolean; second: boolean }
 
 const KNOB = 56
 
-export function Controls({ pad, attacking }: { pad: RefObject<Pad>; attacking: boolean }) {
+/**
+ * Where a touch lands inside an element, in the element's own terms. When the game is drawn
+ * turned a quarter (a phone held upright, see BasketballPracticePage), the screen's down is the
+ * game's left: the touch is turned back the same way.
+ */
+function local(event: { clientX: number; clientY: number }, element: Element, turned: boolean) {
+  const box = element.getBoundingClientRect()
+  return turned ? { x: event.clientY - box.top, y: box.right - event.clientX } : { x: event.clientX - box.left, y: event.clientY - box.top }
+}
+
+export function Controls({ pad, attacking, turned = false }: { pad: RefObject<Pad>; attacking: boolean; turned?: boolean }) {
   const { t } = useTranslation()
   const [stick, setStick] = useState<{ x: number; y: number; dx: number; dy: number } | null>(null)
   const pointer = useRef<number | null>(null)
@@ -108,13 +118,13 @@ export function Controls({ pad, attacking }: { pad: RefObject<Pad>; attacking: b
         onPointerDown={(event) => {
           event.currentTarget.setPointerCapture(event.pointerId)
           pointer.current = event.pointerId
-          const box = event.currentTarget.getBoundingClientRect()
-          moveStick(event.clientX - box.left, event.clientY - box.top, { x: event.clientX - box.left, y: event.clientY - box.top })
+          const at = local(event, event.currentTarget, turned)
+          moveStick(at.x, at.y, at)
         }}
         onPointerMove={(event) => {
           if (pointer.current !== event.pointerId || !stick) return
-          const box = event.currentTarget.getBoundingClientRect()
-          moveStick(event.clientX - box.left, event.clientY - box.top, stick)
+          const at = local(event, event.currentTarget, turned)
+          moveStick(at.x, at.y, stick)
         }}
         onPointerUp={() => {
           pointer.current = null

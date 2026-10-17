@@ -5,9 +5,11 @@
 // The players are stand-ins made of simple shapes, moved by hand (legs that run, an arm that
 // dribbles, both arms up to shoot). They are replaced by the owner's own characters, made in
 // Blender and animated with Mixamo, when those are ready: one model per player, same places.
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
 import { Component, type ReactNode, type RefObject, Suspense, useMemo, useRef } from 'react'
-import { CanvasTexture, type Group, type Mesh, type Object3D, RepeatWrapping, SRGBColorSpace, Vector3 } from 'three'
+import { CanvasTexture, DoubleSide, type Group, type Mesh, type MeshStandardMaterial, type Object3D, PMREMGenerator, RepeatWrapping, SRGBColorSpace, Vector3 } from 'three'
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { useSettingsStore } from '@/core/settings/settingsStore'
 import { ARC, BALL_R, BOARD, COURT, type Game, RIM } from '../../../supabase/functions/_shared/basketball'
 import { Athletes } from './Athletes'
@@ -241,6 +243,41 @@ function Scenery() {
   )
 }
 
+/** The court made in Blender (scripts/makeBasketballCourt.py): the court, fence, bleachers, buildings, lights and crowd. */
+export const COURT_URL = '/basketball/court.v1.glb'
+
+function CourtModel() {
+  const gltf = useLoader(GLTFLoader, COURT_URL)
+  useMemo(() => {
+    gltf.scene.traverse((o) => {
+      const mesh = o as Mesh
+      if (!mesh.isMesh) return
+      // The ground takes the players' shadows; nothing else needs to cast or take any.
+      mesh.receiveShadow = ['court', 'paving'].includes(mesh.name)
+      const material = mesh.material as MeshStandardMaterial
+      if (material.name === 'fence') {
+        // Wire seen from both sides, with clean holes.
+        material.side = DoubleSide
+        material.alphaTest = 0.5
+        material.transparent = false
+      }
+    })
+  }, [gltf])
+  return <primitive object={gltf.scene} />
+}
+
+/** Soft reflections on metal and skin, from a studio-like surrounding (made in code, no download). */
+function Surroundings() {
+  const { gl, scene } = useThree()
+  useMemo(() => {
+    const pmrem = new PMREMGenerator(gl)
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+    scene.environmentIntensity = 0.3
+    pmrem.dispose()
+  }, [gl, scene])
+  return null
+}
+
 function Hoop({ swish }: { swish: RefObject<number> }) {
   const net = useRef<Mesh>(null)
   useFrame(() => {
@@ -262,23 +299,43 @@ function Hoop({ swish }: { swish: RefObject<number> }) {
         <meshStandardMaterial color="#2f3a66" metalness={0.4} roughness={0.5} />
       </mesh>
       {/* The board: glass, with its white square. */}
+      {/* The board: frosted glass in a dark steel frame. */}
       <mesh position={[0, boardY, BOARD.z - 0.02]}>
         <boxGeometry args={[BOARD.halfWidth * 2, BOARD.top - BOARD.bottom, 0.04]} />
-        <meshStandardMaterial color="#dfe8ff" transparent opacity={0.35} roughness={0.1} />
+        <meshStandardMaterial color="#eef3ff" transparent opacity={0.62} roughness={0.15} />
       </mesh>
-      <mesh position={[0, RIM.y + 0.27, BOARD.z + 0.004]}>
-        <planeGeometry args={[0.59, 0.45]} />
-        <meshBasicMaterial color="#ffffff" wireframe />
-      </mesh>
+      {[
+        [0, BOARD.top, BOARD.halfWidth * 2 + 0.06, 0.06],
+        [0, BOARD.bottom, BOARD.halfWidth * 2 + 0.06, 0.06],
+        [-BOARD.halfWidth, boardY, 0.06, BOARD.top - BOARD.bottom],
+        [BOARD.halfWidth, boardY, 0.06, BOARD.top - BOARD.bottom],
+      ].map(([x, y, w, h], i) => (
+        <mesh key={i} position={[x!, y!, BOARD.z]}>
+          <boxGeometry args={[w!, h!, 0.07]} />
+          <meshStandardMaterial color="#1c2130" metalness={0.6} roughness={0.4} />
+        </mesh>
+      ))}
+      {/* The square over the rim, painted on the glass. */}
+      {[
+        [0, RIM.y + 0.15 + 0.45, 0.59, 0.05],
+        [0, RIM.y + 0.15, 0.59, 0.05],
+        [-0.295, RIM.y + 0.375, 0.05, 0.5],
+        [0.295, RIM.y + 0.375, 0.05, 0.5],
+      ].map(([x, y, w, h], i) => (
+        <mesh key={i} position={[x!, y!, BOARD.z + 0.004]}>
+          <planeGeometry args={[w!, h!]} />
+          <meshBasicMaterial color="#ffffff" />
+        </mesh>
+      ))}
       {/* The rim. */}
       <mesh position={[RIM.x, RIM.y, RIM.z]} rotation-x={Math.PI / 2} castShadow>
-        <torusGeometry args={[RIM.r, 0.018, 8, 32]} />
+        <torusGeometry args={[RIM.r, 0.022, 10, 36]} />
         <meshStandardMaterial color="#e5531a" metalness={0.5} roughness={0.35} />
       </mesh>
       {/* The net. */}
       <mesh ref={net} position={[RIM.x, RIM.y - 0.21, RIM.z]}>
         <cylinderGeometry args={[RIM.r, RIM.r * 0.62, 0.42, 16, 4, true]} />
-        <meshBasicMaterial color="#f4f5ff" wireframe transparent opacity={0.75} />
+        <meshBasicMaterial color="#ffffff" wireframe transparent opacity={0.95} />
       </mesh>
     </group>
   )
@@ -513,6 +570,8 @@ export function Court3D({ world, swish }: { world: RefObject<World>; swish: RefO
     <Canvas
       shadows
       dpr={[1, 1.75]}
+      // Measured by its own size, not as it appears on screen: the game may be drawn turned a quarter.
+      resize={{ offsetSize: true }}
       camera={{ fov: 50, near: 0.1, far: 120, position: [0, 4.3, 12] }}
       gl={{ antialias: true, powerPreference: 'high-performance', toneMappingExposure: 1.3 }}
       onCreated={({ scene }) => {
@@ -521,15 +580,32 @@ export function Court3D({ world, swish }: { world: RefObject<World>; swish: RefO
       style={{ touchAction: 'none' }}
     >
       <color attach="background" args={['#141b45']} />
-      <fog attach="fog" args={['#141b45', 22, 48]} />
+      <fog attach="fog" args={['#141b45', 30, 70]} />
+      <Surroundings />
       <hemisphereLight args={['#9fb0ff', '#3a2f48', 1.25]} />
       <ambientLight intensity={0.35} />
       <directionalLight position={[6, 12, 9]} intensity={1.6} color="#ffe2b0" castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={-12} shadow-camera-right={12} shadow-camera-top={14} shadow-camera-bottom={-4} />
       {/* A soft light from behind the camera, so the players' faces and clothes read on the dark court. */}
       <directionalLight position={[0, 5, 18]} intensity={1.4} color="#f4f0ff" />
-      <pointLight position={[-COURT.halfWidth - 1.3, 6.8, 1.5]} intensity={18} distance={18} color="#ffd98a" />
-      <pointLight position={[COURT.halfWidth + 1.3, 6.8, 1.5]} intensity={18} distance={18} color="#ffd98a" />
-      <Scenery />
+      {/* The four street lamps over the court. */}
+      {[
+        [-8.2, -0.5],
+        [8.2, -0.5],
+        [-8.2, 12],
+        [8.2, 12],
+      ].map(([x, z]) => (
+        <pointLight key={`${x}:${z}`} position={[x!, 6.9, z!]} intensity={30} distance={24} decay={1.6} color="#ffd98a" />
+      ))}
+      {/* The court from Blender; the court drawn here while it downloads, in data-saver mode, or if it fails. */}
+      {useSettingsStore.getState().dataSaver ? (
+        <Scenery />
+      ) : (
+        <Fallback fallback={<Scenery />}>
+          <Suspense fallback={<Scenery />}>
+            <CourtModel />
+          </Suspense>
+        </Fallback>
+      )}
       <Hoop swish={swish} />
       {/* The characters; the stand-ins while they download, in data-saver mode, or if they fail. */}
       {useSettingsStore.getState().dataSaver ? (

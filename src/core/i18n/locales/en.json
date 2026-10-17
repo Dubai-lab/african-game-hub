@@ -1777,7 +1777,6 @@
     "computer": "CPU",
     "scoreLabel": "You {{mine}}, computer {{theirs}}",
     "shotClock": "Shot clock",
-    "turnPhone": "Turn your phone sideways for the best view (tap for full screen)",
     "practice": {
       "title": "Street basketball",
       "intro": "Half court, one against one, against the computer. No tokens, no rating: practise your moves and your shot.",
@@ -1843,7 +1842,8 @@
       "score": "Score",
       "again": "Play again"
     },
-    "onlineSoon": "Online street basketball is coming soon"
+    "onlineSoon": "Online street basketball is coming soon",
+    "fullScreen": "Full screen"
   },
   "leaveGame": {
     "title": "Leave this game?",

@@ -1777,7 +1777,6 @@
     "computer": "Ordi",
     "scoreLabel": "Vous {{mine}}, ordinateur {{theirs}}",
     "shotClock": "Chrono des tirs",
-    "turnPhone": "Tournez votre téléphone pour mieux voir (touchez pour le plein écran)",
     "practice": {
       "title": "Basket de rue",
       "intro": "Demi-terrain, un contre un, contre l’ordinateur. Sans jetons ni classement : travaillez vos gestes et votre tir.",
@@ -1843,7 +1842,8 @@
       "score": "Score",
       "again": "Rejouer"
     },
-    "onlineSoon": "Le basket de rue en ligne arrive bientôt"
+    "onlineSoon": "Le basket de rue en ligne arrive bientôt",
+    "fullScreen": "Plein écran"
   },
   "leaveGame": {
     "title": "Quitter cette partie ?",
