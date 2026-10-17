@@ -194,6 +194,29 @@ function Oware() {
   )
 }
 
+function Basketball() {
+  // A street hoop at dusk, the ball on its way in.
+  return (
+    <>
+      <rect width="120" height="100" fill="#1f2a7a" />
+      <rect y="70" width="120" height="30" fill="#2a3142" />
+      <path d="M0 78 Q60 66 120 78" fill="none" stroke="#f4f5ff" strokeWidth="1.5" opacity="0.7" />
+      <circle cx="96" cy="22" r="26" fill="#d1264f" opacity="0.55" />
+      <circle cx="20" cy="30" r="18" fill="#f6b800" opacity="0.5" />
+      {/* The post, the board, the rim and the net. */}
+      <rect x="38" y="20" width="4" height="58" fill="#0b0f24" />
+      <rect x="28" y="14" width="34" height="22" rx="2" fill="#f4f5ff" stroke="#0b0f24" strokeWidth="2" />
+      <rect x="39" y="22" width="12" height="9" fill="none" stroke="#d1264f" strokeWidth="1.6" />
+      <ellipse cx="45" cy="37" rx="9" ry="2.6" fill="none" stroke="#e5531a" strokeWidth="2.4" />
+      <path d="M36.5 37 L39.5 48 L50.5 48 L53.5 37 M40 37 L42 48 M45 37 L45 48 M50 37 L48 48" fill="none" stroke="#f4f5ff" strokeWidth="1" />
+      {/* The ball, with its seams, and the arc it came on. */}
+      <path d="M96 70 Q80 6 52 28" fill="none" stroke="#f6b800" strokeWidth="1.6" strokeDasharray="3 3" />
+      <circle cx="56" cy="27" r="7" fill="#d9631e" stroke="#0b0f24" strokeWidth="1.6" />
+      <path d="M49 27 h14 M56 20 v14 M51 22 q5 5 0 10 M61 22 q-5 5 0 10" fill="none" stroke="#0b0f24" strokeWidth="1" />
+    </>
+  )
+}
+
 function Token() {
   return (
     <>
@@ -204,7 +227,7 @@ function Token() {
   )
 }
 
-const ART: Record<string, () => React.JSX.Element> = { chess: Chess, ludo: Ludo, pool: Pool, draughts: Draughts, checkup: CheckUp, words: Words, oware: Oware, penalty: Penalty, penalty_shootout: Penalty }
+const ART: Record<string, () => React.JSX.Element> = { chess: Chess, ludo: Ludo, pool: Pool, draughts: Draughts, checkup: CheckUp, words: Words, oware: Oware, basketball: Basketball, penalty: Penalty, penalty_shootout: Penalty }
 
 /** Games that have an illustration in public/games/. (Made by `npm run game-art`.) */
 const ILLUSTRATED = new Set(['chess', 'draughts', 'ludo', 'pool', 'penalty', 'penalty_shootout'])

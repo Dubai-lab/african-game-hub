@@ -92,7 +92,7 @@ export default function GameHomePage() {
   const byWins = module?.standing === 'wins'
   const friends = (contacts.data ?? []).filter((contact) => contact.relation === 'friend')
   const play = (
-    <Link to={`/play/${game.id}/new`} data-testid="game-play" className={buttonClass('primary', 'min-h-14 w-full text-lg')}>
+    <Link to={module?.practiceOnly ?? `/play/${game.id}/new`} data-testid="game-play" className={buttonClass('primary', 'min-h-14 w-full text-lg')}>
       {t('play.home.play')}
     </Link>
   )
@@ -136,6 +136,7 @@ export default function GameHomePage() {
           </dl>
         </section>
 
+        {!module?.practiceOnly && (
         <section aria-labelledby="game-friends">
           <div className="flex items-baseline justify-between gap-3">
             <h2 id="game-friends" className={sectionTitle}>
@@ -167,6 +168,7 @@ export default function GameHomePage() {
             </ul>
           )}
         </section>
+        )}
 
       </div>
 

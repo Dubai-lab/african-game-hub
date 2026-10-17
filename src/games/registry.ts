@@ -1,3 +1,4 @@
+import { basketballModule } from './basketball/lobby'
 import { checkupModule } from './checkup/lobby'
 import { chessModule } from './chess/lobby'
 import { draughtsModule } from './draughts/lobby'
@@ -16,6 +17,7 @@ const modules: Record<string, GameModule> = {
   [checkupModule.id]: checkupModule,
   [wordsModule.id]: wordsModule,
   [owareModule.id]: owareModule,
+  [basketballModule.id]: basketballModule,
 }
 
 export function getGameModule(gameId: string): GameModule | undefined {

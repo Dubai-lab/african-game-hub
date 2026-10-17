@@ -139,7 +139,8 @@
       "draughtsBlurb": "Les dames internationales sur un damier de 10 sur 10. La prise est obligatoire, et chaque coup est vérifié par le serveur.",
       "checkupBlurb": "Le jeu de cartes à formes joué dans tout le Nigeria, pour deux à quatre joueurs. Les cartes sont distribuées par le serveur et votre main n’est jamais envoyée à personne d’autre.",
       "wordsBlurb": "Le jeu de lettres sur plateau pour deux à quatre joueurs : formez des mots avec vos lettres et marquez plus que la table. Les mots sont jugés par le serveur et vos lettres ne sont jamais envoyées à personne d’autre. Mots anglais pour l’instant.",
-      "owareBlurb": "Le jeu de semailles du Ghana et de toute la région, aux règles abapa. Semez vos graines, prenez-les par deux ou trois, et soyez le premier à 25. Chaque coup est vérifié par le serveur."
+      "owareBlurb": "Le jeu de semailles du Ghana et de toute la région, aux règles abapa. Semez vos graines, prenez-les par deux ou trois, et soyez le premier à 25. Chaque coup est vérifié par le serveur.",
+      "basketballBlurb": "Du basket de rue en 3D sur demi-terrain, en un contre un : dribblez, crossover, et lâchez votre tir au bon moment. Entraînez-vous contre l’ordinateur dès maintenant ; les matchs en ligne arrivent."
     },
     "how": {
       "title": "Comment ça marche",
@@ -316,7 +317,8 @@
     "penalty": "Tirs au but",
     "checkup": "Check Up",
     "words": "Word Battle",
-    "oware": "Oware (awalé)"
+    "oware": "Oware (awalé)",
+    "basketball": "Basket de rue"
   },
   "about": {
     "link": "À propos",
@@ -1794,7 +1796,8 @@
           "hint": "Contre, intercepte et rate rarement."
         }
       },
-      "start": "Commencer"
+      "start": "Commencer",
+      "link": "S’entraîner contre l’ordinateur"
     },
     "rules": {
       "score": "Un panier à l’intérieur de l’arc vaut 1 point, au-delà 2. Le premier à {{toWin}} gagne.",
@@ -1839,7 +1842,8 @@
       "reason": "Le premier à {{toWin}}.",
       "score": "Score",
       "again": "Rejouer"
-    }
+    },
+    "onlineSoon": "Le basket de rue en ligne arrive bientôt"
   },
   "leaveGame": {
     "title": "Quitter cette partie ?",

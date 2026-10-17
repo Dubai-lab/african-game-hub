@@ -139,7 +139,8 @@
       "draughtsBlurb": "International draughts on a 10 by 10 board. Capturing is compulsory, and every move is checked by the server.",
       "checkupBlurb": "The shape-matching card game played across Nigeria, for two to four players. The cards are dealt on the server and your hand is never sent to anyone else.",
       "wordsBlurb": "The crossword board game for two to four players: make words with your tiles and outscore the table. Words are judged on the server and your tiles are never sent to anyone else.",
-      "owareBlurb": "The sowing game of Ghana and the wider region, Abapa rules. Sow your seeds, take two or three at a time, and be the first to 25. Every move is checked by the server."
+      "owareBlurb": "The sowing game of Ghana and the wider region, Abapa rules. Sow your seeds, take two or three at a time, and be the first to 25. Every move is checked by the server.",
+      "basketballBlurb": "Half-court street basketball in 3D, one against one: dribble, cross over, and hit your jump shot at the right moment. Practice against the computer now; online matches are coming."
     },
     "how": {
       "title": "How it works",
@@ -316,7 +317,8 @@
     "penalty": "Penalty Shootout",
     "checkup": "Check Up",
     "words": "Word Battle",
-    "oware": "Oware"
+    "oware": "Oware",
+    "basketball": "Street Basketball"
   },
   "about": {
     "link": "About us",
@@ -1794,7 +1796,8 @@
           "hint": "Blocks, steals and rarely misses."
         }
       },
-      "start": "Start game"
+      "start": "Start game",
+      "link": "Practise against the computer"
     },
     "rules": {
       "score": "A basket from inside the arc is 1 point, from beyond it 2. First to {{toWin}} wins.",
@@ -1839,7 +1842,8 @@
       "reason": "First to {{toWin}}.",
       "score": "Score",
       "again": "Play again"
-    }
+    },
+    "onlineSoon": "Online street basketball is coming soon"
   },
   "leaveGame": {
     "title": "Leave this game?",

@@ -17,7 +17,7 @@ test('landing page shows every section from live data, with honest copy', async 
 
   // Games registry: chess, ludo, draughts, Oware, pool, Check Up and Word Battle live; nothing is promised that is not built.
   await expect(page.getByRole('heading', { name: 'Chess', level: 3 })).toBeVisible()
-  await expect(page.getByText('Live now')).toHaveCount(7)
+  await expect(page.getByText('Live now')).toHaveCount(8)
   await expect(page.getByText('Coming soon')).toHaveCount(0)
   await expect(page.getByText('Play free, or stake 50 to 1,000 tokens').first()).toBeVisible()
 

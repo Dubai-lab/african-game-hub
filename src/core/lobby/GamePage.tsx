@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, Navigate, useNavigate, useParams } from 'react-router'
 import { type GameType, useRakeBps } from '@/core/games/useGameTypes'
 import { Button, buttonClass } from '@/core/ui/Button'
 import { winnerPayout } from '@/core/wallet/payout'
@@ -166,6 +166,9 @@ export default function GamePage() {
       {t('lobby.cash').toLowerCase()}
     </p>
   )
+
+  // A game whose online play is not open yet is played in practice.
+  if (module?.practiceOnly) return <Navigate to={module.practiceOnly} replace />
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-3 lg:mx-0">

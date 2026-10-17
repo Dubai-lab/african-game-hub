@@ -82,7 +82,7 @@ describe('SQL editor bundle', () => {
       await expect(pg.exec(bundle)).rejects.toThrow(/already applied/)
       await pg.exec('rollback')
       const games = await pg.query<{ n: number }>(`select count(*)::int as n from public.game_types`)
-      expect(games.rows[0]!.n).toBe(8)
+      expect(games.rows[0]!.n).toBe(9)
     } finally {
       await pg.close()
     }

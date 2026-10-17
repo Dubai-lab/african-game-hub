@@ -38,6 +38,12 @@ export type GameModule = {
   practice?: { to: string; labelKey: string }[]
   /** A short name for a set of options, for lists of invitations and tournaments ("5 | 3", "9-ball"). */
   optionsLabel?: (schema: unknown, value: GameOptions | null) => string
+  /**
+   * A game whose online play is not open yet: its Play button goes to this practice page instead
+   * of to Find match, and friends cannot be challenged to it. (Street basketball, until the game
+   * server runs its matches.)
+   */
+  practiceOnly?: string
   /** This game's part of the Settings page (for chess: board colours and pieces), if it has one. */
   SettingsSection?: LazyExoticComponent<ComponentType>
 }
