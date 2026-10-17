@@ -282,7 +282,11 @@ function movePlayer(game: Game, p: Player, input: Input) {
   if (Math.abs(p.x) < 0.5 && p.z < 0.8) p.z = 0.8
   landPlayer(p)
 
-  if (hypot(p.vx, p.vz) > 0.6) p.face = Math.atan2(-p.vx, -p.vz)
+  // A defender close to the ball keeps facing it, and slides; anyone else faces where they go.
+  const carrier = game.ball.holder !== null ? game.players.find((q) => q.id === game.ball.holder) : undefined
+  const guarding = !holding && carrier !== undefined && carrier.team !== p.team && hypot(carrier.x - p.x, carrier.z - p.z) < 3
+  if (guarding) p.face = Math.atan2(-(carrier.x - p.x), -(carrier.z - p.z))
+  else if (hypot(p.vx, p.vz) > 0.6) p.face = Math.atan2(-p.vx, -p.vz)
   else if (holding || p.shootT !== null) p.face = Math.atan2(-(RIM.x - p.x), -(RIM.z - p.z))
   else {
     const ball = game.ball

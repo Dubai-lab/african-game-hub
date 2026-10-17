@@ -103,7 +103,7 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
   const { t } = useTranslation()
   useLockedScreen()
   const seed = useRef((Math.random() * 2 ** 31) | 0)
-  const world = useRef<World>({ game: newGame(seed.current, 1), human: HUMAN })
+  const world = useRef<World>({ game: newGame(seed.current, 1), human: HUMAN, marks: {}, hands: {} })
   const mind = useRef<Mind>(newMind(seed.current + 1))
   const pad = useRef<Pad>({ mx: 0, mz: 0, main: false, second: false })
   const swish = useRef(0)
@@ -137,8 +137,12 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
           call(t('basketball.call.block'), e.by === HUMAN ? 'good' : 'bad')
         } else if (e.type === 'steal') {
           slapSound()
+          world.current.marks[e.by] = performance.now()
           call(t('basketball.call.steal'), e.by === HUMAN ? 'good' : 'bad')
-        } else if (e.type === 'reach') slapSound()
+        } else if (e.type === 'reach') {
+          slapSound()
+          world.current.marks[e.by] = performance.now()
+        }
         else if (e.type === 'crossover' && e.broke) call(t('basketball.call.ankles'), e.by === HUMAN ? 'good' : 'bad')
         else if (e.type === 'turnover') call(t(e.reason === 'out' ? 'basketball.call.out' : 'basketball.call.shotClock'))
         else if (e.type === 'shot' && e.by === HUMAN) {

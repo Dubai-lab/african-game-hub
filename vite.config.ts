@@ -38,6 +38,15 @@ function appShell(): Plugin {
 }
 
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      output: {
+        // The 3D library in a file of its own, with a fixed name, so that it can be kept out of
+        // what every phone downloads at install (see globIgnores below).
+        manualChunks: (id: string) => (/node_modules\/(three|@react-three)\//.test(id) ? 'three' : undefined),
+      },
+    },
+  },
   plugins: [
     react(),
     appShell(),
@@ -71,7 +80,8 @@ export default defineConfig({
         // Never precache the landing page's 3D scene or pictures (app users must not pay for them),
         // nor the font files for scripts we do not use.
         // (The flag font is for computers that cannot draw flags; phones must not be made to fetch it.)
-        globIgnores: ['**/HeroScene-*.js', 'landing/**', 'engine/**', 'words/**', 'fonts/**', '**/*-{math,symbols,vietnamese}-*.woff2'],
+        // Nor the 3D library and street basketball (only those who play it fetch them).
+        globIgnores: ['**/HeroScene-*.js', '**/three-*.js', '**/BasketballPracticePage-*.js', 'landing/**', 'engine/**', 'words/**', 'fonts/**', 'basketball/**', '**/*-{math,symbols,vietnamese}-*.woff2'],
         // App routes open the empty shell; '/' itself is the prerendered landing page.
         navigateFallback: '/app.html',
         navigateFallbackDenylist: [/^\/$/],
@@ -85,6 +95,12 @@ export default defineConfig({
             options: { cacheName: 'sounds', expiration: { maxEntries: 40 } },
           },
           // The word list for Word Battle practice: fetched the first time, then kept on the phone.
+          // Street basketball's characters: fetched the first time someone plays, then kept.
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/basketball/'),
+            handler: 'CacheFirst',
+            options: { cacheName: 'basketball', expiration: { maxEntries: 8 } },
+          },
           {
             urlPattern: ({ url }) => url.pathname.startsWith('/words/'),
             handler: 'CacheFirst',

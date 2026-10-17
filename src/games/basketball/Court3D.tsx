@@ -6,11 +6,20 @@
 // dribbles, both arms up to shoot). They are replaced by the owner's own characters, made in
 // Blender and animated with Mixamo, when those are ready: one model per player, same places.
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { type RefObject, useMemo, useRef } from 'react'
-import { CanvasTexture, type Group, type Mesh, RepeatWrapping, SRGBColorSpace, Vector3 } from 'three'
+import { Component, type ReactNode, type RefObject, Suspense, useMemo, useRef } from 'react'
+import { CanvasTexture, type Group, type Mesh, type Object3D, RepeatWrapping, SRGBColorSpace, Vector3 } from 'three'
+import { useSettingsStore } from '@/core/settings/settingsStore'
 import { ARC, BALL_R, BOARD, COURT, type Game, RIM } from '../../../supabase/functions/_shared/basketball'
+import { Athletes } from './Athletes'
 
-export type World = { game: Game; human: number }
+export type World = {
+  game: Game
+  human: number
+  /** When each player last reached for the ball (performance.now()), to draw the reach. */
+  marks: Record<number, number>
+  /** Each character's right hand, once loaded, to draw the ball in it. */
+  hands: Record<number, Object3D>
+}
 
 const PALETTE = { indigo: '#1f2a7a', indigoSoft: '#4455c7', maize: '#f5b700', hibiscus: '#d1264f', palm: '#0b7a55', white: '#f4f5ff' }
 const TEAM_COLOURS = [
@@ -355,10 +364,8 @@ function Players({ world }: { world: RefObject<World> }) {
   const players = world.current!.game.players
   const limbs = useRef<Partial<Limbs>[]>(players.map(() => ({})))
   const run = useRef<number[]>(players.map(() => 0))
-  const marker = useRef<Mesh>(null)
-
   useFrame((_, dt) => {
-    const { game, human } = world.current!
+    const { game } = world.current!
     const ball = game.ball
     for (const p of game.players) {
       const l = limbs.current[p.id]
@@ -403,9 +410,6 @@ function Players({ world }: { world: RefObject<World> }) {
       }
       if (!guarding) l.body.position.y = 0
     }
-    // A ring of gold under the player at this screen.
-    const me = game.players.find((p) => p.id === human)
-    if (marker.current && me) marker.current.position.set(me.x, 0.02, me.z)
   })
 
   return (
@@ -413,26 +417,64 @@ function Players({ world }: { world: RefObject<World> }) {
       {players.map((p) => (
         <StandIn key={p.id} team={p.team} skin={SKIN[p.id % SKIN.length]!} limbs={(part) => Object.assign(limbs.current[p.id]!, part)} />
       ))}
-      <mesh ref={marker} rotation-x={-Math.PI / 2}>
-        <ringGeometry args={[0.42, 0.52, 32]} />
-        <meshBasicMaterial color={PALETTE.maize} transparent opacity={0.85} />
-      </mesh>
     </>
   )
 }
+
+/** A ring under every player: gold for the player at this screen, red for the other side. */
+function Rings({ world }: { world: RefObject<World> }) {
+  const { game, human } = world.current!
+  const mine = game.players.find((p) => p.id === human)?.team
+  const rings = useRef<(Mesh | null)[]>([])
+  useFrame(() => {
+    for (const p of world.current!.game.players) rings.current[p.id]?.position.set(p.x, 0.02, p.z)
+  })
+  return (
+    <>
+      {game.players.map((p) => (
+        <mesh key={p.id} ref={(m) => void (rings.current[p.id] = m)} rotation-x={-Math.PI / 2}>
+          <ringGeometry args={[0.42, p.id === human ? 0.54 : 0.48, 32]} />
+          <meshBasicMaterial color={p.id === human ? PALETTE.maize : p.team === mine ? PALETTE.indigoSoft : PALETTE.hibiscus} transparent opacity={p.id === human ? 0.9 : 0.65} />
+        </mesh>
+      ))}
+    </>
+  )
+}
+
+/** If the character cannot be loaded, the stand-ins play instead. */
+class Fallback extends Component<{ children: ReactNode; fallback: ReactNode }, { failed: boolean }> {
+  state = { failed: false }
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children
+  }
+}
+
+const handAt = new Vector3()
 
 function Ball({ world }: { world: RefObject<World> }) {
   const mesh = useRef<Mesh>(null)
   const shadow = useRef<Mesh>(null)
   const texture = useMemo(ballTexture, [])
   useFrame((_, dt) => {
-    const ball = world.current!.game.ball
+    const { game, hands } = world.current!
+    const ball = game.ball
     if (!mesh.current || !shadow.current) return
     mesh.current.position.set(ball.x, ball.y, ball.z)
+    // In a character's hand: under the hand while dribbling, in it while shooting.
+    const holder = ball.holder !== null ? game.players.find((p) => p.id === ball.holder) : undefined
+    const hand = ball.holder !== null ? hands[ball.holder] : undefined
+    if (holder && hand) {
+      hand.getWorldPosition(handAt)
+      if (holder.shootT !== null) mesh.current.position.set(handAt.x, handAt.y + BALL_R, handAt.z)
+      else mesh.current.position.set(handAt.x, ball.y, handAt.z)
+    }
     // Spinning as it flies or rolls.
     mesh.current.rotation.x -= (ball.vz / BALL_R) * dt * 0.5
     mesh.current.rotation.z += (ball.vx / BALL_R) * dt * 0.5
-    shadow.current.position.set(ball.x, 0.015, ball.z)
+    shadow.current.position.set(mesh.current.position.x, 0.015, mesh.current.position.z)
     const lift = Math.min(1, ball.y / 4)
     shadow.current.scale.setScalar(1 - lift * 0.5)
   })
@@ -472,7 +514,7 @@ export function Court3D({ world, swish }: { world: RefObject<World>; swish: RefO
       shadows
       dpr={[1, 1.75]}
       camera={{ fov: 50, near: 0.1, far: 120, position: [0, 4.3, 12] }}
-      gl={{ antialias: true, powerPreference: 'high-performance' }}
+      gl={{ antialias: true, powerPreference: 'high-performance', toneMappingExposure: 1.3 }}
       onCreated={({ scene }) => {
         scene.background = null
       }}
@@ -483,11 +525,23 @@ export function Court3D({ world, swish }: { world: RefObject<World>; swish: RefO
       <hemisphereLight args={['#9fb0ff', '#3a2f48', 1.25]} />
       <ambientLight intensity={0.35} />
       <directionalLight position={[6, 12, 9]} intensity={1.6} color="#ffe2b0" castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={-12} shadow-camera-right={12} shadow-camera-top={14} shadow-camera-bottom={-4} />
+      {/* A soft light from behind the camera, so the players' faces and clothes read on the dark court. */}
+      <directionalLight position={[0, 5, 18]} intensity={1.4} color="#f4f0ff" />
       <pointLight position={[-COURT.halfWidth - 1.3, 6.8, 1.5]} intensity={18} distance={18} color="#ffd98a" />
       <pointLight position={[COURT.halfWidth + 1.3, 6.8, 1.5]} intensity={18} distance={18} color="#ffd98a" />
       <Scenery />
       <Hoop swish={swish} />
-      <Players world={world} />
+      {/* The characters; the stand-ins while they download, in data-saver mode, or if they fail. */}
+      {useSettingsStore.getState().dataSaver ? (
+        <Players world={world} />
+      ) : (
+        <Fallback fallback={<Players world={world} />}>
+          <Suspense fallback={<Players world={world} />}>
+            <Athletes world={world} />
+          </Suspense>
+        </Fallback>
+      )}
+      <Rings world={world} />
       <Ball world={world} />
       <Follow world={world} />
     </Canvas>
