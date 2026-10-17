@@ -13,6 +13,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { useSettingsStore } from '@/core/settings/settingsStore'
 import { ARC, BALL_R, BOARD, COURT, type Game, RIM } from '../../../supabase/functions/_shared/basketball'
 import { Athletes } from './Athletes'
+import { PITCH, type View } from './camera'
 
 export type World = {
   game: Game
@@ -21,7 +22,10 @@ export type World = {
   marks: Record<number, number>
   /** Each character's right hand, once loaded, to draw the ball in it. */
   hands: Record<number, Object3D>
+  /** Where the player has turned the camera: see Follow and Controls. */
+  view: View
 }
+
 
 const PALETTE = { indigo: '#1f2a7a', indigoSoft: '#4455c7', maize: '#f5b700', hibiscus: '#d1264f', palm: '#0b7a55', white: '#f4f5ff' }
 const TEAM_COLOURS = [
@@ -587,35 +591,53 @@ function Ball({ world }: { world: RefObject<World> }) {
 }
 
 /**
- * The camera of a television broadcast: high on the near sideline, looking across the court,
- * following the play along it, the basket to the right. Up the screen is away from the camera.
- * (The controls follow the screen: see screenToCourt.)
+ * The camera behind the player at this screen, turned around him by the player's finger
+ * (View), keeping him and the ball in the picture. It turns smoothly to where the finger has
+ * put it, never goes under the floor or through the fence, and at each check it swings round
+ * behind him, facing the basket.
  */
-export const CAMERA_X = 10.5
+const DISTANCE = 6.4
+const BOUNDS = { minX: -8.5, maxX: 12, minZ: -0.7, maxZ: 29 }
 function Follow({ world }: { world: RefObject<World> }) {
   const { camera, size } = useThree()
-  const look = useRef(new Vector3(-1, 0.9, 6))
+  const look = useRef(new Vector3(0, 1.3, 8))
+  const turned = useRef({ yaw: Math.PI, pitch: PITCH.start as number })
+  const phase = useRef<string | null>(null)
   useFrame((_, dt) => {
-    const { game, human } = world.current!
+    const { game, human, view } = world.current!
     const ball = game.ball
-    const me = game.players.find((p) => p.id === human)
-    // Mostly the ball, a little the player at this screen; never past the ends of the play.
-    const along = Math.min(Math.max(ball.z * 0.75 + (me?.z ?? ball.z) * 0.25, 2.2), COURT.depth - 1)
+    const me = game.players.find((p) => p.id === human) ?? game.players[0]!
+    if (game.phase === 'check' && phase.current !== 'check') {
+      // A new possession: behind the player, facing the basket.
+      view.yaw = Math.atan2(RIM.x - me.x, RIM.z - me.z)
+      view.pitch = PITCH.start
+    }
+    phase.current = game.phase
+    // Smoothly to where the finger has turned it (the shortest way round).
+    const k = Math.min(1, dt * 10)
+    let dYaw = view.yaw - turned.current.yaw
+    dYaw = Math.atan2(Math.sin(dYaw), Math.cos(dYaw))
+    turned.current.yaw += dYaw * k
+    turned.current.pitch += (view.pitch - turned.current.pitch) * k
+    const { yaw, pitch } = turned.current
+    // Looking at the player, a little toward the ball.
+    const target = new Vector3(me.x * 0.8 + ball.x * 0.2, 1.3, me.z * 0.8 + ball.z * 0.2)
+    look.current.lerp(target, Math.min(1, dt * 8))
     const portrait = size.height > size.width
-    const goal = new Vector3(portrait ? CAMERA_X + 2.5 : CAMERA_X, portrait ? 8.5 : 6, along + 0.6)
-    const k = Math.min(1, dt * 2.6)
-    camera.position.lerp(goal, k)
-    look.current.lerp(new Vector3(-1 + ball.x * 0.2, 0.9, along), k)
+    const distance = portrait ? DISTANCE * 1.25 : DISTANCE
+    const goal = new Vector3(
+      look.current.x - Math.sin(yaw) * Math.cos(pitch) * distance,
+      look.current.y + Math.sin(pitch) * distance,
+      look.current.z - Math.cos(yaw) * Math.cos(pitch) * distance,
+    )
+    // Inside the fence and above the floor: pulled in toward the player rather than through.
+    goal.x = Math.min(Math.max(goal.x, BOUNDS.minX), BOUNDS.maxX)
+    goal.z = Math.min(Math.max(goal.z, BOUNDS.minZ), BOUNDS.maxZ)
+    goal.y = Math.max(goal.y, 0.8)
+    camera.position.lerp(goal, Math.min(1, dt * 9))
     camera.lookAt(look.current)
   })
   return null
-}
-
-/** A direction pushed on the screen (right, down) as a direction on the court, for the broadcast camera. */
-export function screenToCourt(right: number, down: number): { x: number; z: number } {
-  // The camera looks across the court from the +x side: right on the screen is toward the
-  // basket (-z), down the screen is toward the camera (+x).
-  return { x: down, z: -right }
 }
 
 export function Court3D({ world, swish }: { world: RefObject<World>; swish: RefObject<number> }) {
@@ -625,7 +647,7 @@ export function Court3D({ world, swish }: { world: RefObject<World>; swish: RefO
       dpr={[1, 1.75]}
       // Measured by its own size, not as it appears on screen: the game may be drawn turned a quarter.
       resize={{ offsetSize: true }}
-      camera={{ fov: 46, near: 0.1, far: 140, position: [CAMERA_X, 6, 7] }}
+      camera={{ fov: 55, near: 0.1, far: 140, position: [0, 3.2, 14] }}
       gl={{ antialias: true, powerPreference: 'high-performance', toneMappingExposure: 1.3 }}
       onCreated={({ scene }) => {
         scene.background = null

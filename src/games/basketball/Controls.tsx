@@ -1,6 +1,8 @@
 // What the player holds: a joystick under the left thumb, two buttons under the right. The
-// joystick appears wherever the thumb lands on the left half of the screen. A keyboard works too
-// (arrows or WASD, Space for the main button, J for the other).
+// joystick appears wherever the thumb lands on the left half of the screen; a finger dragged
+// anywhere else on the right half turns the camera. A keyboard works too (arrows or WASD,
+// Space for the main button, J for the other, Q and E to turn the camera); a mouse dragged on
+// the right half turns it as a finger does.
 //
 // The buttons mean different things with and without the ball, as on a real court:
 //   main:   Shoot (hold, let go at the right moment)  /  Block (jump)
@@ -22,7 +24,23 @@ function local(event: { clientX: number; clientY: number }, element: Element, tu
   return turned ? { x: event.clientY - box.top, y: box.right - event.clientX } : { x: event.clientX - box.left, y: event.clientY - box.top }
 }
 
-export function Controls({ pad, attacking, canDunk = false, turned = false }: { pad: RefObject<Pad>; attacking: boolean; canDunk?: boolean; turned?: boolean }) {
+export function Controls({
+  pad,
+  attacking,
+  canDunk = false,
+  turned = false,
+  onLook,
+}: {
+  pad: RefObject<Pad>
+  attacking: boolean
+  canDunk?: boolean
+  turned?: boolean
+  /** The camera finger moved by (dx, dy) pixels, in the game's own directions. */
+  onLook?: (dx: number, dy: number) => void
+}) {
+  const lookFinger = useRef<{ id: number; x: number; y: number } | null>(null)
+  const onLookRef = useRef(onLook)
+  onLookRef.current = onLook
   const { t } = useTranslation()
   const [stick, setStick] = useState<{ x: number; y: number; dx: number; dy: number } | null>(null)
   const pointer = useRef<number | null>(null)
@@ -32,6 +50,10 @@ export function Controls({ pad, attacking, canDunk = false, turned = false }: { 
   // The keyboard, for a computer.
   useEffect(() => {
     const keys = new Set<string>()
+    let turning = 0
+    const spin = window.setInterval(() => {
+      if (turning) onLookRef.current?.(turning * 9, 0)
+    }, 16)
     const update = () => {
       const p = pad.current!
       const x = (keys.has('ArrowRight') || keys.has('d') ? 1 : 0) - (keys.has('ArrowLeft') || keys.has('a') ? 1 : 0)
@@ -42,6 +64,7 @@ export function Controls({ pad, attacking, canDunk = false, turned = false }: { 
         p.mz = z / length
       }
       p.main = keys.has(' ') || keys.has('k')
+      turning = (keys.has('e') ? 1 : 0) - (keys.has('q') ? 1 : 0)
       p.second = keys.has('j') || keys.has('Shift')
       setMain(p.main)
       setSecond(p.second)
@@ -67,6 +90,7 @@ export function Controls({ pad, attacking, canDunk = false, turned = false }: { 
       window.removeEventListener('keydown', down)
       window.removeEventListener('keyup', up)
       window.removeEventListener('blur', clear)
+      window.clearInterval(spin)
     }
   }, [pad])
 
@@ -147,6 +171,26 @@ export function Controls({ pad, attacking, canDunk = false, turned = false }: { 
           <p className="absolute bottom-8 left-8 text-sm font-semibold text-white/50">{t('basketball.controls.move')}</p>
         )}
       </div>
+      {/* The rest of the right half: a finger dragged here turns the camera. Under the buttons. */}
+      <div
+        className="pointer-events-auto absolute bottom-0 right-0 top-16 w-1/2"
+        data-testid="pad-look"
+        onPointerDown={(event) => {
+          event.currentTarget.setPointerCapture(event.pointerId)
+          const at = local(event, event.currentTarget, turned)
+          lookFinger.current = { id: event.pointerId, ...at }
+        }}
+        onPointerMove={(event) => {
+          const finger = lookFinger.current
+          if (!finger || finger.id !== event.pointerId) return
+          const at = local(event, event.currentTarget, turned)
+          onLookRef.current?.(at.x - finger.x, at.y - finger.y)
+          finger.x = at.x
+          finger.y = at.y
+        }}
+        onPointerUp={() => (lookFinger.current = null)}
+        onPointerCancel={() => (lookFinger.current = null)}
+      />
       {/* The right thumb's buttons. */}
       <div className="pointer-events-auto absolute bottom-6 right-5 flex items-end gap-3 pb-[var(--safe-bottom)]">
         {button('second', attacking ? t('basketball.controls.cross') : t('basketball.controls.steal'), false)}

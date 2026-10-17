@@ -12,7 +12,8 @@ import { DUNK_RANGE, fromRim, type Game, type GameEvent, type Input, newGame, PE
 import { isNativeApp, setLandscape } from '@/core/lib/nativeApp'
 import { type Level, levelById, type LevelId, LEVELS, type Mind, newMind, think } from './ai'
 import { Controls, type Pad } from './Controls'
-import { Court3D, screenToCourt, type World } from './Court3D'
+import { newView, PITCH, screenToCourt } from './camera'
+import { Court3D, type World } from './Court3D'
 import { boardSound, bounceSound, hornSound, rimSound, slapSound, swishSound } from './sound'
 
 const STORAGE_KEY = 'agh.basketball.practice'
@@ -111,7 +112,7 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
   const { t } = useTranslation()
   useLockedScreen()
   const seed = useRef((Math.random() * 2 ** 31) | 0)
-  const world = useRef<World>({ game: newGame(seed.current, 1), human: HUMAN, marks: {}, hands: {} })
+  const world = useRef<World>({ game: newGame(seed.current, 1), human: HUMAN, marks: {}, hands: {}, view: newView() })
   const mind = useRef<Mind>(newMind(seed.current + 1))
   const pad = useRef<Pad>({ mx: 0, mz: 0, main: false, second: false })
   const swish = useRef(0)
@@ -182,8 +183,8 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
           carry -= TICK
           const holding = game.ball.holder === HUMAN
           const p = pad.current
-          // The stick and the arrows push in the screen's directions; the court is seen from the side.
-          const toward = screenToCourt(p.mx, p.mz)
+          // The stick and the arrows push the way the camera looks: up is straight ahead.
+          const toward = screenToCourt(p.mx, p.mz, world.current.view.yaw)
           const mine: Input = { mx: toward.x, mz: toward.z, shoot: holding && p.main, jump: !holding && p.main, action: p.second }
           const inputs = game.players.map((player) => (player.id === HUMAN ? mine : think(game, player.id, level, mind.current)))
           step(game, inputs)
@@ -286,7 +287,20 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
         </div>
       )}
 
-      {hud.phase !== 'over' && <Controls pad={pad} attacking={hud.attacking} canDunk={hud.canDunk} turned={screenSize.turned} />}
+      {hud.phase !== 'over' && (
+        <Controls
+          pad={pad}
+          attacking={hud.attacking}
+          canDunk={hud.canDunk}
+          turned={screenSize.turned}
+          onLook={(dx, dy) => {
+            // A finger dragged across the right of the screen turns the camera round the player.
+            const view = world.current.view
+            view.yaw -= dx * 0.0062
+            view.pitch = Math.min(PITCH.max, Math.max(PITCH.min, view.pitch + dy * 0.004))
+          }}
+        />
+      )}
 
       {paused && hud.phase !== 'over' && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-ink/60 p-4" role="presentation">
