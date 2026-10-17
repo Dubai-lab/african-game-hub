@@ -246,8 +246,12 @@ function Scenery() {
   )
 }
 
-/** The court made in Blender (scripts/makeBasketballCourt.py): the court, fence, bleachers, buildings, lights and crowd. */
-export const COURT_URL = '/basketball/court.v2.glb'
+/**
+ * The court made in Blender (scripts/makeBasketballCourt.py): the bought court with its fence
+ * and baskets, and around it the bleachers, buildings, lights and crowd. The nets are the
+ * game's own, so that they move when the ball goes through.
+ */
+export const COURT_URL = '/basketball/court.v3.glb'
 
 function CourtModel() {
   const gltf = useLoader(GLTFLoader, COURT_URL)
@@ -269,6 +273,31 @@ function CourtModel() {
   return <primitive object={gltf.scene} />
 }
 
+function CourtWithNets({ swish }: { swish: RefObject<number> }) {
+  return (
+    <>
+      <CourtModel />
+      <Hoop swish={swish} netOnly />
+      <group position={[0, 0, COURT.depth * 2]} rotation-y={Math.PI}>
+        <Hoop swish={noSwish} netOnly />
+      </group>
+    </>
+  )
+}
+
+/** The court drawn here, with both baskets: while the model downloads, in data-saver mode, or if it fails. */
+function DrawnCourt({ swish }: { swish: RefObject<number> }) {
+  return (
+    <>
+      <Scenery />
+      <Hoop swish={swish} />
+      <group position={[0, 0, COURT.depth * 2]} rotation-y={Math.PI}>
+        <Hoop swish={noSwish} />
+      </group>
+    </>
+  )
+}
+
 /** Soft reflections on metal and skin, from a studio-like surrounding (made in code, no download). */
 function Surroundings() {
   const { gl, scene } = useThree()
@@ -281,7 +310,7 @@ function Surroundings() {
   return null
 }
 
-function Hoop({ swish }: { swish: RefObject<number> }) {
+function Hoop({ swish, netOnly = false }: { swish: RefObject<number>; netOnly?: boolean }) {
   const net = useRef<Mesh>(null)
   useFrame(() => {
     // The net jumps when the ball goes through, and settles.
@@ -290,6 +319,13 @@ function Hoop({ swish }: { swish: RefObject<number> }) {
     if (net.current) net.current.scale.set(1, squash, 1)
   })
   const boardY = (BOARD.bottom + BOARD.top) / 2
+  const netMesh = (
+    <mesh ref={net} position={[RIM.x, RIM.y - 0.21, RIM.z]}>
+      <cylinderGeometry args={[RIM.r, RIM.r * 0.62, 0.42, 16, 4, true]} />
+      <meshBasicMaterial color="#ffffff" wireframe transparent opacity={0.95} />
+    </mesh>
+  )
+  if (netOnly) return netMesh
   return (
     <group>
       {/* The post and the arm. */}
@@ -336,10 +372,7 @@ function Hoop({ swish }: { swish: RefObject<number> }) {
         <meshStandardMaterial color="#e5531a" metalness={0.5} roughness={0.35} />
       </mesh>
       {/* The net. */}
-      <mesh ref={net} position={[RIM.x, RIM.y - 0.21, RIM.z]}>
-        <cylinderGeometry args={[RIM.r, RIM.r * 0.62, 0.42, 16, 4, true]} />
-        <meshBasicMaterial color="#ffffff" wireframe transparent opacity={0.95} />
-      </mesh>
+      {netMesh}
     </group>
   )
 }
@@ -616,20 +649,16 @@ export function Court3D({ world, swish }: { world: RefObject<World>; swish: RefO
         <pointLight key={`${x}:${z}`} position={[x!, 6.9, z!]} intensity={30} distance={24} decay={1.6} color="#ffd98a" />
       ))}
       {/* The court from Blender; the court drawn here while it downloads, in data-saver mode, or if it fails. */}
+      {/* Play is in the near half (street rules); the far basket is for the look of a full court. */}
       {useSettingsStore.getState().dataSaver ? (
-        <Scenery />
+        <DrawnCourt swish={swish} />
       ) : (
-        <Fallback fallback={<Scenery />}>
-          <Suspense fallback={<Scenery />}>
-            <CourtModel />
+        <Fallback fallback={<DrawnCourt swish={swish} />}>
+          <Suspense fallback={<DrawnCourt swish={swish} />}>
+            <CourtWithNets swish={swish} />
           </Suspense>
         </Fallback>
       )}
-      <Hoop swish={swish} />
-      {/* The far basket, at the other end of the full court. Play is in this half (street rules). */}
-      <group position={[0, 0, COURT.depth * 2]} rotation-y={Math.PI}>
-        <Hoop swish={noSwish} />
-      </group>
       {/* The characters; the stand-ins while they download, in data-saver mode, or if they fail. */}
       {useSettingsStore.getState().dataSaver ? (
         <Players world={world} />

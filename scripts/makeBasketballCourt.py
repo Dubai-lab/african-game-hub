@@ -1,7 +1,13 @@
 # Builds the street basketball court for the game, in Blender, without its window:
 #
 #   blender -b --factory-startup --python scripts/makeBasketballCourt.py -- \
-#       art-src/basketball/player1 public/basketball/court.v2.glb art-src/basketball/court-preview.png
+#       art-src/basketball/player1 public/basketball/court.v3.glb art-src/basketball/court-preview.png \
+#       art-src/basketball/court/basket_20blend/Basket_2.0.blend
+#
+# The court itself, its fence and its baskets are a bought model (the last argument; "Street
+# Basketball Court", see ASSETS.md), turned and placed on the game's measurements, with the
+# fence on the camera's side taken away and its pictures made small enough for a phone. Without
+# that argument the court and fence are drawn here instead.
 #
 # Everything is made here, from code: the textures (worn asphalt and its paint, brick, lit
 # windows, chain link, concrete, the mural) and the scene around the court (the fence, the
@@ -19,6 +25,7 @@ import numpy as np
 
 args = sys.argv[sys.argv.index('--') + 1:]
 CHARACTER_DIR, OUT_GLB, OUT_PNG = args[0], args[1], args[2]
+BOUGHT = args[3] if len(args) > 3 else None
 random.seed(7)
 rng = np.random.default_rng(7)
 
@@ -306,8 +313,116 @@ m_wood = material('bench_wood', colour='#7a5232', roughness=0.8)
 m_lamp = material('lamp', colour='#fff4d6', emission='#ffd98a', emission_strength=12, roughness=0.3)
 m_concrete = material('concrete', colour='#6e6c70', roughness=0.95)
 
+# ---- The bought court ------------------------------------------------------------------------
+
+def shrink(img, size):
+    if img.size[0] > size:
+        img.scale(size, size)
+
+
+def bought_court(path):
+    """The bought court, fence and baskets, on the game's measurements."""
+    with bpy.data.libraries.load(path) as (src, dst):
+        # The nets are the game's own (they move when the ball goes through).
+        dst.objects = [n for n in src.objects if n.startswith(('Court', 'Fence', 'HoopFrame', 'HoopPole', 'HoopRing'))]
+    objs = [o for o in dst.objects if o is not None]
+    for o in objs:
+        scene.collection.objects.link(o)
+    bpy.context.view_layer.update()
+    # Each piece on its own (the fence hangs from the court in the file), where it stands.
+    for o in objs:
+        if o.parent:
+            world = o.matrix_world.copy()
+            o.parent = None
+            o.matrix_world = world
+    bpy.context.view_layer.update()
+    # Its court runs along its x, the centre at 0. Turned a quarter, the near basket's rim lands
+    # on the game's (1.575 m out from the baseline, at z = 0 here).
+    from mathutils import Matrix
+    place = Matrix.Translation((0, -13.955, 0)) @ Matrix.Rotation(math.radians(-90), 4, 'Z')
+    for o in objs:
+        o.matrix_world = place @ o.matrix_world
+    bpy.context.view_layer.update()
+    # The top of the court at the floor.
+    court = next(o for o in objs if o.name.startswith('Court'))
+    top = max((court.matrix_world @ v.co).z for v in court.data.vertices)
+    for o in objs:
+        o.location.z -= top
+    bpy.context.view_layer.update()
+    # Nothing between the camera (on the +x side) and the court: that side of the fence goes.
+    for o in objs:
+        if not o.name.startswith('Fence'):
+            continue
+        bm = bmesh.new()
+        bm.from_mesh(o.data)
+        doomed = [f for f in bm.faces if (o.matrix_world @ f.calc_center_median()).x > HALF_W + 0.8]
+        bmesh.ops.delete(bm, geom=doomed, context='FACES')
+        bm.to_mesh(o.data)
+        bm.free()
+    # The rims in fewer pieces: they are small on a phone.
+    for o in objs:
+        if o.name.startswith('HoopRing'):
+            bpy.context.view_layer.objects.active = o
+            d = o.modifiers.new('decimate', 'DECIMATE')
+            d.ratio = 0.15
+            bpy.ops.object.modifier_apply(modifier='decimate')
+    court.name = 'court'
+    for o in objs:
+        for slot in o.material_slots:
+            if slot.material and slot.material.name == 'Fence':
+                slot.material.name = 'fence'
+    # Its materials as the game reads them: the textures on the meshes' own UV maps, the bump map
+    # into the normal input (it was wired to the strength), the shading painted into the colour,
+    # the pictures small.
+    for m in bpy.data.materials:
+        if not m.use_nodes:
+            continue
+        nodes, links = m.node_tree.nodes, m.node_tree.links
+        for l in list(links):
+            if l.from_node.type == 'ATTRIBUTE':
+                links.remove(l)
+        for n in nodes:
+            if n.type == 'NORMAL_MAP':
+                for l in list(n.inputs['Strength'].links):
+                    src_socket = l.from_socket
+                    links.remove(l)
+                    links.new(src_socket, n.inputs['Color'])
+                n.inputs['Strength'].default_value = 1.0
+                for l in n.inputs['Color'].links:
+                    l.from_node.image.colorspace_settings.name = 'Non-Color'
+        images = {n.image.name: n for n in nodes if n.type == 'TEX_IMAGE' and n.image}
+        base = next((n for n in nodes if n.type == 'TEX_IMAGE' and n.image and 'Diffuse' in n.image.name), None)
+        ao = next((n for n in nodes if n.type == 'TEX_IMAGE' and n.image and n.image.name.startswith('Basket_AO')), None)
+        if base and ao:
+            shrink(base.image, 2048)
+            shrink(ao.image, 2048)
+            px = np.empty(2048 * 2048 * 4, dtype=np.float32)
+            base.image.pixels.foreach_get(px)
+            occ = np.empty_like(px)
+            ao.image.pixels.foreach_get(occ)
+            px = px.reshape(-1, 4)
+            px[:, :3] *= (0.35 + 0.65 * occ.reshape(-1, 4)[:, :1])
+            out = bpy.data.images.new('court_colour', 2048, 2048)
+            out.pixels.foreach_set(px.ravel())
+            out.pack()
+            base.image = out
+            nodes.remove(ao)
+        for n in nodes:
+            if n.type == 'TEX_IMAGE' and n.image and n.image is not (base.image if base else None):
+                shrink(n.image, 1024)
+    for o in objs:
+        uv = o.data.uv_layers
+        if len(uv) > 1:
+            uv.active_index = 0
+            uv[0].active_render = True
+    return objs
+
+
 # The ground: the court, paving around it, a street past each end.
-plane('court', 0, DEPTH, 17, LENGTH + 2, 0.0, m_court)
+if BOUGHT:
+    bought_court(BOUGHT)
+else:
+    plane('court', 0, DEPTH, 17, LENGTH + 2, 0.0, m_court)
 plane('paving', 0, DEPTH, 44, LENGTH + 14, -0.006, m_paving, uv=(44 / 2, (LENGTH + 14) / 2))
 
 # A brick wall behind each basket, a mural on the near one, and buildings behind both.
@@ -325,12 +440,15 @@ wall('mural_far', 9, LENGTH + 2.14, -9, LENGTH + 2.14, 5.0, m_mural, y0=3.4)
 # street lights, and a long building behind.
 FENCE_X = HALF_W + 1.6
 x = -FENCE_X
-wall('fence', x, -2.1, x, LENGTH + 2.1, 3.6, m_fence, uv=((LENGTH + 4.2) / 1.4, 3.6 / 1.4))
-for i in range(13):
+if BOUGHT:
+    FENCE_X = HALF_W + 1.45  # the bought court's own fence
+else:
+  wall('fence', x, -2.1, x, LENGTH + 2.1, 3.6, m_fence, uv=((LENGTH + 4.2) / 1.4, 3.6 / 1.4))
+  for i in range(13):
     z = -2.1 + i * ((LENGTH + 4.2) / 12)
     cylinder(f'post_{i}', x, z, 0, 3.7, 0.045, m_dark_metal)
-rail('rail_top', x, -2.1, x, LENGTH + 2.1, 3.65, 0.03, m_dark_metal)
-rail('rail_mid', x, -2.1, x, LENGTH + 2.1, 1.2, 0.025, m_dark_metal)
+  rail('rail_top', x, -2.1, x, LENGTH + 2.1, 3.65, 0.03, m_dark_metal)
+  rail('rail_mid', x, -2.1, x, LENGTH + 2.1, 1.2, 0.025, m_dark_metal)
 box('far_building', -24, 8, DEPTH, 8, 16, LENGTH + 10, m_brick, uv=((LENGTH + 10) / 4, 4))
 wall('far_facade', -19.99, -4, -19.99, LENGTH + 4, 12, m_windows, uv=((LENGTH + 8) / 4, 3), y0=3)
 
