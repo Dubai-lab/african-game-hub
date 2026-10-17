@@ -45,6 +45,9 @@ def rest_world(obj, bone):
 def retarget(source_fbx, rig, name, prefix='mixamorig9:'):
     """Bakes the move in `source_fbx` onto `rig` as an action called `name` (30 frames a second)."""
     before, acts_before = set(bpy.data.objects), set(bpy.data.actions)
+    # Importing the take sets the scene to its 120 frames a second; the scene is put back after,
+    # or every movement in the character's file would play four times too fast.
+    fps = (bpy.context.scene.render.fps, bpy.context.scene.render.fps_base)
     bpy.ops.import_scene.fbx(filepath=source_fbx)
     new = [o for o in bpy.data.objects if o not in before]
     src = next(o for o in new if o.type == 'ARMATURE')
@@ -153,6 +156,7 @@ def retarget(source_fbx, rig, name, prefix='mixamorig9:'):
     for o in new:
         bpy.data.objects.remove(o, do_unlink=True)
     bpy.data.actions.remove(src_action)
+    scene.render.fps, scene.render.fps_base = fps
     action.use_fake_user = True
     return action
 
@@ -217,6 +221,31 @@ def dribble_loop(take, rig, name, cycles=4, hand='mixamorig9:RightHand'):
             pb.keyframe_insert('location', frame=i, group=pb.name)
     out.use_fake_user = True
     return out, each
+
+
+def strokes(take, rig, name, tops, each):
+    """A move cut from `take` between the hand-top frames in `tops`, every stroke between them
+    stretched or squeezed to `each` frames (so the game can time the ball by them). Played once,
+    not looped."""
+    scene = bpy.context.scene
+    use(rig, take)
+    poses = []
+    for i in range(each * (len(tops) - 1) + 1):
+        k, within = divmod(i, each)
+        at = float(tops[-1]) if k >= len(tops) - 1 else tops[k] + (tops[k + 1] - tops[k]) * within / each
+        scene.frame_set(int(at), subframe=at - int(at))
+        poses.append({pb.name: (pb.rotation_quaternion.copy(), pb.location.copy()) for pb in rig.pose.bones})
+    out = bpy.data.actions.new(name)
+    use(rig, out)
+    for i, pose in enumerate(poses):
+        for pb in rig.pose.bones:
+            q, loc = pose[pb.name]
+            pb.rotation_quaternion = q
+            pb.location = loc
+            pb.keyframe_insert('rotation_quaternion', frame=i, group=pb.name)
+            pb.keyframe_insert('location', frame=i, group=pb.name)
+    out.use_fake_user = True
+    return out
 
 
 # ---- On its own: render a film of each move ------------------------------------------------------

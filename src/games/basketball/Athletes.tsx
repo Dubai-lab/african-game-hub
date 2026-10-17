@@ -18,16 +18,24 @@ import { type AnimationAction, AnimationClip, AnimationMixer, type Bone, Color, 
 import { type GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import type { World } from './Court3D'
+import { BALL_R } from '../../../supabase/functions/_shared/basketball'
 import { dyeClothes } from './clothes'
 
 // A new name for every new version: phones keep these files, and must not keep an old one.
-export const CHARACTER_URL = '/basketball/player1.v3.glb'
+export const CHARACTER_URL = '/basketball/player1.v5.glb'
 /**
  * The dribble is motion capture: a loop of this many dribbles of the same length, the hand at
  * the top of its stroke at the start of each (scripts/makeBasketballCharacter.py). The ball is
  * timed by it: it leaves the palm, meets the floor half way, and is back in the palm.
  */
 export const DRIBBLE_CYCLES = 4
+/**
+ * The crossover, also motion capture: two strokes of the dribble's length, the ball from the
+ * right hand across to the left, then back to the right, where the dribble takes it up again.
+ */
+const CROSS_HANDS = ['right', 'left', 'right'] as const
+/** How much faster than captured: the dribble standing and running, the crossover. */
+const PACE = { dribble: 1.35, runDribble: 1.6, cross: 2.1 }
 
 // Which bones belong to the legs and which to the arms, for playing two movements at once.
 const LOWER = /(Hips|UpLeg|Leg|Foot|Toe)/
@@ -36,7 +44,7 @@ const UPPER = /(Spine|Neck|Head|Shoulder|Arm|Hand)/
 const RUN_SPEED = 5.1
 const STRAFE_SPEED = 3.9
 
-type Pose = 'idle' | 'dribble' | 'run' | 'runDribble' | 'strafe_left' | 'strafe_right' | 'stumble' | 'victory' | 'defeated'
+type Pose = 'idle' | 'dribble' | 'run' | 'runDribble' | 'cross' | 'runCross' | 'strafe_left' | 'strafe_right' | 'stumble' | 'victory' | 'defeated'
 
 const up = new Vector3(0, 1, 0)
 const a = new Vector3()
@@ -63,6 +71,8 @@ function aim(bone: Object3D | undefined, child: Object3D | undefined, direction:
 const KIT = ['#3d4fd6', '#d1264f']
 
 const handTip = new Vector3()
+const palmA = new Vector3()
+const palmB = new Vector3()
 
 function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id: number }) {
   const model = useMemo(() => {
@@ -94,6 +104,7 @@ function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id:
       rightForeArm: find('RightForeArm'),
       rightHand: find('RightHand'),
       rightMiddle: find('RightHandMiddle1'),
+      leftMiddle: find('LeftHandMiddle1'),
       leftArm: find('LeftArm'),
       leftForeArm: find('LeftForeArm'),
       leftHand: find('LeftHand'),
@@ -114,9 +125,11 @@ function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id:
     for (const c of gltf.animations) all[c.name] = mixer.clipAction(c)
     const legs = only(clip('run'), LOWER, 'runLegs')
     const arms = only(clip('dribble'), UPPER, 'dribbleArms')
+    const crossArms = only(clip('crossover'), UPPER, 'crossArms')
     if (legs) all.runLegs = mixer.clipAction(legs)
     if (arms) all.dribbleArms = mixer.clipAction(arms)
-    for (const name of ['jump', 'stumble']) {
+    if (crossArms) all.crossArms = mixer.clipAction(crossArms)
+    for (const name of ['jump', 'stumble', 'crossover', 'crossArms']) {
       const action = all[name]
       if (action) {
         action.setLoop(LoopOnce, 1)
@@ -127,11 +140,14 @@ function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id:
   }, [gltf, mixer])
 
   const pose = useRef<Pose | null>(null)
+  // A crossover under way: from the moment it is heard (World.crosses) until its two strokes end.
+  const crossing = useRef({ seen: 0, on: false })
   const blend = useRef({ shoot: 0, block: 0, reach: 0, rebound: 0, knees: 0 })
 
   const play = (next: Pose) => {
     if (pose.current === next) return
-    const names = (p: Pose | null) => (p === null ? [] : p === 'runDribble' ? ['runLegs', 'dribbleArms'] : [p])
+    const names = (p: Pose | null) =>
+      p === null ? [] : p === 'runDribble' ? ['runLegs', 'dribbleArms'] : p === 'runCross' ? ['runLegs', 'crossArms'] : p === 'cross' ? ['crossover'] : [p]
     const leaving = names(pose.current)
     const coming = names(next)
     for (const name of leaving) if (!coming.includes(name)) actions[name]?.fadeOut(0.18)
@@ -140,7 +156,7 @@ function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id:
       if (!action) continue
       if (!leaving.includes(name)) action.reset()
       action.setEffectiveWeight(1).fadeIn(0.18).play()
-      if (name !== 'jump' && name !== 'stumble') action.setLoop(LoopRepeat, Infinity)
+      if (!['jump', 'stumble', 'crossover', 'crossArms'].includes(name)) action.setLoop(LoopRepeat, Infinity)
     }
     pose.current = next
   }
@@ -162,12 +178,23 @@ function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id:
     const across = p.vx * Math.cos(p.face) - p.vz * Math.sin(p.face)
     const along = -p.vx * Math.sin(p.face) - p.vz * Math.cos(p.face)
 
+    const crossed = world.current!.crosses[id] ?? 0
+    if (crossed !== crossing.current.seen) {
+      crossing.current.seen = crossed
+      crossing.current.on = holding
+      actions.crossover?.reset()
+      actions.crossArms?.reset()
+    }
+    const crossAction = speed > 0.6 ? actions.crossArms : actions.crossover
+    if (!holding || (crossAction && crossAction.time >= crossAction.getClip().duration - 1e-3)) crossing.current.on = false
+
     let next: Pose
     if (game.phase === 'over') next = game.winner === p.team ? 'victory' : 'defeated'
     else if (p.stumble > 0) next = 'stumble'
     // Shooting, or in the air: the body stands (the jump lifts it, and the arms and knees are
     // posed below), rather than Mixamo's big leap.
     else if (p.shootT !== null || p.y > 0.03) next = 'idle'
+    else if (holding && crossing.current.on) next = speed > 0.6 ? 'runCross' : 'cross'
     else if (holding) next = speed > 0.6 ? 'runDribble' : 'dribble'
     else if (speed > 0.6) next = guarding && Math.abs(across) > Math.abs(along) ? (across > 0 ? 'strafe_right' : 'strafe_left') : 'run'
     else next = 'idle'
@@ -177,6 +204,10 @@ function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id:
     const pace = (name: string, value: number) => actions[name] && (actions[name]!.timeScale = value)
     pace('run', Math.min(1.6, Math.max(0.6, speed / RUN_SPEED)))
     pace('runLegs', Math.min(1.6, Math.max(0.6, speed / RUN_SPEED)))
+    pace('dribble', PACE.dribble)
+    pace('dribbleArms', PACE.runDribble)
+    pace('crossover', PACE.cross)
+    pace('crossArms', PACE.cross)
     pace('strafe_left', Math.min(1.6, Math.max(0.6, Math.abs(across) / STRAFE_SPEED)))
     pace('strafe_right', Math.min(1.6, Math.max(0.6, Math.abs(across) / STRAFE_SPEED)))
     mixer.update(dt)
@@ -238,16 +269,29 @@ function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id:
     }
     // Where the right hand is, for drawing the ball in it.
     if (bones.rightHand) world.current!.hands[id] = bones.rightHand
-    // Where in the dribble the hand is, for the ball to meet it (see DRIBBLE_CYCLES).
-    const dribbling = holding && !shooting && !airborne && (pose.current === 'dribble' || pose.current === 'runDribble')
-    const stroke = pose.current === 'runDribble' ? actions.dribbleArms : actions.dribble
-    if (dribbling && stroke && bones.rightHand && bones.rightMiddle) {
-      const length = stroke.getClip().duration
-      const palm = (world.current!.dribble[id] ??= { phase: 0, palm: new Vector3() })
-      palm.phase = ((stroke.time / length) * DRIBBLE_CYCLES) % 1
-      bones.rightHand.getWorldPosition(palm.palm)
-      bones.rightMiddle.getWorldPosition(handTip)
-      palm.palm.lerp(handTip, 0.6)
+    // The ball in the dribble, as drawn: pushed down from under one palm at the top of a stroke,
+    // to the floor half way, and up into the same palm (a dribble) or the other (a crossover).
+    const crossNow = pose.current === 'cross' || pose.current === 'runCross'
+    const stroke = crossNow ? crossAction : pose.current === 'runDribble' ? actions.dribbleArms : pose.current === 'dribble' ? actions.dribble : undefined
+    if (holding && !shooting && !airborne && stroke && bones.rightHand && bones.rightMiddle && bones.leftHand && bones.leftMiddle) {
+      const strokes = crossNow ? CROSS_HANDS.length - 1 : DRIBBLE_CYCLES
+      const through = Math.min(0.9999, stroke.time / stroke.getClip().duration) * strokes
+      const k = Math.floor(through)
+      const phase = through - k
+      const palmOf = (side: 'left' | 'right', into: Vector3) => {
+        const [hand, middle] = side === 'right' ? [bones.rightHand!, bones.rightMiddle!] : [bones.leftHand!, bones.leftMiddle!]
+        hand.getWorldPosition(into)
+        middle.getWorldPosition(handTip)
+        return into.lerp(handTip, 0.6)
+      }
+      const from = palmOf(crossNow ? CROSS_HANDS[k]! : 'right', palmA)
+      const to = palmOf(crossNow ? CROSS_HANDS[k + 1]! : 'right', palmB)
+      const drawn = (world.current!.dribble[id] ??= { phase: 0, at: new Vector3() })
+      drawn.phase = phase
+      const under = (palm: Vector3) => palm.y - BALL_R - 0.02
+      const high = under(from) + (under(to) - under(from)) * phase
+      const depth = 1 - Math.abs(2 * phase - 1)
+      drawn.at.set(from.x + (to.x - from.x) * phase, high + (BALL_R - high) * depth, from.z + (to.z - from.z) * phase)
     } else delete world.current!.dribble[id]
   })
 

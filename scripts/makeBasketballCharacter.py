@@ -1,7 +1,7 @@
 # Builds one basketball character for the game from Mixamo downloads.
 #
 #   blender -b --factory-startup --python scripts/makeBasketballCharacter.py -- \
-#       art-src/basketball/player1 public/basketball/player1.v3.glb art-src/basketball/player1/preview.png
+#       art-src/basketball/player1 public/basketball/player1.v5.glb art-src/basketball/player1/preview.png
 #
 # The folder holds the FBX files downloaded from Mixamo for one character (see CLIPS below for
 # the file names). The character itself is taken from "Happy Idle.fbx"; only the movement is
@@ -48,7 +48,7 @@ for m in list(bpy.data.meshes):
 # length, the hand at the top of its stroke at the start of each (the game times the ball by it:
 # DRIBBLE_CYCLES in src/games/basketball/Athletes.tsx).
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from retargetBasketball import retarget, dribble_loop
+from retargetBasketball import retarget, dribble_loop, strokes
 MOVES = os.path.join(os.path.dirname(os.path.abspath(src)), 'animations')
 if os.path.isdir(MOVES):
     take = retarget(os.path.join(MOVES, 'Dribbling_in_Place_with_One_Hand.FBX'), rig, 'dribble_take')
@@ -56,6 +56,13 @@ if os.path.isdir(MOVES):
     loop, each = dribble_loop(take, rig, 'dribble', cycles=4)
     bpy.data.actions.remove(take)
     print('DRIBBLE', each, 'frames a dribble,', int(loop.frame_range[1]), 'in the loop')
+    # The crossover: in the two-hand take the ball goes across on every bounce; the right hand is
+    # at the top of its stroke at frame 17, the left at 40, the right again at 64 (found by
+    # following both hands through the take). Two strokes the length of the dribble's, right to
+    # left and back (CROSS_STROKES in Athletes.tsx).
+    take = retarget(os.path.join(MOVES, 'Dribbling_in_Place_in_Basketball.FBX'), rig, 'cross_take')
+    strokes(take, rig, 'crossover', [17, 40, 64], each)
+    bpy.data.actions.remove(take)
 
 # Movements made to travel ("In Place" not ticked) are kept on the spot: the game moves the
 # player across the court itself. The drift of the hips from the first frame to the last is
@@ -133,6 +140,8 @@ for a in bpy.data.actions:
     try: strip.action_slot = a.slots[0]
     except Exception: pass
 
+# Every movement at the 30 frames a second it was made in.
+bpy.context.scene.render.fps, bpy.context.scene.render.fps_base = 30, 1.0
 bpy.ops.export_scene.gltf(filepath=out_glb, export_format='GLB', export_animation_mode='NLA_TRACKS', export_image_format='JPEG', export_image_quality=82,
                           export_optimize_animation_size=True, export_apply=False, export_yup=True)
 print('GLB', os.path.getsize(out_glb))

@@ -26,8 +26,10 @@ export type World = {
   hands: Record<number, Object3D>
   /** Where the player has turned the camera: see Follow and Controls. */
   view: View
-  /** Each character's dribble, while dribbling: how far through the stroke, and the palm (see Athletes). */
-  dribble: Record<number, { phase: number; palm: Vector3 }>
+  /** The ball in each character's dribble, as drawn: how far through the stroke, and where (see Athletes). */
+  dribble: Record<number, { phase: number; at: Vector3 }>
+  /** When each player last went into a crossover (performance.now()), for the character to play it. */
+  crosses: Record<number, number>
 }
 
 
@@ -577,10 +579,7 @@ function Ball({ world }: { world: RefObject<World> }) {
     const hand = ball.holder !== null ? hands[ball.holder] : undefined
     const stroke = ball.holder !== null ? world.current!.dribble[ball.holder] : undefined
     if (holder && stroke) {
-      // Pushed down from under the palm, to the floor half way through the stroke, and back up.
-      const under = stroke.palm.y - BALL_R - 0.02
-      const depth = 1 - Math.abs(2 * stroke.phase - 1)
-      mesh.current.position.set(stroke.palm.x, under + (BALL_R - under) * depth, stroke.palm.z)
+      mesh.current.position.copy(stroke.at)
       if (lastPhase.current < 0.5 && stroke.phase >= 0.5) bounceSound(3)
       lastPhase.current = stroke.phase
     } else if (holder && hand) {
