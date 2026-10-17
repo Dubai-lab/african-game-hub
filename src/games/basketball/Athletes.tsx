@@ -19,7 +19,8 @@ import { type GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import type { World } from './Court3D'
 
-export const CHARACTER_URL = '/basketball/player1.glb'
+// A new name for every new version: phones keep these files, and must not keep an old one.
+export const CHARACTER_URL = '/basketball/player1.v2.glb'
 
 // Which bones belong to the legs and which to the arms, for playing two movements at once.
 const LOWER = /(Hips|UpLeg|Leg|Foot|Toe)/
