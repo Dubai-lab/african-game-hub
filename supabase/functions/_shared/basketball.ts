@@ -97,7 +97,7 @@ export type Ball = {
 }
 
 export type GameEvent =
-  | { type: 'bounce'; speed: number }
+  | { type: 'bounce'; speed: number; dribble?: boolean }
   | { type: 'rim'; speed: number }
   | { type: 'board' }
   | { type: 'shot'; by: number; quality: number; points: 1 | 2; dunk?: boolean }
@@ -458,7 +458,7 @@ function holdBall(game: Game, p: Player) {
     const before = Math.sin(ball.dribble)
     ball.dribble += TICK * Math.PI * 2 * (hypot(p.vx, p.vz) > 1 ? 2.3 : 1.7)
     const after = Math.sin(ball.dribble)
-    if (before > 0 && after <= 0) game.events.push({ type: 'bounce', speed: 3 })
+    if (before > 0 && after <= 0) game.events.push({ type: 'bounce', speed: 3, dribble: true })
     ball.x = p.x + rx * side + fx * 0.25
     ball.z = p.z + rz * side + fz * 0.25
     ball.y = BALL_R + Math.abs(Math.sin(ball.dribble)) * 0.82

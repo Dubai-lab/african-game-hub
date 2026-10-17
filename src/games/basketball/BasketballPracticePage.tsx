@@ -112,7 +112,7 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
   const { t } = useTranslation()
   useLockedScreen()
   const seed = useRef((Math.random() * 2 ** 31) | 0)
-  const world = useRef<World>({ game: newGame(seed.current, 1), human: HUMAN, marks: {}, hands: {}, view: newView() })
+  const world = useRef<World>({ game: newGame(seed.current, 1), human: HUMAN, marks: {}, hands: {}, view: newView(), dribble: {} })
   const mind = useRef<Mind>(newMind(seed.current + 1))
   const pad = useRef<Pad>({ mx: 0, mz: 0, main: false, second: false })
   const swish = useRef(0)
@@ -136,7 +136,8 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
   const hear = useCallback(
     (events: GameEvent[]) => {
       for (const e of events) {
-        if (e.type === 'bounce') bounceSound(e.speed)
+        // A dribble the character draws makes its own sound, on the floor as drawn (Court3D).
+        if (e.type === 'bounce' && !(e.dribble && Object.keys(world.current.dribble).length)) bounceSound(e.speed)
         else if (e.type === 'rim') rimSound(e.speed)
         else if (e.type === 'board') boardSound()
         else if (e.type === 'score') {

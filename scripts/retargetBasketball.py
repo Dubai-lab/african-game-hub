@@ -157,6 +157,68 @@ def retarget(source_fbx, rig, name, prefix='mixamorig9:'):
     return action
 
 
+def use(rig, action):
+    rig.animation_data_create()
+    rig.animation_data.action = action
+    try:
+        rig.animation_data.action_slot = action.slots[0]
+    except Exception:
+        pass
+
+
+def dribble_loop(take, rig, name, cycles=4, hand='mixamorig9:RightHand'):
+    """A clean loop of `cycles` dribbles cut from the middle of a dribbling take, every dribble
+    the same length (so the game can put the ball in the hand at the right moment: the hand is
+    at the top of its stroke at the start of each), the end joined smoothly back to the start
+    and the drift across the floor taken out. Returns (action, frames per dribble)."""
+    scene = bpy.context.scene
+    use(rig, take)
+    frames = int(take.frame_range[1]) + 1
+    height = []
+    for f in range(frames):
+        scene.frame_set(f)
+        height.append((rig.matrix_world @ rig.pose.bones[hand].head).z)
+    tops = [f for f in range(3, frames - 3) if height[f] == max(height[f - 3:f + 4])]
+    best = None
+    for i in range(len(tops) - cycles):
+        lengths = [tops[i + k + 1] - tops[i + k] for k in range(cycles)]
+        if min(lengths) >= 8 and max(lengths) - min(lengths) <= 4:
+            score = abs(i + cycles / 2 - len(tops) / 2)
+            if best is None or score < best[0]:
+                best = (score, i)
+    if best is None:
+        raise RuntimeError(f'no steady dribbling in {take.name}: tops at {tops}')
+    span = tops[best[1]:best[1] + cycles + 1]
+    each = round((span[-1] - span[0]) / cycles)
+    total = each * cycles
+
+    def source(i):
+        k, within = divmod(i, each)
+        if k >= cycles:
+            return float(span[-1])
+        return span[k] + (span[k + 1] - span[k]) * within / each
+
+    poses = []
+    for i in range(total + 1):
+        at = source(i)
+        scene.frame_set(int(at), subframe=at - int(at))
+        poses.append({pb.name: (pb.rotation_quaternion.copy(), pb.location.copy()) for pb in rig.pose.bones})
+    first, last = poses[0], poses[-1]
+    out = bpy.data.actions.new(name)
+    use(rig, out)
+    for i, pose in enumerate(poses):
+        w = i / total
+        for pb in rig.pose.bones:
+            q, loc = pose[pb.name]
+            fix = Quaternion().slerp(first[pb.name][0] @ last[pb.name][0].inverted(), w)
+            pb.rotation_quaternion = fix @ q
+            pb.location = loc + (first[pb.name][1] - last[pb.name][1]) * w
+            pb.keyframe_insert('rotation_quaternion', frame=i, group=pb.name)
+            pb.keyframe_insert('location', frame=i, group=pb.name)
+    out.use_fake_user = True
+    return out, each
+
+
 # ---- On its own: render a film of each move ------------------------------------------------------
 
 MOVES = [

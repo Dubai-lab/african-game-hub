@@ -15,6 +15,7 @@ import { ARC, BALL_R, BOARD, COURT, type Game, RIM } from '../../../supabase/fun
 import { Athletes } from './Athletes'
 import { PITCH, type View } from './camera'
 import { dyeClothes } from './clothes'
+import { bounceSound } from './sound'
 
 export type World = {
   game: Game
@@ -25,6 +26,8 @@ export type World = {
   hands: Record<number, Object3D>
   /** Where the player has turned the camera: see Follow and Controls. */
   view: View
+  /** Each character's dribble, while dribbling: how far through the stroke, and the palm (see Athletes). */
+  dribble: Record<number, { phase: number; palm: Vector3 }>
 }
 
 
@@ -562,6 +565,7 @@ const noSwish = { current: 0 }
 function Ball({ world }: { world: RefObject<World> }) {
   const mesh = useRef<Mesh>(null)
   const shadow = useRef<Mesh>(null)
+  const lastPhase = useRef(0)
   const texture = useMemo(ballTexture, [])
   useFrame((_, dt) => {
     const { game, hands } = world.current!
@@ -571,7 +575,15 @@ function Ball({ world }: { world: RefObject<World> }) {
     // In a character's hand: under the hand while dribbling, in it while shooting.
     const holder = ball.holder !== null ? game.players.find((p) => p.id === ball.holder) : undefined
     const hand = ball.holder !== null ? hands[ball.holder] : undefined
-    if (holder && hand) {
+    const stroke = ball.holder !== null ? world.current!.dribble[ball.holder] : undefined
+    if (holder && stroke) {
+      // Pushed down from under the palm, to the floor half way through the stroke, and back up.
+      const under = stroke.palm.y - BALL_R - 0.02
+      const depth = 1 - Math.abs(2 * stroke.phase - 1)
+      mesh.current.position.set(stroke.palm.x, under + (BALL_R - under) * depth, stroke.palm.z)
+      if (lastPhase.current < 0.5 && stroke.phase >= 0.5) bounceSound(3)
+      lastPhase.current = stroke.phase
+    } else if (holder && hand) {
       hand.getWorldPosition(handAt)
       if (holder.shootT !== null) mesh.current.position.set(handAt.x, handAt.y + BALL_R, handAt.z)
       else mesh.current.position.set(handAt.x, ball.y, handAt.z)

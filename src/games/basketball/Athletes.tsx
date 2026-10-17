@@ -21,7 +21,13 @@ import type { World } from './Court3D'
 import { dyeClothes } from './clothes'
 
 // A new name for every new version: phones keep these files, and must not keep an old one.
-export const CHARACTER_URL = '/basketball/player1.v2.glb'
+export const CHARACTER_URL = '/basketball/player1.v3.glb'
+/**
+ * The dribble is motion capture: a loop of this many dribbles of the same length, the hand at
+ * the top of its stroke at the start of each (scripts/makeBasketballCharacter.py). The ball is
+ * timed by it: it leaves the palm, meets the floor half way, and is back in the palm.
+ */
+export const DRIBBLE_CYCLES = 4
 
 // Which bones belong to the legs and which to the arms, for playing two movements at once.
 const LOWER = /(Hips|UpLeg|Leg|Foot|Toe)/
@@ -56,6 +62,8 @@ function aim(bone: Object3D | undefined, child: Object3D | undefined, direction:
 /** Each side's clothes: the hub's indigo and hibiscus. */
 const KIT = ['#3d4fd6', '#d1264f']
 
+const handTip = new Vector3()
+
 function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id: number }) {
   const model = useMemo(() => {
     const copy = cloneSkinned(gltf.scene)
@@ -85,6 +93,7 @@ function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id:
       rightArm: find('RightArm'),
       rightForeArm: find('RightForeArm'),
       rightHand: find('RightHand'),
+      rightMiddle: find('RightHandMiddle1'),
       leftArm: find('LeftArm'),
       leftForeArm: find('LeftForeArm'),
       leftHand: find('LeftHand'),
@@ -229,6 +238,17 @@ function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id:
     }
     // Where the right hand is, for drawing the ball in it.
     if (bones.rightHand) world.current!.hands[id] = bones.rightHand
+    // Where in the dribble the hand is, for the ball to meet it (see DRIBBLE_CYCLES).
+    const dribbling = holding && !shooting && !airborne && (pose.current === 'dribble' || pose.current === 'runDribble')
+    const stroke = pose.current === 'runDribble' ? actions.dribbleArms : actions.dribble
+    if (dribbling && stroke && bones.rightHand && bones.rightMiddle) {
+      const length = stroke.getClip().duration
+      const palm = (world.current!.dribble[id] ??= { phase: 0, palm: new Vector3() })
+      palm.phase = ((stroke.time / length) * DRIBBLE_CYCLES) % 1
+      bones.rightHand.getWorldPosition(palm.palm)
+      bones.rightMiddle.getWorldPosition(handTip)
+      palm.palm.lerp(handTip, 0.6)
+    } else delete world.current!.dribble[id]
   })
 
   return <primitive object={model} />

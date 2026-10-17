@@ -1,7 +1,7 @@
 # Builds one basketball character for the game from Mixamo downloads.
 #
 #   blender -b --factory-startup --python scripts/makeBasketballCharacter.py -- \
-#       art-src/basketball/player1 public/basketball/player1.v2.glb art-src/basketball/player1/preview.png
+#       art-src/basketball/player1 public/basketball/player1.v3.glb art-src/basketball/player1/preview.png
 #
 # The folder holds the FBX files downloaded from Mixamo for one character (see CLIPS below for
 # the file names). The character itself is taken from "Happy Idle.fbx"; only the movement is
@@ -42,6 +42,20 @@ for file, name in CLIPS.items():
     for o in objs: bpy.data.objects.remove(o, do_unlink=True)
 for m in list(bpy.data.meshes):
     if m.users == 0: bpy.data.meshes.remove(m)
+
+# The dribble from motion capture (the Ailive pack, art-src/basketball/animations), put on this
+# character by retargetBasketball.py, in place of Mixamo's: a loop of four dribbles of the same
+# length, the hand at the top of its stroke at the start of each (the game times the ball by it:
+# DRIBBLE_CYCLES in src/games/basketball/Athletes.tsx).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from retargetBasketball import retarget, dribble_loop
+MOVES = os.path.join(os.path.dirname(os.path.abspath(src)), 'animations')
+if os.path.isdir(MOVES):
+    take = retarget(os.path.join(MOVES, 'Dribbling_in_Place_with_One_Hand.FBX'), rig, 'dribble_take')
+    bpy.data.actions.remove(bpy.data.actions['dribble'])
+    loop, each = dribble_loop(take, rig, 'dribble', cycles=4)
+    bpy.data.actions.remove(take)
+    print('DRIBBLE', each, 'frames a dribble,', int(loop.frame_range[1]), 'in the loop')
 
 # Movements made to travel ("In Place" not ticked) are kept on the spot: the game moves the
 # player across the court itself. The drift of the hips from the first frame to the last is
