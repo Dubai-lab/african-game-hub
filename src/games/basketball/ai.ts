@@ -1,7 +1,7 @@
 // The computer player for practice games. It sees the game as a player would and presses the
 // same buttons a player can: it moves, crosses over, shoots with the timing meter, reaches for
 // steals and jumps to block. It cannot do anything a person could not.
-import { ARC, fromRim, type Game, type Input, NO_INPUT, PERFECT_RELEASE, RIM, TICK } from '../../../supabase/functions/_shared/basketball'
+import { ARC, fromRim, type Game, type Input, NO_INPUT, PERFECT_RELEASE, RIM, TICK, teammate } from '../../../supabase/functions/_shared/basketball'
 
 export type LevelId = 'easy' | 'medium' | 'hard'
 export type Level = {
@@ -74,6 +74,18 @@ export function think(game: Game, id: number, level: Level, mind: Mind): Input {
       return { ...NO_INPUT, shoot: me.shootT < (mind.releaseAt ?? PERFECT_RELEASE) }
     }
     const distance = fromRim(me.x, me.z)
+    // 2v2: pass when the teammate calls for it, or when crowded with the teammate open.
+    const mate = teammate(game, me)
+    if (mate && me.cooldown === 0) {
+      const mateGap = Math.min(...opponents.map((o) => Math.hypot(o.x - mate.x, o.z - mate.z)))
+      const lane = laneOpen(game, me, mate)
+      if (mate.calling > 0 && lane && mind.random() < 6 * TICK) return { ...NO_INPUT, pass: true }
+      if (gap < 1.4 && mateGap > 1.4 && lane && mind.random() < 2 * TICK) return { ...NO_INPUT, pass: true }
+      // Moving the ball round, out on the perimeter.
+      if (distance > 6 && mateGap > 1.2 && lane && mind.random() < 0.5 * TICK) return { ...NO_INPUT, pass: true }
+      // Back out beyond the arc after winning the ball: a teammate already out there can take it.
+      if (game.mustClear && fromRim(mate.x, mate.z) > ARC + 0.4 && lane && mind.random() < 2 * TICK) return { ...NO_INPUT, pass: true }
+    }
     const shoot = () => {
       mind.releaseAt = PERFECT_RELEASE + (mind.random() * 2 - 1) * level.releaseError
       return { ...NO_INPUT, shoot: true }
@@ -107,9 +119,20 @@ export function think(game: Game, id: number, level: Level, mind: Mind): Input {
   }
 
   const holder = game.players.find((p) => p.id === ball.holder)!
-  // A teammate has it: find space on the far side.
+  // A teammate has it: find space on the far side, and call for it when open.
   if (holder.team === me.team) {
-    return { ...NO_INPUT, ...toward(me.x, me.z, -holder.x * 0.8, 6, level.speed * 0.8) }
+    const open = Math.min(...opponents.map((o) => Math.hypot(o.x - me.x, o.z - me.z)))
+    const call = open > 1.5 && me.calling === 0 && mind.random() < 1 * TICK
+    return { ...NO_INPUT, ...toward(me.x, me.z, -holder.x * 0.8, 6, level.speed * 0.8), pass: call }
+  }
+
+  // 2v2 defence, man to man: each guards the opponent in the same place on the other side; the
+  // one whose man is off the ball stays between him and the basket, a little toward the ball.
+  const mine = opponents[game.players.filter((p) => p.team === me.team).indexOf(me)] ?? holder
+  if (mine.id !== holder.id) {
+    const mx = mine.x + (RIM.x - mine.x) * 0.3 + (holder.x - mine.x) * 0.15
+    const mz = mine.z + (RIM.z - mine.z) * 0.3 + (holder.z - mine.z) * 0.15
+    return { ...NO_INPUT, ...toward(me.x, me.z, mx, mz, level.speed) }
   }
 
   // Defence: between the ball and the basket, a step off.
@@ -125,4 +148,18 @@ export function think(game: Game, id: number, level: Level, mind: Mind): Input {
   const jump = mind.contest === true && holder.shootT !== null && holder.shootT >= 0.2 && me.y === 0
   const steal = holder.shootT === null && close < 1.1 && me.cooldown === 0 && mind.random() < level.stealRate * TICK
   return { ...NO_INPUT, ...goal, jump, action: steal }
+}
+
+/** No opponent standing in the line between the two (where they could take the pass). */
+function laneOpen(game: Game, from: { x: number; z: number; team: number }, to: { x: number; z: number }): boolean {
+  const dx = to.x - from.x
+  const dz = to.z - from.z
+  const length = Math.max(0.01, Math.hypot(dx, dz))
+  return game.players.every((o) => {
+    if (o.team === from.team) return true
+    const along = ((o.x - from.x) * dx + (o.z - from.z) * dz) / length
+    if (along < 0 || along > length) return true
+    const off = Math.abs((o.x - from.x) * dz - (o.z - from.z) * dx) / length
+    return off > 0.9
+  })
 }

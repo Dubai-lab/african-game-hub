@@ -7,10 +7,11 @@
 // The buttons mean different things with and without the ball, as on a real court:
 //   main:   Shoot (hold, let go at the right moment)  /  Block (jump)
 //   second: Cross (a crossover)                       /  Steal
+//   pass (2v2): Pass to the teammate                   /  Call for the ball (the teammate has it)
 import { type RefObject, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-export type Pad = { mx: number; mz: number; main: boolean; second: boolean }
+export type Pad = { mx: number; mz: number; main: boolean; second: boolean; pass: boolean }
 
 const KNOB = 56
 
@@ -27,12 +28,15 @@ function local(event: { clientX: number; clientY: number }, element: Element, tu
 export function Controls({
   pad,
   attacking,
+  passing = null,
   canDunk = false,
   turned = false,
   onLook,
 }: {
   pad: RefObject<Pad>
   attacking: boolean
+  /** 2v2: what the third button does now, or null when it has nothing to do. */
+  passing?: 'pass' | 'call' | null
   canDunk?: boolean
   turned?: boolean
   /** The camera finger moved by (dx, dy) pixels, in the game's own directions. */
@@ -46,6 +50,12 @@ export function Controls({
   const pointer = useRef<number | null>(null)
   const [main, setMain] = useState(false)
   const [second, setSecond] = useState(false)
+  const [pass, setPass] = useState(false)
+
+  // The pass button goes away (no teammate with the ball, not holding it): nothing left held.
+  useEffect(() => {
+    if (!passing && pad.current) pad.current.pass = false
+  }, [passing, pad])
 
   // The keyboard, for a computer.
   useEffect(() => {
@@ -66,6 +76,8 @@ export function Controls({
       p.main = keys.has(' ') || keys.has('k')
       turning = (keys.has('e') ? 1 : 0) - (keys.has('q') ? 1 : 0)
       p.second = keys.has('j') || keys.has('Shift')
+      p.pass = keys.has('l')
+      setPass(p.pass)
       setMain(p.main)
       setSecond(p.second)
     }
@@ -108,17 +120,18 @@ export function Controls({
     pad.current!.mz = dy / KNOB
   }
 
-  const hold = (which: 'main' | 'second', on: boolean) => {
+  const hold = (which: 'main' | 'second' | 'pass', on: boolean) => {
     pad.current![which] = on
     if (which === 'main') setMain(on)
-    else setSecond(on)
+    else if (which === 'second') setSecond(on)
+    else setPass(on)
   }
 
-  const button = (which: 'main' | 'second', label: string, big: boolean, hot = false) => (
+  const button = (which: 'main' | 'second' | 'pass', label: string, big: boolean, hot = false) => (
     <button
       type="button"
       data-testid={`pad-${which}`}
-      aria-pressed={which === 'main' ? main : second}
+      aria-pressed={which === 'main' ? main : which === 'second' ? second : pass}
       onPointerDown={(event) => {
         event.currentTarget.setPointerCapture(event.pointerId)
         hold(which, true)
@@ -126,7 +139,7 @@ export function Controls({
       onPointerUp={() => hold(which, false)}
       onPointerCancel={() => hold(which, false)}
       onContextMenu={(event) => event.preventDefault()}
-      className={`flex select-none items-center justify-center rounded-full border border-edge font-display font-extrabold shadow-lg transition-transform ${big ? 'size-24 text-lg' : 'size-16 text-sm'} ${(which === 'main' ? main : second) ? 'scale-95 bg-brand text-brand-ink' : hot ? 'animate-pulse bg-hibiscus text-white shadow-[0_0_24px_rgba(209,38,79,0.8)]' : big ? 'glow-brand bg-brand/85 text-brand-ink' : 'glass text-fg'}`}
+      className={`flex select-none items-center justify-center rounded-full border border-edge font-display font-extrabold shadow-lg transition-transform ${big ? 'size-24 text-lg' : 'size-16 text-sm'} ${(which === 'main' ? main : which === 'second' ? second : pass) ? 'scale-95 bg-brand text-brand-ink' : hot ? 'animate-pulse bg-hibiscus text-white shadow-[0_0_24px_rgba(209,38,79,0.8)]' : big ? 'glow-brand bg-brand/85 text-brand-ink' : 'glass text-fg'}`}
       style={{ touchAction: 'none' }}
     >
       {label}
@@ -193,6 +206,7 @@ export function Controls({
       />
       {/* The right thumb's buttons. */}
       <div className="pointer-events-auto absolute bottom-6 right-5 flex items-end gap-3 pb-[var(--safe-bottom)]">
+        {passing && <div className="mb-16">{button('pass', passing === 'pass' ? t('basketball.controls.pass') : t('basketball.controls.call'), false)}</div>}
         {button('second', attacking ? t('basketball.controls.cross') : t('basketball.controls.steal'), false)}
         {button('main', attacking ? (canDunk ? t('basketball.controls.dunk') : t('basketball.controls.shoot')) : t('basketball.controls.block'), true, canDunk)}
       </div>

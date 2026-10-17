@@ -16,3 +16,10 @@ export function screenToCourt(right: number, down: number, yaw: number): { x: nu
   const side = { x: -ahead.z, z: ahead.x }
   return { x: side.x * right - ahead.x * down, z: side.z * right - ahead.z * down }
 }
+
+/**
+ * The end of a game, before the result: the camera close on the winners' faces as they
+ * celebrate, then on the losers (milliseconds).
+ */
+export const ENDING = { winners: 3400, losers: 2800 } as const
+export const ENDING_MS = ENDING.winners + ENDING.losers

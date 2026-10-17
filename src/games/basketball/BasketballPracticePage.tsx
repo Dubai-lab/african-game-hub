@@ -10,13 +10,16 @@ import { Button, buttonClass } from '@/core/ui/Button'
 import { ResultDialog, ResultStat, ResultStats } from '@/core/ui/ResultDialog'
 import { DUNK_RANGE, fromRim, type Game, type GameEvent, type Input, newGame, PERFECT_RELEASE, step, TICK, TO_WIN } from '../../../supabase/functions/_shared/basketball'
 import { isNativeApp, setLandscape } from '@/core/lib/nativeApp'
+import { useSettingsStore } from '@/core/settings/settingsStore'
+import { musicVolume, startMusic, stopMusic } from './music'
 import { type Level, levelById, type LevelId, LEVELS, type Mind, newMind, think } from './ai'
 import { Controls, type Pad } from './Controls'
-import { newView, PITCH, screenToCourt } from './camera'
+import { ENDING_MS, newView, PITCH, screenToCourt } from './camera'
 import { Court3D, type World } from './Court3D'
 import { boardSound, bounceSound, hornSound, rimSound, slapSound, swishSound } from './sound'
 
 const STORAGE_KEY = 'agh.basketball.practice'
+const SIZE_KEY = 'agh.basketball.practice.size'
 const HUMAN = 0
 
 type Hud = {
@@ -24,6 +27,9 @@ type Hud = {
   shotClock: number
   phase: Game['phase']
   attacking: boolean
+  /** 2v2: the teammate has the ball (Pass then calls for it). */
+  mateHas: boolean
+  twoOnTwo: boolean
   /** With the ball, close enough to the basket to dunk. */
   canDunk: boolean
   mustClear: boolean
@@ -39,6 +45,8 @@ const hudOf = (game: Game): Hud => {
     shotClock: game.shotClock,
     phase: game.phase,
     attacking: game.ball.holder === HUMAN,
+    mateHas: game.ball.holder !== null && game.ball.holder !== HUMAN && game.players.find((p) => p.id === game.ball.holder)?.team === me.team,
+    twoOnTwo: game.players.length > 2,
     canDunk: game.ball.holder === HUMAN && !game.mustClear && me.shootT === null && fromRim(me.x, me.z) < DUNK_RANGE,
     mustClear: game.mustClear && game.offense === me.team,
     shootT: me.shootT,
@@ -46,8 +54,15 @@ const hudOf = (game: Game): Hud => {
   }
 }
 
-function Setup({ onStart }: { onStart: (level: LevelId) => void }) {
+function Setup({ onStart }: { onStart: (level: LevelId, size: 1 | 2) => void }) {
   const { t } = useTranslation()
+  const [size, setSize] = useState<1 | 2>(() => {
+    try {
+      return localStorage.getItem(SIZE_KEY) === '2' ? 2 : 1
+    } catch {
+      return 1
+    }
+  })
   const [level, setLevel] = useState<LevelId>(() => {
     try {
       return levelById(localStorage.getItem(STORAGE_KEY)).id
@@ -66,6 +81,21 @@ function Setup({ onStart }: { onStart: (level: LevelId) => void }) {
         <h1 className="font-display text-3xl font-extrabold text-accent lg:text-4xl">{t('basketball.practice.title')}</h1>
         <p className="mt-2 text-muted">{t('basketball.practice.intro')}</p>
       </div>
+      <fieldset>
+        <legend className="font-display text-xl font-semibold">{t('basketball.practice.mode')}</legend>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {([1, 2] as const).map((option) => {
+            const chosen = option === size
+            return (
+              <label key={option} className={`flex min-h-14 cursor-pointer flex-col justify-center border px-4 py-2 has-focus-visible:outline-2 has-focus-visible:outline-accent ${chosen ? 'border-edge bg-brand text-brand-ink' : 'border-line bg-panel'}`}>
+                <input type="radio" name="basketball-size" className="sr-only" checked={chosen} onChange={() => setSize(option)} />
+                <span className="font-bold">{t(`basketball.practice.modes.${option}.name`)}</span>
+                <span className={`text-sm ${chosen ? '' : 'text-muted'}`}>{t(`basketball.practice.modes.${option}.hint`)}</span>
+              </label>
+            )
+          })}
+        </div>
+      </fieldset>
       <fieldset>
         <legend className="font-display text-xl font-semibold">{t('basketball.practice.level')}</legend>
         <div className="mt-3 grid gap-2">
@@ -91,6 +121,7 @@ function Setup({ onStart }: { onStart: (level: LevelId) => void }) {
         onClick={() => {
           try {
             localStorage.setItem(STORAGE_KEY, level)
+            localStorage.setItem(SIZE_KEY, String(size))
           } catch {
             // Not kept; the game still starts.
           }
@@ -98,7 +129,8 @@ function Setup({ onStart }: { onStart: (level: LevelId) => void }) {
           // turns it to landscape and puts the phone's bars away. (The app does this itself; an
           // iPhone browser cannot without a banner, so it keeps the game drawn turned.)
           void playSideways()
-          onStart(level)
+          startMusic()
+          onStart(level, size)
         }}
       >
         {t('basketball.practice.start')}
@@ -108,17 +140,19 @@ function Setup({ onStart }: { onStart: (level: LevelId) => void }) {
 }
 
 /** The game in progress: the court, the scoreboard over it, and the controls. */
-function Match({ level, onChange }: { level: Level; onChange: () => void }) {
+function Match({ level, size, onChange }: { level: Level; size: 1 | 2; onChange: () => void }) {
   const { t } = useTranslation()
   useLockedScreen()
   const seed = useRef((Math.random() * 2 ** 31) | 0)
-  const world = useRef<World>({ game: newGame(seed.current, 1), human: HUMAN, marks: {}, hands: {}, view: newView(), dribble: {}, crosses: {} })
-  const mind = useRef<Mind>(newMind(seed.current + 1))
-  const pad = useRef<Pad>({ mx: 0, mz: 0, main: false, second: false })
+  const world = useRef<World>({ game: newGame(seed.current, size), human: HUMAN, marks: {}, hands: {}, view: newView(), dribble: {}, crosses: {}, overAt: null })
+  // One mind for each computer player (its timing, what it decided).
+  const minds = useRef<Mind[]>(world.current.game.players.map((p) => newMind(seed.current + 1 + p.id)))
+  const pad = useRef<Pad>({ mx: 0, mz: 0, main: false, second: false, pass: false })
   const swish = useRef(0)
   const [hud, setHud] = useState<Hud>(() => hudOf(world.current.game))
   const [callouts, setCallouts] = useState<Callout[]>([])
   const [paused, setPaused] = useState(false)
+  const [showResult, setShowResult] = useState(false)
   const pausedRef = useRef(false)
   pausedRef.current = paused
   // The game is played sideways. A phone held upright (or locked upright) has the game drawn
@@ -156,6 +190,10 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
           slapSound()
           world.current.marks[e.by] = performance.now()
         }
+        else if (e.type === 'pass') {
+          slapSound()
+          world.current.marks[e.by] = performance.now()
+        } else if (e.type === 'call' && e.by !== HUMAN) call(t('basketball.call.calling'))
         else if (e.type === 'crossover') {
           world.current.crosses[e.by] = performance.now()
           if (e.broke) call(t('basketball.call.ankles'), e.by === HUMAN ? 'good' : 'bad')
@@ -164,7 +202,13 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
         else if (e.type === 'shot' && e.by === HUMAN && !e.dunk) {
           const q = e.quality
           call(q > 0.85 ? t('basketball.call.perfect') : q > 0.55 ? t('basketball.call.good') : t(q > 0.25 ? 'basketball.call.early' : 'basketball.call.off'), q > 0.55 ? 'good' : 'plain')
-        } else if (e.type === 'over') hornSound()
+        } else if (e.type === 'over') {
+          hornSound()
+          // The end: the camera goes to the winners celebrating, then the losers; then the result.
+          world.current.overAt = performance.now()
+          musicVolume(0.45)
+          setTimeout(() => setShowResult(true), ENDING_MS)
+        }
       }
     },
     [call, t],
@@ -189,8 +233,8 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
           const p = pad.current
           // The stick and the arrows push the way the camera looks: up is straight ahead.
           const toward = screenToCourt(p.mx, p.mz, world.current.view.yaw)
-          const mine: Input = { mx: toward.x, mz: toward.z, shoot: holding && p.main, jump: !holding && p.main, action: p.second }
-          const inputs = game.players.map((player) => (player.id === HUMAN ? mine : think(game, player.id, level, mind.current)))
+          const mine: Input = { mx: toward.x, mz: toward.z, shoot: holding && p.main, jump: !holding && p.main, action: p.second, pass: p.pass }
+          const inputs = game.players.map((player) => (player.id === HUMAN ? mine : think(game, player.id, level, minds.current[player.id]!)))
           step(game, inputs)
           if (game.events.length) hear(game.events)
         }
@@ -217,11 +261,17 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
 
   const restart = () => {
     seed.current = (Math.random() * 2 ** 31) | 0
-    world.current.game = newGame(seed.current, 1)
-    mind.current = newMind(seed.current + 1)
+    world.current.game = newGame(seed.current, size)
+    world.current.overAt = null
+    minds.current = world.current.game.players.map((p) => newMind(seed.current + 1 + p.id))
+    setShowResult(false)
+    musicVolume(1)
     setHud(hudOf(world.current.game))
     setPaused(false)
   }
+
+  // The music, for as long as the game is open (started by the tap on Start or Play again).
+  useEffect(() => () => stopMusic(), [])
 
   // In the app (shell 1.2 and later): turned to landscape, the phone's bars put away, for as
   // long as the game is open. The app then needs no turning of its own and no full screen.
@@ -237,6 +287,7 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
     [],
   )
 
+  const musicOn = useSettingsStore((state) => state.basketballMusic)
   const [mine, theirs] = hud.score
   const meter = hud.shootT !== null ? Math.min(1, hud.shootT / 1.2) : null
   const sweet = PERFECT_RELEASE / 1.2
@@ -294,6 +345,7 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
       {hud.phase !== 'over' && (
         <Controls
           pad={pad}
+          passing={hud.twoOnTwo ? (hud.attacking ? 'pass' : hud.mateHas ? 'call' : null) : null}
           attacking={hud.attacking}
           canDunk={hud.canDunk}
           turned={screenSize.turned}
@@ -314,6 +366,17 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
             <Button variant="ghost" onClick={restart}>
               {t('basketball.pause.restart')}
             </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const on = !useSettingsStore.getState().basketballMusic
+                useSettingsStore.getState().set({ basketballMusic: on })
+                if (on) startMusic()
+                else stopMusic()
+              }}
+            >
+              {musicOn ? t('basketball.pause.musicOff') : t('basketball.pause.musicOn')}
+            </Button>
             <Button variant="ghost" onClick={onChange}>
               {t('basketball.pause.change')}
             </Button>
@@ -324,13 +387,28 @@ function Match({ level, onChange }: { level: Level; onChange: () => void }) {
         </div>
       )}
 
-      {hud.phase === 'over' && (
+      {/* The end, while the camera shows the winners and the losers: a tap goes straight to the result. */}
+      {hud.phase === 'over' && !showResult && (
+        <button type="button" className="absolute inset-0 flex items-end justify-center pb-10" onClick={() => setShowResult(true)} data-testid="basketball-ending">
+          <span className={`result-in rounded-full px-6 py-2 font-display text-3xl font-extrabold text-white ${hud.winner === 0 ? 'bg-palm' : 'bg-hibiscus'}`}>
+            {hud.winner === 0 ? t('basketball.over.won') : t('basketball.over.lost')} {mine} – {theirs}
+          </span>
+        </button>
+      )}
+
+      {hud.phase === 'over' && showResult && (
         <ResultDialog title={hud.winner === 0 ? t('basketball.over.won') : t('basketball.over.lost')} tone={hud.winner === 0 ? 'win' : 'loss'} reason={t('basketball.over.reason', { toWin: TO_WIN })} onClose={onChange} closeLabel={t('basketball.pause.change')}>
           <ResultStats>
             <ResultStat testId="basketball-final" label={t('basketball.over.score')} value={`${mine} – ${theirs}`} />
           </ResultStats>
           <div className="grid grid-cols-2 gap-2">
-            <Button variant="ghost" onClick={restart}>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                startMusic()
+                restart()
+              }}
+            >
               {t('basketball.over.again')}
             </Button>
             <Link to="/lobby" className={buttonClass('ghost')}>
@@ -357,16 +435,18 @@ async function playSideways() {
 
 export default function BasketballPracticePage() {
   const [level, setLevel] = useState<Level | null>(null)
+  const [size, setSize] = useState<1 | 2>(1)
   const [round, setRound] = useState(0)
   if (!level) {
     return (
       <Setup
-        onStart={(id) => {
+        onStart={(id, players) => {
           setLevel(levelById(id))
+          setSize(players)
           setRound((n) => n + 1)
         }}
       />
     )
   }
-  return <Match key={round} level={level} onChange={() => setLevel(null)} />
+  return <Match key={round} level={level} size={size} onChange={() => setLevel(null)} />
 }

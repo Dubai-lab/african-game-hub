@@ -50,8 +50,9 @@ export const PLAYER_R = 0.38
 
 export type Team = 0 | 1
 /** What a player asks for in one tick. `mx`/`mz` is the direction to move, at most 1 long. */
-export type Input = { mx: number; mz: number; shoot: boolean; action: boolean; jump: boolean }
-export const NO_INPUT: Input = { mx: 0, mz: 0, shoot: false, action: false, jump: false }
+/** `pass`: with the ball, pass to a teammate; without it, while a teammate has it, call for it (2v2). */
+export type Input = { mx: number; mz: number; shoot: boolean; action: boolean; jump: boolean; pass?: boolean }
+export const NO_INPUT: Input = { mx: 0, mz: 0, shoot: false, action: false, jump: false, pass: false }
 
 export type Player = {
   id: number
@@ -78,7 +79,9 @@ export type Player = {
   /** Seconds left hanging on the rim after a dunk. */
   hang: number
   /** The buttons as they were last tick, to tell a press from a hold. */
-  held: { shoot: boolean; action: boolean; jump: boolean }
+  held: { shoot: boolean; action: boolean; jump: boolean; pass: boolean }
+  /** Seconds left of a call for the ball (a teammate holding it passes, if the computer). */
+  calling: number
 }
 
 export type Shot = { by: number; team: Team; points: 1 | 2; touchedRim: boolean; quality: number; dunk?: boolean }
@@ -100,6 +103,8 @@ export type Ball = {
   sinceRelease: number
   /** Where in the dribble the ball is (radians). */
   dribble: number
+  /** In the air as a pass (not a shot, not a loose ball). */
+  pass: boolean
 }
 
 export type GameEvent =
@@ -112,6 +117,8 @@ export type GameEvent =
   | { type: 'steal'; by: number }
   | { type: 'reach'; by: number }
   | { type: 'crossover'; by: number; broke: boolean }
+  | { type: 'pass'; by: number; to: number }
+  | { type: 'call'; by: number }
   | { type: 'rebound'; by: number; offensive: boolean }
   | { type: 'turnover'; reason: 'out' | 'shot_clock' }
   | { type: 'check'; team: Team }
@@ -158,7 +165,7 @@ export const fromRim = (x: number, z: number) => hypot(x - RIM.x, z - RIM.z)
 const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v)
 
 function newPlayer(id: number, team: Team): Player {
-  return { id, team, x: 0, z: 0, vx: 0, vz: 0, face: 0, y: 0, vy: 0, shootT: null, cooldown: 0, stumble: 0, burst: 0, dunk: false, hang: 0, held: { shoot: false, action: false, jump: false } }
+  return { id, team, x: 0, z: 0, vx: 0, vz: 0, face: 0, y: 0, vy: 0, shootT: null, cooldown: 0, stumble: 0, burst: 0, dunk: false, hang: 0, calling: 0, held: { shoot: false, action: false, jump: false, pass: false } }
 }
 
 /** A new game for `teamSize` players a side (1 or 2). Players 0..teamSize-1 are team 0. */
@@ -169,7 +176,7 @@ export function newGame(seed: number, teamSize: 1 | 2 = 1): Game {
     phase: 'check',
     phaseT: 0,
     players,
-    ball: { x: CHECK.x, y: 1, z: CHECK.z, vx: 0, vy: 0, vz: 0, holder: null, shot: null, lastTouch: 0, releasedBy: null, sinceRelease: 99, dribble: 0 },
+    ball: { x: CHECK.x, y: 1, z: CHECK.z, vx: 0, vy: 0, vz: 0, holder: null, shot: null, lastTouch: 0, releasedBy: null, sinceRelease: 99, dribble: 0, pass: false },
     score: [0, 0],
     offense: 0,
     mustClear: false,
@@ -228,7 +235,7 @@ export function step(game: Game, inputs: readonly Input[]): Game {
   if (game.phase === 'over') return game
   if (game.phase === 'check') {
     // Everyone stands still for a moment, then play.
-    for (const p of game.players) p.held = { shoot: inputs[p.id]?.shoot ?? false, action: inputs[p.id]?.action ?? false, jump: inputs[p.id]?.jump ?? false }
+    for (const p of game.players) p.held = { shoot: inputs[p.id]?.shoot ?? false, action: inputs[p.id]?.action ?? false, jump: inputs[p.id]?.jump ?? false, pass: inputs[p.id]?.pass ?? false }
     holdBall(game, game.players.find((p) => p.id === game.ball.holder) ?? game.players[0]!)
     if (game.phaseT >= 1) {
       game.phase = 'live'
@@ -370,8 +377,10 @@ function separate(game: Game) {
 }
 
 function act(game: Game, p: Player, input: Input) {
-  const pressed = { shoot: input.shoot && !p.held.shoot, action: input.action && !p.held.action, jump: input.jump && !p.held.jump }
-  p.held = { shoot: input.shoot, action: input.action, jump: input.jump }
+  const pass = input.pass ?? false
+  const pressed = { shoot: input.shoot && !p.held.shoot, action: input.action && !p.held.action, jump: input.jump && !p.held.jump, pass: pass && !p.held.pass }
+  p.held = { shoot: input.shoot, action: input.action, jump: input.jump, pass }
+  p.calling = Math.max(0, p.calling - TICK)
   const ball = game.ball
   const holding = ball.holder === p.id
 
@@ -418,6 +427,13 @@ function act(game: Game, p: Player, input: Input) {
       }
       return
     }
+    if (pressed.pass) {
+      const mate = teammate(game, p)
+      if (mate) {
+        passTo(game, p, mate)
+        return
+      }
+    }
     if (pressed.action && p.cooldown === 0) {
       // A crossover: a burst of speed, and a defender close by may be left behind.
       p.cooldown = 1.1
@@ -434,6 +450,14 @@ function act(game: Game, p: Player, input: Input) {
       game.events.push({ type: 'crossover', by: p.id, broke })
     }
     return
+  }
+
+  if (pressed.pass && ball.holder !== null) {
+    const holder = game.players.find((q) => q.id === ball.holder)
+    if (holder && holder.team === p.team) {
+      p.calling = 1.2
+      game.events.push({ type: 'call', by: p.id })
+    }
   }
 
   if (pressed.jump && p.y === 0 && p.stumble === 0) {
@@ -547,6 +571,7 @@ function release(game: Game, shooter: Player) {
   ball.vy = speed * Math.sin(angle)
   ball.holder = null
   ball.shot = { by: shooter.id, team: shooter.team, points, touchedRim: false, quality }
+  ball.pass = false
   ball.lastTouch = shooter.team
   ball.releasedBy = shooter.id
   ball.sinceRelease = 0
@@ -586,6 +611,7 @@ function slam(game: Game, dunker: Player) {
   ball.vx = ball.vz = 0
   ball.vy = -3
   ball.shot = { by: dunker.id, team: dunker.team, points: 1, touchedRim: true, quality: 1, dunk: true }
+  ball.pass = false
   ball.lastTouch = dunker.team
   ball.releasedBy = dunker.id
   ball.sinceRelease = 0
@@ -608,6 +634,8 @@ function flyBall(game: Game, live: boolean) {
     if (ball.y < BALL_R) {
       ball.y = BALL_R
       if (Math.abs(ball.vy) > 0.8) game.events.push({ type: 'bounce', speed: Math.abs(ball.vy) })
+      // A pass that hits the floor is a loose ball.
+      ball.pass = false
       ball.vy = -ball.vy * 0.72
       ball.vx *= 0.86
       ball.vz *= 0.86
@@ -707,6 +735,42 @@ function turnover(game: Game, reason: 'out' | 'shot_clock', to?: Team) {
   game.phaseT = 0
 }
 
+/** The other player on `p`'s side, if any (2v2). */
+export function teammate(game: Game, p: Player): Player | undefined {
+  return game.players.find((q) => q.team === p.team && q.id !== p.id)
+}
+
+/** How fast a pass travels, flat. */
+const PASS_SPEED = 10
+
+/**
+ * A chest pass to where the teammate will be: quick and flat, a little arc over the distance.
+ * Anyone in its way may catch it first (pickUp): a defender standing in the lane takes it.
+ */
+function passTo(game: Game, from: Player, to: Player) {
+  const ball = game.ball
+  const flight = clamp(hypot(to.x - from.x, to.z - from.z) / PASS_SPEED, 0.2, 0.9)
+  const tx = to.x + to.vx * flight
+  const tz = to.z + to.vz * flight
+  const d = Math.max(0.01, hypot(tx - from.x, tz - from.z))
+  ball.holder = null
+  ball.shot = null
+  ball.pass = true
+  ball.x = from.x + ((tx - from.x) / d) * 0.45
+  ball.z = from.z + ((tz - from.z) / d) * 0.45
+  ball.y = 1.3
+  const t = Math.max(0.15, flight - 0.45 / PASS_SPEED)
+  ball.vx = (tx - ball.x) / t
+  ball.vz = (tz - ball.z) / t
+  ball.vy = (1.25 - ball.y) / t + 0.5 * G * t
+  ball.lastTouch = from.team
+  ball.releasedBy = from.id
+  ball.sinceRelease = 0
+  from.cooldown = Math.max(from.cooldown, 0.3)
+  to.calling = 0
+  game.events.push({ type: 'pass', by: from.id, to: to.id })
+}
+
 /** A loose ball is caught by the first player who can reach it. */
 function pickUp(game: Game) {
   const ball = game.ball
@@ -728,12 +792,17 @@ function pickUp(game: Game) {
 
 function giveBall(game: Game, p: Player) {
   const ball = game.ball
-  const wasShot = ball.shot !== null || ball.releasedBy !== null
+  const passed = ball.pass
+  const wasShot = !passed && (ball.shot !== null || ball.releasedBy !== null)
+  // A pass caught by a teammate keeps the shot clock running; anything else starts it again.
+  const kept = passed && p.team === ball.lastTouch
+  ball.pass = false
   ball.holder = p.id
   ball.shot = null
   ball.lastTouch = p.team
   ball.releasedBy = null
-  game.shotClock = SHOT_CLOCK
+  if (!kept) game.shotClock = SHOT_CLOCK
+  if (passed && !kept) game.events.push({ type: 'steal', by: p.id })
   if (p.team !== game.offense) {
     // The defence has it: now they attack, and must take it back first.
     game.offense = p.team

@@ -1779,7 +1779,7 @@
     "shotClock": "Shot clock",
     "practice": {
       "title": "Street basketball",
-      "intro": "Half court, one against one, against the computer. No tokens, no rating: practise your moves and your shot.",
+      "intro": "Street rules, one against one or two against two, against the computer. No tokens, no rating: practise your moves and your shot.",
       "level": "Level",
       "levels": {
         "easy": {
@@ -1796,7 +1796,18 @@
         }
       },
       "start": "Start game",
-      "link": "Practise against the computer"
+      "link": "Practise against the computer",
+      "mode": "Players",
+      "modes": {
+        "1": {
+          "name": "1 on 1",
+          "hint": "You against the computer"
+        },
+        "2": {
+          "name": "2 on 2",
+          "hint": "You and a computer teammate against two"
+        }
+      }
     },
     "rules": {
       "score": "A basket from inside the arc is 1 point, from beyond it 2. First to {{toWin}} wins.",
@@ -1811,7 +1822,9 @@
       "block": "Block",
       "cross": "Cross",
       "steal": "Steal",
-      "dunk": "Dunk"
+      "dunk": "Dunk",
+      "pass": "Pass",
+      "call": "Call"
     },
     "call": {
       "check": "Check ball",
@@ -1827,7 +1840,8 @@
       "off": "Way off",
       "swish": "Swish! +{{points}}",
       "score": "+{{points}}",
-      "dunk": "DUNK!"
+      "dunk": "DUNK!",
+      "calling": "Open!"
     },
     "pause": {
       "open": "Pause",
@@ -1835,7 +1849,9 @@
       "resume": "Resume",
       "restart": "Start again",
       "change": "Change level",
-      "leave": "Back to the lobby"
+      "leave": "Back to the lobby",
+      "musicOn": "Music on",
+      "musicOff": "Music off"
     },
     "over": {
       "won": "You won",

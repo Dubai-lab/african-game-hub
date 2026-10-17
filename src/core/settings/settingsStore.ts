@@ -40,6 +40,8 @@ const preferencesSchema = z.object({
   draughtsNumbers: z.boolean(),
   /** Draughts: dots on the squares a chosen piece may go to. */
   draughtsHints: z.boolean(),
+  /** Street basketball: the music on the court. */
+  basketballMusic: z.boolean(),
 })
 
 export type Preferences = z.infer<typeof preferencesSchema>
@@ -65,6 +67,7 @@ const DEFAULTS: Preferences = {
   draughtsPieces: 'classic',
   draughtsNumbers: false,
   draughtsHints: true,
+  basketballMusic: true,
 }
 
 type SettingsState = Preferences & {
@@ -92,9 +95,9 @@ if (typeof document !== 'undefined') {
 }
 
 function currentPreferences(): Preferences {
-  const { soundOn, hapticsOn, dataSaver, chessBoardTheme, chessPieceSet, chessPremoves, ludoDice, ludoBoard3d, ludoBoard, ludoSides, ludoLay, poolCloth, poolGuide, poolCue, draughtsBoard, draughtsPieces, draughtsNumbers, draughtsHints } =
+  const { soundOn, hapticsOn, dataSaver, chessBoardTheme, chessPieceSet, chessPremoves, ludoDice, ludoBoard3d, ludoBoard, ludoSides, ludoLay, poolCloth, poolGuide, poolCue, draughtsBoard, draughtsPieces, draughtsNumbers, draughtsHints, basketballMusic } =
     useSettingsStore.getState()
-  return { soundOn, hapticsOn, dataSaver, chessBoardTheme, chessPieceSet, chessPremoves, ludoDice, ludoBoard3d, ludoBoard, ludoSides, ludoLay, poolCloth, poolGuide, poolCue, draughtsBoard, draughtsPieces, draughtsNumbers, draughtsHints }
+  return { soundOn, hapticsOn, dataSaver, chessBoardTheme, chessPieceSet, chessPremoves, ludoDice, ludoBoard3d, ludoBoard, ludoSides, ludoLay, poolCloth, poolGuide, poolCue, draughtsBoard, draughtsPieces, draughtsNumbers, draughtsHints, basketballMusic }
 }
 
 const SAVE_DELAY_MS = 800

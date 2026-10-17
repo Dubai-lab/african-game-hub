@@ -13,7 +13,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { useSettingsStore } from '@/core/settings/settingsStore'
 import { ARC, BALL_R, BOARD, COURT, type Game, RIM } from '../../../supabase/functions/_shared/basketball'
 import { Athletes } from './Athletes'
-import { PITCH, type View } from './camera'
+import { ENDING, PITCH, type View } from './camera'
 import { dyeClothes } from './clothes'
 import { bounceSound } from './sound'
 
@@ -30,6 +30,8 @@ export type World = {
   dribble: Record<number, { phase: number; at: Vector3 }>
   /** When each player last went into a crossover (performance.now()), for the character to play it. */
   crosses: Record<number, number>
+  /** When the game ended (performance.now()), for the camera's ending; null while it is played. */
+  overAt: number | null
 }
 
 
@@ -622,9 +624,31 @@ function Follow({ world }: { world: RefObject<World> }) {
   const turned = useRef({ yaw: Math.PI, pitch: PITCH.start as number })
   const phase = useRef<string | null>(null)
   useFrame((_, dt) => {
-    const { game, human, view } = world.current!
+    const { game, human, view, overAt } = world.current!
     const ball = game.ball
     const me = game.players.find((p) => p.id === human) ?? game.players[0]!
+    if (game.phase === 'over' && overAt !== null && game.winner !== null) {
+      // The ending: close on the winners' faces as they celebrate, then on the losers'.
+      const since = performance.now() - overAt
+      const team = since < ENDING.winners ? game.winner : game.winner === 0 ? 1 : 0
+      const side = game.players.filter((p) => p.team === team)
+      const x = side.reduce((sum, p) => sum + p.x, 0) / side.length
+      const z = side.reduce((sum, p) => sum + p.z, 0) / side.length
+      // In front of them: the way they face (a player turned 0 faces -z).
+      const fx = side.reduce((sum, p) => sum - Math.sin(p.face), 0)
+      const fz = side.reduce((sum, p) => sum - Math.cos(p.face), 0)
+      const length = Math.hypot(fx, fz) || 1
+      const away = side.length > 1 ? 3.1 : 2.2
+      const face = new Vector3(x, 1.5, z)
+      const goal = new Vector3(x + (fx / length) * away, 1.65, z + (fz / length) * away)
+      goal.x = Math.min(Math.max(goal.x, BOUNDS.minX), BOUNDS.maxX)
+      goal.z = Math.min(Math.max(goal.z, BOUNDS.minZ), BOUNDS.maxZ)
+      const k = Math.min(1, dt * 3)
+      camera.position.lerp(goal, k)
+      look.current.lerp(face, k)
+      camera.lookAt(look.current)
+      return
+    }
     if (game.phase === 'check' && phase.current !== 'check') {
       // A new possession: behind the player, facing the basket.
       view.yaw = Math.atan2(RIM.x - me.x, RIM.z - me.z)

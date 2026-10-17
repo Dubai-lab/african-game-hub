@@ -1779,7 +1779,7 @@
     "shotClock": "Chrono des tirs",
     "practice": {
       "title": "Basket de rue",
-      "intro": "Demi-terrain, un contre un, contre l’ordinateur. Sans jetons ni classement : travaillez vos gestes et votre tir.",
+      "intro": "Règles de la rue, un contre un ou deux contre deux, contre l'ordinateur. Pas de jetons, pas de classement : travaillez vos gestes et votre tir.",
       "level": "Niveau",
       "levels": {
         "easy": {
@@ -1796,7 +1796,18 @@
         }
       },
       "start": "Commencer",
-      "link": "S’entraîner contre l’ordinateur"
+      "link": "S’entraîner contre l’ordinateur",
+      "mode": "Joueurs",
+      "modes": {
+        "1": {
+          "name": "1 contre 1",
+          "hint": "Vous contre l'ordinateur"
+        },
+        "2": {
+          "name": "2 contre 2",
+          "hint": "Vous et un coéquipier de l'ordinateur contre deux"
+        }
+      }
     },
     "rules": {
       "score": "Un panier à l’intérieur de l’arc vaut 1 point, au-delà 2. Le premier à {{toWin}} gagne.",
@@ -1811,7 +1822,9 @@
       "block": "Contrer",
       "cross": "Crossover",
       "steal": "Intercepter",
-      "dunk": "Dunk"
+      "dunk": "Dunk",
+      "pass": "Passe",
+      "call": "Appel"
     },
     "call": {
       "check": "Check",
@@ -1827,7 +1840,8 @@
       "off": "Bien trop tôt ou trop tard",
       "swish": "Ficelle ! +{{points}}",
       "score": "+{{points}}",
-      "dunk": "DUNK !"
+      "dunk": "DUNK !",
+      "calling": "Démarqué !"
     },
     "pause": {
       "open": "Pause",
@@ -1835,7 +1849,9 @@
       "resume": "Reprendre",
       "restart": "Recommencer",
       "change": "Changer de niveau",
-      "leave": "Retour au salon"
+      "leave": "Retour au salon",
+      "musicOn": "Musique : oui",
+      "musicOff": "Musique : non"
     },
     "over": {
       "won": "Vous avez gagné",

@@ -190,6 +190,75 @@ describe('dunks', () => {
   })
 })
 
+describe('2v2: passing', () => {
+  /** A live 2v2 game, player 0 holding the ball at (x, z), its teammate (1) at (tx, tz), the others far off. */
+  function twos(x: number, z: number, tx: number, tz: number, seed = 1): Game {
+    const game = newGame(seed, 2)
+    run(game, idle, (g) => g.phase === 'live', 200)
+    game.offense = 0
+    game.ball.holder = 0
+    game.mustClear = false
+    const [a, b, c, d] = game.players
+    a!.x = x
+    a!.z = z
+    b!.x = tx
+    b!.z = tz
+    c!.x = -6
+    c!.z = 12
+    d!.x = 6
+    d!.z = 12.5
+    return game
+  }
+  const press = (game: Game, who: number, input: Partial<Input>) => {
+    let first = true
+    return run(
+      game,
+      (g) => {
+        const inputs = g.players.map((p) => (p.id === who && first ? { ...NO_INPUT, ...input } : NO_INPUT))
+        first = false
+        return inputs
+      },
+      (g) => g.ball.holder !== null && g.ball.holder !== who,
+      60 * 3,
+    )
+  }
+
+  it('a pass reaches the teammate, and the shot clock keeps running', () => {
+    const game = twos(-2, 7, 3, 6)
+    for (let i = 0; i < 60; i++) step(game, idle(game))
+    const clock = game.shotClock
+    const events = press(game, 0, { pass: true })
+    expect(events.find((e) => e.type === 'pass')).toMatchObject({ by: 0, to: 1 })
+    expect(game.ball.holder).toBe(1)
+    expect(game.shotClock).toBeLessThan(clock)
+    expect(events.some((e) => e.type === 'rebound')).toBe(false)
+  })
+
+  it('a defender standing in the lane takes the pass', () => {
+    const game = twos(-3, 7, 3, 7)
+    const defender = game.players[2]!
+    defender.x = 0
+    defender.z = 7
+    const events = press(game, 0, { pass: true })
+    expect(game.ball.holder).toBe(2)
+    expect(events).toContainEqual({ type: 'steal', by: 2 })
+    expect(game.offense).toBe(1)
+  })
+
+  it('four computer players finish a 2v2 game, passing as they go', () => {
+    const game = newGame(17, 2)
+    const minds = game.players.map((p) => newMind(40 + p.id))
+    let passes = 0
+    for (let i = 0; i < 60 * 60 * 25 && game.phase !== 'over'; i++) {
+      step(game, game.players.map((p) => think(game, p.id, levelById('medium'), minds[p.id]!)))
+      passes += game.events.filter((e) => e.type === 'pass').length
+      expect(Number.isFinite(game.ball.x + game.ball.y + game.ball.z)).toBe(true)
+    }
+    expect(game.phase).toBe('over')
+    expect(passes).toBeGreaterThan(0)
+  }, 60_000)
+})
+
 describe('street rules', () => {
   it('a defence that wins the ball must take it back beyond the arc before shooting', () => {
     const game = alone(0, 4)
