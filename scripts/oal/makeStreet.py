@@ -1,14 +1,16 @@
 # One Africa Life: a piece of a real Monrovia street in 3D, from OpenStreetMap, to judge the look.
 #
-#   blender -b --factory-startup --python scripts/oal/makeStreet.py -- <osm.json> <textures dir> <out dir>
+#   blender -b --factory-startup --python scripts/oal/makeStreet.py -- <osm.json> <out dir>
 #
 # The map (OpenStreetMap, © OpenStreetMap contributors, ODbL) gives where every road and building
 # really is. What a map does not say is drawn here from how Sinkor looks: houses of one or two
 # storeys in painted plaster, faded by sun and rain with red dust splashed up their foot, windows
-# behind iron bars, hipped roofs of corrugated zinc gone to rust; bigger blocks in concrete with
-# flat roofs; compound walls with steel gates along every street; zinc kiosks with rusty shutters
-# on the boulevard's red-earth shoulder; coconut palms; wooden poles carrying the wires.
-# The surfaces are photographs from Poly Haven (CC0), tinted here in the colours Sinkor is painted.
+# behind iron bars, hipped roofs of corrugated zinc gone to rust, air-conditioners on the walls;
+# bigger blocks in concrete with flat roofs and water tanks; compound walls with steel gates along
+# every street; zinc kiosks with rusty shutters and painted names on the boulevard's red-earth
+# shoulder, a generator by them, white plastic chairs; a woman selling bananas under an umbrella;
+# yellow taxis and kekehs, cars driving on the right; people standing, phoning, sitting, walking;
+# coconut palms; wooden poles carrying the wires. Built from scripts/oal/scenekit.py.
 import json
 import math
 import os
@@ -19,8 +21,12 @@ import bmesh
 import bpy
 from mathutils import Vector
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import scenekit as kit  # noqa: E402
+from scenekit import box, flat, photo, srgb  # noqa: E402
+
 args = sys.argv[sys.argv.index('--') + 1:]
-OSM, TEX, OUT = args[0], args[1], os.path.expanduser(args[2])
+OSM, OUT = args[0], os.path.expanduser(args[1])
 os.makedirs(OUT, exist_ok=True)
 random.seed(4)
 RADIUS = 170  # metres around the centre that are built
@@ -59,192 +65,31 @@ scene = bpy.context.scene
 
 # ---- Materials ---------------------------------------------------------------------------------
 
-
-def photo(name, stem, scale=1.0, tint=None, tint_amount=0.0, dust=0.0, metallic=0.0, rough_mul=1.0, mul=None):
-    """A Poly Haven photo material on world-sized UVs; optionally tinted, and dusted red at the foot."""
-    m = bpy.data.materials.new(name)
-    m.use_nodes = True
-    nt = m.node_tree
-    bsdf = nt.nodes['Principled BSDF']
-    uv = nt.nodes.new('ShaderNodeUVMap')
-    mapping = nt.nodes.new('ShaderNodeMapping')
-    mapping.inputs['Scale'].default_value = (1 / scale, 1 / scale, 1)
-    nt.links.new(uv.outputs['UV'], mapping.inputs['Vector'])
-
-    def tex(suffix, colour=True):
-        t = nt.nodes.new('ShaderNodeTexImage')
-        t.image = bpy.data.images.load(os.path.join(TEX, f'{stem}_{suffix}.jpg'), check_existing=True)
-        if not colour:
-            t.image.colorspace_settings.name = 'Non-Color'
-        nt.links.new(mapping.outputs['Vector'], t.inputs['Vector'])
-        return t
-
-    colour = tex('diff').outputs['Color']
-    if tint is not None:
-        # Painted: the photo's light and dark kept, its colour replaced by the paint.
-        bw = nt.nodes.new('ShaderNodeRGBToBW')
-        nt.links.new(colour, bw.inputs['Color'])
-        paint = nt.nodes.new('ShaderNodeMix')
-        paint.data_type = 'RGBA'
-        paint.blend_type = 'MULTIPLY'
-        paint.inputs['Factor'].default_value = 1.0
-        nt.links.new(bw.outputs['Val'], paint.inputs['A'])
-        paint.inputs['B'].default_value = (*[c * 2.2 for c in tint], 1)
-        mix = nt.nodes.new('ShaderNodeMix')
-        mix.data_type = 'RGBA'
-        mix.inputs['Factor'].default_value = tint_amount
-        nt.links.new(colour, mix.inputs['A'])
-        nt.links.new(paint.outputs['Result'], mix.inputs['B'])
-        colour = mix.outputs['Result']
-    if dust:
-        # Red laterite splashed up the bottom half metre, uneven; rain streaks darker from the top.
-        geo = nt.nodes.new('ShaderNodeNewGeometry')
-        sep = nt.nodes.new('ShaderNodeSeparateXYZ')
-        nt.links.new(geo.outputs['Position'], sep.inputs['Vector'])
-        n = nt.nodes.new('ShaderNodeTexNoise')
-        n.inputs['Scale'].default_value = 3.0
-        nt.links.new(geo.outputs['Position'], n.inputs['Vector'])
-        add = nt.nodes.new('ShaderNodeMath')
-        add.operation = 'MULTIPLY_ADD'
-        nt.links.new(n.outputs['Fac'], add.inputs[0])
-        add.inputs[1].default_value = 0.5
-        nt.links.new(sep.outputs['Z'], add.inputs[2])
-        ramp = nt.nodes.new('ShaderNodeMapRange')
-        nt.links.new(add.outputs['Value'], ramp.inputs['Value'])
-        ramp.inputs['From Min'].default_value = 0.25
-        ramp.inputs['From Max'].default_value = 0.85
-        ramp.inputs['To Min'].default_value = dust
-        ramp.inputs['To Max'].default_value = 0.0
-        dmix = nt.nodes.new('ShaderNodeMix')
-        dmix.data_type = 'RGBA'
-        nt.links.new(ramp.outputs['Result'], dmix.inputs['Factor'])
-        nt.links.new(colour, dmix.inputs['A'])
-        dmix.inputs['B'].default_value = (0.36, 0.13, 0.06, 1)
-        streak = nt.nodes.new('ShaderNodeTexNoise')
-        streak.inputs['Scale'].default_value = 1.0
-        streak.inputs['Detail'].default_value = 4
-        stretch = nt.nodes.new('ShaderNodeMapping')
-        stretch.inputs['Scale'].default_value = (4.0, 4.0, 0.25)
-        nt.links.new(geo.outputs['Position'], stretch.inputs['Vector'])
-        nt.links.new(stretch.outputs['Vector'], streak.inputs['Vector'])
-        sramp = nt.nodes.new('ShaderNodeMapRange')
-        nt.links.new(streak.outputs['Fac'], sramp.inputs['Value'])
-        sramp.inputs['From Min'].default_value = 0.45
-        sramp.inputs['From Max'].default_value = 0.75
-        sramp.inputs['To Min'].default_value = 1.0
-        sramp.inputs['To Max'].default_value = 0.6
-        dark = nt.nodes.new('ShaderNodeMix')
-        dark.data_type = 'RGBA'
-        dark.blend_type = 'MULTIPLY'
-        dark.inputs['Factor'].default_value = 1.0
-        nt.links.new(dmix.outputs['Result'], dark.inputs['A'])
-        comb = nt.nodes.new('ShaderNodeCombineXYZ')
-        for k in ('X', 'Y', 'Z'):
-            nt.links.new(sramp.outputs['Result'], comb.inputs[k])
-        nt.links.new(comb.outputs['Vector'], dark.inputs['B'])
-        colour = dark.outputs['Result']
-    if mul is not None:
-        # A colour cast: asphalt darker, the earth redder.
-        cast = nt.nodes.new('ShaderNodeMix')
-        cast.data_type = 'RGBA'
-        cast.blend_type = 'MULTIPLY'
-        cast.inputs['Factor'].default_value = 1.0
-        nt.links.new(colour, cast.inputs['A'])
-        cast.inputs['B'].default_value = (*mul, 1)
-        colour = cast.outputs['Result']
-    nt.links.new(colour, bsdf.inputs['Base Color'])
-    rough = tex('rough', False)
-    if rough_mul != 1.0:
-        mul = nt.nodes.new('ShaderNodeMath')
-        mul.operation = 'MULTIPLY'
-        mul.inputs[1].default_value = rough_mul
-        nt.links.new(rough.outputs['Color'], mul.inputs[0])
-        nt.links.new(mul.outputs['Value'], bsdf.inputs['Roughness'])
-    else:
-        nt.links.new(rough.outputs['Color'], bsdf.inputs['Roughness'])
-    nmap = nt.nodes.new('ShaderNodeNormalMap')
-    nt.links.new(tex('nor', False).outputs['Color'], nmap.inputs['Color'])
-    nt.links.new(nmap.outputs['Normal'], bsdf.inputs['Normal'])
-    bsdf.inputs['Metallic'].default_value = metallic
-    return m
-
-
-def flat(name, rgb, roughness=0.8, metallic=0.0):
-    m = bpy.data.materials.new(name)
-    m.use_nodes = True
-    b = m.node_tree.nodes['Principled BSDF']
-    b.inputs['Base Color'].default_value = (*rgb, 1)
-    b.inputs['Roughness'].default_value = roughness
-    b.inputs['Metallic'].default_value = metallic
-    return m
-
-
-def srgb(h):
-    c = [int(h.lstrip('#')[i:i + 2], 16) / 255 for i in (0, 2, 4)]
-    return tuple(x / 12.92 if x <= 0.04045 else ((x + 0.055) / 1.055) ** 2.4 for x in c)
-
-
 # The colours houses in Sinkor are painted: sun-faded creams, yellows, pale greens and blues, a
 # pink, a salmon; some left grey in bare cement render.
 PAINTS = ['#e9dcb8', '#e8c97a', '#cfdcb8', '#a9c8d6', '#e8b8a8', '#d99a7a', '#f2ece0', '#b8d4b0', '#e6d39a', '#9fb8d8']
-wall_mats = [photo(f'wall_{p}', random.choice(['painted_plaster_wall', 'white_stucco']), scale=2.5, tint=srgb(p), tint_amount=0.9, dust=0.75) for p in PAINTS]
+wall_mats = [photo(f'wall_{p}', random.choice(['painted_plaster_wall', 'white_stucco']), scale=2.5, tint=srgb(p), tint_amount=0.9, dust=0.8) for p in PAINTS]
 wall_mats.append(photo('wall_bare', 'white_stucco', scale=3.0, tint=srgb('#b4afa6'), tint_amount=1.0, dust=0.7))
 m_compound = [photo(f'compound_{p}', 'white_stucco', scale=2.5, tint=srgb(p), tint_amount=0.9, dust=0.95) for p in ('#d8d0c0', '#e8c97a', '#f2ece0', '#c0c8b8')]
-m_zinc_rust = photo('zinc_rust', 'rusty_corrugated_iron', scale=2.0, metallic=0.3)
-m_zinc = photo('zinc', 'corrugated_iron_02', scale=2.0, metallic=0.7, rough_mul=0.9)
+m_zinc_rust = photo('zinc_rust', 'rusty_corrugated_iron', scale=2.0, metallic=0.3, streaks=0)
+m_zinc = photo('zinc', 'corrugated_iron_02', scale=2.0, metallic=0.7, rough_mul=0.9, streaks=0)
 m_flatroof = photo('flatroof', 'white_stucco', scale=4.0, tint=srgb('#8f8a82'), tint_amount=1.0)
-m_asphalt = photo('asphalt', 'road_damaged_clean', scale=4.0, mul=(0.5, 0.5, 0.52))
-m_side = photo('side_road', 'road_damaged_clean', scale=3.0, mul=(0.62, 0.6, 0.58))
-m_earth = photo('earth', 'red_laterite_soil_stones', scale=3.0, mul=(1.0, 0.78, 0.62))
-m_dirt = photo('dirt_road', 'red_dirt_mud_01', scale=3.0, mul=(1.0, 0.8, 0.66))
-m_shutter = photo('shutter', 'rusty_metal_shutter', scale=2.2, metallic=0.4)
+m_asphalt = photo('asphalt', 'road_damaged_clean', scale=4.0, mul=(0.5, 0.5, 0.52), streaks=0)
+m_side = photo('side_road', 'road_damaged_clean', scale=3.0, mul=(0.62, 0.6, 0.58), streaks=0)
+m_earth = photo('earth', 'red_laterite_soil_stones', scale=3.0, mul=(1.0, 0.78, 0.62), streaks=0)
+m_dirt = photo('dirt_road', 'red_dirt_mud_01', scale=3.0, mul=(1.0, 0.8, 0.66), streaks=0)
+m_shutter = photo('shutter', 'rusty_metal_shutter', scale=2.2, metallic=0.4, streaks=0)
 m_curb = flat('curb', (0.25, 0.24, 0.22), 0.9)
 m_glass = flat('glass', (0.02, 0.025, 0.03), 0.15)
 m_bars = flat('bars', (0.03, 0.03, 0.03), 0.5, 0.6)
 m_frame = flat('frame', (0.55, 0.52, 0.48), 0.8)
 m_doors = [flat(f'door{i}', srgb(c), 0.6, 0.3) for i, c in enumerate(['#3a2a20', '#1f3a4a', '#5a2a1c', '#2a4a2a', '#3a3a3a'])]
 m_gate = [flat(f'gate{i}', srgb(c), 0.55, 0.5) for i, c in enumerate(['#2a3f6a', '#1a1a1a', '#6a1f1f', '#2a5a3a', '#7a6a2a'])]
-m_kiosk = [flat(f'kiosk{i}', srgb(c), 0.7) for i, c in enumerate(['#2f6fb8', '#e2b62a', '#2f8a4a', '#c43a2a', '#e8e0d0'])]
-m_trunk = flat('trunk', (0.20, 0.16, 0.12), 0.9)
-m_frond = flat('frond', (0.10, 0.20, 0.05), 0.7)
-m_frond_dry = flat('frond_dry', (0.32, 0.24, 0.10), 0.8)
+KIOSK_COLOURS = ['#2f6fb8', '#e2b62a', '#2f8a4a', '#c43a2a', '#e8e0d0', '#6a3a8a']
+m_kiosk = [flat(f'kiosk{i}', srgb(c), 0.7) for i, c in enumerate(KIOSK_COLOURS)]
 m_wood = flat('pole', (0.15, 0.11, 0.08), 0.9)
 m_wire = flat('wire', (0.01, 0.01, 0.01), 0.5)
-
-
-def new_object(name, bm, mats):
-    mesh = bpy.data.meshes.new(name)
-    bm.normal_update()
-    bm.to_mesh(mesh)
-    bm.free()
-    obj = bpy.data.objects.new(name, mesh)
-    scene.collection.objects.link(obj)
-    for m in mats:
-        obj.data.materials.append(m)
-    for p in mesh.polygons:
-        p.use_smooth = False
-    return obj
-
-
-def box(bm, uv, centre, size, yaw=0.0, mat=0, uv_scale=1.0):
-    """A box in a bmesh: centre (x, y, z bottom), size (along, across, high), turned by yaw."""
-    c, s = math.cos(yaw), math.sin(yaw)
-    a, b, h = size[0] / 2, size[1] / 2, size[2]
-    corners = [(-a, -b), (a, -b), (a, b), (-a, b)]
-    lo = [bm.verts.new((centre[0] + x * c - y * s, centre[1] + x * s + y * c, centre[2])) for x, y in corners]
-    hi = [bm.verts.new((v.co.x, v.co.y, centre[2] + h)) for v in lo]
-    faces = [bm.faces.new(hi)]
-    for i in range(4):
-        j = (i + 1) % 4
-        faces.append(bm.faces.new((lo[i], lo[j], hi[j], hi[i])))
-    for f in faces:
-        f.material_index = mat
-        n = f.normal
-        for loop in f.loops:
-            p = loop.vert.co
-            loop[uv].uv = ((p.x if abs(n.x) < 0.7 else p.y) / uv_scale, (p.z if abs(n.z) < 0.7 else p.y) / uv_scale)
-    return faces
-
+m_paint = flat('paint', (0.55, 0.53, 0.48), 0.9)
 
 # ---- Where things are: a grid of what is road and what is building --------------------------
 
@@ -255,7 +100,7 @@ def cell(p):
     return int((p.x + RADIUS * 1.3) / CELL), int((p.y + RADIUS * 1.3) / CELL)
 
 
-occupied = set()  # cells taken by a road (with its edge) or a building
+occupied = set()
 
 
 def mark_disk(p, r):
@@ -279,10 +124,9 @@ g = RADIUS * 1.3
 f = bm.faces.new([bm.verts.new((x, y, 0)) for x, y in ((-g, -g), (g, -g), (g, g), (-g, g))])
 for loop in f.loops:
     loop[uv].uv = (loop.vert.co.x, loop.vert.co.y)
-new_object('ground', bm, [m_earth])
+kit.new_object('ground', bm, [m_earth])
 
 road_lines = []
-m_paint = flat('paint', (0.55, 0.53, 0.48), 0.9)
 for w in roads:
     pts = [xy(n) for n in w['nodes']]
     if all(p.length > RADIUS * 1.2 for p in pts):
@@ -312,7 +156,7 @@ for w in roads:
         face = bm.faces.new((l0, r0, r1, l1))
         for loop, (u, v) in zip(face.loops, ((width, a0), (0, a0), (0, a1), (width, a1))):
             loop[uv].uv = (u, v)
-    new_object('road', bm, [mat])
+    kit.new_object('road', bm, [mat])
     if trunk:
         # Faded lane markings: a solid line in the middle, dashes between the lanes.
         bm = bmesh.new()
@@ -332,11 +176,10 @@ for w in roads:
                     on = not dash or int((walked + t) / 3.0) % 3 == 0
                     if on and random.random() > 0.25:
                         p0, p1 = a + d * t + n * off, a + d * min(ln, t + step) + n * off
-                        q = [bm.verts.new((*(p + n * s), 0.035)) for p, s in ((p0, 0.07), (p0, -0.07), (p1, -0.07), (p1, 0.07))]
-                        bm.faces.new(q)
+                        bm.faces.new([bm.verts.new((*(p + n * s), 0.035)) for p, s in ((p0, 0.07), (p0, -0.07), (p1, -0.07), (p1, 0.07))])
                     t += step
                 walked += ln
-        new_object('lines', bm, [m_paint])
+        kit.new_object('lines', bm, [m_paint])
         # A low concrete kerb along both edges.
         bm = bmesh.new()
         uv = bm.loops.layers.uv.new()
@@ -349,7 +192,7 @@ for w in roads:
                 n = Vector((-d.y, d.x)) * side
                 mid = (a + b) / 2 + n * (width / 2 + 0.15)
                 box(bm, uv, (mid.x, mid.y, 0), (seg.length + 0.05, 0.3, 0.16), math.atan2(seg.y, seg.x))
-        new_object('kerb', bm, [m_curb])
+        kit.new_object('kerb', bm, [m_curb])
 
 # ---- Buildings ---------------------------------------------------------------------------------
 
@@ -392,7 +235,6 @@ def hip_roof(bm, uv, pts, z, overhang, pitch):
         d = long_axis.normalized()
         r0 = bm.verts.new((*(c - d * half), z + rise))
         r1 = bm.verts.new((*(c + d * half), z + rise))
-        # Each eave vertex goes to the nearer ridge end.
         ends = [r0 if (p - c).dot(d) < 0 else r1 for p in ring]
         faces = []
         for i in range(4):
@@ -416,7 +258,6 @@ def hip_roof(bm, uv, pts, z, overhang, pitch):
         for loop in face.loops:
             p = loop.vert.co.xy
             loop[uv].uv = (p.dot(across), p.dot(down) * 1.1)
-    # The fascia under the eaves.
     for i in range(len(ring)):
         j = (i + 1) % len(ring)
         a, b = ring[i], ring[j]
@@ -446,7 +287,6 @@ def build(pts, storeys, big, road_point):
     for loop in lid.loops:
         loop[uv].uv = (loop.vert.co.x, loop.vert.co.y)
     if big:
-        # A parapet round the flat roof, and a water tank on it.
         for i in range(len(pts)):
             a, b = pts[i], pts[(i + 1) % len(pts)]
             seg = b - a
@@ -460,9 +300,10 @@ def build(pts, storeys, big, road_point):
             v.co += Vector((c.x, c.y, height + 0.8))
     else:
         hip_roof(bm, uv, pts, height, 0.55, random.uniform(0.35, 0.5))
-    building = new_object('building', bm, [wall, roof])
+    kit.new_object('building', bm, [wall, roof])
 
-    # Windows (glass behind iron bars, in a plain surround) and a door on the side facing the road.
+    # Windows (glass behind iron bars, in a plain surround), a door on the side facing the road,
+    # and air-conditioners hung on the wall here and there.
     bm = bmesh.new()
     uv = bm.loops.layers.uv.new()
     door_edge = min(range(len(pts)), key=lambda i: (((pts[i] + pts[(i + 1) % len(pts)]) / 2) - road_point).length - 0.3 * (pts[(i + 1) % len(pts)] - pts[i]).length)
@@ -504,8 +345,10 @@ def build(pts, storeys, big, road_point):
                     for bz in (0.33, 0.66):
                         q = p + out * 0.1
                         box(bm, uv, (q.x, q.y, z + h_ * bz), (w_, 0.025, 0.025), yaw, mat=1)
-    new_object('openings', bm, [m_glass, m_bars, m_frame, random.choice(m_doors)])
-    return building
+                if random.random() < (0.25 if big else 0.12):
+                    q = p + d * (w_ / 2 + 0.6) + out * 0.05
+                    kit.place(kit.model('exterior_aircon_unit'), q, yaw, z=z + 0.2)
+    kit.new_object('openings', bm, [m_glass, m_bars, m_frame, random.choice(m_doors)])
 
 
 footprints = []
@@ -530,7 +373,6 @@ for pts, tags in footprints:
     c = sum(pts, Vector((0, 0))) / len(pts)
     dist, near = nearest_road(c)
     build(pts, storeys, big, near if near is not None else c)
-    # Fill the building's cells, so walls and palms keep out.
     for p in pts:
         mark_disk(p, 1.2)
     xs, ys = [p.x for p in pts], [p.y for p in pts]
@@ -544,7 +386,7 @@ for pts, tags in footprints:
         x += CELL
 print('BUILT', len(footprints), 'buildings')
 
-# ---- Compound walls with gates, and kiosks on the boulevard ----------------------------------
+# ---- Compound walls with gates -------------------------------------------------------------
 
 walls_bm = bmesh.new()
 walls_uv = walls_bm.loops.layers.uv.new()
@@ -580,7 +422,6 @@ for pts, width, trunk in road_lines:
                 p = a + d * t + n * setback
                 ok = p.length < RADIUS and free(p) and free(p - n * 0.8)
                 if ok and run and random.random() < 0.035:
-                    # A steel gate, then the wall goes on.
                     gw = random.choice([1.2, 3.2])
                     gp = run[-1][0] + d * gw / 2
                     box(gates, gates_uv, (gp.x, gp.y, 0), (gw, 0.08, 2.0), math.atan2(d.y, d.x), mat=random.randrange(len(m_gate)))
@@ -593,85 +434,154 @@ for pts, width, trunk in road_lines:
                     flush(run)
                 t += 1.0
         flush(run)
-new_object('compound_walls', walls_bm, m_compound)
-new_object('gates', gates, m_gate)
+kit.new_object('compound_walls', walls_bm, m_compound)
+kit.new_object('gates', gates, m_gate)
 print('WALLS', walls_made)
 
-kiosks = 0
-for w in tubman:
+# ---- Life on the boulevard -----------------------------------------------------------------
+
+# Kiosk names, invented, in the way Monrovia names its small businesses.
+SIGNS = ['MA HAWA COOKSHOP', 'BLESSED HANDS\nPHONE REPAIR', 'GOD IS ABLE\nENTERPRISE', 'PEACE & LOVE\nPROVISION SHOP', 'FAITH BARBING SALOON',
+         'JAH GUIDE\nSPARE PARTS', 'DAILY BREAD', 'MOBILE MONEY\nHERE', 'SWEET MOTHER\nCOOKSHOP', 'NO CONDITION\nIS PERMANENT', 'TOP UP\nSCRATCH CARD',
+         'ONE LOVE\nTAILORING', 'GOOD LUCK\nPHARMACY', 'COLD WATER\nSOLD HERE']
+STANDING = ['man_phone', 'man_idle', 'man_talk', 'man_argue', 'woman_idle', 'woman_phone', 'woman_looking']
+WALKING = ['man_walk', 'woman_walk', 'man_carry']
+signs = list(SIGNS)
+random.shuffle(signs)
+
+
+def shoulder_spots(w, offset, every):
+    """Points along a road, at an offset from its centre (+ left of travel, - right)."""
     pts = [xy(n) for n in w['nodes']]
-    width = road_width(w)
     for a, b in zip(pts, pts[1:]):
         seg = b - a
         if seg.length < 0.1:
             continue
         d = seg.normalized()
-        t = random.uniform(2, 10)
+        n = Vector((-d.y, d.x))
+        t = random.uniform(0, every)
         while t < seg.length:
-            side = random.choice((1, -1))
-            n = Vector((-d.y, d.x)) * side
-            p = a + d * t + n * (width / 2 + 2.6)
+            yield a + d * t + n * offset, d, n
+            t += random.uniform(every * 0.6, every * 1.4)
+
+
+kiosks = 0
+for w in tubman:
+    width = road_width(w)
+    for side in (1, -1):
+        for p, d, n in shoulder_spots(w, side * (width / 2 + 2.6), 14):
+            n = n * side
             yaw = math.atan2(d.y, d.x)
-            if p.length < RADIUS and free(p + n * 1.0) and random.random() < 0.55:
-                # A zinc kiosk: painted boards, its rusty shutter rolled half up to the road,
-                # a lean-to roof sticking out to give shade, a plain sign board.
-                k = bmesh.new()
-                kuv = k.loops.layers.uv.new()
-                wide = random.uniform(2.2, 3.4)
-                c = p + n * 1.0
-                box(k, kuv, (c.x, c.y, 0), (wide, 2.0, 2.4), yaw, mat=0)
-                f0 = p - n * 0.01
-                box(k, kuv, (f0.x, f0.y, 1.2), (wide - 0.3, 0.06, 1.1), yaw, mat=1)
-                box(k, kuv, (f0.x, f0.y, 0), (wide - 0.3, 0.04, 1.2), yaw, mat=3)
-                r = p + n * 0.4
-                box(k, kuv, (r.x, r.y, 2.45), (wide + 0.6, 3.2, 0.05), yaw, mat=2)
-                s = p - n * 0.05
-                box(k, kuv, (s.x, s.y, 2.5), (wide - 0.2, 0.05, 0.55), yaw, mat=4)
-                new_object('kiosk', k, [random.choice(m_kiosk), m_shutter, m_zinc_rust, m_glass, random.choice(m_kiosk)])
-                mark_disk(c, 2.0)
-                kiosks += 1
-            t += random.uniform(6, 22)
+            back = p + n * 1.0
+            if p.length > RADIUS or not free(back) or random.random() > 0.6:
+                continue
+            # A zinc kiosk: painted boards, its rusty shutter rolled half up to the road, a lean-to
+            # roof giving shade, a painted sign board with its name.
+            k = bmesh.new()
+            kuv = k.loops.layers.uv.new()
+            wide = random.uniform(2.4, 3.4)
+            box(k, kuv, (back.x, back.y, 0), (wide, 2.0, 2.4), yaw, mat=0)
+            f0 = p - n * 0.01
+            box(k, kuv, (f0.x, f0.y, 1.25), (wide - 0.3, 0.06, 1.05), yaw, mat=1)
+            box(k, kuv, (f0.x, f0.y, 0), (wide - 0.3, 0.04, 0.95), yaw, mat=3)
+            r = p + n * 0.4
+            box(k, kuv, (r.x, r.y, 2.45), (wide + 0.8, 3.2, 0.05), yaw, mat=2, pitch=0.0)
+            s = p - n * 0.06
+            box(k, kuv, (s.x, s.y, 2.5), (wide - 0.1, 0.05, 0.6), yaw, mat=4)
+            colour = random.randrange(len(m_kiosk))
+            board = (colour + 3) % len(m_kiosk)
+            kit.new_object('kiosk', k, [m_kiosk[colour], m_shutter, m_zinc_rust, m_glass, m_kiosk[board]])
+            ink = '#1a1a1a' if KIOSK_COLOURS[board] in ('#e2b62a', '#e8e0d0') else '#f4efe2'
+            name = signs[kiosks % len(signs)]
+            kit.text(name, p - n * 0.1, kit.facing(-n), 0.2 if '\n' in name else 0.24, ink, 2.8)
+            mark_disk(back, 2.2)
+            # In front: white plastic chairs, someone sitting, a generator, jerrycans, crates.
+            front = p - n * 1.2
+            if random.random() < 0.7:
+                kit.place(kit.model('plastic_monobloc_chair_01'), front + d * 0.9, yaw + random.uniform(-0.6, 0.6) + (math.pi if side == 1 else 0))
+                if random.random() < 0.6:
+                    sitter = random.choice(['man_sit', 'woman_sit'])
+                    kit.place(kit.person(sitter), front + d * 0.9, kit.facing(-n) + random.uniform(-0.4, 0.4), z=0.0)
+            if random.random() < 0.5:
+                kit.place(kit.model('portable_generator'), back + d * (wide / 2 + 0.6), yaw)
+            for _ in range(random.randint(0, 3)):
+                kit.place(kit.model(random.choice(['plastic_jerrycan', 'metal_jerrycan_green', 'plastic_crate_01', 'cardboard_box_01'])), front - d * random.uniform(0.6, 1.4) + n * random.uniform(-0.3, 0.6), random.uniform(0, 6.3))
+            if random.random() < 0.55:
+                who = random.choice(STANDING)
+                kit.place(kit.person(who), front - d * random.uniform(0.2, 1.2) - n * random.uniform(0, 0.8), kit.facing(-n.lerp(d, random.uniform(-0.6, 0.6))))
+            kiosks += 1
 print('KIOSKS', kiosks)
 
+# A woman selling bananas under a big umbrella, near the junction.
+for w in tubman[:1]:
+    width = road_width(w)
+    for p, d, n in list(shoulder_spots(w, -(width / 2 + 1.6), 30))[:2]:
+        if not free(p) or p.length > 60:
+            continue
+        yaw = math.atan2(d.y, d.x)
+        kit.place(kit.model('painted_wooden_bench'), p, yaw)
+        kit.place(kit.model('bananas'), p + d * 0.3, yaw, z=0.45)
+        kit.place(kit.model('bananas'), p - d * 0.3, yaw + 1.2, z=0.45)
+        kit.place(kit.model('wicker_basket_01'), p - n * 0.8, yaw)
+        kit.place(kit.person('woman_idle'), p - n * 0.9, kit.facing(n))
+        # The umbrella: eight coloured panels on a pole.
+        bm = bmesh.new()
+        uv = bm.loops.layers.uv.new()
+        top = Vector((p.x, p.y, 2.5))
+        box(bm, uv, (p.x, p.y, 0), (0.04, 0.04, 2.5))
+        for k in range(8):
+            a0, a1 = k / 8 * 2 * math.pi, (k + 1) / 8 * 2 * math.pi
+            face = bm.faces.new((bm.verts.new(top), bm.verts.new((p.x + math.cos(a0) * 1.4, p.y + math.sin(a0) * 1.4, 2.05)), bm.verts.new((p.x + math.cos(a1) * 1.4, p.y + math.sin(a1) * 1.4, 2.05))))
+            face.material_index = 1 + k % 2
+        kit.new_object('umbrella', bm, [m_wood, flat('umb_a', srgb('#d23a2a'), 0.8), flat('umb_b', srgb('#f2e6c8'), 0.8)])
+        mark_disk(p, 2)
+        break
+
+# Rubbish and old tyres on the shoulder; people walking along it.
+for w in tubman:
+    width = road_width(w)
+    for side in (1, -1):
+        for p, d, n in shoulder_spots(w, side * (width / 2 + random.uniform(0.6, 1.4)), 9):
+            if p.length > RADIUS * 0.8 or not free(p + n * side * 0.5):
+                continue
+            r = random.random()
+            if r < 0.25:
+                kit.place(kit.model(random.choice(['trashbag', 'old_tyre', 'cardboard_box_01'])), p, random.uniform(0, 6.3))
+            elif r < 0.6:
+                kit.place(kit.person(random.choice(WALKING)), p, kit.facing(d if random.random() < 0.5 else -d))
+
+# Traffic, driving on the right: taxis (yellow), cars and SUVs in the lanes, kekehs waiting at
+# the junction with 16th Street, a few parked on the shoulder.
+CAR_COLOURS = ['#f0f0ee', '#c8c8c8', '#202020', '#1f2f5a', '#7a1a1a', '#d0c8b0']
+vehicles = 0
+for w in tubman:
+    width = road_width(w)
+    for lane in (-1, 1):
+        # Heading along the way (lane 1) keeps to its right, heading back (lane -1) to the other side.
+        for p, d, n in shoulder_spots(w, -lane * width / 4, 22):
+            if p.length > RADIUS * 0.85 or random.random() > 0.7:
+                continue
+            heading = d if lane == 1 else -d
+            p = p + n * random.uniform(-0.4, 0.4)
+            yaw = math.atan2(heading.y, heading.x)
+            r = random.random()
+            if r < 0.45:
+                kit.car(p, yaw, '#e9b51c', 'saloon', taxi=True)
+            elif r < 0.65:
+                kit.kekeh(p, yaw)
+            else:
+                kit.car(p, yaw, random.choice(CAR_COLOURS), random.choice(['saloon', 'suv', 'suv']))
+            vehicles += 1
+# The kekeh stop.
+for w in tubman[:1]:
+    width = road_width(w)
+    for i, (p, d, n) in enumerate(shoulder_spots(w, -(width / 2 - 1.0), 3.2)):
+        if p.length < 25:
+            kit.kekeh(p, math.atan2(d.y, d.x) + random.uniform(-0.15, 0.15), random.choice(['#e8b41c', '#e8b41c', '#2a6ab8']))
+            vehicles += 1
+print('VEHICLES', vehicles)
+
 # ---- Palms, poles and wires ----------------------------------------------------------------
-
-
-def palm(at):
-    height = random.uniform(8, 14)
-    lean = Vector((random.uniform(-1, 1), random.uniform(-1, 1))).normalized() * random.uniform(0.4, 1.8)
-    tip = Vector((at.x + lean.x, at.y + lean.y, height))
-    bm = bmesh.new()
-    # The trunk: rings of 8, thinning upward, bending with the lean.
-    rings = []
-    for k in range(9):
-        t = k / 8
-        c = Vector((at.x, at.y, 0)).lerp(tip, t) + Vector((lean.x, lean.y, 0)) * (-0.25 * math.sin(t * math.pi))
-        r = 0.2 - 0.06 * t + (0.06 if k == 0 else 0)
-        rings.append([bm.verts.new(c + Vector((math.cos(j / 8 * 2 * math.pi) * r, math.sin(j / 8 * 2 * math.pi) * r, 0))) for j in range(8)])
-    for r0, r1 in zip(rings, rings[1:]):
-        for j in range(8):
-            bm.faces.new((r0[j], r0[(j + 1) % 8], r1[(j + 1) % 8], r1[j]))
-    # Fronds: a stem with leaflets hanging either side, drooping; a few dry and brown below.
-    for k in range(14):
-        ang = k / 14 * 2 * math.pi + random.uniform(-0.2, 0.2)
-        dry = k % 5 == 0
-        droop = random.uniform(0.6, 1.1) + (0.8 if dry else 0)
-        length = random.uniform(3.5, 4.8)
-        out = Vector((math.cos(ang), math.sin(ang), 0))
-        across = Vector((-math.sin(ang), math.cos(ang), 0))
-        prev = None
-        for s in range(1, 13):
-            t = s / 12
-            p = tip + out * length * t + Vector((0, 0, math.sin(t * 2.2) * 0.9 - droop * t * t * 2.2))
-            if prev is not None:
-                span = 0.55 * math.sin(math.pi * min(1, t * 1.1))
-                for side in (1, -1):
-                    hang = Vector((0, 0, -0.35 * span))
-                    q = [bm.verts.new(v) for v in (prev, p, p + across * side * span + hang, prev + across * side * span * 0.9 + hang)]
-                    face = bm.faces.new(q)
-                    face.material_index = 2 if dry else 1
-            prev = p
-    new_object('palm', bm, [m_trunk, m_frond, m_frond_dry])
 
 
 def pole_line(points, offset):
@@ -696,7 +606,9 @@ def pole_line(points, offset):
             p, yaw = pole
             box(bm, uv, (p.x, p.y, 0), (0.24, 0.24, 9.5), yaw)
             box(bm, uv, (p.x, p.y, 8.6), (0.1, 1.8, 0.1), yaw)
-    new_object('poles', bm, [m_wood])
+            if random.random() < 0.4:
+                kit.place(kit.model('security_light'), p, yaw, z=7.5)
+    kit.new_object('poles', bm, [m_wood])
     for p0, p1 in zip(poles, poles[1:]):
         if not p0 or not p1:
             continue
@@ -727,56 +639,17 @@ for _ in range(4000):
     if p.length > RADIUS or not free(p):
         continue
     dist, _near = nearest_road(p)
-    # Palms stand mostly in yards and along the roadside.
     if random.random() < (0.5 if dist < 14 else 0.12):
-        palm(p)
+        kit.palm(p)
         mark_disk(p, 3)
         placed += 1
 print('PALMS', placed)
 
-# ---- Light, sky, cameras -----------------------------------------------------------------------
+# ---- Light and cameras ---------------------------------------------------------------------
 
-world = bpy.data.worlds.new('sky')
-world.use_nodes = True
-sky = world.node_tree.nodes.new('ShaderNodeTexSky')
-for attr, value in (('sky_type', 'NISHITA'), ('sun_elevation', math.radians(40)), ('sun_rotation', math.radians(235)), ('air_density', 3.0), ('dust_density', 5.0), ('ozone_density', 1.0)):
-    try:
-        setattr(sky, attr, value)
-    except Exception:
-        pass
-world.node_tree.links.new(sky.outputs['Color'], world.node_tree.nodes['Background'].inputs['Color'])
-world.node_tree.nodes['Background'].inputs['Strength'].default_value = 0.3
-scene.world = world
-sun = bpy.data.objects.new('sun', bpy.data.lights.new('sun', 'SUN'))
-sun.data.energy = 4.0
-sun.data.angle = math.radians(1.5)
-sun.data.color = (1.0, 0.95, 0.86)
-sun.rotation_euler = (math.radians(50), 0, math.radians(235))
-scene.collection.objects.link(sun)
-scene.render.engine = 'BLENDER_EEVEE'
-scene.eevee.taa_render_samples = 48
-for attr, value in (('use_shadows', True), ('use_raytracing', True), ('volumetric_end', 250.0)):
-    try:
-        setattr(scene.eevee, attr, value)
-    except Exception:
-        pass
-scene.view_settings.view_transform = 'AgX'
-scene.view_settings.exposure = -0.5
-try:
-    scene.view_settings.look = 'AgX - Medium High Contrast'
-except Exception:
-    pass
-scene.render.resolution_x, scene.render.resolution_y = 1280, 720
-scene.render.image_settings.file_format = 'PNG'
-cam = bpy.data.objects.new('cam', bpy.data.cameras.new('cam'))
-scene.collection.objects.link(cam)
-scene.camera = cam
-aim = bpy.data.objects.new('aim', None)
-scene.collection.objects.link(aim)
-cam.constraints.new('TRACK_TO').target = aim
-cam.data.clip_end = 600
+kit.daylight(sun_elevation=48, sun_heading=235)
+cam, aim = kit.render_setup(samples=48)
 
-# On the boulevard's shoulder at eye height, both ways; down a side street; and from above.
 line = []
 for w in tubman:
     line += [xy(n) for n in w['nodes']]
@@ -792,21 +665,35 @@ for pts, width, trunk in road_lines:
         if 30 < c.length < 110 and (pts[-1] - pts[0]).length > 50:
             street = (pts, width)
             break
+
+
+def v3(p, z):
+    return (p.x, p.y, z)
+
+
 views = {
-    'boulevard': (mid + side * (tw / 2 + 1.0) - d * 10, 1.65, mid + d * 70 + side * (tw / 2 - 2), 2.2, 26),
-    'boulevard_back': (mid - side * (tw / 2 + 1.0) + d * 10, 1.65, mid - d * 70 - side * (tw / 2 - 2), 2.2, 26),
-    'above': (mid + side * 55 - d * 45, 32, mid + d * 15, 0, 30),
+    'sinkor_boulevard': (v3(mid + side * (tw / 2 + 1.0) - d * 10, 1.65), v3(mid + d * 70 + side * (tw / 2 - 2), 2.2), 26),
+    'sinkor_boulevard_back': (v3(mid - side * (tw / 2 + 1.0) + d * 10, 1.65), v3(mid - d * 70 - side * (tw / 2 - 2), 2.2), 26),
+    'sinkor_kiosks': (v3(mid - side * (tw / 2 + 0.5) - d * 25, 1.6), v3(mid - side * (tw / 2 + 3.5) + d * 5, 1.4), 30),
+    'sinkor_above': (v3(mid + side * 55 - d * 45, 32), v3(mid + d * 15, 0), 30),
 }
 if street:
     pts, width = street
     a, b = pts[0], pts[-1]
     sd = (b - a).normalized()
-    views['side_street'] = (a + sd * 6 + Vector((-sd.y, sd.x)) * (width / 2 - 0.8), 1.65, a + sd * 50, 2.0, 26)
-for name, (at, h, look, lh, lens) in views.items():
-    cam.location = (at.x, at.y, h)
-    aim.location = (look.x, look.y, lh)
-    cam.data.lens = lens
-    scene.render.filepath = os.path.join(OUT, f'sinkor_{name}.png')
-    bpy.ops.render.render(write_still=True)
-    print('VIEW', name)
+    views['sinkor_side_street'] = (v3(a + sd * 6 + Vector((-sd.y, sd.x)) * (width / 2 - 0.8), 1.65), v3(a + sd * 50, 2.0), 26)
+# People close to where the cameras stand, so the street is seen with its life.
+for (eye, look, lens) in list(views.values()):
+    e, l = Vector(eye[:2]), Vector(look[:2])
+    if eye[2] > 5:
+        continue
+    for k in range(6):
+        t = random.uniform(6, 30)
+        q = e + (l - e).normalized() * t + Vector((-(l - e).y, (l - e).x)).normalized() * random.uniform(-3.5, 3.5)
+        if free(q):
+            who = random.choice(STANDING + WALKING)
+            kit.place(kit.person(who), q, kit.facing((random.uniform(-1, 1), random.uniform(-1, 1))))
+            mark_disk(q, 0.8)
+for name, (at, look, lens) in views.items():
+    kit.shoot(cam, aim, OUT, name, at, look, lens)
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, 'sinkor.blend'))
