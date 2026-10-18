@@ -70,9 +70,15 @@ def rest_world(obj, bone):
     return loc, rot
 
 
-def retarget(source_fbx, rig, name, prefix='mixamorig9:', recorded=MANNY, travel=True):
+def retarget(source_fbx, rig, name, prefix='mixamorig9:', recorded=MANNY, travel=True, at_rest=('Shoulder',)):
     """Bakes the move in `source_fbx` onto `rig` as an action called `name` (30 frames a second).
-    Without `travel`, the hips keep no movement across the floor at all (only up and down)."""
+    Without `travel`, the hips keep no movement across the floor at all (only up and down).
+
+    The bones named in `at_rest` (by the end of their name) are not taken from the recording:
+    they stay as the character holds them, under their parents. The shoulders, by default: the
+    recorded skeleton's collarbones sit differently from the character's, and carried across
+    they hunch the shoulders up toward the ears. The arms are still carried exactly, from the
+    shoulder joint out."""
     before, acts_before = set(bpy.data.objects), set(bpy.data.actions)
     # Importing the take sets the scene to its 120 frames a second; the scene is put back after,
     # or every movement in the character's file would play four times too fast.
@@ -85,7 +91,10 @@ def retarget(source_fbx, rig, name, prefix='mixamorig9:', recorded=MANNY, travel
     scene = bpy.context.scene
     start, end = (int(v) for v in src_action.frame_range)
     src_fps = recorded['fps']
-    PAIRS, NEXT, PELVIS, THIGHS = recorded['pairs'], recorded['toward'], recorded['hips'], recorded['thighs']
+    PAIRS = [(s_, t) for s_, t in recorded['pairs'] if not t.endswith(tuple(at_rest))]
+    kept = {s_ for s_, _ in PAIRS}
+    NEXT = {a: b for a, b in recorded['toward'].items() if a in kept and b in kept}
+    PELVIS, THIGHS = recorded['hips'], recorded['thighs']
 
     tb = {p[1]: rig.data.bones[prefix + p[1]] for p in PAIRS}
     sb = {p[0]: src.data.bones[p[0]] for p in PAIRS}

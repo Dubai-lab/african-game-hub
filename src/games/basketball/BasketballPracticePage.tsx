@@ -15,12 +15,14 @@ import { musicVolume, startMusic, stopMusic } from './music'
 import { type Level, levelById, type LevelId, LEVELS, type Mind, newMind, think } from './ai'
 import { Controls, type Pad } from './Controls'
 import { ENDING_MS, newView, PITCH, screenToCourt } from './camera'
+import { controlled, MY_TEAM } from './control'
 import { Court3D, type World } from './Court3D'
 import { boardSound, bounceSound, hornSound, rimSound, slapSound, swishSound } from './sound'
 
 const STORAGE_KEY = 'agh.basketball.practice'
 const SIZE_KEY = 'agh.basketball.practice.size'
 const HUMAN = 0
+
 
 type Hud = {
   score: [number, number]
@@ -38,16 +40,16 @@ type Hud = {
 }
 type Callout = { id: number; text: string; tone: 'good' | 'bad' | 'plain' }
 
-const hudOf = (game: Game): Hud => {
-  const me = game.players[HUMAN]!
+const hudOf = (game: Game, you: number): Hud => {
+  const me = game.players[you]!
   return {
     score: [game.score[0], game.score[1]],
     shotClock: game.shotClock,
     phase: game.phase,
-    attacking: game.ball.holder === HUMAN,
-    mateHas: game.ball.holder !== null && game.ball.holder !== HUMAN && game.players.find((p) => p.id === game.ball.holder)?.team === me.team,
+    attacking: game.ball.holder === you,
+    mateHas: game.ball.holder !== null && game.ball.holder !== you && game.players.find((p) => p.id === game.ball.holder)?.team === me.team,
     twoOnTwo: game.players.length > 2,
-    canDunk: game.ball.holder === HUMAN && !game.mustClear && me.shootT === null && fromRim(me.x, me.z) < DUNK_RANGE,
+    canDunk: game.ball.holder === you && !game.mustClear && me.shootT === null && fromRim(me.x, me.z) < DUNK_RANGE,
     mustClear: game.mustClear && game.offense === me.team,
     shootT: me.shootT,
     winner: game.winner,
@@ -149,7 +151,7 @@ function Match({ level, size, onChange }: { level: Level; size: 1 | 2; onChange:
   const minds = useRef<Mind[]>(world.current.game.players.map((p) => newMind(seed.current + 1 + p.id)))
   const pad = useRef<Pad>({ mx: 0, mz: 0, main: false, second: false, pass: false })
   const swish = useRef(0)
-  const [hud, setHud] = useState<Hud>(() => hudOf(world.current.game))
+  const [hud, setHud] = useState<Hud>(() => hudOf(world.current.game, world.current.human))
   const [callouts, setCallouts] = useState<Callout[]>([])
   const [paused, setPaused] = useState(false)
   const [showResult, setShowResult] = useState(false)
@@ -177,15 +179,15 @@ function Match({ level, size, onChange }: { level: Level; size: 1 | 2; onChange:
         else if (e.type === 'score') {
           swishSound()
           swish.current = performance.now()
-          const mine = e.team === world.current.game.players[HUMAN]!.team
+          const mine = e.team === MY_TEAM
           call(e.dunk ? t('basketball.call.dunk') : e.swish ? t('basketball.call.swish', { points: e.points }) : t('basketball.call.score', { points: e.points }), mine ? 'good' : 'bad')
         } else if (e.type === 'block') {
           slapSound()
-          call(t('basketball.call.block'), e.by === HUMAN ? 'good' : 'bad')
+          call(t('basketball.call.block'), world.current.game.players[e.by]?.team === MY_TEAM ? 'good' : 'bad')
         } else if (e.type === 'steal') {
           slapSound()
           world.current.marks[e.by] = performance.now()
-          call(t('basketball.call.steal'), e.by === HUMAN ? 'good' : 'bad')
+          call(t('basketball.call.steal'), world.current.game.players[e.by]?.team === MY_TEAM ? 'good' : 'bad')
         } else if (e.type === 'reach') {
           slapSound()
           world.current.marks[e.by] = performance.now()
@@ -193,13 +195,13 @@ function Match({ level, size, onChange }: { level: Level; size: 1 | 2; onChange:
         else if (e.type === 'pass') {
           slapSound()
           world.current.marks[e.by] = performance.now()
-        } else if (e.type === 'call' && e.by !== HUMAN) call(t('basketball.call.calling'))
+        } else if (e.type === 'call' && e.by !== world.current.human) call(t('basketball.call.calling'))
         else if (e.type === 'crossover') {
           world.current.crosses[e.by] = performance.now()
-          if (e.broke) call(t('basketball.call.ankles'), e.by === HUMAN ? 'good' : 'bad')
+          if (e.broke) call(t('basketball.call.ankles'), world.current.game.players[e.by]?.team === MY_TEAM ? 'good' : 'bad')
         }
         else if (e.type === 'turnover') call(t(e.reason === 'out' ? 'basketball.call.out' : 'basketball.call.shotClock'))
-        else if (e.type === 'shot' && e.by === HUMAN && !e.dunk) {
+        else if (e.type === 'shot' && e.by === world.current.human && !e.dunk) {
           const q = e.quality
           call(q > 0.85 ? t('basketball.call.perfect') : q > 0.55 ? t('basketball.call.good') : t(q > 0.25 ? 'basketball.call.early' : 'basketball.call.off'), q > 0.55 ? 'good' : 'plain')
         } else if (e.type === 'over') {
@@ -219,6 +221,8 @@ function Match({ level, size, onChange }: { level: Level; size: 1 | 2; onChange:
     let frame = 0
     let last = performance.now()
     let carry = 0
+    let lastHolder: number | null = null
+    let stale = { main: false, second: false, pass: false }
     let sinceHud = 0
     const loop = (now: number) => {
       const elapsed = Math.min(0.1, (now - last) / 1000)
@@ -229,19 +233,29 @@ function Match({ level, size, onChange }: { level: Level; size: 1 | 2; onChange:
         const game = world.current.game
         while (carry >= TICK) {
           carry -= TICK
-          const holding = game.ball.holder === HUMAN
+          // The controls go to whoever should have them (2v2), before this tick's buttons.
+          const was = world.current.human
+          world.current.human = controlled(game, was, lastHolder)
+          lastHolder = game.ball.holder
+          const you = world.current.human
+          const holding = game.ball.holder === you
           const p = pad.current
+          // A button still held from the player before is not pressed again for this one: it
+          // counts once it has been let go (the stick carries straight on).
+          if (you !== was) stale = { main: p.main, second: p.second, pass: p.pass }
+          stale = { main: stale.main && p.main, second: stale.second && p.second, pass: stale.pass && p.pass }
+          const press = { main: p.main && !stale.main, second: p.second && !stale.second, pass: p.pass && !stale.pass }
           // The stick and the arrows push the way the camera looks: up is straight ahead.
           const toward = screenToCourt(p.mx, p.mz, world.current.view.yaw)
-          const mine: Input = { mx: toward.x, mz: toward.z, shoot: holding && p.main, jump: !holding && p.main, action: p.second, pass: p.pass }
-          const inputs = game.players.map((player) => (player.id === HUMAN ? mine : think(game, player.id, level, minds.current[player.id]!)))
+          const mine: Input = { mx: toward.x, mz: toward.z, shoot: holding && press.main, jump: !holding && press.main, action: press.second, pass: press.pass }
+          const inputs = game.players.map((player) => (player.id === you ? mine : think(game, player.id, level, minds.current[player.id]!)))
           step(game, inputs)
           if (game.events.length) hear(game.events)
         }
         // The scoreboard, about fifteen times a second; the court itself is drawn every frame.
         if (sinceHud > 1 / 15) {
           sinceHud = 0
-          setHud(hudOf(game))
+          setHud(hudOf(game, world.current.human))
         }
       }
       frame = requestAnimationFrame(loop)
@@ -262,11 +276,12 @@ function Match({ level, size, onChange }: { level: Level; size: 1 | 2; onChange:
   const restart = () => {
     seed.current = (Math.random() * 2 ** 31) | 0
     world.current.game = newGame(seed.current, size)
+    world.current.human = HUMAN
     world.current.overAt = null
     minds.current = world.current.game.players.map((p) => newMind(seed.current + 1 + p.id))
     setShowResult(false)
     musicVolume(1)
-    setHud(hudOf(world.current.game))
+    setHud(hudOf(world.current.game, world.current.human))
     setPaused(false)
   }
 

@@ -1,7 +1,7 @@
 # Builds one basketball character for the game from Mixamo downloads.
 #
 #   blender -b --factory-startup --python scripts/makeBasketballCharacter.py -- \
-#       art-src/basketball/player1 public/basketball/player1.v6.glb art-src/basketball/player1/preview.png
+#       art-src/basketball/player1 public/basketball/player1.v7.glb art-src/basketball/player1/preview.png
 #
 # The folder holds the FBX files downloaded from Mixamo for one character (see CLIPS below for
 # the file names). The character itself is taken from "Happy Idle.fbx"; only the movement is
@@ -71,7 +71,8 @@ if os.path.isdir(MOVES):
     from retargetBasketball import BIND
     dunk_file = os.path.join(MOVES, 'dunk', 'smac.fbx')
     if os.path.exists(dunk_file):
-        take = retarget(dunk_file, rig, 'dunk_take', recorded=BIND, travel=False)
+        # The same skeleton as the character's: its shoulders come across too (up for the rim).
+        take = retarget(dunk_file, rig, 'dunk_take', recorded=BIND, travel=False, at_rest=())
         strokes(take, rig, 'dunk', [18, 37, 70], [14, 33])
         bpy.data.actions.remove(take)
 

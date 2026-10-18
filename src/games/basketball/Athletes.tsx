@@ -22,7 +22,7 @@ import { BALL_R } from '../../../supabase/functions/_shared/basketball'
 import { dyeClothes } from './clothes'
 
 // A new name for every new version: phones keep these files, and must not keep an old one.
-export const CHARACTER_URL = '/basketball/player1.v6.glb'
+export const CHARACTER_URL = '/basketball/player1.v7.glb'
 /**
  * The dribble is motion capture: a loop of this many dribbles of the same length, the hand at
  * the top of its stroke at the start of each (scripts/makeBasketballCharacter.py). The ball is

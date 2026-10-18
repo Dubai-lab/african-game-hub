@@ -366,3 +366,27 @@ describe('online: what the server sends and receives', () => {
     for (const bad of [null, [1, 2], [0, 0, 16], [0, 0, 1.5], ['x', 0, 0], [Infinity, 0, 0], { mx: 0 }]) expect(decodeInput(bad)).toBeNull()
   })
 })
+
+describe('practice 2v2: who the player controls', () => {
+  it('the controls follow the ball on our side, and go to the nearest defender when the other side has it', async () => {
+    const { controlled } = await import('./control')
+    const game = newGame(3, 2)
+    const [a, b, c] = game.players
+    a!.x = 0
+    a!.z = 8
+    b!.x = 4
+    b!.z = 6
+    c!.x = 4.5
+    c!.z = 6.5
+    // A teammate catches the ball: the controls go to him.
+    game.ball.holder = 1
+    expect(controlled(game, 0, 0)).toBe(1)
+    // The other side has it, beside player 1: player 1 defends.
+    game.ball.holder = 2
+    expect(controlled(game, 0, 1)).toBe(1)
+    // Nothing changed hands: no switch.
+    expect(controlled(game, 0, 2)).toBe(0)
+    game.ball.holder = null
+    expect(controlled(game, 1, 2)).toBe(1)
+  })
+})
