@@ -5,7 +5,7 @@ import { api, useApi } from '../lib/api'
 import type { Player } from '../lib/types'
 import { ActionDialog, Badge, Button, Card, Failure, inputClass, Loading, PageTitle, signed, Stat, Table, tokens, When, words } from '../ui'
 
-type Dialog = 'ban' | 'unban' | 'adjust' | null
+type Dialog = 'ban' | 'unban' | 'adjust' | 'oal' | null
 
 export default function PlayerPage() {
   const { userId } = useParams()
@@ -15,6 +15,7 @@ export default function PlayerPage() {
   const [direction, setDirection] = useState<'add' | 'remove'>('add')
   const [amount, setAmount] = useState('')
   const [balanceType, setBalanceType] = useState<'cash' | 'bonus'>('cash')
+  const [currency, setCurrency] = useState<'USD' | 'LRD' | 'GHS'>('USD')
 
   if (player.isPending) return <Loading />
   if (player.isError) return <Failure error={player.error} retry={() => void player.refetch()} />
@@ -30,6 +31,7 @@ export default function PlayerPage() {
         aside={
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => setDialog('adjust')}>Adjust balance</Button>
+            <Button onClick={() => setDialog('oal')}>Adjust life money</Button>
             {p.is_banned ? (
               <Button variant="primary" onClick={() => setDialog('unban')}>
                 Lift ban
@@ -257,6 +259,46 @@ export default function PlayerPage() {
           <p className="text-xs text-muted">
             Now: {tokens(p.cash_balance)} cash, {tokens(p.bonus_balance)} bonus.
           </p>
+        </ActionDialog>
+      )}
+
+      {dialog === 'oal' && (
+        <ActionDialog
+          title={`Adjust ${p.username}’s One Africa Life money`}
+          explain="One Africa Life's game money (Liberian dollars, US dollars, cedis) is not the hub's tokens and can never be cashed out. This writes a permanent entry of type “adjustment” to the life's money and an audit log entry with your name. A mistake is corrected with a second adjustment."
+          confirmLabel={whole ? `${direction === 'add' ? 'Add' : 'Remove'} ${whole.toLocaleString()} ${currency}` : 'Enter an amount'}
+          danger={direction === 'remove'}
+          onClose={() => setDialog(null)}
+          onConfirm={async (reason) => {
+            if (!whole) throw new Error('amount')
+            // Sent in hundredths (cents, pesewas), as the game keeps it.
+            await api('players.oalAdjust', { userId: p.id, currency, amount: (direction === 'add' ? whole : -whole) * 100, reason })
+            setAmount('')
+            await refresh()
+          }}
+        >
+          <div className="grid grid-cols-3 gap-2">
+            <label className="text-sm font-semibold">
+              Direction
+              <select value={direction} onChange={(e) => setDirection(e.target.value as 'add' | 'remove')} className={`${inputClass} mt-1`}>
+                <option value="add">Add</option>
+                <option value="remove">Remove</option>
+              </select>
+            </label>
+            <label className="text-sm font-semibold">
+              Amount
+              <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="numeric" pattern="[0-9]+" required className={`${inputClass} mt-1`} />
+            </label>
+            <label className="text-sm font-semibold">
+              Currency
+              <select value={currency} onChange={(e) => setCurrency(e.target.value as 'USD' | 'LRD' | 'GHS')} className={`${inputClass} mt-1`}>
+                <option value="USD">US dollars</option>
+                <option value="LRD">Liberian dollars</option>
+                <option value="GHS">Ghana cedis</option>
+              </select>
+            </label>
+          </div>
+          <p className="text-xs text-muted">The player must have started a life; otherwise this is refused.</p>
         </ActionDialog>
       )}
     </>

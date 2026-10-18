@@ -323,6 +323,29 @@ for i, u in enumerate(booths_u):
         put(kit.person('officer_desk'), u, BOOTH_V - 1.0, kit.facing((0, 1)), z=0.12)
 put(kit.person('officer_stand'), booths_u[-1] + 3, BOOTH_V + 2.0, kit.facing((-1, 0.3)), z=0.12)
 
+# The line across the hall at the booths: glass panels from wall to wall, broken only by the
+# booths and, beside each, a gate an officer opens for the traveller they admit.
+GATE_W = 1.0
+barrier = []   # (u0, u1) of each glass panel run
+gates = []     # (u0, u1) of each booth's gate
+u0 = 0.2
+for u in booths_u:
+    barrier.append((u0, u - 1.1))
+    gates.append((u + 1.15, u + 1.15 + GATE_W))
+    u0 = u + 1.15 + GATE_W
+barrier.append((u0, LEN - 0.2))
+bm, uv, done = mesh('barrier', [m_glass, m_alu])
+for b0, b1 in barrier:
+    box(bm, uv, ((b0 + b1) / 2, BOOTH_V, 0.12), (b1 - b0, 0.04, 2.2), mat=0)
+    box(bm, uv, ((b0 + b1) / 2, BOOTH_V, 2.32), (b1 - b0, 0.08, 0.06), mat=1)
+done().visible_shadow = False
+# Each gate its own object (gate1, gate2...), hinged at its booth's side, so the game can swing
+# open the one whose officer admits the traveller.
+for i, (g0, g1) in enumerate(gates):
+    bm, uv, done = mesh(f'gate{i + 1}', [m_blue])
+    box(bm, uv, ((g1 - g0) / 2, 0, 0), (g1 - g0 - 0.06, 0.05, 1.0), mat=0)
+    done().location = (g0, BOOTH_V, 0.12)
+
 # The sign hanging over the queue, and the welcome.
 bm, uv, done = mesh('arrival_signs', [m_sign, m_white])
 box(bm, uv, (51, BOOTH_V + 1.5, 3.3), (34, 0.12, 0.9), mat=0)
@@ -334,19 +357,27 @@ sign('WELCOME TO LIBERIA', 51, 34.62, (0, 1), 0.85, '#0a2a5c', 3.75)
 sign('Visitors · Liberian citizens · ECOWAS', 51, 34.62, (0, 1), 0.34, '#bf0a30', 3.15)
 inside(kit.liberian_flag((booths_u[0] - 3.2, BOOTH_V + 0.6), 0, 3.4, 1.2)).location.z = 0.12
 
-# Queue lines: posts with belts, three lanes before the booths; passengers in them.
+# Queue lines: posts with belts, three lanes before the booths; passengers in them. The belts
+# are unhooked in the middle (a quiet day), so a traveller can walk straight to the booths.
+QUEUE_GAP = (49.0, 52.0)
 bm, uv, done = mesh('stanchions', [m_alu, m_blue])
 for lane in range(4):
     v = BOOTH_V + 2.6 + lane * 1.4
-    for u in range(28, 76, 3):
+    for u in [u for u in range(28, 76, 3)] + list(QUEUE_GAP):
         cylinder(bm, (u, v, 0.12 + 0.48), 0.03, 0.96, 0, 8, mat=0)
         cylinder(bm, (u, v, 0.13), 0.16, 0.02, 0, 12, mat=0)
-        if u + 3 < 76:
-            box(bm, uv, (u + 1.5, v, 0.95), (3.0, 0.01, 0.05), mat=1)
+    for u in range(28, 73, 3):
+        a0, a1 = u, u + 3
+        for g0, g1 in ((28, QUEUE_GAP[0]), (QUEUE_GAP[1], 73)):
+            s0, s1 = max(a0, g0), min(a1, g1)
+            if s1 > s0:
+                box(bm, uv, ((s0 + s1) / 2, v, 0.95), (s1 - s0, 0.01, 0.05), mat=1)
 done()
 for k in range(14):
     lane = k % 3
     u = 32 + (k * 3.1) % 40
+    if QUEUE_GAP[0] - 0.8 < u < QUEUE_GAP[1] + 0.8:
+        u += 4.0
     v = BOOTH_V + 3.3 + lane * 1.4
     who = random.choice(STAND)
     put(kit.person(who), u, v, kit.facing((random.uniform(-0.3, 0.3), -1)), z=0.12)
@@ -572,6 +603,139 @@ views = {
     'ria_checkin': (at(10, 3.0, Z1 + 1.7), at(60, CHECK_V + 1, Z1 + 2.2), 20),
     'ria_gate': (at(62, 27.5, Z1 + 1.65), at(bridge_u[1] + 6, WID + 30, Z1 + 1.2), 20),
 }
+EXPORT = os.environ.get('RIA_EXPORT')
+if EXPORT:
+    # The game's arrivals hall: the ground floor and what is seen through its glass, in the
+    # terminal's own frame (glTF: x = u, y = up, z = -v), light enough for budget phones. And
+    # the hall's solid parts as rectangles in (u, v), for the game to walk against.
+    import json as _json
+    inv = root.matrix_world.inverted()
+    keep_world = ('car', 'flag', 'palm', 'grass', 'apron', 'airliner', 'jet_bridge', 'lead_in', 'stop_bar', 'cart')
+    for o in list(scene.objects):
+        if o.parent is None and o is not root and o.type in ('MESH', 'FONT', 'EMPTY') and o.name.split('.')[0] in keep_world:
+            o.parent = root
+            o.matrix_parent_inverse = inv
+    upstairs = lambda o: min((o.matrix_world @ Vector(c)).z for c in o.bound_box) >= FLOOR1 - 0.2 if o.type in ('MESH', 'FONT') else (o.matrix_world.translation.z >= FLOOR1 - 0.2)
+    for o in list(scene.objects):
+        is_person = o.type == 'EMPTY' and o.instance_collection is not None and o.instance_collection.name.startswith('person_')
+        if o is root:
+            continue
+        if o.parent is not root or is_person or o.type == 'LIGHT' or upstairs(o):
+            bpy.data.objects.remove(o)
+    # Instanced props become real objects; text becomes meshes.
+    for o in list(scene.objects):
+        o.select_set(o.type == 'EMPTY' and o.instance_collection is not None)
+    bpy.context.view_layer.objects.active = None
+    if any(o.select_get() for o in scene.objects):
+        bpy.ops.object.duplicates_make_real(use_base_parent=False, use_hierarchy=False)
+    for o in list(scene.objects):
+        if o.type == 'EMPTY' and o.instance_collection is not None:
+            bpy.data.objects.remove(o)
+    for o in list(scene.objects):
+        o.select_set(o.type == 'FONT')
+    if any(o.select_get() for o in scene.objects):
+        bpy.context.view_layer.objects.active = next(o for o in scene.objects if o.select_get())
+        bpy.ops.object.convert(target='MESH')
+    # The library of hidden originals goes too.
+    lib = bpy.data.collections.get('library')
+    if lib:
+        for c in list(lib.children_recursive) + [lib]:
+            for o in list(c.objects):
+                bpy.data.objects.remove(o)
+            bpy.data.collections.remove(c)
+    root.matrix_world.identity()
+    bpy.context.view_layer.update()
+
+    # Materials glTF can carry: the photo straight into the colour, its tint as the colour
+    # factor (a Multiply node, which the exporter reads as one), its scale as a texture
+    # transform; the normal and roughness pictures kept. Pictures at 512 pixels.
+    def simple(m):
+        if not m or not m.use_nodes:
+            return
+        nt = m.node_tree
+        images = {n.image.name.rsplit('_', 1)[-1].split('.')[0]: n.image for n in nt.nodes if n.type == 'TEX_IMAGE' and n.image}
+        if 'diff' not in images:
+            return
+        mapping = next((n for n in nt.nodes if n.type == 'MAPPING'), None)
+        scale = tuple(mapping.inputs['Scale'].default_value) if mapping else (1, 1, 1)
+        tint = next((n.inputs['B'].default_value[:3] for n in nt.nodes if n.type == 'MIX' and n.blend_type == 'MULTIPLY' and not n.inputs['B'].is_linked), None)
+        bsdf = nt.nodes['Principled BSDF']
+        metallic = bsdf.inputs['Metallic'].default_value
+        for n in list(nt.nodes):
+            if n not in (bsdf, nt.nodes.get('Material Output')):
+                nt.nodes.remove(n)
+        uvn = nt.nodes.new('ShaderNodeUVMap')
+        mp = nt.nodes.new('ShaderNodeMapping')
+        mp.inputs['Scale'].default_value = scale
+        nt.links.new(uvn.outputs['UV'], mp.inputs['Vector'])
+
+        def tex(kind, colour=True):
+            t = nt.nodes.new('ShaderNodeTexImage')
+            t.image = images[kind]
+            if not colour:
+                t.image.colorspace_settings.name = 'Non-Color'
+            nt.links.new(mp.outputs['Vector'], t.inputs['Vector'])
+            return t
+
+        d = tex('diff')
+        if tint is not None:
+            mul = nt.nodes.new('ShaderNodeMix')
+            mul.data_type = 'RGBA'
+            mul.blend_type = 'MULTIPLY'
+            mul.inputs['Factor'].default_value = 1.0
+            nt.links.new(d.outputs['Color'], mul.inputs['A'])
+            mul.inputs['B'].default_value = (*[min(1.0, c) for c in tint], 1)
+            nt.links.new(mul.outputs['Result'], bsdf.inputs['Base Color'])
+        else:
+            nt.links.new(d.outputs['Color'], bsdf.inputs['Base Color'])
+        if 'rough' in images:
+            sep = nt.nodes.new('ShaderNodeSeparateColor')
+            nt.links.new(tex('rough', False).outputs['Color'], sep.inputs['Color'])
+            nt.links.new(sep.outputs['Green'], bsdf.inputs['Roughness'])
+        if 'nor' in images:
+            nm = nt.nodes.new('ShaderNodeNormalMap')
+            nt.links.new(tex('nor', False).outputs['Color'], nm.inputs['Color'])
+            nt.links.new(nm.outputs['Normal'], bsdf.inputs['Normal'])
+        bsdf.inputs['Metallic'].default_value = metallic
+
+    for m in bpy.data.materials:
+        simple(m)
+    for img in bpy.data.images:
+        if img.size[0] > 512:
+            img.scale(512, max(1, int(512 * img.size[1] / img.size[0])))
+    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, 'ria_arrivals_game.blend'))
+    bpy.ops.export_scene.gltf(filepath=EXPORT, export_format='GLB', export_image_format='JPEG', export_image_quality=80, export_apply=True,
+                              export_yup=True, export_lights=False, export_cameras=False)
+
+    # The solid parts, in (u, v) metres: [u0, v0, u1, v1, id?]. The gates are named, so the
+    # game can open the one whose officer admitted the traveller.
+    solids = []
+    wall = 0.25
+    solids += [[0, -0.1, LEN, wall], [0, WID - wall, LEN, WID + 0.1], [-0.1, 0, wall, WID], [LEN - wall, 0, LEN + 0.1, WID]]
+    for u in booths_u:
+        solids.append([u - 1.1, BOOTH_V - 0.75, u + 1.2, BOOTH_V + 0.75])
+    for b0, b1 in barrier:
+        solids.append([b0, BOOTH_V - 0.06, b1, BOOTH_V + 0.06])
+    for i, (g0, g1) in enumerate(gates):
+        solids.append([g0, BOOTH_V - 0.06, g1, BOOTH_V + 0.06, f'gate{i + 1}'])
+    for lane in range(4):
+        v = BOOTH_V + 2.6 + lane * 1.4
+        solids.append([28, v - 0.05, QUEUE_GAP[0], v + 0.05])
+        solids.append([QUEUE_GAP[1], v - 0.05, 73, v + 0.05])
+    for cu in (36.0, 68.0):
+        solids.append([cu - 3.2 - 3.65, 10.5 - 3.65, cu + 3.2 + 3.65, 10.5 + 3.65])
+    plan = {
+        'frame': 'u along the hall from its south-west end, v across from the landside (0) to the airside',
+        'length': LEN, 'width': WID, 'boothV': BOOTH_V,
+        'booths': [{'n': i + 1, 'u': u, 'staffed': i in (1, 2, 4, 6), 'gate': f'gate{i + 1}'} for i, u in enumerate(booths_u)],
+        'spawn': {'u': 51.0, 'v': WID - 2.5}, 'exit': {'u0': 44.0, 'u1': 58.0, 'v1': 2.0},
+        'solids': solids,
+    }
+    with open(EXPORT.replace('.glb', '.json'), 'w') as f:
+        _json.dump(plan, f, indent=1)
+    print('EXPORTED', EXPORT, os.path.getsize(EXPORT))
+    sys.exit(0)
+
 ONLY = os.environ.get('RIA_VIEWS', '').split(',') if os.environ.get('RIA_VIEWS') else None
 for name, (eye, look, lens) in views.items():
     if ONLY and name not in ONLY:

@@ -102,6 +102,15 @@ export async function resetTestAccounts() {
 
     -- One Africa Life: the test accounts start with no life. (Its money entries are final for
     -- everyone; on the development project only, the lock is lifted for this one clean-up.)
+    -- Journeys first (they point at the life), and the game's clock back to the real calendar
+    -- (a journey test moves it; on the development project only).
+    update public.oal_lives set trip_id = null where user_id in ${theirIds};
+    delete from public.oal_border_entries where user_id in ${theirIds};
+    delete from public.oal_trips where user_id in ${theirIds};
+    delete from public.oal_tickets where user_id in ${theirIds};
+    delete from public.oal_bookings where user_id in ${theirIds};
+    delete from public.oal_passports where user_id in ${theirIds};
+    update public.oal_settings set clock_epoch = '2026-10-18 00:00:00+00' where clock_epoch <> '2026-10-18 00:00:00+00';
     alter table public.oal_money_entries disable trigger oal_money_entries_final;
     delete from public.oal_money_entries where user_id in ${theirIds};
     alter table public.oal_money_entries enable trigger oal_money_entries_final;

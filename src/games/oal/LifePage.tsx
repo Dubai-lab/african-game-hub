@@ -1,6 +1,6 @@
 // One Africa Life: the player's life. Someone who has not started one makes their character
-// here, in the creator; someone who has sees their life (the game's clock, their money). The
-// rest of the life (a room in Monrovia, the phone, work) comes in the next stage.
+// here, in the creator; someone who has sees their life: the game's clock, their money, where
+// they are, and their journeys (./Journey.tsx). A room, the phone and work come next.
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -11,8 +11,9 @@ import { supabase } from '@/core/lib/supabase'
 import { Button, buttonClass } from '@/core/ui/Button'
 import { Skeleton } from '@/core/ui/Skeleton'
 import { toast } from '@/core/ui/toast'
-import { AGE, type Appearance, BUILD, CATALOGUE, checkGameName, defaultAppearance, FACE, gameTime, HOME_TOWNS, type HomeCountry, type Sex } from '../../../supabase/functions/_shared/oal'
+import { AGE, type Appearance, BUILD, CATALOGUE, checkGameName, defaultAppearance, FACE, HOME_TOWNS, type HomeCountry, type Sex } from '../../../supabase/functions/_shared/oal'
 import type { Framing } from './CreatorScene'
+import { OnTheWay, Travel, useGameNow, useTravel } from './Journey'
 
 const CreatorScene = lazy(() => import('./CreatorScene'))
 
@@ -208,13 +209,14 @@ function Creator() {
 // ---- The life ------------------------------------------------------------------------------
 
 function useGameClock() {
-  const [now, setNow] = useState(() => gameTime(Date.now()))
+  const gameNow = useGameNow()
+  const [, tick] = useState(0)
   useEffect(() => {
     // A game minute is two real seconds.
-    const timer = setInterval(() => setNow(gameTime(Date.now())), 2000)
+    const timer = setInterval(() => tick((n) => n + 1), 2000)
     return () => clearInterval(timer)
   }, [])
-  return now
+  return gameNow()
 }
 
 function LifeHome({ life }: { life: Life }) {
@@ -255,7 +257,31 @@ function LifeHome({ life }: { life: Life }) {
         ))}
         <p className="mt-1 text-xs text-muted">{t('oal.life.moneyHint')}</p>
       </section>
+      <Whereabouts life={life} />
       <p className="text-muted">{t('oal.life.next')}</p>
     </div>
+  )
+}
+
+/** Where the life is now: at home or abroad in a town, with its journeys; or on the way. */
+function Whereabouts({ life }: { life: Life }) {
+  const { t } = useTranslation()
+  const travel = useTravel()
+  if (travel.isPending) return <Skeleton className="h-32" />
+  if (travel.isError)
+    return (
+      <div>
+        <p className="text-alert">{refusalMessage('SERVER_ERROR')}</p>
+        <Button className="mt-2" onClick={() => void travel.refetch()}>
+          {'↻'}
+        </Button>
+      </div>
+    )
+  const here = travel.data
+  return (
+    <>
+      {here.state === 'settled' && <p className="font-semibold">{t('oal.life.where', { town: here.place, country: t(`oal.countries.${here.country}`) })}</p>}
+      {here.state === 'settled' ? <Travel travel={here} /> : <OnTheWay travel={here} appearance={life.appearance} homeCountry={life.home_country} />}
+    </>
   )
 }

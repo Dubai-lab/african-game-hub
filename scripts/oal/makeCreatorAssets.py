@@ -1,7 +1,7 @@
 # One Africa Life: the character creator's files, one per sex, made with MPFB (the free
 # MakeHuman add-on for Blender) and its CC0 packs.
 #
-#   blender -b --python scripts/oal/makeCreatorAssets.py -- <male|female> public/oal/creator-<sex>.v1.glb
+#   blender -b --python scripts/oal/makeCreatorAssets.py -- <male|female> art-src/one-africa-life/creator-<sex>.glb (then packed into public/oal/creator-<sex>.v2.glb)
 #
 # (Blender's own preferences, not --factory-startup: MPFB is an add-on installed there.)
 #
@@ -291,13 +291,22 @@ for img in list(bpy.data.images):
     if img.size[0] > size:
         img.scale(size, size)
 
-# 8. The creator's idle: standing and breathing, from Mixamo.
-idle_file = os.path.join(ANIMATIONS, 'Breathing Idle.fbx' if SEX == 'male' else 'Standing Idle.fbx')
-if os.path.exists(idle_file):
-    action = retarget(idle_file, rig, 'idle', prefix='mixamorig:', recorded=skeleton(lambda t: 'mixamorig:' + t, fps=30), at_rest=())
+# 8. The movements, from Mixamo, each a track of its own: standing and breathing (the creator,
+# and anyone waiting); walking, on the spot (the game moves the character); talking (officers,
+# shopkeepers, anyone spoken to).
+CLIPS = {
+    'idle': 'Breathing Idle.fbx' if SEX == 'male' else 'Standing Idle.fbx',
+    'walk': 'Walking.fbx' if SEX == 'male' else 'Female Walk.fbx',
+    'talk': 'Talking.fbx',
+}
+for clip, file in CLIPS.items():
+    path = os.path.join(ANIMATIONS, file)
+    if not os.path.exists(path):
+        continue
+    action = retarget(path, rig, clip, prefix='mixamorig:', recorded=skeleton(lambda t: 'mixamorig:' + t, fps=30), travel=clip != 'walk', at_rest=())
     track = rig.animation_data.nla_tracks.new()
-    track.name = 'idle'
-    track.strips.new('idle', 0, action)
+    track.name = clip
+    track.strips.new(clip, 0, action)
     rig.animation_data.action = None
 bpy.context.scene.render.fps = 30
 

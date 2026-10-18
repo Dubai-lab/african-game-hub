@@ -75,6 +75,15 @@ const ACTIONS: Record<string, Action<any>> = {
     }),
   ),
 
+  // One Africa Life's game money (never cashed out): a correction, in hundredths of the currency.
+  'players.oalAdjust': action(
+    z.object({ userId: uuid, currency: z.enum(['LRD', 'USD', 'GHS']), amount: z.int().min(-100_000_000).max(100_000_000), reason }),
+    (p, adminId) => ({
+      fn: 'admin_oal_adjust',
+      args: { p_admin_id: adminId, p_user_id: p.userId, p_currency: p.currency, p_amount: p.amount, p_reason: p.reason },
+    }),
+  ),
+
   'matches.list': action(z.object({ status: z.optional(z.enum(['waiting', 'active', 'finished', 'aborted'])), ...page }), (p) => ({
     fn: 'admin_matches',
     args: { p_status: p.status ?? null, p_limit: p.limit ?? 25, p_offset: p.offset ?? 0 },

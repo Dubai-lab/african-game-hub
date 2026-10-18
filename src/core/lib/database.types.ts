@@ -1244,6 +1244,27 @@ export type Database = {
           },
         ]
       }
+      oal_airports: {
+        Row: {
+          code: string
+          country: string
+          name: string
+          town: string
+        }
+        Insert: {
+          code: string
+          country: string
+          name: string
+          town: string
+        }
+        Update: {
+          code?: string
+          country?: string
+          name?: string
+          town?: string
+        }
+        Relationships: []
+      }
       oal_balances: {
         Row: {
           amount: number
@@ -1273,38 +1294,244 @@ export type Database = {
           },
         ]
       }
+      oal_bookings: {
+        Row: {
+          created_at: string
+          from_date: string
+          hotel_id: string
+          id: number
+          nights: number
+          price: number
+          reference: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          from_date: string
+          hotel_id: string
+          id?: never
+          nights: number
+          price: number
+          reference: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          from_date?: string
+          hotel_id?: string
+          id?: never
+          nights?: number
+          price?: number
+          reference?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oal_bookings_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "oal_hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oal_bookings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "oal_lives"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      oal_border_entries: {
+        Row: {
+          airport: string
+          answers: Json | null
+          category: string
+          country: string
+          created_at: string
+          decision: string
+          game_at: string
+          id: number
+          permitted_until: string | null
+          reasons: string[]
+          trip_id: number
+          user_id: string
+        }
+        Insert: {
+          airport: string
+          answers?: Json | null
+          category: string
+          country: string
+          created_at?: string
+          decision: string
+          game_at: string
+          id?: never
+          permitted_until?: string | null
+          reasons?: string[]
+          trip_id: number
+          user_id: string
+        }
+        Update: {
+          airport?: string
+          answers?: Json | null
+          category?: string
+          country?: string
+          created_at?: string
+          decision?: string
+          game_at?: string
+          id?: never
+          permitted_until?: string | null
+          reasons?: string[]
+          trip_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oal_border_entries_airport_fkey"
+            columns: ["airport"]
+            isOneToOne: false
+            referencedRelation: "oal_airports"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "oal_border_entries_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: true
+            referencedRelation: "oal_trips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oal_border_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "oal_lives"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      oal_flights: {
+        Row: {
+          airline: string
+          code: string
+          departs: string
+          fare: number
+          from_airport: string
+          minutes: number
+          to_airport: string
+        }
+        Insert: {
+          airline: string
+          code: string
+          departs: string
+          fare: number
+          from_airport: string
+          minutes: number
+          to_airport: string
+        }
+        Update: {
+          airline?: string
+          code?: string
+          departs?: string
+          fare?: number
+          from_airport?: string
+          minutes?: number
+          to_airport?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oal_flights_from_airport_fkey"
+            columns: ["from_airport"]
+            isOneToOne: false
+            referencedRelation: "oal_airports"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "oal_flights_to_airport_fkey"
+            columns: ["to_airport"]
+            isOneToOne: false
+            referencedRelation: "oal_airports"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      oal_hotels: {
+        Row: {
+          area: string
+          country: string
+          id: string
+          name: string
+          nightly: number
+          town: string
+        }
+        Insert: {
+          area: string
+          country: string
+          id: string
+          name: string
+          nightly: number
+          town: string
+        }
+        Update: {
+          area?: string
+          country?: string
+          id?: string
+          name?: string
+          nightly?: number
+          town?: string
+        }
+        Relationships: []
+      }
       oal_lives: {
         Row: {
           appearance: Json
           born_on: string
+          country: string
           game_name: string
           home_country: string
           home_town: string
+          place: string
           sex: string
           started_at: string
+          state: string
+          trip_id: number | null
           user_id: string
         }
         Insert: {
           appearance: Json
           born_on: string
+          country: string
           game_name: string
           home_country: string
           home_town: string
+          place: string
           sex: string
           started_at?: string
+          state: string
+          trip_id?: number | null
           user_id: string
         }
         Update: {
           appearance?: Json
           born_on?: string
+          country?: string
           game_name?: string
           home_country?: string
           home_town?: string
+          place?: string
           sex?: string
           started_at?: string
+          state?: string
+          trip_id?: number | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "oal_lives_trip"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "oal_trips"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "oal_lives_user_id_fkey"
             columns: ["user_id"]
@@ -1355,6 +1582,38 @@ export type Database = {
           },
         ]
       }
+      oal_passports: {
+        Row: {
+          country: string
+          expires_on: string
+          issued_on: string
+          number: string
+          user_id: string
+        }
+        Insert: {
+          country: string
+          expires_on: string
+          issued_on: string
+          number: string
+          user_id: string
+        }
+        Update: {
+          country?: string
+          expires_on?: string
+          issued_on?: string
+          number?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oal_passports_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "oal_lives"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       oal_settings: {
         Row: {
           clock_epoch: string
@@ -1362,6 +1621,8 @@ export type Database = {
           id: boolean
           start_lrd: number
           start_usd: number
+          usd_ghs: number
+          usd_lrd: number
         }
         Insert: {
           clock_epoch?: string
@@ -1369,6 +1630,8 @@ export type Database = {
           id?: boolean
           start_lrd?: number
           start_usd?: number
+          usd_ghs?: number
+          usd_lrd?: number
         }
         Update: {
           clock_epoch?: string
@@ -1376,8 +1639,133 @@ export type Database = {
           id?: boolean
           start_lrd?: number
           start_usd?: number
+          usd_ghs?: number
+          usd_lrd?: number
         }
         Relationships: []
+      }
+      oal_tickets: {
+        Row: {
+          bought_game_at: string
+          created_at: string
+          fare: number
+          flies_on: string
+          flight_code: string
+          id: number
+          status: string
+          user_id: string
+        }
+        Insert: {
+          bought_game_at: string
+          created_at?: string
+          fare: number
+          flies_on: string
+          flight_code: string
+          id?: never
+          status?: string
+          user_id: string
+        }
+        Update: {
+          bought_game_at?: string
+          created_at?: string
+          fare?: number
+          flies_on?: string
+          flight_code?: string
+          id?: never
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oal_tickets_flight_code_fkey"
+            columns: ["flight_code"]
+            isOneToOne: false
+            referencedRelation: "oal_flights"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "oal_tickets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "oal_lives"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      oal_trips: {
+        Row: {
+          arrives_at: string
+          created_at: string
+          departs_at: string
+          flight_code: string
+          from_airport: string
+          id: number
+          kind: string
+          ticket_id: number | null
+          to_airport: string
+          user_id: string
+        }
+        Insert: {
+          arrives_at: string
+          created_at?: string
+          departs_at: string
+          flight_code: string
+          from_airport: string
+          id?: never
+          kind: string
+          ticket_id?: number | null
+          to_airport: string
+          user_id: string
+        }
+        Update: {
+          arrives_at?: string
+          created_at?: string
+          departs_at?: string
+          flight_code?: string
+          from_airport?: string
+          id?: never
+          kind?: string
+          ticket_id?: number | null
+          to_airport?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oal_trips_flight_code_fkey"
+            columns: ["flight_code"]
+            isOneToOne: false
+            referencedRelation: "oal_flights"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "oal_trips_from_airport_fkey"
+            columns: ["from_airport"]
+            isOneToOne: false
+            referencedRelation: "oal_airports"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "oal_trips_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: true
+            referencedRelation: "oal_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oal_trips_to_airport_fkey"
+            columns: ["to_airport"]
+            isOneToOne: false
+            referencedRelation: "oal_airports"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "oal_trips_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "oal_lives"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       oware_games: {
         Row: {
@@ -2745,6 +3133,16 @@ export type Database = {
         Args: { p_limit: number; p_offset: number; p_status: string }
         Returns: Json
       }
+      admin_oal_adjust: {
+        Args: {
+          p_admin_id: string
+          p_amount: number
+          p_currency: string
+          p_reason: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       admin_overview: { Args: never; Returns: Json }
       admin_player: { Args: { p_user_id: string }; Returns: Json }
       admin_promotion: { Args: { p_promotion_id: number }; Returns: Json }
@@ -2975,7 +3373,41 @@ export type Database = {
         Returns: undefined
       }
       match_chat_status: { Args: { p_match_id: string }; Returns: Json }
+      oal_board: {
+        Args: { p_ticket_id: number; p_user_id: string }
+        Returns: Json
+      }
+      oal_book_flight: {
+        Args: { p_flight: string; p_on: string; p_user_id: string }
+        Returns: Json
+      }
+      oal_book_hotel: {
+        Args: {
+          p_from: string
+          p_hotel: string
+          p_nights: number
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      oal_border_facts: {
+        Args: { p_reference: string; p_user_id: string }
+        Returns: Json
+      }
+      oal_border_record: {
+        Args: {
+          p_answers: Json
+          p_category: string
+          p_decision: string
+          p_permitted_until: string
+          p_reasons: string[]
+          p_trip_id: number
+          p_user_id: string
+        }
+        Returns: Json
+      }
       oal_game_time: { Args: { p_at?: string }; Returns: string }
+      oal_leave_airport: { Args: { p_user_id: string }; Returns: Json }
       oal_money_problems: {
         Args: never
         Returns: {
@@ -2997,6 +3429,7 @@ export type Database = {
         }
         Returns: Json
       }
+      oal_travel_state: { Args: { p_user_id: string }; Returns: Json }
       oware_apply_move: {
         Args: {
           p_end_reason: string

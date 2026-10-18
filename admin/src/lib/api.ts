@@ -19,6 +19,8 @@ const MESSAGES: Record<string, string> = {
   REASON_REQUIRED: 'Write a reason (at least 5 characters). It is kept in the audit log.',
   CANNOT_BAN_ADMIN: 'An admin account cannot be banned from here.',
   CANNOT_ADJUST_SELF: 'You cannot adjust your own wallet. Ask another admin.',
+  NO_LIFE: 'This player has not started a One Africa Life.',
+  NOT_ENOUGH_MONEY: 'That would take the life’s money below zero.',
   INSUFFICIENT_BALANCE: 'The player does not have that many tokens in that balance.',
   PLAYER_NOT_FOUND: 'No such player.',
   MATCH_NOT_ACTIVE: 'That match is already over.',
