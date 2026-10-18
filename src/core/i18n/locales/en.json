@@ -2224,5 +2224,88 @@
       "closed": "Closed"
     },
     "orEmail": "You can also write to us at"
+  },
+  "oal": {
+    "back": "Back",
+    "countries": {
+      "LR": "Liberia",
+      "GH": "Ghana"
+    },
+    "creator": {
+      "title": "Make your character",
+      "sex": {
+        "male": "Man",
+        "female": "Woman"
+      },
+      "tabs": {
+        "body": "Body",
+        "face": "Face",
+        "skin": "Skin & eyes",
+        "hair": "Hair",
+        "clothes": "Clothes",
+        "you": "You"
+      },
+      "build": {
+        "weight": "Weight",
+        "muscle": "Muscle",
+        "height": "Height"
+      },
+      "face": {
+        "noseWidth": "Nose width",
+        "noseLength": "Nose length",
+        "lips": "Lips",
+        "mouthWidth": "Mouth width",
+        "jaw": "Jaw",
+        "chin": "Chin",
+        "cheekbones": "Cheekbones",
+        "eyes": "Eyes"
+      },
+      "skin": "Skin tone",
+      "skinHint": "From light to the darkest skin, with its own shading kept.",
+      "eyes": {
+        "darkbrown": "Dark brown eyes",
+        "brown": "Brown eyes",
+        "hazel": "Hazel eyes"
+      },
+      "hair": {
+        "lowcut": "Low cut",
+        "short": "Short",
+        "afro": "Afro",
+        "bald": "Bald",
+        "bun": "Bun",
+        "braids": "Braids"
+      },
+      "hairColour": {
+        "black": "Black",
+        "darkbrown": "Dark brown",
+        "brown": "Brown",
+        "auburn": "Auburn"
+      },
+      "hairHint": "More styles are coming: fades, cornrows, box braids, locs and head wraps.",
+      "outfit": {
+        "tee_jeans": "T-shirt and jeans",
+        "shirt_jeans": "Shirt and jeans",
+        "jacket_jeans": "Jacket and jeans",
+        "suit": "Suit",
+        "blouse_skirt": "Blouse and skirt",
+        "tee_shorts": "T-shirt and shorts",
+        "sport": "Sportswear"
+      },
+      "name": "Your name in the game",
+      "nameHint": "It does not have to be your real name, and others may have the same one. Your hub username is what makes you you.",
+      "nameNeeded": "Give your character a name (letters only, 2 to 40).",
+      "age": "Age: {{age}}",
+      "home": "Where your life starts",
+      "start": "Start my life",
+      "next": "Next"
+    },
+    "life": {
+      "who": "{{age}} years old, from {{town}}, {{country}}",
+      "clock": "In the game it is",
+      "clockHint": "The game runs thirty times faster than real time: a day lasts 48 minutes.",
+      "money": "Your money",
+      "moneyHint": "Game money: it has no value outside the game.",
+      "next": "Your room in Monrovia, your phone and your first job are coming next."
+    }
   }
 }

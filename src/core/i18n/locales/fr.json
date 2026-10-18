@@ -2224,5 +2224,88 @@
       "closed": "Fermé"
     },
     "orEmail": "Vous pouvez aussi nous écrire à"
+  },
+  "oal": {
+    "back": "Retour",
+    "countries": {
+      "LR": "Libéria",
+      "GH": "Ghana"
+    },
+    "creator": {
+      "title": "Créez votre personnage",
+      "sex": {
+        "male": "Homme",
+        "female": "Femme"
+      },
+      "tabs": {
+        "body": "Corps",
+        "face": "Visage",
+        "skin": "Peau et yeux",
+        "hair": "Cheveux",
+        "clothes": "Vêtements",
+        "you": "Vous"
+      },
+      "build": {
+        "weight": "Poids",
+        "muscle": "Muscles",
+        "height": "Taille"
+      },
+      "face": {
+        "noseWidth": "Largeur du nez",
+        "noseLength": "Longueur du nez",
+        "lips": "Lèvres",
+        "mouthWidth": "Largeur de la bouche",
+        "jaw": "Mâchoire",
+        "chin": "Menton",
+        "cheekbones": "Pommettes",
+        "eyes": "Yeux"
+      },
+      "skin": "Teint",
+      "skinHint": "Du plus clair au plus foncé, en gardant le modelé de la peau.",
+      "eyes": {
+        "darkbrown": "Yeux marron foncé",
+        "brown": "Yeux marron",
+        "hazel": "Yeux noisette"
+      },
+      "hair": {
+        "lowcut": "Coupe courte",
+        "short": "Courts",
+        "afro": "Afro",
+        "bald": "Crâne rasé",
+        "bun": "Chignon",
+        "braids": "Tresses"
+      },
+      "hairColour": {
+        "black": "Noirs",
+        "darkbrown": "Brun foncé",
+        "brown": "Bruns",
+        "auburn": "Auburn"
+      },
+      "hairHint": "D'autres coiffures arrivent : dégradés, nattes collées, box braids, locks et foulards.",
+      "outfit": {
+        "tee_jeans": "T-shirt et jean",
+        "shirt_jeans": "Chemise et jean",
+        "jacket_jeans": "Veste et jean",
+        "suit": "Costume",
+        "blouse_skirt": "Chemisier et jupe",
+        "tee_shorts": "T-shirt et short",
+        "sport": "Tenue de sport"
+      },
+      "name": "Votre nom dans le jeu",
+      "nameHint": "Ce n'est pas forcément votre vrai nom, et d'autres peuvent avoir le même. C'est votre nom d'utilisateur du hub qui vous distingue.",
+      "nameNeeded": "Donnez un nom à votre personnage (lettres seulement, de 2 à 40).",
+      "age": "Âge : {{age}} ans",
+      "home": "Où votre vie commence",
+      "start": "Commencer ma vie",
+      "next": "Suivant"
+    },
+    "life": {
+      "who": "{{age}} ans, de {{town}}, {{country}}",
+      "clock": "Dans le jeu, il est",
+      "clockHint": "Le jeu va trente fois plus vite que la réalité : une journée dure 48 minutes.",
+      "money": "Votre argent",
+      "moneyHint": "Argent du jeu : il n'a aucune valeur hors du jeu.",
+      "next": "Votre chambre à Monrovia, votre téléphone et votre premier travail arrivent bientôt."
+    }
   }
 }

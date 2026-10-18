@@ -1244,6 +1244,141 @@ export type Database = {
           },
         ]
       }
+      oal_balances: {
+        Row: {
+          amount: number
+          currency: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          currency: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          currency?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oal_balances_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "oal_lives"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      oal_lives: {
+        Row: {
+          appearance: Json
+          born_on: string
+          game_name: string
+          home_country: string
+          home_town: string
+          sex: string
+          started_at: string
+          user_id: string
+        }
+        Insert: {
+          appearance: Json
+          born_on: string
+          game_name: string
+          home_country: string
+          home_town: string
+          sex: string
+          started_at?: string
+          user_id: string
+        }
+        Update: {
+          appearance?: Json
+          born_on?: string
+          game_name?: string
+          home_country?: string
+          home_town?: string
+          sex?: string
+          started_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oal_lives_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      oal_money_entries: {
+        Row: {
+          amount: number
+          balance_after: number
+          created_at: string
+          currency: string
+          game_at: string
+          id: number
+          kind: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          created_at?: string
+          currency: string
+          game_at: string
+          id?: never
+          kind: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          currency?: string
+          game_at?: string
+          id?: never
+          kind?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oal_money_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "oal_lives"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      oal_settings: {
+        Row: {
+          clock_epoch: string
+          clock_speed: number
+          id: boolean
+          start_lrd: number
+          start_usd: number
+        }
+        Insert: {
+          clock_epoch?: string
+          clock_speed?: number
+          id?: boolean
+          start_lrd?: number
+          start_usd?: number
+        }
+        Update: {
+          clock_epoch?: string
+          clock_speed?: number
+          id?: boolean
+          start_lrd?: number
+          start_usd?: number
+        }
+        Relationships: []
+      }
       oware_games: {
         Row: {
           draw_offer_by: string | null
@@ -2840,6 +2975,28 @@ export type Database = {
         Returns: undefined
       }
       match_chat_status: { Args: { p_match_id: string }; Returns: Json }
+      oal_game_time: { Args: { p_at?: string }; Returns: string }
+      oal_money_problems: {
+        Args: never
+        Returns: {
+          balance: number
+          currency: string
+          entries: number
+          user_id: string
+        }[]
+      }
+      oal_start_life: {
+        Args: {
+          p_age: number
+          p_appearance: Json
+          p_game_name: string
+          p_home_country: string
+          p_home_town: string
+          p_sex: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       oware_apply_move: {
         Args: {
           p_end_reason: string

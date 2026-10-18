@@ -41,6 +41,7 @@ const ComputerPoolPage = lazy(() => import('@/games/pool/PoolComputerPage'))
 const ComputerDraughtsPage = lazy(() => import('@/games/draughts/DraughtsComputerPage'))
 const ComputerOwarePage = lazy(() => import('@/games/oware/OwareComputerPage'))
 const BasketballPracticePage = lazy(() => import('@/games/basketball/BasketballPracticePage'))
+const LifePage = lazy(() => import('@/games/oal/LifePage'))
 const WalletPage = lazy(() => import('@/core/wallet/WalletPage'))
 const ProfilePage = lazy(() => import('@/core/profile/ProfilePage'))
 const LeaderboardsPage = lazy(() => import('@/core/leaderboards/LeaderboardsPage'))
@@ -144,6 +145,7 @@ export default function App({ staticLocation }: { staticLocation?: string }) {
                   <Route path="play/draughts/computer" element={<ComputerDraughtsPage />} />
                   <Route path="play/oware/computer" element={<ComputerOwarePage />} />
                   <Route path="play/basketball/practice" element={<BasketballPracticePage />} />
+                  <Route path="life" element={<LifePage />} />
                   <Route path="play/:gameId/match/:matchId" element={<MatchRoute />} />
                 </Route>
               </Route>

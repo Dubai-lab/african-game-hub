@@ -167,3 +167,10 @@ Two small line drawings written by hand in that file: a musical note beside the 
 | Arm movements for the shot, block and steal | Made in code on top of the Mixamo movements (`src/games/basketball/Athletes.tsx`). | Ours |
 | Sounds (bounce, rim, board, net, horn) | Synthesised in the browser (`src/games/basketball/sound.ts`). No audio files. | Ours |
 
+## One Africa Life
+
+| Asset | Source | License |
+| --- | --- | --- |
+| The character creator's people (`public/oal/creator-male.v1.glb`, `creator-female.v1.glb`): bodies, African skins, eyes, eyebrows, eyelashes, hair and clothes | MPFB, the MakeHuman add-on for Blender, and the MakeHuman community's asset packs (system assets, skins 01 and 02, hair 01, eyebrows 01, eyelashes 01), assembled by `scripts/oal/makeCreatorAssets.py`. The packs stay in `art-src/one-africa-life/mpfb-packs/`. | CC0 (public domain), as stated on each pack's page. Characters made with MakeHuman are the maker's own. |
+| The standing idle in those files | Adobe Mixamo, downloaded by the owner on 18 October 2026, put on the characters by `scripts/retargetBasketball.py`. | Mixamo's terms allow its animations in commercial games, royalty-free, but not redistribution of the raw files. |
+

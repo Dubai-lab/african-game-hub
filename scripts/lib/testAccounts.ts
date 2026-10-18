@@ -100,6 +100,14 @@ export async function resetTestAccounts() {
 
     delete from public.player_ratings where user_id in ${theirIds};
 
+    -- One Africa Life: the test accounts start with no life. (Its money entries are final for
+    -- everyone; on the development project only, the lock is lifted for this one clean-up.)
+    alter table public.oal_money_entries disable trigger oal_money_entries_final;
+    delete from public.oal_money_entries where user_id in ${theirIds};
+    alter table public.oal_money_entries enable trigger oal_money_entries_final;
+    delete from public.oal_balances where user_id in ${theirIds};
+    delete from public.oal_lives where user_id in ${theirIds};
+
     -- Social state between the test accounts: no friendships, no messages, live chat back on.
     delete from public.direct_messages where sender_id in ${theirIds} and recipient_id in ${theirIds};
     delete from public.friendships where requester_id in ${theirIds} and addressee_id in ${theirIds};

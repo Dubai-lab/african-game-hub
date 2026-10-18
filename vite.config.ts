@@ -80,8 +80,9 @@ export default defineConfig({
         // Never precache the landing page's 3D scene or pictures (app users must not pay for them),
         // nor the font files for scripts we do not use.
         // (The flag font is for computers that cannot draw flags; phones must not be made to fetch it.)
-        // Nor the 3D library and street basketball (only those who play it fetch them).
-        globIgnores: ['**/HeroScene-*.js', '**/three-*.js', '**/BasketballPracticePage-*.js', 'landing/**', 'engine/**', 'words/**', 'fonts/**', 'basketball/**', '**/*-{math,symbols,vietnamese}-*.woff2'],
+        // Nor the 3D library, street basketball and One Africa Life's characters (only those who
+        // play them fetch them).
+        globIgnores: ['**/HeroScene-*.js', '**/three-*.js', '**/BasketballPracticePage-*.js', 'landing/**', 'engine/**', 'words/**', 'fonts/**', 'basketball/**', 'oal/**', '**/CreatorScene-*.js', '**/*-{math,symbols,vietnamese}-*.woff2'],
         // App routes open the empty shell; '/' itself is the prerendered landing page.
         navigateFallback: '/app.html',
         navigateFallbackDenylist: [/^\/$/],
@@ -94,13 +95,19 @@ export default defineConfig({
             handler: 'CacheFirst',
             options: { cacheName: 'sounds', expiration: { maxEntries: 40 } },
           },
-          // The word list for Word Battle practice: fetched the first time, then kept on the phone.
+          // One Africa Life's characters: fetched the first time someone opens the creator, then kept.
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/oal/'),
+            handler: 'CacheFirst',
+            options: { cacheName: 'oal', expiration: { maxEntries: 8 } },
+          },
           // Street basketball's characters: fetched the first time someone plays, then kept.
           {
             urlPattern: ({ url }) => url.pathname.startsWith('/basketball/'),
             handler: 'CacheFirst',
             options: { cacheName: 'basketball', expiration: { maxEntries: 8 } },
           },
+          // The word list for Word Battle practice: fetched the first time, then kept on the phone.
           {
             urlPattern: ({ url }) => url.pathname.startsWith('/words/'),
             handler: 'CacheFirst',
