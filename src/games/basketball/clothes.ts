@@ -43,3 +43,31 @@ export function dyeClothes(material: Material, colour: Color | 'vertex') {
   }
   m.needsUpdate = true
 }
+
+// The kit (jersey, shorts and leggings): black with orange, in its own pictures. Each side wears
+// it in its own colours: the black in the side's main colour, the orange in its accent, the
+// halftone and the shading kept (measured on the kit's pictures: the black is very dark and
+// colourless, the orange bright and colourful).
+const KIT_DYE = /* glsl */ `
+  {
+    float light = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+    float colourful = max(diffuseColor.r, max(diffuseColor.g, diffuseColor.b)) - min(diffuseColor.r, min(diffuseColor.g, diffuseColor.b));
+    float accent = smoothstep(0.08, 0.2, colourful);
+    vec3 base = kitMain * clamp(light / 0.018, 0.25, 2.2) * 0.55;
+    vec3 trim = kitAccent * clamp(light / 0.14, 0.4, 1.4);
+    diffuseColor.rgb = mix(base, trim, accent);
+  }
+`
+
+/** Paints the kit in `material` in a side's main and accent colours (linear). */
+export function dyeKit(material: Material, main: Color, accent: Color) {
+  const m = material as MeshStandardMaterial
+  if (!m.map) return
+  m.onBeforeCompile = (shader) => {
+    shader.uniforms.kitMain = { value: main }
+    shader.uniforms.kitAccent = { value: accent }
+    shader.fragmentShader = `uniform vec3 kitMain;\nuniform vec3 kitAccent;\n${shader.fragmentShader}`.replace('#include <map_fragment>', `#include <map_fragment>\n${KIT_DYE}`)
+  }
+  m.customProgramCacheKey = () => 'dye-kit'
+  m.needsUpdate = true
+}

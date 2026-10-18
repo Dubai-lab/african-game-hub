@@ -19,10 +19,10 @@ import { type GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import type { World } from './Court3D'
 import { BALL_R } from '../../../supabase/functions/_shared/basketball'
-import { dyeClothes } from './clothes'
+import { dyeClothes, dyeKit } from './clothes'
 
 // A new name for every new version: phones keep these files, and must not keep an old one.
-export const CHARACTER_URL = '/basketball/player1.v7.glb'
+export const CHARACTER_URL = '/basketball/player1.v8.glb'
 /**
  * The dribble is motion capture: a loop of this many dribbles of the same length, the hand at
  * the top of its stroke at the start of each (scripts/makeBasketballCharacter.py). The ball is
@@ -67,8 +67,11 @@ function aim(bone: Object3D | undefined, child: Object3D | undefined, direction:
   bone.updateMatrixWorld(true)
 }
 
-/** Each side's clothes: the hub's indigo and hibiscus. */
-const KIT = ['#3d4fd6', '#d1264f']
+/** Each side's kit: a main colour and an accent (indigo and maize; hibiscus and white). */
+const KIT = [
+  { main: '#2f4fd8', accent: '#f5b700' },
+  { main: '#c81e45', accent: '#f2f2f2' },
+]
 
 const handTip = new Vector3()
 const palmA = new Vector3()
@@ -78,15 +81,26 @@ function Athlete({ gltf, world, id }: { gltf: GLTF; world: RefObject<World>; id:
   const model = useMemo(() => {
     const copy = cloneSkinned(gltf.scene)
     const team = world.current!.game.players.find((p) => p.id === id)?.team ?? 0
-    const kit = new Color(KIT[team]!)
+    const colours = KIT[team]!
+    const main = new Color(colours.main)
+    const accent = new Color(colours.accent)
+    // A character file with the kit in it: the kit takes the side's colours, and what shows of
+    // his own clothes (the sleeves) stays as it is. An older file without it: his clothes do.
+    let hasKit = false
+    copy.traverse((o) => {
+      if (o.name.startsWith('kit_')) hasKit = true
+    })
     copy.traverse((o) => {
       const mesh = o as Mesh
       if (mesh.isMesh) {
         mesh.castShadow = true
         mesh.frustumCulled = false
-        // This player's own copy of the materials, the clothes in his side's colour.
+        // This player's own copy of the materials, in his side's colours.
         mesh.material = Array.isArray(mesh.material) ? mesh.material.map((m) => m.clone()) : mesh.material.clone()
-        for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) dyeClothes(m, kit)
+        for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+          if (m.name.startsWith('kit_')) dyeKit(m, main, accent)
+          else if (!hasKit) dyeClothes(m, main)
+        }
       }
     })
     return copy

@@ -1,7 +1,7 @@
 # Builds one basketball character for the game from Mixamo downloads.
 #
 #   blender -b --factory-startup --python scripts/makeBasketballCharacter.py -- \
-#       art-src/basketball/player1 public/basketball/player1.v7.glb art-src/basketball/player1/preview.png
+#       art-src/basketball/player1 public/basketball/player1.v8.glb art-src/basketball/player1/preview.png
 #
 # The folder holds the FBX files downloaded from Mixamo for one character (see CLIPS below for
 # the file names). The character itself is taken from "Happy Idle.fbx"; only the movement is
@@ -114,6 +114,21 @@ for a in bpy.data.actions:
     bpy.context.scene.frame_set(f0); p0 = rig.matrix_world @ hips.head
     bpy.context.scene.frame_set(f1); p1 = rig.matrix_world @ hips.head
     print('CLIP', a.name, 'frames', f0, f1, 'travel_xy=%.2f' % math.hypot(p1.x - p0.x, p1.y - p0.y), 'rise=%.2f' % (p1.z - p0.z))
+
+# The basketball kit (art-src/basketball/uniform-kit): fitted onto the character, skinned to his
+# skeleton, and what it covers of his own clothes taken away (scripts/fitBasketballKit.py). The
+# game paints it in each side's colours.
+KIT_DIR = os.path.join(os.path.dirname(os.path.abspath(src)), 'uniform-kit')
+if os.path.isdir(KIT_DIR):
+    from fitBasketballKit import fit_kit
+    character = next(o for o in body if o.name.startswith('Ch'))
+    kit = fit_kit(KIT_DIR, rig, character)
+    for o in kit:
+        bpy.context.view_layer.objects.active = o
+        mod = o.modifiers.new('decimate', 'DECIMATE'); mod.ratio = 0.35
+        while o.modifiers[0].name != 'decimate': bpy.ops.object.modifier_move_up(modifier='decimate')
+        bpy.ops.object.modifier_apply(modifier='decimate')
+        o.data.calc_loop_triangles(); print('KIT', o.name, 'tris', len(o.data.loop_triangles))
 
 # Lighter for phones: half the triangles, smaller pictures.
 for o in body:
