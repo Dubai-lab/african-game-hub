@@ -168,8 +168,9 @@ function People({ airport, appearance, stick, look, paused, open, onNear, onExit
     let du = 0
     let dv = 0
     if (!paused) {
-      du = Math.sin(yaw) * y + Math.cos(yaw) * x
-      dv = -Math.cos(yaw) * y + Math.sin(yaw) * x
+      // Forward is (sin yaw, -cos yaw) in the hall; right, as the camera sees it, is (-cos yaw, -sin yaw).
+      du = Math.sin(yaw) * y - Math.cos(yaw) * x
+      dv = -Math.cos(yaw) * y - Math.sin(yaw) * x
     }
     const amount = Math.min(1, Math.hypot(du, dv))
     if (amount > 0.05) {

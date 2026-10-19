@@ -39,7 +39,7 @@ async function walkTo(page: Page, x: number, y: number, done: () => Promise<bool
     // (cos yaw, sin yaw), the camera still looking the way it started (no drag here).
     const yaw = Math.atan2(face[0]!, -face[1]!)
     const ahead = dx * Math.sin(yaw) - dy * Math.cos(yaw)
-    const right = dx * Math.cos(yaw) + dy * Math.sin(yaw)
+    const right = -(dx * Math.cos(yaw) + dy * Math.sin(yaw))
     const forward = Math.abs(ahead) >= Math.abs(right)
     const key = forward ? (ahead > 0 ? 'ArrowUp' : 'ArrowDown') : right > 0 ? 'ArrowRight' : 'ArrowLeft'
     await page.keyboard.down(key)
@@ -73,7 +73,8 @@ test('out on Tubman Boulevard: the money changer, then Ma Hawa Cookshop', async 
   await page.getByRole('button', { name: 'Log in' }).click()
   await expect(page).toHaveURL(/\/lobby$/, { timeout: 20_000 })
   await page.goto('/life')
-  await page.getByTestId('oal-go-out').click({ timeout: 20_000 })
+  await page.getByTestId('oal-map').click({ timeout: 20_000 })
+  await page.getByTestId('oal-map-walk-sinkor').click()
   const view = page.getByTestId('oal-street')
   await expect(view).toHaveAttribute('data-x', /\d/, { timeout: 120_000 })
 
@@ -110,7 +111,8 @@ test('Waterside Market: from Water Street to the trader\'s table', async ({ page
   await page.getByRole('button', { name: 'Log in' }).click()
   await expect(page).toHaveURL(/\/lobby$/, { timeout: 20_000 })
   await page.goto('/life')
-  await page.getByTestId('oal-go-waterside').click({ timeout: 20_000 })
+  await page.getByTestId('oal-map').click({ timeout: 20_000 })
+  await page.getByTestId('oal-map-walk-waterside').click()
   const view = page.getByTestId('oal-street')
   await expect(view).toHaveAttribute('data-x', /\d/, { timeout: 120_000 })
   await expect(page.getByTestId('oal-street-chip')).toHaveText(/Waterside Market/)

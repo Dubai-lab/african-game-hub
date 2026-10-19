@@ -4,6 +4,7 @@
 // (The rules and chances are tested on the database: supabase/tests/oalWork.test.ts.)
 // Run with: npm run on-dev -- e2e -- e2e/oal-work.spec.ts
 import { expect, test } from '@playwright/test'
+import { goTo } from './oalWorld.ts'
 import { runSql } from '../scripts/lib/managementApi.ts'
 import { ensureTestAccounts, resetTestAccounts, TEST_ACCOUNTS, TEST_PASSWORD } from '../scripts/lib/testAccounts.ts'
 
@@ -37,6 +38,7 @@ test('a day at Waterside Market, the money changer, and a licence applied for', 
   await page.getByRole('button', { name: 'Log in' }).click()
   await expect(page).toHaveURL(/\/lobby$/, { timeout: 20_000 })
   await page.goto('/life')
+  await goTo(page, 'jobs', 'jobs')
   await expect(page.getByTestId('oal-work')).toBeVisible({ timeout: 20_000 })
 
   // L$2,000 of stock, eight hours at the market.
@@ -54,7 +56,8 @@ test('a day at Waterside Market, the money changer, and a licence applied for', 
   expect(shift!.status).toBe('done')
   expect(Number(shift!.earned)).toBeGreaterThanOrEqual(200000)
 
-  // L$1,000 for dollars at the changer.
+  // L$1,000 for dollars at the changer on Tubman Boulevard.
+  await goTo(page, 'sinkor', 'changer')
   await page.getByTestId('oal-change-amount').fill('1000')
   await page.getByTestId('oal-buy-usd').click()
   await expect(page.getByText(/You received US\$5/)).toBeVisible({ timeout: 20_000 })
@@ -63,6 +66,7 @@ test('a day at Waterside Market, the money changer, and a licence applied for', 
   // market went is chance).
   await runSql(`select private.oal_money('${me!.id}', 'LRD', 300000, 'adjustment')`)
   await page.reload()
+  await goTo(page, 'jobs', 'jobs')
   await expect(page.getByTestId('oal-apply-licence')).toBeVisible({ timeout: 20_000 })
   await page.getByTestId('oal-apply-licence').click()
   await expect(page.getByText(/Your licence will be ready/)).toBeVisible({ timeout: 20_000 })

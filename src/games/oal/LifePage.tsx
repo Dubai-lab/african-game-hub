@@ -1,8 +1,7 @@
 // One Africa Life: the player's life. Someone who has not started one makes their character
-// here, in the creator; someone who has sees their life: the game's clock, their money, where
-// they are, and their journeys (./Journey.tsx). A room, the phone and work come next.
+// here, in the creator; someone who has is in the game's world (./World.tsx).
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { useAuth } from '@/core/auth/AuthContext'
@@ -13,17 +12,10 @@ import { Skeleton } from '@/core/ui/Skeleton'
 import { toast } from '@/core/ui/toast'
 import { AGE, type Appearance, BUILD, CATALOGUE, checkGameName, defaultAppearance, FACE, HOME_TOWNS, type HomeCountry, type Sex } from '../../../supabase/functions/_shared/oal'
 import type { Framing } from './CreatorScene'
-import { OnTheWay, Travel, useGameNow, useTravel } from './Journey'
-import { AtWork, JobsAbroad, MoneyChanger, VisaOffice, Work } from './Work'
-import { PhoneSection, RoomSection } from './Home'
-import { BodyPanel, OverstayWarning, Resting } from './Body'
-import { StreetView } from './Street'
-import type { TownId } from './StreetScene'
+import { type Life, World } from './World'
 
 const CreatorScene = lazy(() => import('./CreatorScene'))
 
-type Life = { game_name: string; sex: Sex; born_on: string; home_country: HomeCountry; home_town: string; appearance: Appearance }
-type Balance = { currency: string; amount: number }
 
 export default function LifePage() {
   const { user } = useAuth()
@@ -213,107 +205,6 @@ function Creator() {
 
 // ---- The life ------------------------------------------------------------------------------
 
-function useGameClock() {
-  const gameNow = useGameNow()
-  const [, tick] = useState(0)
-  useEffect(() => {
-    // A game minute is two real seconds.
-    const timer = setInterval(() => tick((n) => n + 1), 2000)
-    return () => clearInterval(timer)
-  }, [])
-  return gameNow()
-}
-
 function LifeHome({ life }: { life: Life }) {
-  const { t, i18n } = useTranslation()
-  const { user } = useAuth()
-  const now = useGameClock()
-  const money = useQuery({
-    queryKey: ['oal-money', user?.id],
-    enabled: Boolean(user),
-    queryFn: async () => {
-      const { data, error } = await supabase.from('oal_balances').select('currency, amount').eq('user_id', user!.id)
-      if (error) throw error
-      return data as Balance[]
-    },
-  })
-  const age = Math.floor((now.getTime() - Date.parse(life.born_on)) / (365.25 * 24 * 3600 * 1000))
-  const date = new Intl.DateTimeFormat(i18n.language, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(now)
-  const time = new Intl.DateTimeFormat(i18n.language, { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }).format(now)
-  return (
-    <div className="mx-auto flex max-w-lg flex-col gap-4 p-4" data-testid="oal-life">
-      <Link to="/lobby" className="font-semibold text-accent underline underline-offset-4">
-        {t('oal.back')}
-      </Link>
-      <h1 className="font-display text-3xl font-extrabold text-accent">{life.game_name}</h1>
-      <p className="text-muted">{t('oal.life.who', { age, town: life.home_town, country: t(`oal.countries.${life.home_country}`) })}</p>
-      <section className="border border-line bg-panel p-4">
-        <h2 className="text-sm font-semibold text-muted">{t('oal.life.clock')}</h2>
-        <p className="font-display text-2xl font-extrabold tabular-nums">{time}</p>
-        <p>{date}</p>
-        <p className="mt-1 text-xs text-muted">{t('oal.life.clockHint')}</p>
-      </section>
-      <section className="border border-line bg-panel p-4">
-        <h2 className="text-sm font-semibold text-muted">{t('oal.life.money')}</h2>
-        {money.data?.map((b) => (
-          <p key={b.currency} className="font-display text-xl font-extrabold tabular-nums">
-            {t(`oal.life.currencies.${b.currency}`, { defaultValue: b.currency })} {(b.amount / 100).toLocaleString(i18n.language, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </p>
-        ))}
-        <p className="mt-1 text-xs text-muted">{t('oal.life.moneyHint')}</p>
-      </section>
-      <Whereabouts life={life} />
-    </div>
-  )
-}
-
-/** Where the life is now: at home or abroad in a town, with its journeys; or on the way. */
-function Whereabouts({ life }: { life: Life }) {
-  const { t } = useTranslation()
-  const travel = useTravel()
-  const [outside, setOutside] = useState<TownId | null>(null)
-  if (travel.isPending) return <Skeleton className="h-32" />
-  if (travel.isError)
-    return (
-      <div>
-        <p className="text-alert">{refusalMessage('SERVER_ERROR')}</p>
-        <Button className="mt-2" onClick={() => void travel.refetch()}>
-          {'↻'}
-        </Button>
-      </div>
-    )
-  const here = travel.data
-  // Out on the street, the street is everything (its places offer what the page would).
-  if (outside && here.state === 'settled') return <StreetView town={outside} travel={here} appearance={life.appearance} name={life.game_name} homeCountry={life.home_country} onClose={() => setOutside(null)} />
-  return (
-    <>
-      {here.state === 'settled' && <p className="font-semibold">{t('oal.life.where', { town: here.place, country: t(`oal.countries.${here.country}`) })}</p>}
-      <OverstayWarning travel={here} homeCountry={life.home_country} />
-      {here.state === 'settled' && here.place === 'Monrovia' && (
-        <div className="flex flex-col gap-2">
-          <Button className="min-h-14 text-lg" onClick={() => setOutside('sinkor')} data-testid="oal-go-out">
-            {t('oal.street.towns.sinkor.goOut')}
-          </Button>
-          <Button variant="ghost" className="min-h-14 text-lg" onClick={() => setOutside('waterside')} data-testid="oal-go-waterside">
-            {t('oal.street.towns.waterside.goOut')}
-          </Button>
-        </div>
-      )}
-      {here.state === 'settled' && (
-        <>
-          <BodyPanel travel={here} homeTown={life.home_town} homeCountry={life.home_country} />
-          <Work travel={here} />
-          <MoneyChanger country={here.country} />
-          <PhoneSection travel={here} homeCountry={life.home_country} />
-          <RoomSection travel={here} />
-          <VisaOffice homeCountry={life.home_country} />
-          <JobsAbroad homeCountry={life.home_country} />
-          <Travel travel={here} />
-        </>
-      )}
-      {here.state === 'working' && <AtWork />}
-      {(here.state === 'sleeping' || here.state === 'clinic') && <Resting travel={here} />}
-      {['in_flight', 'arrivals', 'cleared', 'held'].includes(here.state) && <OnTheWay travel={here} appearance={life.appearance} homeCountry={life.home_country} />}
-    </>
-  )
+  return <World life={life} />
 }

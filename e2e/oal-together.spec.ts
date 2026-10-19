@@ -42,6 +42,7 @@ async function open(browser: Browser, account: { email: string }): Promise<Page>
   await page.getByRole('button', { name: 'Log in' }).click()
   await expect(page).toHaveURL(/\/lobby$/, { timeout: 30_000 })
   await page.goto('/life')
+  await page.getByTestId('oal-phone-button').click({ timeout: 30_000 })
   await expect(page.getByTestId('oal-phone-use')).toBeVisible({ timeout: 30_000 })
   return page
 }
@@ -69,12 +70,16 @@ test('a text and mobile money between two players, and each seen on Tubman Boule
 
   // Musu sees the text (within the inbox's refresh) and the money.
   await b.reload()
+  await b.getByTestId('oal-phone-button').click({ timeout: 30_000 })
   await expect(b.getByTestId('oal-inbox')).toContainText('Musu, it is Kollie. I am on Tubman.', { timeout: 30_000 })
   await expect(b.getByTestId('oal-wallet')).toHaveText('L$500', { timeout: 30_000 })
 
-  // Both out on the street: each sees the other.
-  await a.getByTestId('oal-go-out').click()
-  await b.getByTestId('oal-go-out').click()
+  // Both out on the street (by the map): each sees the other.
+  for (const p of [a, b]) {
+    await p.getByTestId('oal-phone-sheet').getByRole('button', { name: 'Done' }).click()
+    await p.getByTestId('oal-map').click()
+    await p.getByTestId('oal-map-walk-sinkor').click()
+  }
   await expect(a.getByTestId('oal-street-chip')).toContainText('1 other person out here', { timeout: 180_000 })
   await expect(b.getByTestId('oal-street-chip')).toContainText('1 other person out here', { timeout: 180_000 })
 })

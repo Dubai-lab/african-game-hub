@@ -4,7 +4,7 @@
 // SIM agent, a money changer, the kekeh stop, the clinic, the trader's own table. Each uses the
 // same server steps as the life's page. Other players out in the same place are seen walking it.
 import { useQueryClient } from '@tanstack/react-query'
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, type ReactNode, Suspense, useEffect, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { useAuth } from '@/core/auth/AuthContext'
 import { supabase } from '@/core/lib/supabase'
@@ -71,19 +71,12 @@ function useStreetCompany(town: TownId, name: string, appearance: Appearance) {
   return { others, present, share }
 }
 
-export function StreetView({ town, travel, appearance, name, homeCountry, onClose }: { town: TownId; travel: TravelState; appearance: Appearance; name: string; homeCountry: 'LR' | 'GH'; onClose: () => void }) {
+/** What can be done at a place in town (the same panel whether walked to or chosen on the map). */
+export function PlacePanel({ place, travel, homeCountry }: { place: Place; travel: TravelState; homeCountry: 'LR' | 'GH' }) {
   const { t } = useTranslation()
-  const company = useStreetCompany(town, name, appearance)
   const queryClient = useQueryClient()
-  const stick = useRef<Stick>({ x: 0, y: 0 })
-  const look = useRef<number | null>(null)
-  const [place, setPlace] = useState<Place | null>(null)
-  const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
-  const drag = useRef<{ x: number; look: number } | null>(null)
-  const base = useRef<{ x: number; y: number } | null>(null)
-  const view = useRef<HTMLDivElement>(null)
-
+  const lr = travel.country === 'LR'
   const step = async (body: Record<string, unknown>, done: string) => {
     setBusy(true)
     try {
@@ -97,13 +90,48 @@ export function StreetView({ town, travel, appearance, name, homeCountry, onClos
       for (const key of ['oal-travel', 'oal-money']) void queryClient.invalidateQueries({ queryKey: [key] })
     }
   }
+  return (
+    <>
+      {place === 'cookshop' && (
+        <div className="border border-line bg-panel flex flex-col gap-2 p-4">
+          <p>{t(lr ? 'oal.street.cookshop' : 'oal.street.cookshopGh')}</p>
+          <Button disabled={busy} onClick={() => void step({ action: 'eat_out' }, t('oal.street.ate'))} data-testid="oal-street-eat">
+            {t('oal.body.eatOut', { price: lr ? 'L$250' : 'GH¢30' })}
+          </Button>
+        </div>
+      )}
+      {place === 'clinic' && (
+        <div className="border border-line bg-panel flex flex-col gap-2 p-4">
+          <p>{t('oal.street.clinic')}</p>
+          <Button disabled={busy} onClick={() => void step({ action: 'clinic' }, t('oal.street.seen'))} data-testid="oal-street-clinic">
+            {t('oal.body.clinic', { price: lr ? 'L$1,500' : 'GH¢60' })}
+          </Button>
+        </div>
+      )}
+      {place === 'phone' && <PhoneSection travel={travel} homeCountry={homeCountry} />}
+      {place === 'changer' && <MoneyChanger country={travel.country} />}
+      {(place === 'kekeh' || place === 'stall') && <Work travel={travel} />}
+    </>
+  )
+}
+
+export function StreetView({ town, travel, appearance, name, homeCountry, hud, start }: { town: TownId; travel: TravelState; appearance: Appearance; name: string; homeCountry: 'LR' | 'GH'; hud?: ReactNode; start?: Place | null }) {
+  const { t } = useTranslation()
+  const company = useStreetCompany(town, name, appearance)
+  const stick = useRef<Stick>({ x: 0, y: 0 })
+  const look = useRef<number | null>(null)
+  const [place, setPlace] = useState<Place | null>(null)
+  const [open, setOpen] = useState(false)
+  const drag = useRef<{ x: number; look: number } | null>(null)
+  const base = useRef<{ x: number; y: number } | null>(null)
+  const view = useRef<HTMLDivElement>(null)
 
   return (
-    <div ref={view} className="fixed inset-0 z-50 bg-bg" data-testid="oal-street">
+    <div ref={view} className="fixed inset-0 z-40 bg-bg" data-testid="oal-street">
       <div
         className="absolute inset-0"
         onPointerDown={(e) => {
-          if ((e.target as HTMLElement).closest('button, [data-stick], [data-panel]')) return
+          if ((e.target as HTMLElement).closest('button, a, [data-stick], [data-panel], [data-hud]')) return
           e.currentTarget.setPointerCapture(e.pointerId)
           drag.current = { x: e.clientX, look: look.current ?? 0 }
         }}
@@ -116,6 +144,7 @@ export function StreetView({ town, travel, appearance, name, homeCountry, onClos
         <Suspense fallback={<Skeleton className="h-full rounded-none" />}>
           <StreetScene
             town={town}
+            start={start ?? null}
             appearance={appearance}
             stick={stick}
             look={look}
@@ -134,10 +163,8 @@ export function StreetView({ town, travel, appearance, name, homeCountry, onClos
           />
         </Suspense>
       </div>
-      <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-2 p-3">
-        <Button variant="ghost" onClick={onClose}>
-          {t('oal.back')}
-        </Button>
+      {hud}
+      <div className="pointer-events-none absolute inset-x-0 top-24 flex justify-center px-3">
         <p className="glass rounded-full border border-line px-4 py-2 text-sm font-semibold" data-testid="oal-street-chip">
           {place ? t(`oal.street.towns.${town}.places.${place}`) : t(`oal.street.towns.${town}.where`)}
           {company.present.length > 0 && <span className="ml-2 text-muted">· {t('oal.street.company', { count: company.present.length })}</span>}
@@ -175,31 +202,13 @@ export function StreetView({ town, travel, appearance, name, homeCountry, onClos
         </div>
       )}
       {place && open && (
-        <div data-panel className="absolute inset-x-0 bottom-0 flex max-h-[70vh] flex-col gap-2 overflow-y-auto p-3" data-testid={`oal-place-${place}`}>
+        <div data-panel className="absolute inset-x-0 bottom-0 z-10 mx-auto flex max-h-[70vh] max-w-lg flex-col gap-2 overflow-y-auto p-3" data-testid={`oal-place-${place}`}>
           <div className="flex justify-end">
             <Button variant="ghost" onClick={() => setOpen(false)}>
               {t('oal.street.done')}
             </Button>
           </div>
-          {place === 'cookshop' && (
-            <div className="glass flex flex-col gap-2 border border-line p-4">
-              <p>{t('oal.street.cookshop')}</p>
-              <Button disabled={busy} onClick={() => void step({ action: 'eat_out' }, t('oal.street.ate'))} data-testid="oal-street-eat">
-                {t('oal.body.eatOut', { price: 'L$250' })}
-              </Button>
-            </div>
-          )}
-          {place === 'clinic' && (
-            <div className="glass flex flex-col gap-2 border border-line p-4">
-              <p>{t('oal.street.clinic')}</p>
-              <Button disabled={busy} onClick={() => void step({ action: 'clinic' }, t('oal.street.seen'))} data-testid="oal-street-clinic">
-                {t('oal.body.clinic', { price: 'L$1,500' })}
-              </Button>
-            </div>
-          )}
-          {place === 'phone' && <PhoneSection travel={travel} homeCountry={homeCountry} />}
-          {place === 'changer' && <MoneyChanger country={travel.country} />}
-          {(place === 'kekeh' || place === 'stall') && <Work travel={travel} />}
+          <PlacePanel place={place} travel={travel} homeCountry={homeCountry} />
         </div>
       )}
     </div>

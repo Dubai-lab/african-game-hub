@@ -7,6 +7,7 @@
 // back). The officer's rules themselves are tested in src/games/oal/oalBorder.test.ts.
 // Run with: npm run on-dev -- e2e -- e2e/oal-travel.spec.ts
 import { expect, type Page, test } from '@playwright/test'
+import { goTo } from './oalWorld.ts'
 import { runSql } from '../scripts/lib/managementApi.ts'
 import { ensureTestAccounts, resetTestAccounts, TEST_ACCOUNTS, TEST_PASSWORD } from '../scripts/lib/testAccounts.ts'
 
@@ -38,7 +39,7 @@ async function position(page: Page) {
 /**
  * Walks the traveller to a point with short presses of the arrow keys, looking again after each
  * (frames can be slow in a test browser, so a long press would overshoot). Up is toward the
- * landside (v falling), right is along the hall (u rising). Stops early when `done` says so.
+ * landside (v falling), right is along the hall toward its start (u falling), as seen. Stops early when `done` says so.
  */
 async function walkTo(page: Page, u: number, v: number, done?: () => Promise<boolean>) {
   for (let i = 0; i < 400; i++) {
@@ -51,7 +52,7 @@ async function walkTo(page: Page, u: number, v: number, done?: () => Promise<boo
       if (!done) return
     }
     const alongU = Math.abs(dv) < 1.0 || (Math.abs(du) >= 1.0 && Math.abs(du) >= Math.abs(dv))
-    const key = alongU ? (du > 0 ? 'ArrowRight' : 'ArrowLeft') : dv < 0 ? 'ArrowUp' : 'ArrowDown'
+    const key = alongU ? (du > 0 ? 'ArrowLeft' : 'ArrowRight') : dv < 0 ? 'ArrowUp' : 'ArrowDown'
     const metres = Math.max(0.2, Math.abs(alongU ? du : dv))
     await page.keyboard.down(key)
     await page.waitForTimeout(Math.min(800, metres * 300))
@@ -79,6 +80,8 @@ async function logIn(page: Page, account: { email: string }) {
   await page.getByRole('button', { name: 'Log in' }).click()
   await expect(page).toHaveURL(/\/lobby$/, { timeout: 20_000 })
   await page.goto('/life')
+  // To the airport, by the map.
+  await goTo(page, 'airport', 'airport')
   await expect(page.getByTestId('oal-travel')).toBeVisible({ timeout: 20_000 })
 }
 
@@ -92,7 +95,7 @@ test('Monrovia to Accra: tickets and a hotel, the flight, the officer in Kotoka\
   await setGameTime(`${DAY} 06:00`)
   await logIn(page, account)
   const travel = page.getByTestId('oal-travel')
-  await expect(page.getByText('You are in Monrovia, Liberia.')).toBeVisible()
+  await expect(page.getByTestId('oal-at-airport')).toContainText('Roberts International Airport')
   await expect(travel.getByText(/^Liberia/)).toBeVisible()
 
   // The flight out today, the flight home in a week, a hotel in Osu for the week.
@@ -139,7 +142,8 @@ test('Monrovia to Accra: tickets and a hotel, the flight, the officer in Kotoka\
   await walkTo(page, 25.5, 14.0)
   await walkTo(page, 25.5, 2.4)
   await walkTo(page, 33.0, 1.0, async () => !(await kotoka.isVisible()))
-  await expect(page.getByText('You are in Accra, Ghana.')).toBeVisible({ timeout: 20_000 })
+  // Out in Accra, at the airport's front.
+  await expect(page.getByTestId('oal-at-airport')).toContainText('Kotoka International Airport', { timeout: 20_000 })
 
   expect(await crossingsOf(id)).toEqual([{ country: 'GH', category: 'ecowas_visitor', decision: 'admitted' }])
   expect(errors).toEqual([])
@@ -153,7 +157,7 @@ test('Accra to Monrovia: home through Roberts International\'s hall, welcomed as
   await runSql(`update public.oal_lives set place = 'Accra', country = 'GH' where user_id = '${id}'`)
   await setGameTime(`${WEEK_LATER} 06:00`)
   await logIn(page, account)
-  await expect(page.getByText('You are in Accra, Ghana.')).toBeVisible()
+  await expect(page.getByTestId('oal-at-airport')).toContainText('Kotoka International Airport')
   await page.getByTestId('oal-book-CL302').click()
   await expect(page.getByText('Ticket bought.')).toBeVisible()
 
@@ -179,7 +183,7 @@ test('Accra to Monrovia: home through Roberts International\'s hall, welcomed as
   // Through the gate the officer opened, and out of the landside doors.
   await walkTo(page, 54.05, 22.0)
   await walkTo(page, 54.05, 1.0, async () => !(await hall.isVisible()))
-  await expect(page.getByText('You are in Monrovia, Liberia.')).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByTestId('oal-at-airport')).toContainText('Roberts International Airport', { timeout: 20_000 })
 
   expect(await crossingsOf(id)).toEqual([{ country: 'LR', category: 'citizen', decision: 'admitted' }])
   expect(errors).toEqual([])

@@ -184,7 +184,7 @@ function Other({ entry }: { entry: OtherPlayer }) {
   return <primitive object={them.root} />
 }
 
-function People({ town: id, appearance, stick, look, paused, onPlace, onPosition }: Props) {
+function People({ town: id, start, appearance, stick, look, paused, onPlace, onPosition }: Props) {
   const where = TOWNS[id]
   const gltf = useLoader(GLTFLoader, CHARACTER_URL(appearance.sex), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const { camera } = useThree()
@@ -192,6 +192,10 @@ function People({ town: id, appearance, stick, look, paused, onPlace, onPosition
   // Arriving a few steps apart along the street, so two players never stand in one another.
   const state = useRef(
     (() => {
+      // Come by the map to a place: there, facing it. Else where the street is entered, a few
+      // steps apart.
+      const at = start ? where.places[start] : undefined
+      if (at) return { x: at.x, y: at.y, facing: yawFacing(at.face), speed: 0, place: null as Place | null, told: 0 }
       const along = (Math.random() - 0.5) * 6
       const { spawn } = where.plan
       return { x: spawn.x + spawn.face[0]! * along, y: spawn.y + spawn.face[1]! * along, facing: where.spawnYaw, speed: 0, place: null as Place | null, told: 0 }
@@ -223,9 +227,9 @@ function People({ town: id, appearance, stick, look, paused, onPlace, onPosition
     return { player, locals }
   }, [gltf, appearance, where])
 
-  // The camera starts looking along the street.
+  // The camera starts looking along the street (or at the place come to).
   useEffect(() => {
-    if (look.current === null) (look as { current: number | null }).current = where.spawnYaw
+    if (look.current === null) (look as { current: number | null }).current = state.current.facing
   }, [look, where])
   useEffect(() => {
     const down = (e: KeyboardEvent) => keys.current.add(e.key.toLowerCase())
@@ -255,8 +259,9 @@ function People({ town: id, appearance, stick, look, paused, onPlace, onPosition
     let dx = 0
     let dy = 0
     if (!paused) {
-      dx = Math.sin(yaw) * y + Math.cos(yaw) * x
-      dy = -Math.cos(yaw) * y + Math.sin(yaw) * x
+      // Forward is (sin yaw, -cos yaw) on the map; right, as the camera sees it, is (-cos yaw, -sin yaw).
+      dx = Math.sin(yaw) * y - Math.cos(yaw) * x
+      dy = -Math.cos(yaw) * y - Math.sin(yaw) * x
     }
     const amount = Math.min(1, Math.hypot(dx, dy))
     if (amount > 0.05) {
@@ -330,6 +335,8 @@ export type OtherPlayer = { name: string; appearance: Appearance; x: number; y: 
 
 type Props = {
   town: TownId
+  /** Come by the map to this place (else at the street's own start). */
+  start: Place | null
   appearance: Appearance
   /** The others out on the street, by id (positions change in place, without re-rendering). */
   others: RefObject<Map<string, OtherPlayer>>

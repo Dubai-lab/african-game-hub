@@ -5,6 +5,7 @@
 // supabase/tests/oalHome.test.ts.)
 // Run with: npm run on-dev -- e2e -- e2e/oal-phone.spec.ts
 import { expect, test } from '@playwright/test'
+import { goTo } from './oalWorld.ts'
 import { runSql } from '../scripts/lib/managementApi.ts'
 import { ensureTestAccounts, resetTestAccounts, TEST_ACCOUNTS, TEST_PASSWORD } from '../scripts/lib/testAccounts.ts'
 
@@ -35,6 +36,8 @@ test('a Ghanaian in Accra: a phone, a SIM registered with the Ghana Card, airtim
   await page.getByRole('button', { name: 'Log in' }).click()
   await expect(page).toHaveURL(/\/lobby$/, { timeout: 20_000 })
   await page.goto('/life')
+  // The phone shop in town.
+  await goTo(page, 'town', 'phone')
   const phone = page.getByTestId('oal-phone')
   await expect(phone).toBeVisible({ timeout: 20_000 })
   await expect(phone.getByText(`Your Ghana Card: ${card!.number}`)).toBeVisible()
@@ -52,7 +55,8 @@ test('a Ghanaian in Accra: a phone, a SIM registered with the Ghana Card, airtim
   await page.getByTestId('oal-network-gh_sika').getByRole('button', { name: 'Top up' }).click()
   await expect(page.getByTestId('oal-network-gh_sika').getByText('Airtime GH¢5')).toBeVisible({ timeout: 20_000 })
 
-  // A single room in Nima: GH¢400 a month, twelve months at once. Not yet.
+  // A single room in Nima: GH¢400 a month, twelve months at once. Not yet (from home).
+  await goTo(page, 'home', 'home')
   await expect(page.getByTestId('oal-room').getByText('You live with family for now.')).toBeVisible()
   await page.getByTestId('oal-rent-nima_single').click()
   await expect(page.getByText('You do not have enough money for that.')).toBeVisible({ timeout: 20_000 })

@@ -2668,7 +2668,40 @@
       "clinic": "Une infirmière vous reçoit, et un médecin s’il le faut. Cela prend trois heures.",
       "seen": "Vous êtes à la clinique.",
       "company_one": "{{count}} autre personne dehors",
-      "company_other": "{{count}} autres personnes dehors"
+      "company_other": "{{count}} autres personnes dehors",
+      "cookshopGh": "Jollof, waakye ou banku et tilapia : une assiette pour 30 GH¢."
+    },
+    "world": {
+      "map": "Carte",
+      "phone": "Téléphone",
+      "menu": "Menu",
+      "leave": "Quitter le jeu",
+      "mapTitle": "Où aller, à {{town}}",
+      "walk": "Se promener ici",
+      "unwell": "Malade : la clinique aide",
+      "tired": "Fatigué : dormez bientôt",
+      "hungry": "Faim : mangez bientôt",
+      "noPhone": "Vous n’avez pas de téléphone. Achetez-en un dans une boutique (sur la carte), puis une carte SIM, enregistrée avec votre pièce d’identité.",
+      "apps": {
+        "messages": "Messages",
+        "jobs": "Emplois",
+        "flights": "Vols",
+        "rooms": "Chambres"
+      },
+      "places": {
+        "familyHome": "Maison familiale",
+        "room": "Votre chambre",
+        "airportROB": "Aéroport international Roberts",
+        "airportACC": "Aéroport international de Kotoka",
+        "visa": "Bureau des visas",
+        "jobs": "Chercher du travail",
+        "cookshop": "Gargote, {{town}}",
+        "phone": "Boutique de téléphones, {{town}}",
+        "changer": "Changeur, {{town}}",
+        "stall": "Marché, {{town}}",
+        "kekeh": "Station de kekeh et trotro, {{town}}",
+        "clinic": "Clinique, {{town}}"
+      }
     }
   }
 }

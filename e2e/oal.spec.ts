@@ -40,10 +40,13 @@ test('a player makes their character and starts a life in Voinjama', async ({ pa
   await page.getByRole('button', { name: 'Voinjama, Liberia' }).click()
   await page.getByTestId('oal-start').click()
 
+  // In the game: at home, the clock, the body, the money over the world; who she is in the menu.
   await expect(page.getByTestId('oal-life')).toBeVisible({ timeout: 20_000 })
-  await expect(page.getByRole('heading', { name: 'Musu Kollie' })).toBeVisible()
-  await expect(page.getByText('from Voinjama, Liberia')).toBeVisible()
-  await expect(page.getByText('LRD 3,000.00')).toBeVisible()
+  await expect(page.getByTestId('oal-at-home')).toBeVisible()
+  await expect(page.getByTestId('oal-hud-money')).toContainText('L$ 3,000')
+  await page.getByTestId('oal-menu').click()
+  await expect(page.getByText('Musu Kollie', { exact: true })).toBeVisible()
+  await expect(page.getByTestId('oal-who')).toContainText('from Voinjama, Liberia')
 
   const [life] = await runSql<{ sex: string; home_town: string; hair: string; weight: number }>(
     `select l.sex, l.home_town, l.appearance ->> 'hair' as hair, (l.appearance -> 'build' ->> 'weight')::float as weight

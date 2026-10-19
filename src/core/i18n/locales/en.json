@@ -2668,7 +2668,40 @@
       "clinic": "A nurse sees you, and a doctor if you need one. It takes three hours.",
       "seen": "You are at the clinic.",
       "company_one": "{{count}} other person out here",
-      "company_other": "{{count}} other people out here"
+      "company_other": "{{count}} other people out here",
+      "cookshopGh": "Jollof, waakye or banku and tilapia: a plate for GH¢30."
+    },
+    "world": {
+      "map": "Map",
+      "phone": "Phone",
+      "menu": "Menu",
+      "leave": "Leave the game",
+      "mapTitle": "Where to, in {{town}}",
+      "walk": "Walk around here",
+      "unwell": "Unwell: the clinic helps",
+      "tired": "Tired: sleep soon",
+      "hungry": "Hungry: eat soon",
+      "noPhone": "You have no phone. Buy one at a phone shop (on the map), then a SIM, registered with your ID.",
+      "apps": {
+        "messages": "Messages",
+        "jobs": "Jobs",
+        "flights": "Flights",
+        "rooms": "Rooms"
+      },
+      "places": {
+        "familyHome": "Family home",
+        "room": "Your room",
+        "airportROB": "Roberts International Airport",
+        "airportACC": "Kotoka International Airport",
+        "visa": "Visa office",
+        "jobs": "Look for work",
+        "cookshop": "Cookshop, {{town}}",
+        "phone": "Phone shop, {{town}}",
+        "changer": "Money changer, {{town}}",
+        "stall": "Market, {{town}}",
+        "kekeh": "Kekeh and trotro stop, {{town}}",
+        "clinic": "Clinic, {{town}}"
+      }
     }
   }
 }

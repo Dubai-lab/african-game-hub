@@ -26,7 +26,7 @@ type Lease = { room_id: string; starts_on: string; ends_on: string }
 /** A number as people write it at home: +231771234567 → 077 123 4567. */
 export const localNumber = (e164: string) => `0${e164.slice(4, 6)} ${e164.slice(6, 9)} ${e164.slice(9)}`
 
-function useHome() {
+export function useHome() {
   const { user } = useAuth()
   return useQuery({
     queryKey: ['oal-home', user?.id],

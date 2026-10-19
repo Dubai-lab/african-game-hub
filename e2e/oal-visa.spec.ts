@@ -4,6 +4,7 @@
 // (The rules: supabase/tests/oalVisa.test.ts and src/games/oal/oalBorder.test.ts.)
 // Run with: npm run on-dev -- e2e -- e2e/oal-visa.spec.ts
 import { expect, test } from '@playwright/test'
+import { goTo } from './oalWorld.ts'
 import { runSql } from '../scripts/lib/managementApi.ts'
 import { ensureTestAccounts, resetTestAccounts, TEST_ACCOUNTS, TEST_PASSWORD } from '../scripts/lib/testAccounts.ts'
 
@@ -36,9 +37,11 @@ test('a six-month visa for Ghana, applied for and issued', async ({ page }) => {
   await page.getByRole('button', { name: 'Log in' }).click()
   await expect(page).toHaveURL(/\/lobby$/, { timeout: 20_000 })
   await page.goto('/life')
+  await goTo(page, 'jobs', 'jobs')
+  await expect(page.getByTestId('oal-jobs-abroad').getByText('Osu Trading, Accra')).toBeVisible({ timeout: 20_000 })
+  await goTo(page, 'visa', 'visa')
   const office = page.getByTestId('oal-visa')
   await expect(office).toBeVisible({ timeout: 20_000 })
-  await expect(page.getByTestId('oal-jobs-abroad').getByText('Osu Trading, Accra')).toBeVisible()
 
   await office.getByLabel('Months').selectOption('6')
   await page.getByTestId('oal-apply-long-visit').click()
