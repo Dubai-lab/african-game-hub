@@ -1265,6 +1265,47 @@ export type Database = {
         }
         Relationships: []
       }
+      oal_applications: {
+        Row: {
+          applied_at: string
+          created_at: string
+          id: number
+          kind: string
+          ready_at: string
+          status: string
+          target: string
+          user_id: string
+        }
+        Insert: {
+          applied_at: string
+          created_at?: string
+          id?: never
+          kind: string
+          ready_at: string
+          status?: string
+          target: string
+          user_id: string
+        }
+        Update: {
+          applied_at?: string
+          created_at?: string
+          id?: never
+          kind?: string
+          ready_at?: string
+          status?: string
+          target?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oal_applications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "oal_lives"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       oal_balances: {
         Row: {
           amount: number
@@ -1409,6 +1450,45 @@ export type Database = {
           },
         ]
       }
+      oal_employments: {
+        Row: {
+          job_id: string
+          owed: number
+          paid_through: string | null
+          since: string
+          user_id: string
+        }
+        Insert: {
+          job_id: string
+          owed?: number
+          paid_through?: string | null
+          since: string
+          user_id: string
+        }
+        Update: {
+          job_id?: string
+          owed?: number
+          paid_through?: string | null
+          since?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oal_employments_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "oal_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oal_employments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "oal_lives"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       oal_flights: {
         Row: {
           airline: string
@@ -1481,6 +1561,77 @@ export type Database = {
         }
         Relationships: []
       }
+      oal_jobs: {
+        Row: {
+          closes: string
+          country: string
+          currency: string
+          id: string
+          kind: string
+          opens: string
+          pay: Json
+          place: string
+          town: string
+        }
+        Insert: {
+          closes: string
+          country: string
+          currency: string
+          id: string
+          kind: string
+          opens: string
+          pay: Json
+          place: string
+          town: string
+        }
+        Update: {
+          closes?: string
+          country?: string
+          currency?: string
+          id?: string
+          kind?: string
+          opens?: string
+          pay?: Json
+          place?: string
+          town?: string
+        }
+        Relationships: []
+      }
+      oal_licences: {
+        Row: {
+          country: string
+          expires_on: string
+          issued_on: string
+          kind: string
+          number: string
+          user_id: string
+        }
+        Insert: {
+          country: string
+          expires_on: string
+          issued_on: string
+          kind: string
+          number: string
+          user_id: string
+        }
+        Update: {
+          country?: string
+          expires_on?: string
+          issued_on?: string
+          kind?: string
+          number?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oal_licences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "oal_lives"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       oal_lives: {
         Row: {
           appearance: Json
@@ -1491,6 +1642,7 @@ export type Database = {
           home_town: string
           place: string
           sex: string
+          shift_id: number | null
           started_at: string
           state: string
           trip_id: number | null
@@ -1505,6 +1657,7 @@ export type Database = {
           home_town: string
           place: string
           sex: string
+          shift_id?: number | null
           started_at?: string
           state: string
           trip_id?: number | null
@@ -1519,12 +1672,20 @@ export type Database = {
           home_town?: string
           place?: string
           sex?: string
+          shift_id?: number | null
           started_at?: string
           state?: string
           trip_id?: number | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "oal_lives_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "oal_shifts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "oal_lives_trip"
             columns: ["trip_id"]
@@ -1643,6 +1804,63 @@ export type Database = {
           usd_lrd?: number
         }
         Relationships: []
+      }
+      oal_shifts: {
+        Row: {
+          created_at: string
+          earned: number
+          ends_at: string
+          id: number
+          job_id: string
+          outcome: Json | null
+          spent: number
+          starts_at: string
+          status: string
+          stock: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          earned?: number
+          ends_at: string
+          id?: never
+          job_id: string
+          outcome?: Json | null
+          spent?: number
+          starts_at: string
+          status?: string
+          stock?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          earned?: number
+          ends_at?: string
+          id?: never
+          job_id?: string
+          outcome?: Json | null
+          spent?: number
+          starts_at?: string
+          status?: string
+          stock?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oal_shifts_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "oal_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oal_shifts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "oal_lives"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       oal_tickets: {
         Row: {
@@ -3373,6 +3591,10 @@ export type Database = {
         Returns: undefined
       }
       match_chat_status: { Args: { p_match_id: string }; Returns: Json }
+      oal_apply: {
+        Args: { p_kind: string; p_target: string; p_user_id: string }
+        Returns: Json
+      }
       oal_board: {
         Args: { p_ticket_id: number; p_user_id: string }
         Returns: Json
@@ -3406,6 +3628,10 @@ export type Database = {
         }
         Returns: Json
       }
+      oal_exchange: {
+        Args: { p_amount: number; p_from: string; p_user_id: string }
+        Returns: Json
+      }
       oal_game_time: { Args: { p_at?: string }; Returns: string }
       oal_leave_airport: { Args: { p_user_id: string }; Returns: Json }
       oal_money_problems: {
@@ -3425,6 +3651,15 @@ export type Database = {
           p_home_country: string
           p_home_town: string
           p_sex: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      oal_start_shift: {
+        Args: {
+          p_hours: number
+          p_job: string
+          p_stock: number
           p_user_id: string
         }
         Returns: Json

@@ -14,6 +14,7 @@ import { toast } from '@/core/ui/toast'
 import { AGE, type Appearance, BUILD, CATALOGUE, checkGameName, defaultAppearance, FACE, HOME_TOWNS, type HomeCountry, type Sex } from '../../../supabase/functions/_shared/oal'
 import type { Framing } from './CreatorScene'
 import { OnTheWay, Travel, useGameNow, useTravel } from './Journey'
+import { AtWork, MoneyChanger, Work } from './Work'
 
 const CreatorScene = lazy(() => import('./CreatorScene'))
 
@@ -258,7 +259,6 @@ function LifeHome({ life }: { life: Life }) {
         <p className="mt-1 text-xs text-muted">{t('oal.life.moneyHint')}</p>
       </section>
       <Whereabouts life={life} />
-      <p className="text-muted">{t('oal.life.next')}</p>
     </div>
   )
 }
@@ -281,7 +281,15 @@ function Whereabouts({ life }: { life: Life }) {
   return (
     <>
       {here.state === 'settled' && <p className="font-semibold">{t('oal.life.where', { town: here.place, country: t(`oal.countries.${here.country}`) })}</p>}
-      {here.state === 'settled' ? <Travel travel={here} /> : <OnTheWay travel={here} appearance={life.appearance} homeCountry={life.home_country} />}
+      {here.state === 'settled' && (
+        <>
+          <Work travel={here} />
+          <MoneyChanger country={here.country} />
+          <Travel travel={here} />
+        </>
+      )}
+      {here.state === 'working' && <AtWork />}
+      {here.state !== 'settled' && here.state !== 'working' && <OnTheWay travel={here} appearance={life.appearance} homeCountry={life.home_country} />}
     </>
   )
 }

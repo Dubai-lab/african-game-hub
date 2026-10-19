@@ -104,7 +104,11 @@ export async function resetTestAccounts() {
     -- everyone; on the development project only, the lock is lifted for this one clean-up.)
     -- Journeys first (they point at the life), and the game's clock back to the real calendar
     -- (a journey test moves it; on the development project only).
-    update public.oal_lives set trip_id = null where user_id in ${theirIds};
+    update public.oal_lives set trip_id = null, shift_id = null where user_id in ${theirIds};
+    delete from public.oal_shifts where user_id in ${theirIds};
+    delete from public.oal_employments where user_id in ${theirIds};
+    delete from public.oal_applications where user_id in ${theirIds};
+    delete from public.oal_licences where user_id in ${theirIds};
     delete from public.oal_border_entries where user_id in ${theirIds};
     delete from public.oal_trips where user_id in ${theirIds};
     delete from public.oal_tickets where user_id in ${theirIds};

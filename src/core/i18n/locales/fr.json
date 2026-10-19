@@ -109,7 +109,21 @@
       "NOT_CLEARED": "Vous n’êtes pas passé par l’immigration.",
       "ANSWERS_REQUIRED": "L’agent a besoin de vos réponses.",
       "NO_LIFE": "Commencez d’abord votre vie.",
-      "BOARDING_NOT_OPEN": "L’embarquement n’est pas encore ouvert : il ouvre trois heures avant le vol."
+      "BOARDING_NOT_OPEN": "L’embarquement n’est pas encore ouvert : il ouvre trois heures avant le vol.",
+      "BUSY": "Vous êtes occupé à autre chose.",
+      "ALREADY_APPLIED": "Vous avez déjà fait la demande.",
+      "WRONG_COUNTRY": "Cela se demande dans son propre pays.",
+      "ALREADY_LICENSED": "Vous avez déjà ce permis.",
+      "WRONG_TOWN": "Ce travail est dans une autre ville.",
+      "ALREADY_EMPLOYED": "Vous y travaillez déjà.",
+      "TRY_LATER": "Vous pourrez repostuler une semaine après un refus.",
+      "CLOSED": "C’est fermé à cette heure-ci.",
+      "NOT_EMPLOYED": "Vous n’y travaillez pas.",
+      "WEEKEND": "Le bureau est fermé le week-end.",
+      "TOO_LATE_FOR_WORK": "Trop tard : le bureau commence à 08:30.",
+      "ALREADY_WORKED_TODAY": "Vous avez déjà travaillé aujourd’hui.",
+      "BAD_STOCK": "Apportez au moins 1 000 L$ (ou 60 GH¢) de marchandise.",
+      "NO_LICENCE": "Il vous faut d’abord un permis commercial."
     },
     "samePassword": "C’est votre mot de passe actuel. Choisissez-en un autre.",
     "captchaFailed": "La vérification de sécurité a échoué. Rechargez la page et réessayez."
@@ -2427,6 +2441,56 @@
       },
       "thankYou": "Merci",
       "understood": "Je comprends"
+    },
+    "work": {
+      "title": "Travailler à {{town}}",
+      "none": "Il n’y a pas encore de travail ici.",
+      "hours": "Heures",
+      "hoursCount_one": "{{count}} heure",
+      "hoursCount_other": "{{count}} heures",
+      "kinds": {
+        "trader": "Commerçant au marché",
+        "kekeh": "Conducteur de kekeh",
+        "office": "Emploi de bureau"
+      },
+      "about": {
+        "trader": "Achetez votre marchandise et vendez-la à votre table, de {{opens}} à {{closes}}. Droit de place {{dues}} par jour. La plupart se vend, avec une marge qui change chaque jour ; le reste part à bas prix à la fermeture.",
+        "kekeh": "Louez un kekeh pour la journée : {{balance}} au propriétaire et {{fuel}} de carburant, payés d’abord. Chaque passager paie {{fare}}. De {{opens}} à {{closes}} : une longue journée rapporte plus.",
+        "office": "{{salary}} par mois, du lundi au vendredi, arrivée avant 08:30, sortie à 17:00. Payé à la fin de chaque mois pour les jours travaillés."
+      },
+      "stock": "Marchandise ({{symbol}})",
+      "goTrade": "Aller au marché",
+      "goRide": "Louer un kekeh et rouler",
+      "goOffice": "Aller travailler",
+      "licensed": "Permis {{number}}",
+      "applyLicence": "Demander un permis commercial ({{fee}})",
+      "licenceApplied": "Demande faite. Votre permis sera prêt dans deux jours.",
+      "licenceReady": "Votre permis sera prêt {{when}}.",
+      "apply": "Postuler",
+      "applied": "Candidature envoyée. Réponse demain.",
+      "answerOn": "Réponse {{when}}.",
+      "notTaken": "Vous n’avez pas été retenu. Vous pourrez repostuler une semaine après.",
+      "employed": "Vous travaillez ici. Gagné ce mois, pas encore payé : {{owed}}.",
+      "at": {
+        "trader": "En vente à {{place}}",
+        "kekeh": "En kekeh à {{place}}",
+        "office": "Au travail chez {{place}}"
+      },
+      "until": "Jusqu’à {{time}}.",
+      "atHint": "Vous ne pouvez pas voyager pendant le travail.",
+      "result": {
+        "trader": "Votre dernière journée à {{place}} : {{sold}} % de la marchandise vendue, à {{markup}} % au-dessus du coût. Vous avez encaissé {{took}} (dépensé {{spent}}).",
+        "kekeh": "Votre dernière journée en kekeh : {{passengers}} passagers, {{took}} de courses (dépensé {{spent}} pour la location et le carburant).",
+        "office": "Votre dernière journée chez {{place}} : {{owed}} gagnés, payés à la fin du mois."
+      }
+    },
+    "money": {
+      "changer": "Bureau de change",
+      "rate": "1 US$ vaut environ {{local}}{{rate}}. Le changeur garde un peu à chaque sens.",
+      "amount": "Montant",
+      "buyUsd": "{{local}} → US$",
+      "sellUsd": "US$ → {{local}}",
+      "changed": "Vous avez reçu {{got}}."
     }
   }
 }

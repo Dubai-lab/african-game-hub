@@ -109,7 +109,21 @@
       "NOT_CLEARED": "You have not been through immigration.",
       "ANSWERS_REQUIRED": "The officer needs your answers.",
       "NO_LIFE": "Start your life first.",
-      "BOARDING_NOT_OPEN": "Boarding has not opened yet: it opens three hours before the flight."
+      "BOARDING_NOT_OPEN": "Boarding has not opened yet: it opens three hours before the flight.",
+      "BUSY": "You are busy with something else right now.",
+      "ALREADY_APPLIED": "You have already applied.",
+      "WRONG_COUNTRY": "That is applied for in its own country.",
+      "ALREADY_LICENSED": "You already have that licence.",
+      "WRONG_TOWN": "That job is in another town.",
+      "ALREADY_EMPLOYED": "You already work there.",
+      "TRY_LATER": "You can apply again a week after being turned down.",
+      "CLOSED": "It is closed at this hour.",
+      "NOT_EMPLOYED": "You do not work there.",
+      "WEEKEND": "The office is closed at the weekend.",
+      "TOO_LATE_FOR_WORK": "Too late: the office starts at 08:30.",
+      "ALREADY_WORKED_TODAY": "You have already worked today.",
+      "BAD_STOCK": "Bring at least L$1,000 (or GH¢60) of stock.",
+      "NO_LICENCE": "You need a commercial licence first."
     },
     "samePassword": "That is your current password. Choose a different one.",
     "captchaFailed": "The security check did not pass. Reload the page and try again."
@@ -2427,6 +2441,56 @@
       },
       "thankYou": "Thank you",
       "understood": "I understand"
+    },
+    "work": {
+      "title": "Work in {{town}}",
+      "none": "There is no work here yet.",
+      "hours": "Hours",
+      "hoursCount_one": "{{count}} hour",
+      "hoursCount_other": "{{count}} hours",
+      "kinds": {
+        "trader": "Market trader",
+        "kekeh": "Kekeh rider",
+        "office": "Office job"
+      },
+      "about": {
+        "trader": "Buy your stock and sell it at your table, {{opens}} to {{closes}}. Market dues {{dues}} a day. Most of it sells, at a markup that changes day to day; what is left goes cheap at closing.",
+        "kekeh": "Rent a kekeh for the day: {{balance}} to the owner and {{fuel}} of fuel, paid first. Each passenger pays {{fare}}. Riding from {{opens}} to {{closes}}: a longer day pays better.",
+        "office": "{{salary}} a month, Monday to Friday, in by 08:30, out at 17:00. Paid at the end of each month for the days you worked."
+      },
+      "stock": "Stock ({{symbol}})",
+      "goTrade": "Go to the market",
+      "goRide": "Rent a kekeh and ride",
+      "goOffice": "Go to work",
+      "licensed": "Licence {{number}}",
+      "applyLicence": "Apply for a commercial licence ({{fee}})",
+      "licenceApplied": "Applied. Your licence will be ready in two days.",
+      "licenceReady": "Your licence will be ready {{when}}.",
+      "apply": "Apply for the job",
+      "applied": "Applied. You will hear tomorrow.",
+      "answerOn": "You will hear {{when}}.",
+      "notTaken": "You were not taken on. You can apply again a week after.",
+      "employed": "You work here. Earned this month, not yet paid: {{owed}}.",
+      "at": {
+        "trader": "Selling at {{place}}",
+        "kekeh": "Riding a kekeh in {{place}}",
+        "office": "At work at {{place}}"
+      },
+      "until": "Until {{time}}.",
+      "atHint": "You cannot travel while you are at work.",
+      "result": {
+        "trader": "Your last day at {{place}}: {{sold}}% of your stock sold, at {{markup}}% over cost. You took {{took}} (you spent {{spent}}).",
+        "kekeh": "Your last day riding: {{passengers}} passengers, {{took}} in fares (you spent {{spent}} on the balance and fuel).",
+        "office": "Your last day at {{place}}: {{owed}} earned, paid at the end of the month."
+      }
+    },
+    "money": {
+      "changer": "Money changer",
+      "rate": "US$1 is about {{local}}{{rate}}. The changer keeps a little each way.",
+      "amount": "Amount",
+      "buyUsd": "{{local}} → US$",
+      "sellUsd": "US$ → {{local}}",
+      "changed": "You received {{got}}."
     }
   }
 }
