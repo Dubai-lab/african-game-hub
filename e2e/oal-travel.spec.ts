@@ -10,7 +10,8 @@ import { expect, type Page, test } from '@playwright/test'
 import { runSql } from '../scripts/lib/managementApi.ts'
 import { ensureTestAccounts, resetTestAccounts, TEST_ACCOUNTS, TEST_PASSWORD } from '../scripts/lib/testAccounts.ts'
 
-test.setTimeout(1_200_000)
+// The halls are drawn in software by the test browser: slow on a busy machine.
+test.setTimeout(3_600_000)
 test.beforeAll(ensureTestAccounts)
 test.beforeEach(resetTestAccounts)
 test.afterAll(resetTestAccounts)

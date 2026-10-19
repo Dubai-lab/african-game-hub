@@ -1,6 +1,6 @@
 // One Africa Life: Tubman Boulevard in Sinkor, Monrovia, in 3D, walked by the player's own
 // character. Made by scripts/oal/makeStreet.py (STREET_EXPORT) from the real map: the street
-// (public/oal/sinkor-street.v1.glb) and its plan (./sinkorStreet.json, metres east (x) and north
+// (public/oal/sinkor-street.v2.glb) and its plan (./sinkorStreet.json, metres east (x) and north
 // (y) of the junction with 16th Street; here x = x and z = -y): every building, compound wall,
 // kiosk, palm and pole as a shape to walk against, and the places on the street: Ma Hawa
 // Cookshop, the phone shop, the money changer, the kekeh stop, the clinic. Standing at one, the
@@ -18,7 +18,7 @@ import { person, type Stick } from './ArrivalsScene'
 import { CHARACTER_URL } from './character'
 import street from './sinkorStreet.json'
 
-export const STREET_URL = '/oal/sinkor-street.v1.glb'
+export const STREET_URL = '/oal/sinkor-street.v2.glb'
 export type Place = 'cookshop' | 'phone' | 'changer' | 'kekeh' | 'clinic'
 const WALK_SPEED = 1.45
 const RADIUS = 0.3
@@ -311,9 +311,9 @@ type Props = {
 
 export default function StreetScene(props: Props) {
   return (
-    <Canvas dpr={[1, 1.5]} camera={{ fov: 60, near: 0.1, far: 700, position: [street.spawn.x, 2.4, -(street.spawn.y - 3)] }} gl={{ antialias: true, toneMappingExposure: 1.0 }} style={{ touchAction: 'none' }}>
+    <Canvas dpr={[1, 1.5]} camera={{ fov: 60, near: 0.1, far: 160, position: [street.spawn.x, 2.4, -(street.spawn.y - 3)] }} gl={{ antialias: true, toneMappingExposure: 1.0 }} style={{ touchAction: 'none' }}>
       <color attach="background" args={['#a9c9ea']} />
-      <fog attach="fog" args={['#c4d6e6', 90, 260]} />
+      <fog attach="fog" args={['#c4d6e6', 70, 155]} />
       <Sky />
       <hemisphereLight args={['#eaf2ff', '#7a5a3c', 1.0]} />
       <directionalLight position={[-60, 90, 40]} intensity={2.2} color="#fff1dc" />

@@ -137,7 +137,8 @@ def kente():
     return m
 
 
-m_grass = photo('grass', 'leafy_grass', scale=2.5, mul=(0.55, 0.95, 0.4), streaks=0)
+# The owner's photographed lawn, a little dry, as airport grass is.
+m_grass = kit.lawn('grass', 3.0, (0.92, 0.95, 0.78))
 m_apron = photo('apron', 'brushed_concrete', scale=6.0, mul=(0.85, 0.85, 0.84), streaks=0)
 m_asphalt = photo('asphalt', 'road_damaged_clean', scale=4.0, mul=(0.45, 0.45, 0.47), streaks=0)
 m_paving = photo('paving', 'brushed_concrete', scale=2.0, mul=(0.95, 0.93, 0.9), streaks=0)
@@ -404,6 +405,11 @@ for u in (LEN / 2 - 10, LEN / 2 + 10):
 plane_at = W(LEN / 2 + 25, WID + 38)
 kit.airliner(plane_at, YAW_T - math.pi / 2, '#0b4f2e', '#e3a812')
 
+# Potted palms along the landside wall, either side of the way out and at the ends.
+PLANTS_U = (6.0, LEN / 2 - 11, LEN / 2 + 11, LEN - 6)
+for k, u in enumerate(PLANTS_U):
+    inside(kit.thing('potted_palm', (u, 1.0), k * 1.3, z=0.12))
+
 # ---- Export, or light and pictures --------------------------------------------------------
 
 if EXPORT:
@@ -411,6 +417,7 @@ if EXPORT:
     solids = []
     wall = 0.25
     solids += [[0, -0.1, LEN, wall], [-0.1, 0, wall, WID], [LEN - wall, 0, LEN + 0.1, WID]]
+    solids += [[u - 0.5, 0.5, u + 0.5, 1.5] for u in PLANTS_U]
     # The airside wall, open where the corridor comes in; the corridor's own walls.
     solids += [[0, WID - wall, CORRIDOR[0], WID + 0.1], [CORRIDOR[1], WID - wall, LEN, WID + 0.1]]
     solids += [[CORRIDOR[0] - 0.3, WID, CORRIDOR[0], WID + 12], [CORRIDOR[1], WID, CORRIDOR[1] + 0.3, WID + 12], [CORRIDOR[0], WID + 11.8, CORRIDOR[1], WID + 12.2]]

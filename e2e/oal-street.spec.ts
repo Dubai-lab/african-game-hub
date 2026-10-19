@@ -7,7 +7,9 @@ import { runSql } from '../scripts/lib/managementApi.ts'
 import { ensureTestAccounts, resetTestAccounts, TEST_ACCOUNTS, TEST_PASSWORD } from '../scripts/lib/testAccounts.ts'
 import street from '../src/games/oal/sinkorStreet.json' with { type: 'json' }
 
-test.setTimeout(1_200_000)
+// The test browser draws the street in software, under a frame a second on a busy machine: a
+// long limit.
+test.setTimeout(3_600_000)
 test.beforeAll(ensureTestAccounts)
 test.beforeEach(resetTestAccounts)
 test.afterAll(resetTestAccounts)
@@ -36,11 +38,21 @@ async function walkTo(page: Page, x: number, y: number, done: () => Promise<bool
     const yaw = Math.atan2(street.spawn.face[0]!, -street.spawn.face[1]!)
     const ahead = dx * Math.sin(yaw) - dy * Math.cos(yaw)
     const right = dx * Math.cos(yaw) + dy * Math.sin(yaw)
-    const key = Math.abs(ahead) >= Math.abs(right) ? (ahead > 0 ? 'ArrowUp' : 'ArrowDown') : right > 0 ? 'ArrowRight' : 'ArrowLeft'
+    const forward = Math.abs(ahead) >= Math.abs(right)
+    const key = forward ? (ahead > 0 ? 'ArrowUp' : 'ArrowDown') : right > 0 ? 'ArrowRight' : 'ArrowLeft'
     await page.keyboard.down(key)
     await page.waitForTimeout(Math.min(700, Math.max(150, Math.max(Math.abs(dx), Math.abs(dy)) * 250)))
     await page.keyboard.up(key)
     await page.waitForTimeout(200)
+    // Stopped by something (a palm, a bin): a step to the side, as a walker would, then on.
+    const now = await where(page)
+    if (Math.hypot(now.x - at.x, now.y - at.y) < 0.05) {
+      const side = forward ? (i % 2 ? 'ArrowLeft' : 'ArrowRight') : i % 2 ? 'ArrowUp' : 'ArrowDown'
+      await page.keyboard.down(side)
+      await page.waitForTimeout(500)
+      await page.keyboard.up(side)
+      await page.waitForTimeout(200)
+    }
   }
   throw new Error(`could not reach (${x}, ${y}): at ${JSON.stringify(await where(page))}`)
 }

@@ -9,7 +9,7 @@ import random
 
 import bmesh
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 ART = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'art-src', 'one-africa-life')
 TEX = os.path.join(ART, 'textures')
@@ -404,41 +404,65 @@ def text(body, at, yaw, size, colour, z, depth=0.0, align='CENTER'):
 
 
 def palm(at, rng=random):
-    trunk = _vm('trunk', lambda: flat('trunk', (0.20, 0.16, 0.12), 0.9))
-    frond = _vm('frond', lambda: flat('frond', (0.10, 0.20, 0.05), 0.7))
-    dry = _vm('frond_dry', lambda: flat('frond_dry', (0.32, 0.24, 0.10), 0.8))
-    height = rng.uniform(8, 14)
-    lean = Vector((rng.uniform(-1, 1), rng.uniform(-1, 1))).normalized() * rng.uniform(0.4, 1.8)
-    tip = Vector((at[0] + lean.x, at[1] + lean.y, height))
-    bm = bmesh.new()
-    rings = []
-    for k in range(9):
-        t = k / 8
-        c = Vector((at[0], at[1], 0)).lerp(tip, t) + Vector((lean.x, lean.y, 0)) * (-0.25 * math.sin(t * math.pi))
-        r = 0.2 - 0.06 * t + (0.06 if k == 0 else 0)
-        rings.append([bm.verts.new(c + Vector((math.cos(j / 8 * 2 * math.pi) * r, math.sin(j / 8 * 2 * math.pi) * r, 0))) for j in range(8)])
-    for r0, r1 in zip(rings, rings[1:]):
-        for j in range(8):
-            bm.faces.new((r0[j], r0[(j + 1) % 8], r1[(j + 1) % 8], r1[j]))
-    for k in range(14):
-        ang = k / 14 * 2 * math.pi + rng.uniform(-0.2, 0.2)
-        is_dry = k % 5 == 0
-        droop = rng.uniform(0.6, 1.1) + (0.8 if is_dry else 0)
-        length = rng.uniform(3.5, 4.8)
-        out = Vector((math.cos(ang), math.sin(ang), 0))
-        across = Vector((-math.sin(ang), math.cos(ang), 0))
-        prev = None
-        for s in range(1, 13):
-            t = s / 12
-            p = tip + out * length * t + Vector((0, 0, math.sin(t * 2.2) * 0.9 - droop * t * t * 2.2))
-            if prev is not None:
-                span = 0.55 * math.sin(math.pi * min(1, t * 1.1))
-                for side in (1, -1):
-                    hang = Vector((0, 0, -0.35 * span))
-                    q = [bm.verts.new(v) for v in (prev, p, p + across * side * span + hang, prev + across * side * span * 0.9 + hang)]
-                    bm.faces.new(q).material_index = 2 if is_dry else 1
-            prev = p
-    return new_object('palm', bm, [trunk, frond, dry])
+    """A coconut palm (the owner's model, slimmed), turned and sized at random, 9 to 13 m."""
+    return thing('coconut_palm', at, rng.uniform(0, 2 * math.pi), rng.uniform(0.75, 1.08), name='palm')
+
+
+def thing(model_name, at, yaw=0.0, scale=1.0, z=0.0, name=None):
+    """A slimmed model (slimModels.py) as a real object sharing the model's mesh: drawn once by
+    the game however many stand (glTF shares the mesh), and exported where it stands (an
+    instance would not be). Named name (or the model's) for game_export's keep_world."""
+    col = vehicle_model(model_name)
+    made = []
+    for src in col.objects:
+        if src.type != 'MESH':
+            continue
+        o = bpy.data.objects.new(name or model_name, src.data)
+        o.matrix_world = Matrix.Translation((at[0], at[1], z)) @ Matrix.Rotation(yaw, 4, 'Z') @ Matrix.Scale(scale, 4) @ src.matrix_world
+        scene().collection.objects.link(o)
+        made.append(o)
+    return made[0] if made else None
+
+
+# The owner's grass (Mat_025, a photographed lawn) as a material: verges, airport lawns, pitches.
+GRASS = os.path.join(ART, 'ground', '2048_mat_025_grass', '2048_Mat_025_grass', '2048_Texture')
+
+
+def lawn(name, scale=3.0, tint=(1.0, 1.0, 1.0)):
+    """Grass: the photo tiled every scale metres, multiplied by tint (a drier verge is yellower),
+    its normal picture for the blades' relief; built only of what glTF carries."""
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    nt = m.node_tree
+    bsdf = nt.nodes['Principled BSDF']
+    bsdf.inputs['Roughness'].default_value = 0.95
+    uvn = nt.nodes.new('ShaderNodeUVMap')
+    mp = nt.nodes.new('ShaderNodeMapping')
+    mp.inputs['Scale'].default_value = (1 / scale, 1 / scale, 1)
+    nt.links.new(uvn.outputs['UV'], mp.inputs['Vector'])
+
+    def tex(file, colour=True):
+        t = nt.nodes.new('ShaderNodeTexImage')
+        t.image = bpy.data.images.load(os.path.join(GRASS, file), check_existing=True)
+        if not colour:
+            t.image.colorspace_settings.name = 'Non-Color'
+        nt.links.new(mp.outputs['Vector'], t.inputs['Vector'])
+        return t
+
+    colour = tex('025_basecolor_2k.png').outputs['Color']
+    if tint != (1.0, 1.0, 1.0):
+        mul = nt.nodes.new('ShaderNodeMix')
+        mul.data_type = 'RGBA'
+        mul.blend_type = 'MULTIPLY'
+        mul.inputs['Factor'].default_value = 1.0
+        nt.links.new(colour, mul.inputs['A'])
+        mul.inputs['B'].default_value = (*tint, 1)
+        colour = mul.outputs['Result']
+    nt.links.new(colour, bsdf.inputs['Base Color'])
+    nm = nt.nodes.new('ShaderNodeNormalMap')
+    nt.links.new(tex('025_normal_2k.png', False).outputs['Color'], nm.inputs['Color'])
+    nt.links.new(nm.outputs['Normal'], bsdf.inputs['Normal'])
+    return m
 
 
 # ---- Sky, sun, render ----------------------------------------------------------------------
@@ -710,7 +734,8 @@ def game_export(root, keep_world, drop, path, blend=None):
     """Turns a test scene into the game's: everything in root's frame (the world objects named
     in keep_world, or all if None, are brought into it), what drop(object) says removed, people removed (the game
     draws its own), instanced props made real, text made meshes; materials simplified so glTF
-    carries them, pictures at 512 pixels; exported to path (.glb), root's frame as the world."""
+    carries them, pictures at 512 pixels, as WebP (small, and keeping the cut-out of leaves);
+    exported to path (.glb), root's frame as the world."""
     inv = root.matrix_world.inverted()
     for o in list(scene().objects):
         if o.parent is None and o is not root and o.type in ('MESH', 'FONT', 'EMPTY') and (keep_world is None or o.name.split('.')[0] in keep_world):
@@ -805,7 +830,7 @@ def game_export(root, keep_world, drop, path, blend=None):
             img.scale(512, max(1, int(512 * img.size[1] / img.size[0])))
     if blend:
         bpy.ops.wm.save_as_mainfile(filepath=blend)
-    bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', export_image_format='JPEG', export_image_quality=80, export_apply=True,
+    bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', export_image_format='WEBP', export_image_quality=80, export_apply=True,
                               export_yup=True, export_lights=False, export_cameras=False)
 
 

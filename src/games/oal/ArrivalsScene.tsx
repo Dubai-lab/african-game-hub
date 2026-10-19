@@ -1,6 +1,6 @@
 // One Africa Life: an airport's arrivals hall, in 3D, walked through by the player's own
 // character: Roberts International (made by scripts/oal/makeAirport.py, RIA_EXPORT) and Kotoka
-// (scripts/oal/makeKotoka.py, KOTOKA_EXPORT). Each is a file (public/oal/<airport>-arrivals.v1.glb)
+// (scripts/oal/makeKotoka.py, KOTOKA_EXPORT). Each is a file (public/oal/<airport>-arrivals.v2.glb)
 // and a plan (./riaArrivals.json, ./kotokaArrivals.json: the booths and e-gates, their gates, and
 // every solid part as a rectangle to walk against, in the terminal's frame, u along the hall and
 // v across it from the landside; here x = u and z = -v).
@@ -37,8 +37,8 @@ export type Plan = {
 }
 /** Each airport's arrivals hall: its file, its plan, the colour its officers wear. */
 export const HALLS: Record<'ROB' | 'ACC', { url: string; plan: Plan; uniform: string }> = {
-  ROB: { url: '/oal/ria-arrivals.v1.glb', plan: ria as Plan, uniform: '#1d2b55' },
-  ACC: { url: '/oal/kotoka-arrivals.v1.glb', plan: kotoka as Plan, uniform: '#22304a' },
+  ROB: { url: '/oal/ria-arrivals.v2.glb', plan: ria as Plan, uniform: '#1d2b55' },
+  ACC: { url: '/oal/kotoka-arrivals.v2.glb', plan: kotoka as Plan, uniform: '#22304a' },
 }
 
 type Solid = [number, number, number, number, string?]

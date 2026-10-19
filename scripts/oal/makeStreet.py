@@ -39,6 +39,8 @@ PLACES = {}   # what: {x, y, face: [dx, dy]}
 # Props from Poly Haven: in pictures, all; in the game's copy only the light ones (an air
 # conditioner alone is 100,000 triangles).
 LIGHT_PROPS = {'painted_wooden_bench'}
+# The owner's models whose front is not their -Y side: turned this much more (found by looking).
+FRONT_TURN = {'veg_stand': math.pi}
 
 
 def prop(name, *args, **kwargs):
@@ -50,6 +52,10 @@ def prop(name, *args, **kwargs):
 def solid_box(centre, along, across, yaw):
     c, s_ = math.cos(yaw), math.sin(yaw)
     SOLIDS.append([[round(centre.x + x * c - y * s_, 2), round(centre.y + x * s_ + y * c, 2)] for x, y in ((-along / 2, -across / 2), (along / 2, -across / 2), (along / 2, across / 2), (-along / 2, across / 2))])
+def ring(p, r, sides=8):
+    return [[round(p.x + r * math.cos(k * 2 * math.pi / sides), 2), round(p.y + r * math.sin(k * 2 * math.pi / sides), 2)] for k in range(sides)]
+
+
 os.makedirs(OUT, exist_ok=True)
 random.seed(4)
 RADIUS = 170  # metres around the centre that are built
@@ -428,6 +434,8 @@ def flush(run):
             mid = (p0 + p1) / 2
             box(walls_bm, walls_uv, (mid.x, mid.y, 0), (seg.length + 0.02, 0.22, 2.2), math.atan2(seg.y, seg.x), mat=colour)
             solid_box(mid, seg.length + 0.02, 0.3, math.atan2(seg.y, seg.x))
+        for p, _d in run:
+            mark_disk(p, 0.7)
         walls_made += 1
     run.clear()
 
@@ -542,6 +550,10 @@ for w in tubman:
                     kit.place(kit.person(sitter), front + d * 0.9, kit.facing(-n) + random.uniform(-0.4, 0.4), z=0.0)
             if random.random() < 0.5:
                 prop('portable_generator', back + d * (wide / 2 + 0.6), yaw)
+            if random.random() < 0.18:
+                at = front + d * (wide / 2 + 0.4)
+                kit.thing('wheelbarrow', at, yaw + random.uniform(-0.5, 0.5), name='wheelbarrow')
+                solid_box(at, 1.5, 0.7, yaw)
             for _ in range(random.randint(0, 3)):
                 prop(random.choice(['plastic_jerrycan', 'metal_jerrycan_green', 'plastic_crate_01', 'cardboard_box_01']), front - d * random.uniform(0.6, 1.4) + n * random.uniform(-0.3, 0.6), random.uniform(0, 6.3))
             if random.random() < 0.55:
@@ -585,6 +597,10 @@ for w in tubman:
             r = random.random()
             if r < 0.25:
                 prop(random.choice(['trashbag', 'old_tyre', 'cardboard_box_01']), p, random.uniform(0, 6.3))
+            elif r < 0.31:
+                kit.thing('waste_bin', p, random.uniform(0, 6.3), name='bin')
+                SOLIDS.append(ring(p, 0.4, 6))
+                mark_disk(p, 0.8)
             elif r < 0.6:
                 kit.place(kit.person(random.choice(WALKING)), p, kit.facing(d if random.random() < 0.5 else -d))
 
@@ -644,6 +660,112 @@ for w in tubman[:1]:
             break
 print('VEHICLES', vehicles)
 
+# ---- Lots, tanks and grass -----------------------------------------------------------------
+
+
+def road_at(p):
+    """The nearest road to p: (distance, direction along it, nearest point, width, trunk)."""
+    best = (1e9, None, None, 0.0, False)
+    for pts, width, trunk in road_lines:
+        for a, b in zip(pts, pts[1:]):
+            ab = b - a
+            if ab.length < 0.1:
+                continue
+            t = max(0.0, min(1.0, (p - a).dot(ab) / ab.length_squared))
+            q = a + ab * t
+            if (q - p).length < best[0]:
+                best = ((q - p).length, ab.normalized(), q, width, trunk)
+    return best
+
+
+def rect_cells(c, along, across, yaw, margin):
+    d, n = Vector((math.cos(yaw), math.sin(yaw))), Vector((-math.sin(yaw), math.cos(yaw)))
+    x = -along / 2 - margin
+    while x <= along / 2 + margin:
+        y = -across / 2 - margin
+        while y <= across / 2 + margin:
+            yield c + d * x + n * y
+            y += CELL * 0.8
+        x += CELL * 0.8
+
+
+def find_lot(along, across, near, far, gap, trunk_only=False):
+    """A free piece of ground along across metres, its long side gap metres back from a road's
+    edge and parallel to it, between near and far metres from the junction. Turned so the
+    model's -Y side (its front, for these models) faces the road."""
+    for _ in range(1500):
+        a, r = random.uniform(0, 2 * math.pi), random.uniform(near, far)
+        p = Vector((math.cos(a) * r, math.sin(a) * r))
+        dist, d, q, width, trunk = road_at(p)
+        if d is None or (trunk_only and not trunk) or dist < 0.5:
+            continue
+        n = (p - q).normalized()
+        if Vector((-d.y, d.x)).dot(n) < 0:
+            d = -d
+        yaw = math.atan2(d.y, d.x)
+        # Past the strip kept clear along every road (1.5 m) and the lot's own margin, then
+        # from the shoulder back into the compounds: the first place it fits.
+        for back in range(0, 13):
+            c = q + n * (width / 2 + 2.2 + gap + back + across / 2)
+            if near < c.length < far and all(free(x) for x in rect_cells(c, along, across, yaw, 0.6)):
+                for x in rect_cells(c, along, across, yaw, 0.6):
+                    occupied.add(cell(x))
+                solid_box(c, along, across, yaw)
+                return c, yaw
+    return None
+
+
+# A petrol station on the boulevard (most of Tubman's junctions have one), a market woman's
+# vegetable stand near the junction, zinc store sheds and a rubbish skip and bins off the side
+# streets.
+LOTS = [('petrol_station', 20.0, 19.0, 30, 115, 0.5, True), ('veg_stand', 6.9, 1.8, 8, 70, 0.0, True),
+        ('zinc_shed', 13.4, 5.4, 25, 110, 3.0, False), ('zinc_shed', 13.4, 5.4, 25, 110, 3.0, False),
+        ('skip', 3.7, 2.5, 20, 100, 0.0, False), ('dumpsters', 4.0, 2.0, 20, 100, 0.0, False)]
+for what, along, across, near, far_, gap, trunk_only in LOTS:
+    lot = find_lot(along, across, near, far_, gap, trunk_only)
+    print('LOT', what, 'at', [round(v, 1) for v in lot[0]] if lot else None)
+    # The vegetable stand is 50,000 triangles of photo scan: in pictures only for now (its lot is
+    # kept in the game's copy too, so everything else stands where the pictures show it).
+    if lot and not (EXPORT and what == 'veg_stand'):
+        kit.thing(what, lot[0], lot[1] + FRONT_TURN.get(what, 0.0), name=what)
+
+# Black and blue water tanks by a quarter of the houses (town water comes and goes).
+tanks = 0
+for pts, tags in footprints:
+    if abs(area(pts)) > 450 or random.random() > 0.25:
+        continue
+    c = sum(pts, Vector((0, 0))) / len(pts)
+    corner = random.choice(pts)
+    q = corner + (corner - c).normalized() * 1.9
+    if free(q) and q.length < RADIUS:
+        kit.thing('water_tank', q, random.uniform(0, 6.3), name='water_tank')
+        solid_box(q, 1.4, 1.4, 0.0)
+        mark_disk(q, 1.0)
+        tanks += 1
+print('TANKS', tanks)
+
+# Grass where nothing is built or trodden: patches in the yards and on the verges, some lush
+# (October, the rains' end), some going dry.
+grass_mats = [kit.lawn('verge', 3.0, (0.62, 0.72, 0.48)), kit.lawn('verge_dry', 3.0, (0.78, 0.72, 0.45))]
+patches = 0
+for kind in (0, 1):
+    bm = bmesh.new()
+    uv = bm.loops.layers.uv.new()
+    for _ in range(2500):
+        if patches >= (260 if kind == 0 else 380):
+            break
+        p = Vector((random.uniform(-RADIUS, RADIUS), random.uniform(-RADIUS, RADIUS)))
+        r = random.uniform(2.0, 6.5)
+        if p.length > RADIUS or not free(p) or not all(free(p + Vector((math.cos(a), math.sin(a))) * r) for a in range(0, 7)):
+            continue
+        ring_ = [bm.verts.new((p.x + math.cos(k / 14 * 2 * math.pi) * r * random.uniform(0.7, 1.15), p.y + math.sin(k / 14 * 2 * math.pi) * r * random.uniform(0.7, 1.15), 0.02)) for k in range(14)]
+        face = bm.faces.new(ring_)
+        for loop in face.loops:
+            loop[uv].uv = (loop.vert.co.x, loop.vert.co.y)
+        patches += 1
+    kit.new_object('grass', bm, [grass_mats[kind]])
+print('GRASS', patches)
+
 # ---- Palms, poles and wires ----------------------------------------------------------------
 
 
@@ -695,20 +817,37 @@ def pole_line(points, offset):
 
 for w in tubman:
     pole_line([xy(n) for n in w['nodes']], road_width(w) / 2 + 1.2)
-placed = 0
-for _ in range(4000):
-    p = Vector((random.uniform(-RADIUS, RADIUS), random.uniform(-RADIUS, RADIUS)))
-    if placed >= 90:
+# Coconut palms along the roads; in the yards behind the walls, palms, banana clumps and a few
+# big shade trees (mango, almond), as Sinkor's compounds have.
+trees = {'palm': 0, 'banana': 0, 'tree': 0}
+for _ in range(6000):
+    if sum(trees.values()) >= 80:
         break
+    p = Vector((random.uniform(-RADIUS, RADIUS), random.uniform(-RADIUS, RADIUS)))
     if p.length > RADIUS or not free(p):
         continue
     dist, _near = nearest_road(p)
-    if random.random() < (0.5 if dist < 14 else 0.12):
+    if random.random() > (0.5 if dist < 14 else 0.16):
+        continue
+    kind = 'palm' if dist < 14 else random.choices(['palm', 'banana', 'tree'], [0.45, 0.35, 0.2])[0]
+    if kind == 'tree' and not all(free(p + Vector((math.cos(a), math.sin(a))) * 4.5) for a in range(0, 7)):
+        kind = 'banana'
+    if kind == 'banana' and not all(free(p + Vector((math.cos(a), math.sin(a))) * 2.0) for a in range(0, 7)):
+        continue
+    if kind == 'palm':
         kit.palm(p)
-        SOLIDS.append([[round(p.x + 0.35 * math.cos(k * math.pi / 4), 2), round(p.y + 0.35 * math.sin(k * math.pi / 4), 2)] for k in range(8)])
+        SOLIDS.append(ring(p, 0.35))
         mark_disk(p, 3)
-        placed += 1
-print('PALMS', placed)
+    elif kind == 'banana':
+        kit.thing('banana_clump', p, random.uniform(0, 6.3), random.uniform(0.8, 1.1), name='banana')
+        SOLIDS.append(ring(p, 1.1))
+        mark_disk(p, 2.6)
+    else:
+        kit.thing('shade_tree', p, random.uniform(0, 6.3), random.uniform(0.85, 1.15), name='tree')
+        SOLIDS.append(ring(p, 0.5))
+        mark_disk(p, 5)
+    trees[kind] += 1
+print('TREES', trees)
 
 # The clinic: the nearest sizeable building to the junction, with its sign over the door side.
 best = None

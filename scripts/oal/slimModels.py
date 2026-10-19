@@ -1,5 +1,5 @@
-# One Africa Life: makes the owner's downloaded models (Fab; cars, a police car, a plane, a
-# rifle) light enough for budget phones: their triangles reduced to a target (Blender's
+# One Africa Life: makes the owner's downloaded models (Fab; cars, a police car, a plane, a rifle;
+# palms, trees, tanks, bins, a shed, a market stand, a petrol station) light enough for budget phones: their triangles reduced to a target (Blender's
 # decimate, collapsing edges, which keeps the shape), every picture at most 1024 pixels, the
 # model stood on the ground at its real size (length in metres), facing +X, and saved as glTF.
 #
@@ -18,7 +18,10 @@ OUT = os.path.expanduser(sys.argv[sys.argv.index('--') + 1])
 os.makedirs(OUT, exist_ok=True)
 ART = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'art-src', 'one-africa-life')
 
-# name: (source, triangles wanted, real length in metres)
+# name: (source, triangles wanted, real length in metres[, how])
+#   how: 'height' (the size given is its height, for plants), 'keep' (the file's own size),
+#   tex=(folder, {material: picture prefix}) to wire pictures the file only names, uv=n to draw
+#   with the file's n-th texture layout, clip=True for leaves cut out of a picture.
 MODELS = {
     'sedan': ('cars/generic_sedan_car.glb', 24000, 4.6),
     'coupe': ('cars/generic_sport_coupe_car.glb', 24000, 4.5),
@@ -29,6 +32,26 @@ MODELS = {
     # A four-engined wide-body: at a 747's length its span and height come out right too.
     'airliner': ('plane/2_plane.glb', 60000, 64.0),
     'rifle': ('weapons/AK105fbx.fbx', 4000, 0.82),
+    # The street's trees and things (the owner's downloads, 2026-10-19).
+    'coconut_palm': ('tree/coconut_tree.glb', 4000, 12.0, {'how': 'height', 'clip': True}),
+    'shade_tree': ('tree/realistic_tree.glb', 8000, 10.0, {'how': 'height', 'clip': True}),
+    'banana_clump': ('tree/scene.gltf', 6000, 0, {'how': 'keep', 'uv': 1}),
+    # A potted palm, about a person's height: indoors (the arrivals halls). Its leaflets are
+    # modelled, so its opacity picture is not used.
+    'potted_palm': ('tree/Alexandra_Palm_ukgkcilia_Raw_ukgkcilia_VarA_LOD0.fbx', 6000, 1.6,
+                    {'how': 'height', 'tex': ('tree', {'': 'Alexandra_Palm_ukgkcilia_Raw_8K_'})}),
+    'water_tank': ('water_tank_and_rubbish/water_tank.glb', 2000, 0, {'how': 'keep'}),
+    'skip': ('water_tank_and_rubbish/dirty_rusty_skip___low_poly_game_ready.glb', 1000, 3.7),
+    'waste_bin': ('water_tank_and_rubbish/waste_bin___low_poly_game_ready.glb', 1000, 1.0, {'how': 'height'}),
+    'dumpsters': ('water_tank_and_rubbish/dumpsters_glb.glb', 5000, 0, {'how': 'keep'}),
+    'zinc_shed': ('buildings/Building_M.fbx', 6000, 0,
+                  {'how': 'keep', 'tex': ('buildings/textures', {'Material.002': 'BuildingM2_', 'Material.003': 'BuildingM1_'})}),
+    'wheelbarrow': ('market/TACHKA.fbx', 6000, 1.45, {'tex': ('market', {'': 'tachka_'})}),
+    # A photo scan: Blender's decimate tears its picture apart, gltfpack's simplifier (which
+    # keeps the picture's seams) takes it to a twentieth first. Still 50,000 triangles (the seams
+    # allow no fewer, and gltfpack's aggressive mode tears the picture): pictures only for now.
+    'veg_stand': ('market/vegetable_stand.glb', 60000, 0, {'how': 'keep', 'pre': 0.05}),
+    'petrol_station': ('buildings/gas_station.fbx', 15000, 20.0),
 }
 ONLY = os.environ.get('SLIM_ONLY', '').split(',') if os.environ.get('SLIM_ONLY') else None
 
@@ -125,20 +148,110 @@ def wheels_back():
             o.matrix_world = Matrix.Translation((a_lo + a_hi) / 2 - (b_lo + b_hi) / 2) @ o.matrix_world
 
 
+def wire(folder, prefixes, opacity):
+    """Pictures a file only names (Megascans, Substance exports): each material given the
+    pictures in folder that start with its prefix ('' = every material), as glTF reads them."""
+    names = os.listdir(os.path.join(ART, folder))
+
+    def find(prefix, *kinds):
+        for kind in kinds:
+            for n in names:
+                if n.startswith(prefix) and kind.lower() in n.lower() and 'billboard' not in n.lower():
+                    return os.path.join(ART, folder, n)
+        return None
+
+    for m in bpy.data.materials:
+        prefix = prefixes.get(m.name, prefixes.get(''))
+        if prefix is None or not m.use_nodes:
+            continue
+        nt = m.node_tree
+        bsdf = next(n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED')
+
+        def tex(path, colour=True):
+            t = nt.nodes.new('ShaderNodeTexImage')
+            t.image = bpy.data.images.load(path)
+            if not colour:
+                t.image.colorspace_settings.name = 'Non-Color'
+            return t
+
+        if (path := find(prefix, 'BaseColor', 'Base_Color')):
+            nt.links.new(tex(path).outputs['Color'], bsdf.inputs['Base Color'])
+        if (path := find(prefix, 'Roughness')):
+            nt.links.new(tex(path, False).outputs['Color'], bsdf.inputs['Roughness'])
+        if (path := find(prefix, 'Metallic')):
+            nt.links.new(tex(path, False).outputs['Color'], bsdf.inputs['Metallic'])
+        if (path := find(prefix, 'Normal_OpenGL', 'Normal')):
+            nm = nt.nodes.new('ShaderNodeNormalMap')
+            nt.links.new(tex(path, False).outputs['Color'], nm.inputs['Color'])
+            nt.links.new(nm.outputs['Normal'], bsdf.inputs['Normal'])
+        if opacity and (path := find(prefix, 'Opacity')):
+            nt.links.new(tex(path, False).outputs['Color'], bsdf.inputs['Alpha'])
+
+
+def clip():
+    """Leaves cut out of a picture: drawn cut (glTF 'MASK'), never see-through (which phones
+    sort badly), through a Round node on the alpha, as the glTF exporter reads it."""
+    for m in bpy.data.materials:
+        if not m.use_nodes:
+            continue
+        nt = m.node_tree
+        bsdf = next((n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED'), None)
+        if bsdf is None or not bsdf.inputs['Alpha'].is_linked:
+            continue
+        src = bsdf.inputs['Alpha'].links[0].from_socket
+        if src.node.type == 'MATH' and src.node.operation == 'ROUND':
+            continue
+        rnd = nt.nodes.new('ShaderNodeMath')
+        rnd.operation = 'ROUND'
+        nt.links.new(src, rnd.inputs[0])
+        nt.links.new(rnd.outputs['Value'], bsdf.inputs['Alpha'])
+        m.surface_render_method = 'DITHERED'
+
+
+def use_uv(index):
+    """Draw with the file's index-th texture layout (the banana plants keep theirs second)."""
+    for o in bpy.data.objects:
+        if o.type == 'MESH' and len(o.data.uv_layers) > index:
+            keep = o.data.uv_layers[index].name
+            for u in [u for u in o.data.uv_layers if u.name != keep]:
+                o.data.uv_layers.remove(u)
+    for m in bpy.data.materials:
+        if m.use_nodes:
+            for n in [n for n in m.node_tree.nodes if n.type == 'UVMAP']:
+                m.node_tree.nodes.remove(n)
+
+
 def triangles(objs):
     return sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in objs if o.type == 'MESH')
 
 
-for name, (source, target, length) in MODELS.items():
+for name, (source, target, length, *rest) in MODELS.items():
+    how = rest[0] if rest else {}
     if ONLY and name not in ONLY:
         continue
     bpy.ops.wm.read_factory_settings(use_empty=True)
     path = os.path.join(ART, source)
+    if 'pre' in how:
+        import subprocess
+        simpler = os.path.join(OUT, f'_{name}_simpler.glb')
+        subprocess.run(['npx', 'gltfpack@0.24.0', '-i', path, '-o', simpler, '-si', str(how['pre']), '-kn'], check=True)
+        path = simpler
     if source.endswith('.fbx'):
         bpy.ops.import_scene.fbx(filepath=path)
     else:
         bpy.ops.import_scene.gltf(filepath=path)
+    if 'tex' in how:
+        wire(*how['tex'], how.get('clip', False))
+    if 'uv' in how:
+        use_uv(how['uv'])
+    if how.get('clip'):
+        clip()
     meshes = [o for o in bpy.data.objects if o.type == 'MESH']
+    # Only the texture layout it is drawn with (the others are lightmaps and spares).
+    for o in meshes:
+        drawn = next((u.name for u in o.data.uv_layers if u.active_render), None)
+        for u in [u for u in o.data.uv_layers if u.name != drawn]:
+            o.data.uv_layers.remove(u)
     before = triangles(meshes)
     # Everything as one: transforms applied, joined, so one decimation spreads evenly.
     for o in bpy.data.objects:
@@ -180,7 +293,7 @@ for name, (source, target, length) in MODELS.items():
     if (hi - lo).y > (hi - lo).x:
         obj.data.transform(Matrix.Rotation(math.pi / 2, 4, 'Z'))
         lo, hi = bounds()
-    s = length / (hi - lo).x
+    s = {'height': lambda: length / (hi - lo).z, 'keep': lambda: 1.0}.get(how.get('how'), lambda: length / (hi - lo).x)()
     centre = (lo + hi) / 2
     obj.data.transform(Matrix.Scale(s, 4) @ Matrix.Translation(Vector((-centre.x, -centre.y, -lo.z))))
     obj.data.update()
@@ -191,7 +304,9 @@ for name, (source, target, length) in MODELS.items():
             k = 1024 / max(img.size)
             img.scale(max(1, int(img.size[0] * k)), max(1, int(img.size[1] * k)))
     out = os.path.join(OUT, f'{name}.glb')
-    bpy.ops.export_scene.gltf(filepath=out, export_format='GLB', export_image_format='JPEG', export_image_quality=82, export_apply=True)
+    bpy.ops.export_scene.gltf(filepath=out, export_format='GLB', export_image_format='AUTO' if how.get('clip') else 'JPEG', export_image_quality=82, export_apply=True)
     lo, hi = bounds()
     dims = hi - lo
     print(f'SLIM {name}: {before} -> {triangles([obj])} triangles, {dims.x:.2f} x {dims.y:.2f} x {dims.z:.2f} m, {os.path.getsize(out) / 1e6:.1f} MB')
+    if 'pre' in how:
+        os.remove(simpler)

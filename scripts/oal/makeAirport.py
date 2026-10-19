@@ -100,7 +100,8 @@ def sign(body, u, v, facing, size, colour, z, depth=0.0):
 
 # ---- Materials -----------------------------------------------------------------------------
 
-m_grass = photo('grass', 'leafy_grass', scale=2.5, mul=(0.55, 0.95, 0.4), streaks=0)
+# The owner's photographed lawn, a little dry, as airport grass is.
+m_grass = kit.lawn('grass', 3.0, (0.92, 0.95, 0.78))
 m_apron = photo('apron', 'brushed_concrete', scale=6.0, mul=(0.85, 0.85, 0.84), streaks=0)
 m_asphalt = photo('asphalt', 'road_damaged_clean', scale=4.0, mul=(0.5, 0.5, 0.52), streaks=0)
 m_paving = photo('paving', 'brushed_concrete', scale=2.0, mul=(0.95, 0.93, 0.9), streaks=0)
@@ -606,6 +607,11 @@ views = {
     'ria_checkin': (at(10, 3.0, Z1 + 1.7), at(60, CHECK_V + 1, Z1 + 2.2), 20),
     'ria_gate': (at(62, 27.5, Z1 + 1.65), at(bridge_u[1] + 6, WID + 30, Z1 + 1.2), 20),
 }
+# Potted palms along the landside wall, either side of the way out and at the ends.
+PLANTS_U = (8.0, 40.0, 62.0, 95.0)
+for k, u in enumerate(PLANTS_U):
+    inside(kit.thing('potted_palm', (u, 1.0), k * 1.3, z=0.12))
+
 EXPORT = os.environ.get('RIA_EXPORT')
 if EXPORT:
     # The game's arrivals hall: the ground floor and what is seen through its glass, in the
@@ -620,6 +626,7 @@ if EXPORT:
     solids = []
     wall = 0.25
     solids += [[0, -0.1, LEN, wall], [0, WID - wall, LEN, WID + 0.1], [-0.1, 0, wall, WID], [LEN - wall, 0, LEN + 0.1, WID]]
+    solids += [[u - 0.5, 0.5, u + 0.5, 1.5] for u in PLANTS_U]
     for u in booths_u:
         solids.append([u - 1.1, BOOTH_V - 0.75, u + 1.2, BOOTH_V + 0.75])
     for b0, b1 in barrier:
