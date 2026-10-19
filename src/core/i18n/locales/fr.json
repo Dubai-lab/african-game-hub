@@ -2700,8 +2700,16 @@
         "changer": "Changeur, {{town}}",
         "stall": "Marché, {{town}}",
         "kekeh": "Station de kekeh et trotro, {{town}}",
-        "clinic": "Clinique, {{town}}"
-      }
+        "clinic": "Clinique, {{town}}",
+        "townCentre": "Centre-ville, {{town}}"
+      },
+      "goHere": "Y aller",
+      "walkHere": "Y marcher",
+      "km": "{{km}} km",
+      "zoomIn": "Zoomer",
+      "zoomOut": "Dézoomer",
+      "mapView": "Carte",
+      "listView": "Liste"
     }
   }
 }

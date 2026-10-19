@@ -69,6 +69,6 @@ test('a day at Waterside Market, the money changer, and a licence applied for', 
   await goTo(page, 'jobs', 'jobs')
   await expect(page.getByTestId('oal-apply-licence')).toBeVisible({ timeout: 20_000 })
   await page.getByTestId('oal-apply-licence').click()
-  await expect(page.getByText(/Your licence will be ready/)).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByRole('status', { name: /Your licence will be ready in two days/ })).toBeVisible({ timeout: 20_000 })
   expect(errors).toEqual([])
 })

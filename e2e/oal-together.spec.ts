@@ -4,6 +4,7 @@
 // (The rules: supabase/tests/oalPhoneSocial.test.ts.)
 // Run with: npm run on-dev -- e2e -- e2e/oal-together.spec.ts
 import { type Browser, expect, type Page, test } from '@playwright/test'
+import { walkIn } from './oalWorld.ts'
 import { runSql } from '../scripts/lib/managementApi.ts'
 import { ensureTestAccounts, resetTestAccounts, TEST_ACCOUNTS, TEST_PASSWORD } from '../scripts/lib/testAccounts.ts'
 
@@ -77,8 +78,7 @@ test('a text and mobile money between two players, and each seen on Tubman Boule
   // Both out on the street (by the map): each sees the other.
   for (const p of [a, b]) {
     await p.getByTestId('oal-phone-sheet').getByRole('button', { name: 'Done' }).click()
-    await p.getByTestId('oal-map').click()
-    await p.getByTestId('oal-map-walk-sinkor').click()
+    await walkIn(p, 'sinkor')
   }
   await expect(a.getByTestId('oal-street-chip')).toContainText('1 other person out here', { timeout: 180_000 })
   await expect(b.getByTestId('oal-street-chip')).toContainText('1 other person out here', { timeout: 180_000 })

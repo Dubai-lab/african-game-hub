@@ -6,7 +6,7 @@
 // (texts and mobile money, jobs, flights and hotels, rooms). Busy (at work, asleep, at the clinic,
 // on a journey), the screen says so over the world.
 import { useQuery } from '@tanstack/react-query'
-import { type ReactNode, useEffect, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
@@ -19,6 +19,7 @@ import type { Appearance, HomeCountry, Sex } from '../../../supabase/functions/_
 import { BodyPanel, OverstayWarning, Resting } from './Body'
 import { PhoneSection, RoomSection, useHome } from './Home'
 import { OnTheWay, Travel, type TravelState, useGameNow, useTravel } from './Journey'
+import { type MapPoint, MapView, type Mark } from './MapView'
 import { PlacePanel, StreetView } from './Street'
 import type { Place, TownId } from './StreetScene'
 import { AtWork, JobsAbroad, VisaOffice, Work } from './Work'
@@ -78,6 +79,8 @@ export function World({ life }: { life: Life }) {
   const travel = useTravel()
   const [spot, setSpot] = useState<Spot | null>(() => (user ? readSpot(user.id) : null))
   const [sheet, setSheet] = useState<'map' | 'phone' | null>(null)
+  // Where the player last stood on a 3D street (its own metres), for the map's arrow.
+  const walked = useRef<{ area: string; x: number; y: number; facing: number } | null>(null)
   const go = (next: Spot) => {
     setSpot(next)
     setSheet(null)
@@ -103,7 +106,17 @@ export function World({ life }: { life: Life }) {
   const hud = <Hud life={life} travel={here} onMap={() => setSheet('map')} onPhone={() => setSheet('phone')} />
   const sheets = (
     <>
-      {sheet === 'map' && <MapSheet areas={areas} here={here} life={life} spot={valid} onGo={go} onClose={() => setSheet(null)} />}
+      {sheet === 'map' && (
+        <MapView
+          town={here.place}
+          marks={areas.flatMap((a) => a.places.map((p): Mark => ({ area: a.area, place: p, name: placeName(a.area, p, here.place, life, t), walk: Boolean(a.walk) })))}
+          areaNames={Object.fromEntries(areas.filter((a) => a.places.length > 1).map((a) => [a.area, a.walk ? t(`oal.street.towns.${a.walk}.where`) : t('oal.world.places.townCentre', { town: here.place })]))}
+          me={mapPoint(valid, walked.current)}
+          onGo={(mark, walk) => go({ area: mark.area as Area, place: mark.place as Place | Other, walking: walk })}
+          onClose={() => setSheet(null)}
+          list={<MapList areas={areas} here={here} life={life} spot={valid} onGo={go} />}
+        />
+      )}
       {sheet === 'phone' && <PhoneSheet travel={here} life={life} onClose={() => setSheet(null)} />}
     </>
   )
@@ -135,7 +148,17 @@ export function World({ life }: { life: Life }) {
   if (area?.walk && (valid.walking || !valid.place))
     return (
       <>
-        <StreetView key={`${area.walk}:${valid.place ?? ''}`} town={area.walk} start={(valid.place as Place) ?? null} travel={here} appearance={life.appearance} name={life.game_name} homeCountry={life.home_country} hud={<Hud life={life} travel={here} onMap={() => setSheet('map')} onPhone={() => setSheet('phone')} walking />} />
+        <StreetView
+          key={`${area.walk}:${valid.place ?? ''}`}
+          town={area.walk}
+          start={(valid.place as Place) ?? null}
+          travel={here}
+          appearance={life.appearance}
+          name={life.game_name}
+          homeCountry={life.home_country}
+          onMove={(x, y, facing) => (walked.current = { area: valid.area, x, y, facing })}
+          hud={<Hud life={life} travel={here} onMap={() => setSheet('map')} onPhone={() => setSheet('phone')} walking />}
+        />
         {sheets}
       </>
     )
@@ -337,12 +360,13 @@ function Sheet({ title, onClose, children, testId }: { title: string; onClose: (
   )
 }
 
-function MapSheet({ areas, here, life, spot, onGo, onClose }: { areas: ReturnType<typeof areasOf>; here: TravelState; life: Life; spot: Spot; onGo: (s: Spot) => void; onClose: () => void }) {
+/** The map's places as a list (for reading, and for those who would rather). */
+function MapList({ areas, here, life, spot, onGo }: { areas: AreaInfo[]; here: TravelState; life: Life; spot: Spot; onGo: (s: Spot) => void }) {
   const { t } = useTranslation()
   return (
-    <Sheet title={t('oal.world.mapTitle', { town: here.place })} onClose={onClose} testId="oal-map-sheet">
+    <div className="glass flex flex-col gap-3 rounded-2xl border border-line p-3">
       {areas.map((a) => (
-        <div key={a.area} className="flex flex-col gap-2 border-t border-line pt-2">
+        <div key={a.area} className="flex flex-col gap-2 border-t border-line pt-2 first:border-t-0 first:pt-0">
           {a.walk ? (
             <div className="flex items-center justify-between gap-2">
               <p className="font-semibold">{t(`oal.street.towns.${a.walk}.where`)}</p>
@@ -363,8 +387,14 @@ function MapSheet({ areas, here, life, spot, onGo, onClose }: { areas: ReturnTyp
           </div>
         </div>
       ))}
-    </Sheet>
+    </div>
   )
+}
+
+/** Where the player is on the town's map: on a 3D street, where they stood; else at the place. */
+function mapPoint(spot: Spot, walked: { area: string; x: number; y: number; facing: number } | null): MapPoint {
+  if (spot.walking && walked && walked.area === spot.area) return { area: spot.area, local: { x: walked.x, y: walked.y, facing: walked.facing } }
+  return { area: spot.area, place: spot.place }
 }
 
 function PhoneSheet({ travel, life, onClose }: { travel: TravelState; life: Life; onClose: () => void }) {

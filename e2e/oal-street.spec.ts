@@ -4,6 +4,7 @@
 // walks to the trader's table, where the market's work is offered (scripts/oal/makeWaterside.py).
 // Run with: npm run on-dev -- e2e -- e2e/oal-street.spec.ts
 import { expect, type Page, test } from '@playwright/test'
+import { walkIn } from './oalWorld.ts'
 import { runSql } from '../scripts/lib/managementApi.ts'
 import { ensureTestAccounts, resetTestAccounts, TEST_ACCOUNTS, TEST_PASSWORD } from '../scripts/lib/testAccounts.ts'
 import street from '../src/games/oal/sinkorStreet.json' with { type: 'json' }
@@ -73,8 +74,7 @@ test('out on Tubman Boulevard: the money changer, then Ma Hawa Cookshop', async 
   await page.getByRole('button', { name: 'Log in' }).click()
   await expect(page).toHaveURL(/\/lobby$/, { timeout: 20_000 })
   await page.goto('/life')
-  await page.getByTestId('oal-map').click({ timeout: 20_000 })
-  await page.getByTestId('oal-map-walk-sinkor').click()
+  await walkIn(page, 'sinkor')
   const view = page.getByTestId('oal-street')
   await expect(view).toHaveAttribute('data-x', /\d/, { timeout: 120_000 })
 
@@ -111,8 +111,7 @@ test('Waterside Market: from Water Street to the trader\'s table', async ({ page
   await page.getByRole('button', { name: 'Log in' }).click()
   await expect(page).toHaveURL(/\/lobby$/, { timeout: 20_000 })
   await page.goto('/life')
-  await page.getByTestId('oal-map').click({ timeout: 20_000 })
-  await page.getByTestId('oal-map-walk-waterside').click()
+  await walkIn(page, 'waterside')
   const view = page.getByTestId('oal-street')
   await expect(view).toHaveAttribute('data-x', /\d/, { timeout: 120_000 })
   await expect(page.getByTestId('oal-street-chip')).toHaveText(/Waterside Market/)

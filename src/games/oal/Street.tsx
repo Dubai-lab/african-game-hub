@@ -115,7 +115,7 @@ export function PlacePanel({ place, travel, homeCountry }: { place: Place; trave
   )
 }
 
-export function StreetView({ town, travel, appearance, name, homeCountry, hud, start }: { town: TownId; travel: TravelState; appearance: Appearance; name: string; homeCountry: 'LR' | 'GH'; hud?: ReactNode; start?: Place | null }) {
+export function StreetView({ town, travel, appearance, name, homeCountry, hud, start, onMove }: { town: TownId; travel: TravelState; appearance: Appearance; name: string; homeCountry: 'LR' | 'GH'; hud?: ReactNode; start?: Place | null; onMove?: (x: number, y: number, facing: number) => void }) {
   const { t } = useTranslation()
   const company = useStreetCompany(town, name, appearance)
   const stick = useRef<Stick>({ x: 0, y: 0 })
@@ -159,6 +159,7 @@ export function StreetView({ town, travel, appearance, name, homeCountry, hud, s
               view.current?.setAttribute('data-x', x.toFixed(2))
               view.current?.setAttribute('data-y', y.toFixed(2))
               company.share(x, y, facing, moving)
+              onMove?.(x, y, facing)
             }}
           />
         </Suspense>

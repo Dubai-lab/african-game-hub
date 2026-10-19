@@ -2700,8 +2700,16 @@
         "changer": "Money changer, {{town}}",
         "stall": "Market, {{town}}",
         "kekeh": "Kekeh and trotro stop, {{town}}",
-        "clinic": "Clinic, {{town}}"
-      }
+        "clinic": "Clinic, {{town}}",
+        "townCentre": "Town centre, {{town}}"
+      },
+      "goHere": "Go here",
+      "walkHere": "Walk here",
+      "km": "{{km}} km",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "mapView": "Map",
+      "listView": "List"
     }
   }
 }
