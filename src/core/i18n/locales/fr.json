@@ -140,7 +140,13 @@
       "NOT_AT_HOME": "Votre famille est dans votre ville natale.",
       "ALREADY_ATE_WITH_FAMILY": "Vous avez déjà mangé en famille aujourd’hui.",
       "NO_KITCHEN": "Pas de cuisine ici : louez une chambre, ou mangez à la gargote.",
-      "OVERSTAY_FINE_UNPAID": "Vous avez dépassé votre séjour : payez l’amende (10 US$ par jour) avant d’embarquer. Vous n’avez pas assez."
+      "OVERSTAY_FINE_UNPAID": "Vous avez dépassé votre séjour : payez l’amende (10 US$ par jour) avant d’embarquer. Vous n’avez pas assez.",
+      "NO_PHONE": "Il vous faut d’abord un téléphone.",
+      "NUMBER_NOT_FOUND": "Aucun téléphone enregistré n’a ce numéro.",
+      "OWN_NUMBER": "C’est votre propre numéro.",
+      "NOT_DELIVERED": "Il n’a pas pu être livré.",
+      "NO_AIRTIME": "Pas assez de crédit : rechargez d’abord.",
+      "BAD_TEXT": "Un SMS fait de 1 à 160 caractères."
     },
     "samePassword": "C’est votre mot de passe actuel. Choisissez-en un autre.",
     "captchaFailed": "La vérification de sécurité a échoué. Rechargez la page et réessayez."
@@ -2350,7 +2356,14 @@
       "money": "Votre argent",
       "moneyHint": "Argent du jeu : il n'a aucune valeur hors du jeu.",
       "next": "Votre chambre à Monrovia, votre téléphone et votre premier travail arrivent bientôt.",
-      "where": "Vous êtes à {{town}}, {{country}}."
+      "where": "Vous êtes à {{town}}, {{country}}.",
+      "currencies": {
+        "LRD": "L$",
+        "USD": "US$",
+        "GHS": "GH¢",
+        "LRM": "Mobile money L$",
+        "GHM": "Mobile money GH¢"
+      }
     },
     "travel": {
       "passport": "Votre passeport",
@@ -2539,7 +2552,29 @@
       "registered": "Enregistrée. Votre numéro est le {{number}}.",
       "airtime": "Crédit {{amount}}",
       "topUpAmount": "Crédit à acheter",
-      "topUp": "Recharger"
+      "topUp": "Recharger",
+      "texts": "SMS",
+      "toNumber": "À {{number}}",
+      "noTexts": "Pas encore de SMS. Donnez votre numéro à vos amis.",
+      "markRead": "Marquer comme lus",
+      "toLabel": "À (numéro)",
+      "message": "Message",
+      "sent": "Envoyé.",
+      "send": "Envoyer ({{price}})",
+      "momo": {
+        "title": "Mobile money",
+        "amount": "Montant",
+        "cashIn": "Dépôt (agent)",
+        "cashOut": "Retrait",
+        "sendTo": "Envoyer à (numéro)",
+        "send": "Envoyer de l’argent",
+        "fees": "Envoyer ou retirer coûte 1 % (au moins {{least}}). L’argent va aux numéros de ce pays.",
+        "done": {
+          "cash_in": "Déposé.",
+          "cash_out": "Retiré.",
+          "send_money": "Argent envoyé."
+        }
+      }
     },
     "room": {
       "title": "Où vous vivez",
@@ -2617,7 +2652,9 @@
       "cookshop": "Riz et sauce, palm butter ou feuilles de patate : une assiette pour 250 L$.",
       "ate": "Vous avez mangé.",
       "clinic": "Une infirmière vous reçoit, et un médecin s’il le faut. Cela prend trois heures.",
-      "seen": "Vous êtes à la clinique."
+      "seen": "Vous êtes à la clinique.",
+      "company_one": "{{count}} autre personne dehors",
+      "company_other": "{{count}} autres personnes dehors"
     }
   }
 }

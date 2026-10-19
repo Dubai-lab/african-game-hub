@@ -140,7 +140,13 @@
       "NOT_AT_HOME": "Your family is in your home town.",
       "ALREADY_ATE_WITH_FAMILY": "You have already eaten with family today.",
       "NO_KITCHEN": "You have no kitchen here: rent a room, or eat at a cookshop.",
-      "OVERSTAY_FINE_UNPAID": "You overstayed: pay the fine (US$10 a day) before you can board. You do not have enough."
+      "OVERSTAY_FINE_UNPAID": "You overstayed: pay the fine (US$10 a day) before you can board. You do not have enough.",
+      "NO_PHONE": "You need a phone first.",
+      "NUMBER_NOT_FOUND": "No registered phone has that number.",
+      "OWN_NUMBER": "That is your own number.",
+      "NOT_DELIVERED": "It could not be delivered.",
+      "NO_AIRTIME": "Not enough airtime: top up first.",
+      "BAD_TEXT": "A text is 1 to 160 characters."
     },
     "samePassword": "That is your current password. Choose a different one.",
     "captchaFailed": "The security check did not pass. Reload the page and try again."
@@ -2350,7 +2356,14 @@
       "money": "Your money",
       "moneyHint": "Game money: it has no value outside the game.",
       "next": "Your room in Monrovia, your phone and your first job are coming next.",
-      "where": "You are in {{town}}, {{country}}."
+      "where": "You are in {{town}}, {{country}}.",
+      "currencies": {
+        "LRD": "L$",
+        "USD": "US$",
+        "GHS": "GH¢",
+        "LRM": "Mobile money L$",
+        "GHM": "Mobile money GH¢"
+      }
     },
     "travel": {
       "passport": "Your passport",
@@ -2539,7 +2552,29 @@
       "registered": "Registered. Your number is {{number}}.",
       "airtime": "Airtime {{amount}}",
       "topUpAmount": "Airtime to buy",
-      "topUp": "Top up"
+      "topUp": "Top up",
+      "texts": "Texts",
+      "toNumber": "To {{number}}",
+      "noTexts": "No texts yet. Share your number with friends.",
+      "markRead": "Mark as read",
+      "toLabel": "To (number)",
+      "message": "Message",
+      "sent": "Sent.",
+      "send": "Send ({{price}})",
+      "momo": {
+        "title": "Mobile money",
+        "amount": "Amount",
+        "cashIn": "Cash in (agent)",
+        "cashOut": "Cash out",
+        "sendTo": "Send to (number)",
+        "send": "Send money",
+        "fees": "Sending or cashing out costs 1% (at least {{least}}). Money goes to numbers in this country.",
+        "done": {
+          "cash_in": "Cashed in.",
+          "cash_out": "Cashed out.",
+          "send_money": "Money sent."
+        }
+      }
     },
     "room": {
       "title": "Where you live",
@@ -2617,7 +2652,9 @@
       "cookshop": "Rice and soup, palm butter or potato greens: a plate for L$250.",
       "ate": "You ate.",
       "clinic": "A nurse sees you, and a doctor if you need one. It takes three hours.",
-      "seen": "You are at the clinic."
+      "seen": "You are at the clinic.",
+      "company_one": "{{count}} other person out here",
+      "company_other": "{{count}} other people out here"
     }
   }
 }

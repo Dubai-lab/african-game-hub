@@ -2,8 +2,12 @@
 // opened), the thumb stick and the drag to look, and, standing at one of the street's places,
 // what can be done there: eat at Ma Hawa Cookshop, the phone shop and SIM agent, the money
 // changer, the kekeh stop, the clinic. Each uses the same server steps as the life's page.
+// Other players out on Tubman Boulevard at the same time are seen walking it.
 import { useQueryClient } from '@tanstack/react-query'
-import { lazy, Suspense, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import type { RealtimeChannel } from '@supabase/supabase-js'
+import { useAuth } from '@/core/auth/AuthContext'
+import { supabase } from '@/core/lib/supabase'
 import { useTranslation } from 'react-i18next'
 import { callFunction, refusalMessage } from '@/core/lib/functions'
 import { Button } from '@/core/ui/Button'
@@ -13,13 +17,63 @@ import type { Appearance } from '../../../supabase/functions/_shared/oal'
 import type { Stick } from './ArrivalsScene'
 import { PhoneSection } from './Home'
 import type { TravelState } from './Journey'
-import type { Place } from './StreetScene'
+import type { OtherPlayer, Place } from './StreetScene'
 import { MoneyChanger, Work } from './Work'
 
 const StreetScene = lazy(() => import('./StreetScene'))
 
-export function StreetView({ travel, appearance, homeCountry, onClose }: { travel: TravelState; appearance: Appearance; homeCountry: 'LR' | 'GH'; onClose: () => void }) {
+/**
+ * The others out on the street, through a Realtime channel: who is there and how they look
+ * (presence), where they are (a few times a second, only while moving, or once in a while).
+ * Nothing in it is trusted for anything but drawing.
+ */
+function useStreetCompany(name: string, appearance: Appearance) {
+  const { user } = useAuth()
+  const others = useRef(new Map<string, OtherPlayer>())
+  const [present, setPresent] = useState<string[]>([])
+  const channel = useRef<RealtimeChannel | null>(null)
+  const last = useRef({ x: 0, y: 0, at: 0 })
+  useEffect(() => {
+    if (!user) return
+    const me = user.id
+    const ch = supabase.channel('oal-street:sinkor', { config: { presence: { key: me }, broadcast: { self: false } } })
+    ch.on('presence', { event: 'sync' }, () => {
+      const state = ch.presenceState() as Record<string, { name: string; appearance: Appearance; x: number; y: number }[]>
+      const ids = Object.keys(state).filter((id) => id !== me)
+      for (const id of ids) {
+        const seen = state[id]![0]!
+        if (!others.current.has(id)) others.current.set(id, { name: seen.name, appearance: seen.appearance, x: seen.x, y: seen.y, f: 0, m: false })
+      }
+      for (const id of [...others.current.keys()]) if (!ids.includes(id)) others.current.delete(id)
+      setPresent(ids)
+    })
+    ch.on('broadcast', { event: 'pos' }, ({ payload }) => {
+      const p = payload as { id: string; x: number; y: number; f: number; m: boolean }
+      const entry = others.current.get(p.id)
+      if (entry) Object.assign(entry, { x: p.x, y: p.y, f: p.f, m: p.m })
+    })
+    ch.subscribe((status) => {
+      if (status === 'SUBSCRIBED') void ch.track({ name, appearance, x: last.current.x, y: last.current.y })
+    })
+    channel.current = ch
+    return () => {
+      channel.current = null
+      void supabase.removeChannel(ch)
+    }
+  }, [user, name, appearance])
+  const share = (x: number, y: number, f: number, m: boolean) => {
+    const now = Date.now()
+    const moved = Math.hypot(x - last.current.x, y - last.current.y) > 0.05
+    if (!channel.current || !user || (!moved && now - last.current.at < 3000)) return
+    last.current = { x, y, at: now }
+    void channel.current.send({ type: 'broadcast', event: 'pos', payload: { id: user.id, x, y, f, m } })
+  }
+  return { others, present, share }
+}
+
+export function StreetView({ travel, appearance, name, homeCountry, onClose }: { travel: TravelState; appearance: Appearance; name: string; homeCountry: 'LR' | 'GH'; onClose: () => void }) {
   const { t } = useTranslation()
+  const company = useStreetCompany(name, appearance)
   const queryClient = useQueryClient()
   const stick = useRef<Stick>({ x: 0, y: 0 })
   const look = useRef<number | null>(null)
@@ -65,13 +119,16 @@ export function StreetView({ travel, appearance, homeCountry, onClose }: { trave
             stick={stick}
             look={look}
             paused={open}
+            others={company.others}
+            present={company.present}
             onPlace={(p) => {
               setPlace(p)
               if (!p) setOpen(false)
             }}
-            onPosition={(x, y) => {
+            onPosition={(x, y, facing, moving) => {
               view.current?.setAttribute('data-x', x.toFixed(2))
               view.current?.setAttribute('data-y', y.toFixed(2))
+              company.share(x, y, facing, moving)
             }}
           />
         </Suspense>
@@ -80,7 +137,10 @@ export function StreetView({ travel, appearance, homeCountry, onClose }: { trave
         <Button variant="ghost" onClick={onClose}>
           {t('oal.back')}
         </Button>
-        <p className="glass rounded-full border border-line px-4 py-2 text-sm font-semibold">{place ? t(`oal.street.places.${place}`) : t('oal.street.where')}</p>
+        <p className="glass rounded-full border border-line px-4 py-2 text-sm font-semibold" data-testid="oal-street-chip">
+          {place ? t(`oal.street.places.${place}`) : t('oal.street.where')}
+          {company.present.length > 0 && <span className="ml-2 text-muted">· {t('oal.street.company', { count: company.present.length })}</span>}
+        </p>
       </div>
       <div
         data-stick

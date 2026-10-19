@@ -157,6 +157,11 @@ export function PhoneSection({ travel, homeCountry }: { travel: TravelState; hom
             )
           })}
       </ul>
+      {phone && sims.some((x) => x.number && networks.find((n) => n.id === x.network)?.country === travel.country) && (
+        <div className="mt-3">
+          <PhoneUse travel={travel} />
+        </div>
+      )}
     </section>
   )
 }
@@ -194,6 +199,127 @@ export function RoomSection({ travel }: { travel: TravelState }) {
           </li>
         ))}
       </ul>
+    </section>
+  )
+}
+
+// ---- Using the phone: texts and mobile money -------------------------------------------------
+
+type Text = { id: number; from_user: string; from_number: string; to_number: string; body: string; game_at: string; read_at: string | null }
+
+function useTexts() {
+  const { user } = useAuth()
+  return useQuery({
+    queryKey: ['oal-texts', user?.id],
+    enabled: Boolean(user),
+    refetchInterval: 15000,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('oal_texts').select('id, from_user, from_number, to_number, body, game_at, read_at').order('id', { ascending: false }).limit(30)
+      if (error) throw error
+      return data as Text[]
+    },
+  })
+}
+
+function useWallet(currency: 'LRM' | 'GHM') {
+  const { user } = useAuth()
+  return useQuery({
+    queryKey: ['oal-money', user?.id, currency],
+    enabled: Boolean(user),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('oal_balances').select('amount').eq('user_id', user!.id).eq('currency', currency).maybeSingle()
+      if (error) throw error
+      return Number(data?.amount ?? 0)
+    },
+  })
+}
+
+/** Texts (an inbox, and a new one to any number) and the mobile money wallet on the SIM. */
+export function PhoneUse({ travel }: { travel: TravelState }) {
+  const { t, i18n } = useTranslation()
+  const { user } = useAuth()
+  const texts = useTexts()
+  const queryClient = useQueryClient()
+  const wallet = useWallet(travel.country === 'LR' ? 'LRM' : 'GHM')
+  const { run, busy } = useHomeStep()
+  const [to, setTo] = useState('')
+  const [body, setBody] = useState('')
+  const [amount, setAmount] = useState('')
+  const [sendTo, setSendTo] = useState('')
+  const local: Currency = travel.country === 'LR' ? 'LRD' : 'GHS'
+  const unread = (texts.data ?? []).filter((x) => x.from_user !== user?.id && !x.read_at)
+  const refresh = () => {
+    for (const key of ['oal-texts', 'oal-money', 'oal-home']) void queryClient.invalidateQueries({ queryKey: [key] })
+  }
+  const time = (d: string) => new Intl.DateTimeFormat(i18n.language, { weekday: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }).format(new Date(`${d.slice(0, 19)}Z`))
+  const money = (action: string, extra: Record<string, unknown> = {}) =>
+    void run({ action, amount: Number(amount) * 100, ...extra }).then((r) => {
+      if (r) {
+        setAmount('')
+        toast.success(t(`oal.phone.momo.done.${action}`))
+        refresh()
+      }
+    })
+  return (
+    <section className="border border-line bg-panel p-4" data-testid="oal-phone-use">
+      <h2 className="text-sm font-semibold text-muted">
+        {t('oal.phone.texts')} {unread.length > 0 && <span className="ml-1 rounded-full bg-brand px-2 text-brand-ink">{unread.length}</span>}
+      </h2>
+      <ul className="mt-2 flex max-h-56 flex-col gap-2 overflow-y-auto" data-testid="oal-inbox">
+        {(texts.data ?? []).map((x) => (
+          <li key={x.id} className={`text-sm ${x.from_user === user?.id ? 'text-muted' : ''}`}>
+            <span className="font-bold tabular-nums">{x.from_user === user?.id ? t('oal.phone.toNumber', { number: localNumber(x.to_number) }) : localNumber(x.from_number)}</span> · {time(x.game_at)}
+            <br />
+            {x.body}
+          </li>
+        ))}
+        {texts.data?.length === 0 && <li className="text-sm text-muted">{t('oal.phone.noTexts')}</li>}
+      </ul>
+      {unread.length > 0 && (
+        <Button variant="ghost" disabled={busy} onClick={() => void run({ action: 'read_texts' }).then(refresh)}>
+          {t('oal.phone.markRead')}
+        </Button>
+      )}
+      <div className="mt-2 flex flex-col gap-2 border-t border-line pt-2">
+        <input value={to} onChange={(e) => setTo(e.target.value.replace(/[^0-9+ ]/g, ''))} placeholder="077 123 4567" inputMode="tel" aria-label={t('oal.phone.toLabel')} className="min-h-11 rounded-xl border border-line bg-panel px-2 tabular-nums" data-testid="oal-text-to" />
+        <textarea value={body} onChange={(e) => setBody(e.target.value.slice(0, 160))} rows={2} aria-label={t('oal.phone.message')} className="rounded-xl border border-line bg-panel p-2" data-testid="oal-text-body" />
+        <Button
+          disabled={busy || !to || !body.trim()}
+          onClick={() =>
+            void run({ action: 'text', number: to, body: body.trim() }).then((r) => {
+              if (r) {
+                setBody('')
+                toast.success(t('oal.phone.sent'))
+                refresh()
+              }
+            })
+          }
+          data-testid="oal-text-send"
+        >
+          {t('oal.phone.send', { price: travel.country === 'LR' ? 'L$5' : 'GH¢0.10' })}
+        </Button>
+      </div>
+
+      <h2 className="mt-4 text-sm font-semibold text-muted">{t('oal.phone.momo.title')}</h2>
+      <p className="font-display text-xl font-extrabold tabular-nums" data-testid="oal-wallet">
+        {cash(wallet.data ?? 0, local, i18n.language)}
+      </p>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <input value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" aria-label={t('oal.phone.momo.amount')} className="min-h-11 w-28 rounded-xl border border-line bg-panel px-2" data-testid="oal-momo-amount" />
+        <Button variant="ghost" disabled={busy || !Number(amount)} onClick={() => money('cash_in')} data-testid="oal-cash-in">
+          {t('oal.phone.momo.cashIn')}
+        </Button>
+        <Button variant="ghost" disabled={busy || !Number(amount)} onClick={() => money('cash_out')} data-testid="oal-cash-out">
+          {t('oal.phone.momo.cashOut')}
+        </Button>
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <input value={sendTo} onChange={(e) => setSendTo(e.target.value.replace(/[^0-9+ ]/g, ''))} placeholder="077 123 4567" inputMode="tel" aria-label={t('oal.phone.momo.sendTo')} className="min-h-11 w-36 rounded-xl border border-line bg-panel px-2 tabular-nums" data-testid="oal-momo-to" />
+        <Button disabled={busy || !Number(amount) || !sendTo} onClick={() => money('send_money', { number: sendTo })} data-testid="oal-momo-send">
+          {t('oal.phone.momo.send')}
+        </Button>
+      </div>
+      <p className="mt-1 text-xs text-muted">{t('oal.phone.momo.fees', { least: travel.country === 'LR' ? 'L$5' : 'GH¢0.50' })}</p>
     </section>
   )
 }

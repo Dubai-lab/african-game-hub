@@ -2156,6 +2156,57 @@ export type Database = {
           },
         ]
       }
+      oal_texts: {
+        Row: {
+          body: string
+          created_at: string
+          from_number: string
+          from_user: string
+          game_at: string
+          id: number
+          read_at: string | null
+          to_number: string
+          to_user: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          from_number: string
+          from_user: string
+          game_at: string
+          id?: never
+          read_at?: string | null
+          to_number: string
+          to_user: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          from_number?: string
+          from_user?: string
+          game_at?: string
+          id?: never
+          read_at?: string | null
+          to_number?: string
+          to_user?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oal_texts_from_user_fkey"
+            columns: ["from_user"]
+            isOneToOne: false
+            referencedRelation: "oal_lives"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "oal_texts_to_user_fkey"
+            columns: ["to_user"]
+            isOneToOne: false
+            referencedRelation: "oal_lives"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       oal_tickets: {
         Row: {
           bought_game_at: string
@@ -3996,6 +4047,16 @@ export type Database = {
       }
       oal_needs_action: {
         Args: { p_action: string; p_hours: number; p_user_id: string }
+        Returns: Json
+      }
+      oal_phone_action: {
+        Args: {
+          p_action: string
+          p_amount: number
+          p_body: string
+          p_number: string
+          p_user_id: string
+        }
         Returns: Json
       }
       oal_start_life: {

@@ -4,7 +4,7 @@
 // (y) of the junction with 16th Street; here x = x and z = -y): every building, compound wall,
 // kiosk, palm and pole as a shape to walk against, and the places on the street: Ma Hawa
 // Cookshop, the phone shop, the money changer, the kekeh stop, the clinic. Standing at one, the
-// page offers what can be done there.
+// page offers what can be done there. Other players out on the street walk it too.
 //
 // Loaded only here (three.js stays out of the rest of the app).
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
@@ -107,11 +107,57 @@ function Street() {
   return <primitive object={gltf.scene} />
 }
 
+/** Another player out on the street: drawn walking toward where they last said they were. */
+function Other({ entry }: { entry: OtherPlayer }) {
+  const gltf = useLoader(GLTFLoader, CHARACTER_URL(entry.appearance.sex), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const them = useMemo(() => {
+    const p = person(gltf.scene, gltf.animations, entry.appearance)
+    p.actions.idle?.play()
+    p.actions.walk?.play()
+    if (p.actions.walk) p.actions.walk.weight = 0
+    p.root.position.set(entry.x, 0.05, -entry.y)
+    return p
+  }, [gltf, entry.appearance]) // eslint-disable-line react-hooks/exhaustive-deps
+  const speed = useRef(0)
+  useFrame((_, rawDt) => {
+    const dt = Math.min(rawDt, 0.25)
+    const pos = them.root.position
+    const dx = entry.x - pos.x
+    const dz = -entry.y - pos.z
+    const far = Math.hypot(dx, dz)
+    // Far behind (a jump, a slow phone): there at once; else walking there.
+    if (far > 6) pos.set(entry.x, 0.05, -entry.y)
+    else if (far > 0.02) {
+      const step = Math.min(far, WALK_SPEED * 1.2 * dt)
+      pos.x += (dx / far) * step
+      pos.z += (dz / far) * step
+    }
+    const moving = far > 0.05 || entry.m
+    speed.current += ((moving ? 1 : 0) - speed.current) * Math.min(1, dt * 8)
+    let turn = entry.f - them.root.rotation.y
+    turn = Math.atan2(Math.sin(turn), Math.cos(turn))
+    them.root.rotation.y += turn * Math.min(1, dt * 8)
+    if (them.actions.walk && them.actions.idle) {
+      them.actions.walk.weight = speed.current
+      them.actions.idle.weight = 1 - speed.current
+    }
+    them.mixer.update(dt)
+  })
+  return <primitive object={them.root} />
+}
+
 function People({ appearance, stick, look, paused, onPlace, onPosition }: Props) {
   const gltf = useLoader(GLTFLoader, CHARACTER_URL(appearance.sex), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const { camera } = useThree()
   const keys = useRef(new Set<string>())
-  const state = useRef({ x: street.spawn.x, y: street.spawn.y, facing: SPAWN_YAW, speed: 0, place: null as Place | null, told: 0 })
+  // Arriving a few steps apart along the shoulder, so two players never stand in one another.
+  const state = useRef(
+    (() => {
+      const along = (Math.random() - 0.5) * 6
+      const f = street.spawn.face
+      return { x: street.spawn.x + f[0]! * along, y: street.spawn.y + f[1]! * along, facing: SPAWN_YAW, speed: 0, place: null as Place | null, told: 0 }
+    })(),
+  )
 
   const { player, locals } = useMemo(() => {
     const player = person(gltf.scene, gltf.animations, appearance)
@@ -205,9 +251,9 @@ function People({ appearance, stick, look, paused, onPlace, onPosition }: Props)
     for (const l of locals) l.mixer.update(dt)
 
     s.told += dt
-    if (s.told > 0.3) {
+    if (s.told > 0.25) {
       s.told = 0
-      onPosition?.(s.x, s.y)
+      onPosition?.(s.x, s.y, s.facing, s.speed > 0.2)
     }
     const place = placeAt(s)
     if (place !== s.place) {
@@ -245,15 +291,22 @@ function Sky() {
   return null
 }
 
+/** Another player, as they last said: how they look, where they are, which way, walking or not. */
+export type OtherPlayer = { name: string; appearance: Appearance; x: number; y: number; f: number; m: boolean }
+
 type Props = {
   appearance: Appearance
+  /** The others out on the street, by id (positions change in place, without re-rendering). */
+  others: RefObject<Map<string, OtherPlayer>>
+  /** Their ids, as they come and go. */
+  present: string[]
   stick: RefObject<Stick>
   /** Where the camera looks, as an angle (a drag turns it); null until the scene sets it. */
   look: RefObject<number | null>
   /** No walking while dealing at a place. */
   paused: boolean
   onPlace: (place: Place | null) => void
-  onPosition?: (x: number, y: number) => void
+  onPosition?: (x: number, y: number, facing: number, moving: boolean) => void
 }
 
 export default function StreetScene(props: Props) {
@@ -267,6 +320,14 @@ export default function StreetScene(props: Props) {
       <Suspense fallback={null}>
         <Street />
         <People {...props} />
+        {props.present.map((id) => {
+          const entry = props.others.current?.get(id)
+          return entry ? (
+            <Suspense key={id} fallback={null}>
+              <Other entry={entry} />
+            </Suspense>
+          ) : null
+        })}
       </Suspense>
     </Canvas>
   )

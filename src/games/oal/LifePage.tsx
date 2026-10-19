@@ -256,7 +256,7 @@ function LifeHome({ life }: { life: Life }) {
         <h2 className="text-sm font-semibold text-muted">{t('oal.life.money')}</h2>
         {money.data?.map((b) => (
           <p key={b.currency} className="font-display text-xl font-extrabold tabular-nums">
-            {b.currency} {(b.amount / 100).toLocaleString(i18n.language, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {t(`oal.life.currencies.${b.currency}`, { defaultValue: b.currency })} {(b.amount / 100).toLocaleString(i18n.language, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
         ))}
         <p className="mt-1 text-xs text-muted">{t('oal.life.moneyHint')}</p>
@@ -283,7 +283,7 @@ function Whereabouts({ life }: { life: Life }) {
     )
   const here = travel.data
   // Out on the street, the street is everything (its places offer what the page would).
-  if (outside && here.state === 'settled') return <StreetView travel={here} appearance={life.appearance} homeCountry={life.home_country} onClose={() => setOutside(false)} />
+  if (outside && here.state === 'settled') return <StreetView travel={here} appearance={life.appearance} name={life.game_name} homeCountry={life.home_country} onClose={() => setOutside(false)} />
   return (
     <>
       {here.state === 'settled' && <p className="font-semibold">{t('oal.life.where', { town: here.place, country: t(`oal.countries.${here.country}`) })}</p>}
