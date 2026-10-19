@@ -17,7 +17,7 @@ import { Skeleton } from '@/core/ui/Skeleton'
 import { toast } from '@/core/ui/toast'
 import { type Appearance, gameTime } from '../../../supabase/functions/_shared/oal'
 import { addDays, type Answers, OCCUPATIONS, type Occupation, PURPOSES, type Purpose, type Reason } from '../../../supabase/functions/_shared/oalBorder'
-import type { Stick } from './ArrivalsScene'
+import { HALLS, type Stick } from './ArrivalsScene'
 
 const ArrivalsScene = lazy(() => import('./ArrivalsScene'))
 
@@ -333,7 +333,7 @@ export function OnTheWay({ travel, appearance, homeCountry }: { travel: TravelSt
 
   if (travel.state === 'arrivals' || travel.state === 'cleared') {
     const citizen = travel.country === homeCountry
-    const hall = travel.place === 'ROB'
+    const hall = travel.place === 'ROB' || travel.place === 'ACC'
     const leave = async () => {
       const reply = await run<{ place: string }>({ action: 'leave_airport' })
       if (reply) {
@@ -359,7 +359,7 @@ export function OnTheWay({ travel, appearance, homeCountry }: { travel: TravelSt
             </Button>
           )}
         </div>
-        {hall && arrivalsOpen && <Hall appearance={appearance} citizen={citizen} country={travel.country} cleared={travel.state === 'cleared'} onLeave={() => void leave()} onClose={() => setArrivalsOpen(false)} />}
+        {hall && arrivalsOpen && <Hall airport={travel.place as 'ROB' | 'ACC'} appearance={appearance} citizen={citizen} country={travel.country} cleared={travel.state === 'cleared'} onLeave={() => void leave()} onClose={() => setArrivalsOpen(false)} />}
       </section>
     )
   }
@@ -368,14 +368,18 @@ export function OnTheWay({ travel, appearance, homeCountry }: { travel: TravelSt
 
 // ---- The arrivals hall in 3D ----------------------------------------------------------------
 
-function Hall({ appearance, citizen, country, cleared, onLeave, onClose }: { appearance: Appearance; citizen: boolean; country: Country; cleared: boolean; onLeave: () => void; onClose: () => void }) {
+function Hall({ airport, appearance, citizen, country, cleared, onLeave, onClose }: { airport: 'ROB' | 'ACC'; appearance: Appearance; citizen: boolean; country: Country; cleared: boolean; onLeave: () => void; onClose: () => void }) {
   const { t } = useTranslation()
+  const { plan } = HALLS[airport]
+  const { run, busy } = useStep()
   const stick = useRef<Stick>({ x: 0, y: 0 })
   const look = useRef(0)
   const [near, setNear] = useState<number | null>(null)
   const [speaking, setSpeaking] = useState(false)
   // The gate opened by the officer who admitted the traveller (any, once cleared).
-  const [opened, setOpened] = useState<string | null>(cleared ? 'gate2' : null)
+  const [opened, setOpened] = useState<string | null>(cleared ? (plan.booths.find((b) => b.staffed)?.gate ?? null) : null)
+  const booth = plan.booths.find((b) => b.n === near)
+  const egate = booth?.kind === 'egate'
   const drag = useRef<{ x: number; look: number } | null>(null)
   const base = useRef<{ x: number; y: number } | null>(null)
   const hall = useRef<HTMLDivElement>(null)
@@ -397,6 +401,7 @@ function Hall({ appearance, citizen, country, cleared, onLeave, onClose }: { app
       >
         <Suspense fallback={<Skeleton className="h-full rounded-none" />}>
           <ArrivalsScene
+            airport={airport}
             appearance={appearance}
             stick={stick}
             look={look}
@@ -443,11 +448,31 @@ function Hall({ appearance, citizen, country, cleared, onLeave, onClose }: { app
           stick.current = { x: 0, y: 0 }
         }}
       />
-      {near && !opened && !speaking && (
+      {near && !opened && !speaking && !egate && (
         <div className="absolute bottom-6 right-6">
           <Button className="min-h-14 px-6 text-lg" onClick={() => setSpeaking(true)} data-testid="oal-speak">
             {t('oal.hall.speak')}
           </Button>
+        </div>
+      )}
+      {near && !opened && egate && (
+        <div className="absolute bottom-6 right-6 flex max-w-[60vw] flex-col items-end gap-2">
+          {citizen ? (
+            <Button
+              className="min-h-14 px-6 text-lg"
+              disabled={busy}
+              data-testid="oal-egate"
+              onClick={() =>
+                void run<{ decision: string }>({ action: 'immigration' }).then((r) => {
+                  if (r?.decision === 'admitted') setOpened(booth!.gate)
+                })
+              }
+            >
+              {t('oal.hall.scan')}
+            </Button>
+          ) : (
+            <p className="glass rounded-xl border border-line px-4 py-3 text-sm font-semibold">{t('oal.hall.egateCitizens')}</p>
+          )}
         </div>
       )}
       {speaking && near !== null && (

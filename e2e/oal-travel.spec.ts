@@ -1,8 +1,8 @@
-// One Africa Life: a journey there and back, against the development project. A Liberian life
-// buys its tickets and a hotel, boards in the boarding window, flies, answers the immigration
-// officer at Kotoka (by the desk: Kotoka's hall is not built yet) and goes into Accra; a week
-// later it flies home and walks through Roberts International's arrivals hall in 3D to a booth,
-// is welcomed home, and walks out through the gate the officer opened.
+// One Africa Life: journeys, against the development project. A Liberian life buys its tickets
+// and a hotel, boards in the boarding window, flies, walks through Kotoka's arrivals hall in 3D to
+// an officer, answers, and walks out into Accra. Another, in Accra, flies home and walks through
+// Roberts International's hall to a booth, is welcomed home, and out through the opened gate.
+// (Two tests: a browser without a graphics card draws these halls slowly.)
 // The game's clock is moved by moving its start (development project only; the reset puts it
 // back). The officer's rules themselves are tested in src/games/oal/oalBorder.test.ts.
 // Run with: npm run on-dev -- e2e -- e2e/oal-travel.spec.ts
@@ -10,7 +10,7 @@ import { expect, type Page, test } from '@playwright/test'
 import { runSql } from '../scripts/lib/managementApi.ts'
 import { ensureTestAccounts, resetTestAccounts, TEST_ACCOUNTS, TEST_PASSWORD } from '../scripts/lib/testAccounts.ts'
 
-test.setTimeout(900_000)
+test.setTimeout(1_200_000)
 test.beforeAll(ensureTestAccounts)
 test.beforeEach(resetTestAccounts)
 test.afterAll(resetTestAccounts)
@@ -61,24 +61,36 @@ async function walkTo(page: Page, u: number, v: number, done?: () => Promise<boo
   throw new Error(`could not walk to (${u}, ${v}): stopped at (${at.u}, ${at.v})`)
 }
 
-test('Monrovia to Accra and back: tickets, a hotel, two borders, the arrivals hall at Roberts', async ({ page }) => {
-  const account = TEST_ACCOUNTS[0]!
-  const errors: string[] = []
-  page.on('pageerror', (error) => errors.push(error.message))
+/** A Liberian life for the test account, given what a journey costs (as an admin would). */
+async function liberian(index: number) {
+  const account = TEST_ACCOUNTS[index]!
   const [me] = await runSql<{ id: string }>(`select id from auth.users where email = '${account.email}'`)
   await runSql(`select public.oal_start_life('${me!.id}', 'Kollie Flomo', 'male', 30, 'LR', 'Monrovia', '${JSON.stringify(APPEARANCE)}'::jsonb)`)
-  // Twenty dollars buys no ticket: the life is given what a journey costs, as an admin would.
+  // Twenty dollars buys no ticket.
   await runSql(`select private.oal_money('${me!.id}', 'USD', 300000, 'adjustment')`)
-  await setGameTime(`${DAY} 06:00`)
+  return { account, id: me!.id }
+}
 
+async function logIn(page: Page, account: { email: string }) {
   await page.goto('/login')
   await page.getByLabel('Email').fill(account.email)
   await page.getByLabel('Password').fill(TEST_PASSWORD)
   await page.getByRole('button', { name: 'Log in' }).click()
   await expect(page).toHaveURL(/\/lobby$/, { timeout: 20_000 })
   await page.goto('/life')
+  await expect(page.getByTestId('oal-travel')).toBeVisible({ timeout: 20_000 })
+}
+
+const crossingsOf = (id: string) =>
+  runSql<{ country: string; category: string; decision: string }>(`select country, category, decision from public.oal_border_entries where user_id = '${id}' order by id`)
+
+test('Monrovia to Accra: tickets and a hotel, the flight, the officer in Kotoka\'s hall, out into Accra', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  const { account, id } = await liberian(0)
+  await setGameTime(`${DAY} 06:00`)
+  await logIn(page, account)
   const travel = page.getByTestId('oal-travel')
-  await expect(travel).toBeVisible({ timeout: 20_000 })
   await expect(page.getByText('You are in Monrovia, Liberia.')).toBeVisible()
   await expect(travel.getByText(/^Liberia/)).toBeVisible()
 
@@ -102,6 +114,13 @@ test('Monrovia to Accra and back: tickets, a hotel, two borders, the arrivals ha
   await setGameTime(`${DAY} 11:50`)
   await page.reload()
   await expect(page.getByTestId('oal-arrivals')).toBeVisible({ timeout: 20_000 })
+  await page.getByTestId('oal-enter-hall').click()
+  const kotoka = page.getByTestId('oal-hall')
+  await expect(kotoka).toHaveAttribute('data-v', /\d/, { timeout: 90_000 })
+  // Out of the corridor, through the gap in the queue lines, to booth 6 (ECOWAS nationals).
+  await walkTo(page, 37.6, 18.4)
+  await walkTo(page, 36.0, 18.2, () => page.getByTestId('oal-speak').isVisible())
+  await page.getByTestId('oal-speak').click()
   await page.getByTestId('oal-hand-passport').click()
   await page.getByRole('button', { name: 'Visiting family' }).click()
   await page.getByTestId('oal-days').fill('7')
@@ -114,10 +133,30 @@ test('Monrovia to Accra and back: tickets, a hotel, two borders, the arrivals ha
   await page.getByTestId('oal-submit').click()
   await expect(page.getByText(/Welcome to Ghana\. You may stay until/)).toBeVisible({ timeout: 20_000 })
   await page.getByTestId('oal-desk-done').click()
-  await page.getByTestId('oal-leave-airport').click()
+  // Through booth 6's gate, round the middle belt, out of the doors.
+  await walkTo(page, 37.6, 14.0)
+  await walkTo(page, 25.5, 14.0)
+  await walkTo(page, 25.5, 2.4)
+  await walkTo(page, 33.0, 1.0, async () => !(await kotoka.isVisible()))
   await expect(page.getByText('You are in Accra, Ghana.')).toBeVisible({ timeout: 20_000 })
 
-  // A week later, home: boarding the 13:05, landing at Roberts at 15:10.
+  expect(await crossingsOf(id)).toEqual([{ country: 'GH', category: 'ecowas_visitor', decision: 'admitted' }])
+  expect(errors).toEqual([])
+})
+
+test('Accra to Monrovia: home through Roberts International\'s hall, welcomed as a citizen', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  const { account, id } = await liberian(1)
+  // A Liberian visiting Accra (on the development project only, put there directly).
+  await runSql(`update public.oal_lives set place = 'Accra', country = 'GH' where user_id = '${id}'`)
+  await setGameTime(`${WEEK_LATER} 06:00`)
+  await logIn(page, account)
+  await expect(page.getByText('You are in Accra, Ghana.')).toBeVisible()
+  await page.getByTestId('oal-book-CL302').click()
+  await expect(page.getByText('Ticket bought.')).toBeVisible()
+
+  // Boarding the 13:05, landing at Roberts at 15:10.
   await setGameTime(`${WEEK_LATER} 11:00`)
   await page.reload()
   await page.getByTestId(/^oal-board-/).first().click()
@@ -141,12 +180,6 @@ test('Monrovia to Accra and back: tickets, a hotel, two borders, the arrivals ha
   await walkTo(page, 54.05, 1.0, async () => !(await hall.isVisible()))
   await expect(page.getByText('You are in Monrovia, Liberia.')).toBeVisible({ timeout: 20_000 })
 
-  const crossings = await runSql<{ country: string; category: string; decision: string }>(
-    `select country, category, decision from public.oal_border_entries where user_id = '${me!.id}' order by id`,
-  )
-  expect(crossings).toEqual([
-    { country: 'GH', category: 'ecowas_visitor', decision: 'admitted' },
-    { country: 'LR', category: 'citizen', decision: 'admitted' },
-  ])
+  expect(await crossingsOf(id)).toEqual([{ country: 'LR', category: 'citizen', decision: 'admitted' }])
   expect(errors).toEqual([])
 })

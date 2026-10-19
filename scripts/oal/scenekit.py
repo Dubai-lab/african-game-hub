@@ -275,10 +275,26 @@ def _vm(key, make):
     return _vehicle_mats[key]
 
 
+# The owner's models (vehicle()) stand in for the code-made saloon and airliner in pictures; the
+# game's exports keep the code-made ones, far lighter (a script sets this to False to export).
+REAL_MODELS = True
+# Each model's turn so that its front faces +X, found by looking (slimModels.py lines up only
+# the long side).
+FRONT = {'sedan': 0.0, 'police_car': 0.0, 'bus': 0.0, 'toy_bus': 0.0, 'airliner': math.pi}
+
+
+def airliner_door():
+    """Where the airliner's front left door is, from its centre: (metres toward the nose, out to
+    the left side, the sill's height). The code-made A320, or the owner's wide-body (64 m)."""
+    return (22.4, 3.2, 5.2) if REAL_MODELS else (12.5, 2.05, 3.15)
+
+
 def car(at, yaw, colour, kind='saloon', taxi=False):
     """A car made here: a saloon (the Corolla shape Monrovia's taxis are) or an SUV. The body is a
     side profile pushed across the car's width; on it a glass cabin narrowing toward the roof;
     wheels showing under the body; lights. Liberia drives on the right."""
+    if REAL_MODELS:
+        return vehicle('sedan', at, yaw + FRONT['sedan'], colour)
     paint = _vm(('paint', colour), lambda: flat(f'paint_{colour}', srgb(colour), 0.25, 0.6))
     glass = _vm('glass', lambda: flat('car_glass', (0.02, 0.025, 0.03), 0.05, 0.2))
     tyre = _vm('tyre', lambda: flat('tyre', (0.02, 0.02, 0.02), 0.85))
@@ -507,7 +523,10 @@ def shoot(cam, aim, out, name, at, look, lens=26, cycles=False):
 def airliner(centre, yaw, belly='#1c3f8c', cheat='#c8102e'):
     """A narrow-body airliner of the A320's size (37.6 m long, 34 m span, the cabin 3.95 m
     across, its centre 3.9 m above the ground; the front door on the left, 12.5 m behind the
-    nose). Its livery is invented (no airline's): white, a coloured cheat line and tail."""
+    nose). Its livery is invented (no airline's): white, a coloured cheat line and tail. In
+    pictures, the owner's model stands in (white)."""
+    if REAL_MODELS:
+        return vehicle('airliner', centre, yaw + FRONT['airliner'], '#e9eaec')
     white = _vm('plane_white', lambda: flat('plane_white', (0.85, 0.86, 0.87), 0.3, 0.1))
     blue = _vm(('plane', belly), lambda: flat(f'plane_{belly}', srgb(belly), 0.35, 0.1))
     red = _vm(('plane', cheat), lambda: flat(f'plane_{cheat}', srgb(cheat), 0.35, 0.1))
@@ -589,10 +608,35 @@ def airliner(centre, yaw, belly='#1c3f8c', cheat='#c8102e'):
     return obj
 
 
-def liberian_flag(at, yaw, height=8.0, size=1.9):
-    """Liberia's flag on a white pole: eleven red and white stripes, a blue square with a white star."""
+def _star(px, cx, cy, r, colour):
+    """A five-pointed star, one point up, painted into a picture (rows run down the picture)."""
+    star = [(cx + math.sin(k * math.pi / 5) * (r if k % 2 == 0 else r * 0.382), cy - math.cos(k * math.pi / 5) * (r if k % 2 == 0 else r * 0.382)) for k in range(10)]
+    for y in range(int(cy - r) - 1, int(cy + r) + 2):
+        for x in range(int(cx - r) - 1, int(cx + r) + 2):
+            hit = False
+            for i in range(10):
+                (x0, y0), (x1, y1) = star[i], star[(i + 1) % 10]
+                if (y0 > y) != (y1 > y) and x < (x1 - x0) * (y - y0) / (y1 - y0) + x0:
+                    hit = not hit
+            if hit:
+                px[y, x, :3] = colour
+
+
+def flag(at, yaw, country='LR', height=8.0, size=1.9):
+    """A country's flag on a white pole. Liberia: eleven red and white stripes, a blue square with
+    a white star. Ghana: red, gold and green, a black star in the middle."""
     import numpy as np
-    img = bpy.data.images.get('flag_liberia')
+    name = f'flag_{country}'
+    img = bpy.data.images.get(name)
+    if img is None and country == 'GH':
+        W, H = 300, 200
+        px = np.ones((H, W, 4), dtype=np.float32)
+        for y in range(H):
+            px[y, :, :3] = srgb(('#ce1126', '#fcd116', '#006b3f')[min(2, y * 3 // H)])
+        _star(px, W / 2, H / 2, H / 6 * 1.05, np.array((0.0, 0.0, 0.0)))
+        img = bpy.data.images.new(name, W, H)
+        img.pixels.foreach_set(px[::-1].ravel())
+        img.pack()
     if img is None:
         W, H = 380, 200
         px = np.ones((H, W, 4), dtype=np.float32)
@@ -601,37 +645,26 @@ def liberian_flag(at, yaw, height=8.0, size=1.9):
             px[y, :, :3] = red if int(y / H * 11) % 2 == 0 else white
         c = int(H * 5 / 11)
         px[:c, :c, :3] = blue
-        # The star: ten points, out and in, one pointing up (rows run down the picture).
-        cx, cy, r = c / 2, c / 2, c * 0.38
-        star = [(cx + math.sin(k * math.pi / 5) * (r if k % 2 == 0 else r * 0.382), cy - math.cos(k * math.pi / 5) * (r if k % 2 == 0 else r * 0.382)) for k in range(10)]
-        for y in range(c):
-            for x in range(c):
-                hit = False
-                for i in range(10):
-                    (x0, y0), (x1, y1) = star[i], star[(i + 1) % 10]
-                    if (y0 > y) != (y1 > y) and x < (x1 - x0) * (y - y0) / (y1 - y0) + x0:
-                        hit = not hit
-                if hit:
-                    px[y, x, :3] = white
-        img = bpy.data.images.new('flag_liberia', W, H)
+        _star(px, c / 2, c / 2, c * 0.38, white)
+        img = bpy.data.images.new(name, W, H)
         img.pixels.foreach_set(px[::-1].ravel())
         img.pack()
-    mat = _vm('flag', lambda: None)
+    mat = _vm(('flag', country), lambda: None)
     if mat is None:
-        mat = bpy.data.materials.new('flag')
+        mat = bpy.data.materials.new(name)
         mat.use_nodes = True
         t = mat.node_tree.nodes.new('ShaderNodeTexImage')
         t.image = img
         mat.node_tree.links.new(t.outputs['Color'], mat.node_tree.nodes['Principled BSDF'].inputs['Base Color'])
         mat.node_tree.nodes['Principled BSDF'].inputs['Roughness'].default_value = 0.8
-        _vehicle_mats['flag'] = mat
+        _vehicle_mats[('flag', country)] = mat
     pole = _vm('pole_white', lambda: flat('pole_white', (0.85, 0.85, 0.85), 0.3, 0.6))
     bm = bmesh.new()
     uv = bm.loops.layers.uv.new()
     cylinder(bm, (0, 0, height / 2), 0.05, height, 0, 10, mat=1)
     # The cloth, rippling a little in the wind off the sea.
     cols, rows = 12, 4
-    w, h = size, size * 10 / 19
+    w, h = size, size * (10 / 19 if country == 'LR' else 2 / 3)
     grid = [[bm.verts.new((0.06 + w * i / cols, 0.12 * math.sin(i / cols * 7.0) * (i / cols), height - 0.1 - h * j / rows)) for j in range(rows + 1)] for i in range(cols + 1)]
     for i in range(cols):
         for j in range(rows):
@@ -642,6 +675,10 @@ def liberian_flag(at, yaw, height=8.0, size=1.9):
     obj.location = (at[0], at[1], 0)
     obj.rotation_euler = (0, 0, yaw)
     return obj
+
+
+def liberian_flag(at, yaw, height=8.0, size=1.9):
+    return flag(at, yaw, 'LR', height, size)
 
 
 def beam_seats(at, yaw, seats=5):
@@ -665,3 +702,161 @@ def beam_seats(at, yaw, seats=5):
     obj.location = (at[0], at[1], at[2] if len(at) > 2 else 0)
     obj.rotation_euler = (0, 0, yaw)
     return obj
+
+# ---- The game's copy of a scene --------------------------------------------------------------
+
+
+def game_export(root, keep_world, drop, path, blend=None):
+    """Turns a test scene into the game's: everything in root's frame (the world objects named
+    in keep_world are brought into it), what drop(object) says removed, people removed (the game
+    draws its own), instanced props made real, text made meshes; materials simplified so glTF
+    carries them, pictures at 512 pixels; exported to path (.glb), root's frame as the world."""
+    inv = root.matrix_world.inverted()
+    for o in list(scene().objects):
+        if o.parent is None and o is not root and o.type in ('MESH', 'FONT', 'EMPTY') and o.name.split('.')[0] in keep_world:
+            o.parent = root
+            o.matrix_parent_inverse = inv
+    for o in list(scene().objects):
+        is_person = o.type == 'EMPTY' and o.instance_collection is not None and o.instance_collection.name.startswith('person_')
+        if o is root:
+            continue
+        if o.parent is not root or is_person or o.type == 'LIGHT' or drop(o):
+            bpy.data.objects.remove(o)
+    # Instanced props become real objects; text becomes meshes.
+    for o in list(scene().objects):
+        o.select_set(o.type == 'EMPTY' and o.instance_collection is not None)
+    bpy.context.view_layer.objects.active = None
+    if any(o.select_get() for o in scene().objects):
+        bpy.ops.object.duplicates_make_real(use_base_parent=False, use_hierarchy=False)
+    for o in list(scene().objects):
+        if o.type == 'EMPTY' and o.instance_collection is not None:
+            bpy.data.objects.remove(o)
+    for o in list(scene().objects):
+        o.select_set(o.type == 'FONT')
+    if any(o.select_get() for o in scene().objects):
+        bpy.context.view_layer.objects.active = next(o for o in scene().objects if o.select_get())
+        bpy.ops.object.convert(target='MESH')
+    # The library of hidden originals goes too.
+    lib = bpy.data.collections.get('library')
+    if lib:
+        for c in list(lib.children_recursive) + [lib]:
+            for o in list(c.objects):
+                bpy.data.objects.remove(o)
+            bpy.data.collections.remove(c)
+    root.matrix_world.identity()
+    bpy.context.view_layer.update()
+
+    # Materials glTF can carry: the photo straight into the colour, its tint as the colour
+    # factor (a Multiply node, which the exporter reads as one), its scale as a texture
+    # transform; the normal and roughness pictures kept. Pictures at 512 pixels.
+    def simple(m):
+        if not m or not m.use_nodes:
+            return
+        nt = m.node_tree
+        images = {n.image.name.rsplit('_', 1)[-1].split('.')[0]: n.image for n in nt.nodes if n.type == 'TEX_IMAGE' and n.image}
+        if 'diff' not in images:
+            return
+        mapping = next((n for n in nt.nodes if n.type == 'MAPPING'), None)
+        scale = tuple(mapping.inputs['Scale'].default_value) if mapping else (1, 1, 1)
+        tint = next((n.inputs['B'].default_value[:3] for n in nt.nodes if n.type == 'MIX' and n.blend_type == 'MULTIPLY' and not n.inputs['B'].is_linked), None)
+        bsdf = nt.nodes['Principled BSDF']
+        metallic = bsdf.inputs['Metallic'].default_value
+        for n in list(nt.nodes):
+            if n not in (bsdf, nt.nodes.get('Material Output')):
+                nt.nodes.remove(n)
+        uvn = nt.nodes.new('ShaderNodeUVMap')
+        mp = nt.nodes.new('ShaderNodeMapping')
+        mp.inputs['Scale'].default_value = scale
+        nt.links.new(uvn.outputs['UV'], mp.inputs['Vector'])
+
+        def tex(kind, colour=True):
+            t = nt.nodes.new('ShaderNodeTexImage')
+            t.image = images[kind]
+            if not colour:
+                t.image.colorspace_settings.name = 'Non-Color'
+            nt.links.new(mp.outputs['Vector'], t.inputs['Vector'])
+            return t
+
+        d = tex('diff')
+        if tint is not None:
+            mul = nt.nodes.new('ShaderNodeMix')
+            mul.data_type = 'RGBA'
+            mul.blend_type = 'MULTIPLY'
+            mul.inputs['Factor'].default_value = 1.0
+            nt.links.new(d.outputs['Color'], mul.inputs['A'])
+            mul.inputs['B'].default_value = (*[min(1.0, c) for c in tint], 1)
+            nt.links.new(mul.outputs['Result'], bsdf.inputs['Base Color'])
+        else:
+            nt.links.new(d.outputs['Color'], bsdf.inputs['Base Color'])
+        if 'rough' in images:
+            sep = nt.nodes.new('ShaderNodeSeparateColor')
+            nt.links.new(tex('rough', False).outputs['Color'], sep.inputs['Color'])
+            nt.links.new(sep.outputs['Green'], bsdf.inputs['Roughness'])
+        if 'nor' in images:
+            nm = nt.nodes.new('ShaderNodeNormalMap')
+            nt.links.new(tex('nor', False).outputs['Color'], nm.inputs['Color'])
+            nt.links.new(nm.outputs['Normal'], bsdf.inputs['Normal'])
+        bsdf.inputs['Metallic'].default_value = metallic
+
+    for m in bpy.data.materials:
+        simple(m)
+    for img in bpy.data.images:
+        if img.size[0] > 512:
+            img.scale(512, max(1, int(512 * img.size[1] / img.size[0])))
+    if blend:
+        bpy.ops.wm.save_as_mainfile(filepath=blend)
+    bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', export_image_format='JPEG', export_image_quality=80, export_apply=True,
+                              export_yup=True, export_lights=False, export_cameras=False)
+
+
+
+
+# ---- The owner's models (Fab), slimmed by slimModels.py ---------------------------------------
+
+SLIM = os.path.join(ART, 'slim')
+# Which material is the paint, for the models that can be repainted.
+PAINTED = {'sedan': 'Car_Paint', 'airliner': 'Material.030'}
+
+
+def vehicle_model(name, paint=None):
+    """A slimmed model (sedan, police_car, bus, toy_bus, airliner, rifle), imported once per
+    colour into the hidden library: the paint keeps the picture's light and dark, in the colour
+    asked for (a taxi's yellow, a private car's white or maroon...)."""
+    key = ('vehicle', name, paint)
+    if key in _library:
+        return _library[key]
+    before_objects = set(bpy.data.objects)
+    before_materials = set(bpy.data.materials)
+    bpy.ops.import_scene.gltf(filepath=os.path.join(SLIM, f'{name}.glb'))
+    col = bpy.data.collections.new(f'vehicle_{name}_{paint or "own"}')
+    _hidden().children.link(col)
+    for o in set(bpy.data.objects) - before_objects:
+        for c in list(o.users_collection):
+            c.objects.unlink(o)
+        col.objects.link(o)
+    if paint and name in PAINTED:
+        for m in set(bpy.data.materials) - before_materials:
+            if not m.name.startswith(PAINTED[name]) or not m.use_nodes:
+                continue
+            nt = m.node_tree
+            bsdf = nt.nodes['Principled BSDF']
+            socket = bsdf.inputs['Base Color']
+            if socket.links:
+                bw = nt.nodes.new('ShaderNodeRGBToBW')
+                nt.links.new(socket.links[0].from_socket, bw.inputs['Color'])
+                # The paint picture is dark: brightened so the colour reads (a taxi's yellow stays yellow).
+                lift = nt.nodes.new('ShaderNodeMath')
+                lift.operation = 'MULTIPLY_ADD'
+                nt.links.new(bw.outputs['Val'], lift.inputs[0])
+                lift.inputs[1].default_value = 1.6
+                lift.inputs[2].default_value = 0.45
+                nt.links.new(_mix(nt, lift.outputs['Value'], srgb(paint), 1.0, 'MULTIPLY'), socket)
+            else:
+                socket.default_value = (*srgb(paint), 1)
+    _library[key] = col
+    return col
+
+
+def vehicle(name, at, yaw, paint=None):
+    """A slimmed model placed on the ground, turned by yaw (the models face +X)."""
+    return place(vehicle_model(name, paint), at, yaw)

@@ -565,12 +565,14 @@ for w in tubman:
             p = p + n * random.uniform(-0.4, 0.4)
             yaw = math.atan2(heading.y, heading.x)
             r = random.random()
-            if r < 0.45:
+            if r < 0.42:
                 kit.car(p, yaw, '#e9b51c', 'saloon', taxi=True)
-            elif r < 0.65:
+            elif r < 0.62:
                 kit.kekeh(p, yaw)
+            elif r < 0.7:
+                kit.vehicle(random.choice(['bus', 'toy_bus']), p, yaw + kit.FRONT['bus'])
             else:
-                kit.car(p, yaw, random.choice(CAR_COLOURS), random.choice(['saloon', 'suv', 'suv']))
+                kit.car(p, yaw, random.choice(CAR_COLOURS), random.choice(['saloon', 'saloon', 'suv']))
             vehicles += 1
 # The kekeh stop.
 for w in tubman[:1]:
@@ -579,6 +581,15 @@ for w in tubman[:1]:
         if p.length < 25:
             kit.kekeh(p, math.atan2(d.y, d.x) + random.uniform(-0.15, 0.15), random.choice(['#e8b41c', '#e8b41c', '#2a6ab8']))
             vehicles += 1
+# A police car parked on the shoulder near the junction.
+for w in tubman[:1]:
+    width = road_width(w)
+    for p, d, n in list(shoulder_spots(w, width / 2 + 1.4, 12))[:6]:
+        if 12 < p.length < 45 and free(p):
+            kit.vehicle('police_car', p, math.atan2(d.y, d.x) + kit.FRONT['police_car'])
+            mark_disk(p, 3)
+            vehicles += 1
+            break
 print('VEHICLES', vehicles)
 
 # ---- Palms, poles and wires ----------------------------------------------------------------

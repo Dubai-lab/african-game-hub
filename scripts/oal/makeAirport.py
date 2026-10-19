@@ -29,6 +29,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import scenekit as kit  # noqa: E402
 from scenekit import box, cylinder, flat, photo, srgb  # noqa: E402
 
+kit.REAL_MODELS = not os.environ.get('RIA_EXPORT')
+
 args = sys.argv[sys.argv.index('--') + 1:]
 OSM, OUT = args[0], os.path.expanduser(args[1])
 os.makedirs(OUT, exist_ok=True)
@@ -537,13 +539,14 @@ for b, (belly, cheat) in zip(BRIDGES, (('#1c3f8c', '#c8102e'), ('#0b6b3a', '#f2b
     # The plane: nose in to the terminal, its front door (on the left) at the bridge's end.
     nose = -V
     port = Vector((-nose.y, nose.x))
-    centre = p2 - nose * 12.5 - port * 2.05
+    along, out, sill = kit.airliner_door()
+    centre = p2 - nose * along - port * out
     kit.airliner(centre, math.atan2(nose.y, nose.x), belly, cheat)
     planes.append((centre, nose, port))
     bm = bmesh.new()
     uv = bm.loops.layers.uv.new()
     # The fixed link out of the terminal's upper floor, the rotunda, the moving tunnel.
-    for (a, b_), z0, z1 in (((p0, p1), FLOOR1 - 0.6, FLOOR1 - 0.6), ((p1, p2), FLOOR1 - 0.6, 3.15)):
+    for (a, b_), z0, z1 in (((p0, p1), FLOOR1 - 0.6, FLOOR1 - 0.6), ((p1, p2), FLOOR1 - 0.6, sill)):
         d = b_ - a
         mid = (a + b_) / 2
         yaw = math.atan2(d.y, d.x)
@@ -609,103 +612,8 @@ if EXPORT:
     # terminal's own frame (glTF: x = u, y = up, z = -v), light enough for budget phones. And
     # the hall's solid parts as rectangles in (u, v), for the game to walk against.
     import json as _json
-    inv = root.matrix_world.inverted()
-    keep_world = ('car', 'flag', 'palm', 'grass', 'apron', 'airliner', 'jet_bridge', 'lead_in', 'stop_bar', 'cart')
-    for o in list(scene.objects):
-        if o.parent is None and o is not root and o.type in ('MESH', 'FONT', 'EMPTY') and o.name.split('.')[0] in keep_world:
-            o.parent = root
-            o.matrix_parent_inverse = inv
     upstairs = lambda o: min((o.matrix_world @ Vector(c)).z for c in o.bound_box) >= FLOOR1 - 0.2 if o.type in ('MESH', 'FONT') else (o.matrix_world.translation.z >= FLOOR1 - 0.2)
-    for o in list(scene.objects):
-        is_person = o.type == 'EMPTY' and o.instance_collection is not None and o.instance_collection.name.startswith('person_')
-        if o is root:
-            continue
-        if o.parent is not root or is_person or o.type == 'LIGHT' or upstairs(o):
-            bpy.data.objects.remove(o)
-    # Instanced props become real objects; text becomes meshes.
-    for o in list(scene.objects):
-        o.select_set(o.type == 'EMPTY' and o.instance_collection is not None)
-    bpy.context.view_layer.objects.active = None
-    if any(o.select_get() for o in scene.objects):
-        bpy.ops.object.duplicates_make_real(use_base_parent=False, use_hierarchy=False)
-    for o in list(scene.objects):
-        if o.type == 'EMPTY' and o.instance_collection is not None:
-            bpy.data.objects.remove(o)
-    for o in list(scene.objects):
-        o.select_set(o.type == 'FONT')
-    if any(o.select_get() for o in scene.objects):
-        bpy.context.view_layer.objects.active = next(o for o in scene.objects if o.select_get())
-        bpy.ops.object.convert(target='MESH')
-    # The library of hidden originals goes too.
-    lib = bpy.data.collections.get('library')
-    if lib:
-        for c in list(lib.children_recursive) + [lib]:
-            for o in list(c.objects):
-                bpy.data.objects.remove(o)
-            bpy.data.collections.remove(c)
-    root.matrix_world.identity()
-    bpy.context.view_layer.update()
-
-    # Materials glTF can carry: the photo straight into the colour, its tint as the colour
-    # factor (a Multiply node, which the exporter reads as one), its scale as a texture
-    # transform; the normal and roughness pictures kept. Pictures at 512 pixels.
-    def simple(m):
-        if not m or not m.use_nodes:
-            return
-        nt = m.node_tree
-        images = {n.image.name.rsplit('_', 1)[-1].split('.')[0]: n.image for n in nt.nodes if n.type == 'TEX_IMAGE' and n.image}
-        if 'diff' not in images:
-            return
-        mapping = next((n for n in nt.nodes if n.type == 'MAPPING'), None)
-        scale = tuple(mapping.inputs['Scale'].default_value) if mapping else (1, 1, 1)
-        tint = next((n.inputs['B'].default_value[:3] for n in nt.nodes if n.type == 'MIX' and n.blend_type == 'MULTIPLY' and not n.inputs['B'].is_linked), None)
-        bsdf = nt.nodes['Principled BSDF']
-        metallic = bsdf.inputs['Metallic'].default_value
-        for n in list(nt.nodes):
-            if n not in (bsdf, nt.nodes.get('Material Output')):
-                nt.nodes.remove(n)
-        uvn = nt.nodes.new('ShaderNodeUVMap')
-        mp = nt.nodes.new('ShaderNodeMapping')
-        mp.inputs['Scale'].default_value = scale
-        nt.links.new(uvn.outputs['UV'], mp.inputs['Vector'])
-
-        def tex(kind, colour=True):
-            t = nt.nodes.new('ShaderNodeTexImage')
-            t.image = images[kind]
-            if not colour:
-                t.image.colorspace_settings.name = 'Non-Color'
-            nt.links.new(mp.outputs['Vector'], t.inputs['Vector'])
-            return t
-
-        d = tex('diff')
-        if tint is not None:
-            mul = nt.nodes.new('ShaderNodeMix')
-            mul.data_type = 'RGBA'
-            mul.blend_type = 'MULTIPLY'
-            mul.inputs['Factor'].default_value = 1.0
-            nt.links.new(d.outputs['Color'], mul.inputs['A'])
-            mul.inputs['B'].default_value = (*[min(1.0, c) for c in tint], 1)
-            nt.links.new(mul.outputs['Result'], bsdf.inputs['Base Color'])
-        else:
-            nt.links.new(d.outputs['Color'], bsdf.inputs['Base Color'])
-        if 'rough' in images:
-            sep = nt.nodes.new('ShaderNodeSeparateColor')
-            nt.links.new(tex('rough', False).outputs['Color'], sep.inputs['Color'])
-            nt.links.new(sep.outputs['Green'], bsdf.inputs['Roughness'])
-        if 'nor' in images:
-            nm = nt.nodes.new('ShaderNodeNormalMap')
-            nt.links.new(tex('nor', False).outputs['Color'], nm.inputs['Color'])
-            nt.links.new(nm.outputs['Normal'], bsdf.inputs['Normal'])
-        bsdf.inputs['Metallic'].default_value = metallic
-
-    for m in bpy.data.materials:
-        simple(m)
-    for img in bpy.data.images:
-        if img.size[0] > 512:
-            img.scale(512, max(1, int(512 * img.size[1] / img.size[0])))
-    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, 'ria_arrivals_game.blend'))
-    bpy.ops.export_scene.gltf(filepath=EXPORT, export_format='GLB', export_image_format='JPEG', export_image_quality=80, export_apply=True,
-                              export_yup=True, export_lights=False, export_cameras=False)
+    kit.game_export(root, ('car', 'flag', 'palm', 'grass', 'apron', 'airliner', 'jet_bridge', 'lead_in', 'stop_bar', 'cart'), upstairs, EXPORT, os.path.join(OUT, 'ria_arrivals_game.blend'))
 
     # The solid parts, in (u, v) metres: [u0, v0, u1, v1, id?]. The gates are named, so the
     # game can open the one whose officer admitted the traveller.

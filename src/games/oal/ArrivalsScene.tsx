@@ -1,6 +1,7 @@
-// One Africa Life: the arrivals hall of Roberts International Airport, in 3D, walked through by
-// the player's own character. Made by scripts/oal/makeAirport.py (RIA_EXPORT): the hall
-// (public/oal/ria-arrivals.v1.glb) and its plan (./riaArrivals.json: the booths, the gates, and
+// One Africa Life: an airport's arrivals hall, in 3D, walked through by the player's own
+// character: Roberts International (made by scripts/oal/makeAirport.py, RIA_EXPORT) and Kotoka
+// (scripts/oal/makeKotoka.py, KOTOKA_EXPORT). Each is a file (public/oal/<airport>-arrivals.v1.glb)
+// and a plan (./riaArrivals.json, ./kotokaArrivals.json: the booths and e-gates, their gates, and
 // every solid part as a rectangle to walk against, in the terminal's frame, u along the hall and
 // v across it from the landside; here x = u and z = -v).
 //
@@ -19,26 +20,41 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import { type Appearance, defaultAppearance } from '../../../supabase/functions/_shared/oal'
 import { CHARACTER_URL, prepare } from './character'
-import plan from './riaArrivals.json'
-
-export const HALL_URL = '/oal/ria-arrivals.v1.glb'
+import kotoka from './kotokaArrivals.json'
+import ria from './riaArrivals.json'
 const WALK_SPEED = 1.45
 const RADIUS = 0.28
-const OFFICER_NAVY = '#1d2b55'
+
+export type Booth = { n: number; u: number; staffed: boolean; gate: string; kind?: 'booth' | 'egate' }
+export type Plan = {
+  length: number
+  width: number
+  boothV: number
+  booths: Booth[]
+  spawn: { u: number; v: number }
+  exit: { u0: number; u1: number; v1: number }
+  solids: (number | string)[][]
+}
+/** Each airport's arrivals hall: its file, its plan, the colour its officers wear. */
+export const HALLS: Record<'ROB' | 'ACC', { url: string; plan: Plan; uniform: string }> = {
+  ROB: { url: '/oal/ria-arrivals.v1.glb', plan: ria as Plan, uniform: '#1d2b55' },
+  ACC: { url: '/oal/kotoka-arrivals.v1.glb', plan: kotoka as Plan, uniform: '#22304a' },
+}
 
 type Solid = [number, number, number, number, string?]
 export type Stick = { x: number; y: number }
 
-/** A staffed booth's number when the player stands before it, ready to speak. */
-function boothAt(u: number, v: number): number | null {
+/** The booth (staffed) or e-gate the player stands before, ready to be seen. */
+function boothAt(plan: Plan, u: number, v: number): number | null {
   for (const b of plan.booths) {
-    if (b.staffed && Math.abs(u - b.u) < 1.1 && v > plan.boothV + 0.75 && v < plan.boothV + 2.3) return b.n
+    const reach = b.kind === 'egate' ? 0.7 : 1.1
+    if ((b.staffed || b.kind === 'egate') && Math.abs(u - b.u) < reach && v > plan.boothV + 0.75 && v < plan.boothV + 2.3) return b.n
   }
   return null
 }
 
 /** Pushes a walker (a circle) out of every solid part it overlaps. */
-function collide(p: { u: number; v: number }, open: string | null) {
+function collide(plan: Plan, p: { u: number; v: number }, open: string | null) {
   for (const s of plan.solids as Solid[]) {
     if (s[4] && s[4] === open) continue
     const cu = Math.max(s[0], Math.min(p.u, s[2]))
@@ -73,8 +89,8 @@ function person(source: Object3D, animations: AnimationClip[], appearance: Appea
   return { root, mixer, actions }
 }
 
-function Hall({ open }: { open: string | null }) {
-  const gltf = useLoader(GLTFLoader, HALL_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+function Hall({ open, url, plan }: { open: string | null; url: string; plan: Plan }) {
+  const gltf = useLoader(GLTFLoader, url, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   useFrame((_, dt) => {
     // The admitted traveller's gate swings open toward the landside.
     for (const b of plan.booths) {
@@ -87,7 +103,8 @@ function Hall({ open }: { open: string | null }) {
   return <primitive object={gltf.scene} />
 }
 
-function People({ appearance, stick, look, paused, open, onNear, onExit, onPosition }: Props) {
+function People({ airport, appearance, stick, look, paused, open, onNear, onExit, onPosition }: Props) {
+  const { plan, uniform } = HALLS[airport]
   const gltf = useLoader(GLTFLoader, CHARACTER_URL(appearance.sex), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const { camera } = useThree()
   const keys = useRef(new Set<string>())
@@ -110,7 +127,7 @@ function People({ appearance, stick, look, paused, open, onNear, onExit, onPosit
           outfit: appearance.sex === 'male' ? 'suit' : 'blouse_skirt',
           hair: appearance.sex === 'male' ? (i % 2 ? 'lowcut' : 'short') : 'bun',
         }
-        const officer = person(gltf.scene, gltf.animations, look, OFFICER_NAVY)
+        const officer = person(gltf.scene, gltf.animations, look, uniform)
         officer.root.position.set(b.u, 0.12, -(plan.boothV - 1.0))
         officer.root.rotation.y = Math.PI
         const action = officer.actions[i % 2 ? 'idle' : 'talk'] ?? officer.actions.idle
@@ -119,7 +136,7 @@ function People({ appearance, stick, look, paused, open, onNear, onExit, onPosit
         return officer
       })
     return { player, officers }
-  }, [gltf, appearance])
+  }, [gltf, appearance, plan, uniform])
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => keys.current.add(e.key.toLowerCase())
@@ -162,7 +179,7 @@ function People({ appearance, stick, look, paused, open, onNear, onExit, onPosit
       for (let i = 0; i < steps; i++) {
         s.u += ((du / n) * distance) / steps
         s.v += ((dv / n) * distance) / steps
-        collide(s, open)
+        collide(plan, s, open)
       }
       // Walking into the barrier beside the open gate eases the traveller into its gap, as a
       // person steering by thumb would mean.
@@ -192,7 +209,7 @@ function People({ appearance, stick, look, paused, open, onNear, onExit, onPosit
       s.told = 0
       onPosition?.(s.u, s.v)
     }
-    const near = boothAt(s.u, s.v)
+    const near = boothAt(plan, s.u, s.v)
     if (near !== s.near) {
       s.near = near
       onNear(near)
@@ -206,7 +223,8 @@ function People({ appearance, stick, look, paused, open, onNear, onExit, onPosit
     target.set(s.u, 1.55, -s.v)
     const back = paused ? 1.6 : 3.4
     const eu = Math.max(0.6, Math.min(plan.length - 0.6, s.u - Math.sin(yaw) * back))
-    const ev = Math.max(0.6, Math.min(plan.width - 0.6, s.v + Math.cos(yaw) * back))
+    // (The corridor from the planes may lie beyond the hall's airside wall.)
+    const ev = Math.max(0.6, Math.min(Math.max(plan.width - 0.6, plan.spawn.v + 3), s.v + Math.cos(yaw) * back))
     eye.set(eu, paused ? 1.75 : 2.3, -ev)
     camera.position.lerp(eye, Math.min(1, dt * 5))
     camera.lookAt(target)
@@ -235,6 +253,8 @@ function Studio() {
 }
 
 type Props = {
+  /** Which airport's hall. */
+  airport: keyof typeof HALLS
   appearance: Appearance
   /** The thumb stick, -1 to 1 each way (y forward). */
   stick: RefObject<Stick>
@@ -251,6 +271,7 @@ type Props = {
 }
 
 export default function ArrivalsScene(props: Props) {
+  const { url, plan } = HALLS[props.airport]
   return (
     <Canvas dpr={[1, 1.5]} camera={{ fov: 60, near: 0.05, far: 900, position: [plan.spawn.u, 2.3, -(plan.spawn.v + 3)] }} gl={{ antialias: true, toneMappingExposure: 1.05 }} style={{ touchAction: 'none' }}>
       <color attach="background" args={['#bcd4ea']} />
@@ -259,7 +280,7 @@ export default function ArrivalsScene(props: Props) {
       <directionalLight position={[30, 60, 40]} intensity={1.6} color="#fff3e4" />
       <ambientLight intensity={0.25} />
       <Suspense fallback={null}>
-        <Hall open={props.open} />
+        <Hall open={props.open} url={url} plan={plan} />
         <People {...props} />
       </Suspense>
     </Canvas>

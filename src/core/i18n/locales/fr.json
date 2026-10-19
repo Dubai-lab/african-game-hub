@@ -2363,7 +2363,9 @@
       "toExit": "Passez la barrière et allez vers la sortie.",
       "atBooth": "Guichet {{n}}",
       "findBooth": "Faites la queue à un guichet avec un agent.",
-      "speak": "Parler à l’agent"
+      "speak": "Parler à l’agent",
+      "scan": "Scanner votre passeport",
+      "egateCitizens": "Les portiques automatiques sont pour les citoyens ghanéens. Faites la queue pour un agent."
     },
     "desk": {
       "officer": "Agent de l’immigration",

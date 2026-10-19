@@ -2363,7 +2363,9 @@
       "toExit": "Walk on through the gate to the exit.",
       "atBooth": "Booth {{n}}",
       "findBooth": "Queue for a booth with an officer.",
-      "speak": "Speak to the officer"
+      "speak": "Speak to the officer",
+      "scan": "Scan your passport",
+      "egateCitizens": "E-gates are for Ghanaian citizens. Queue for an officer."
     },
     "desk": {
       "officer": "Immigration officer",
