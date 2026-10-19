@@ -129,7 +129,12 @@
       "ALREADY_REGISTERED": "That SIM is already registered.",
       "NO_DOCUMENT": "You need a valid identity document to register a SIM.",
       "NOT_REGISTERED": "Register the SIM first.",
-      "ALREADY_RENTING": "You already rent a room."
+      "ALREADY_RENTING": "You already rent a room.",
+      "CITIZEN_NO_VISA": "You need no visa for your own country.",
+      "PASSPORT_TOO_SHORT": "Your passport must stay valid at least a month past the visa.",
+      "NO_JOB_OFFER": "You need a job there that has taken you on.",
+      "NOT_ENOUGH_FUNDS_SHOWN": "You must hold at least US$300 besides the fee.",
+      "NO_WORK_PERMIT": "You need a work visa to work in this country."
     },
     "samePassword": "That is your current password. Choose a different one.",
     "captchaFailed": "The security check did not pass. Reload the page and try again."
@@ -2444,7 +2449,8 @@
         "NOT_ENOUGH_MONEY": "You do not have enough money for your stay.",
         "HOST_UNKNOWN": "No phone in this country has that number.",
         "HOST_IS_YOU": "That is your own number.",
-        "HOST_NOT_REACHED": "I called your host and could not reach them."
+        "HOST_NOT_REACHED": "I called your host and could not reach them.",
+        "BEYOND_VISA": "You would stay beyond your visa."
       },
       "thankYou": "Thank you",
       "understood": "I understand",
@@ -2541,6 +2547,26 @@
       "rent": "Rent it",
       "renew": "Pay the next months",
       "rented": "Rented. Paid until {{until}}."
+    },
+    "visa": {
+      "title": "Visa office",
+      "ecowas": "As an ECOWAS citizen you may visit {{country}} for up to 90 days without a visa. To stay longer or to work there, apply here first.",
+      "held": {
+        "long_visit": "Long-stay visa for {{country}}, {{number}}, valid until {{until}}.",
+        "work": "Work visa for {{country}}, {{number}}, valid until {{until}}."
+      },
+      "pending": "Your visa application will be answered {{when}}.",
+      "longVisit": "Long-stay visa for {{country}}",
+      "longVisitAbout": "For 4 to 12 months. You must hold at least US$300, and your passport must stay valid past the visa.",
+      "months": "Months",
+      "monthsCount_one": "{{count}} month",
+      "monthsCount_other": "{{count}} months",
+      "work": "Work visa for {{country}}",
+      "workAbout": "A year's work. You need a job there that has taken you on: apply for one below.",
+      "apply": "Apply ({{fee}})",
+      "applied": "Applied. The answer comes in about an hour.",
+      "jobsAbroad": "Jobs abroad (apply online)",
+      "offer": "They have taken you on. Get a work visa to start."
     }
   }
 }

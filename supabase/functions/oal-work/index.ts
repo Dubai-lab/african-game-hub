@@ -7,7 +7,7 @@ import { z } from 'npm:zod@4'
 import { admin, json, refuse, serve } from '../_shared/http.ts'
 
 const body = z.discriminatedUnion('action', [
-  z.object({ action: z.literal('apply'), kind: z.enum(['licence', 'job']), target: z.string().regex(/^[A-Za-z0-9_]{2,40}$/) }),
+  z.object({ action: z.literal('apply'), kind: z.enum(['licence', 'job', 'visa']), target: z.string().regex(/^[A-Za-z0-9_:]{2,40}$/) }),
   z.object({
     action: z.literal('start_shift'),
     job: z.string().regex(/^[a-z0-9_]{2,40}$/),

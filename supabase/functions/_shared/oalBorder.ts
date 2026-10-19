@@ -4,8 +4,10 @@
 //   * A citizen coming home is always let in (no country may refuse its own citizens). The
 //     officer looks at the passport and says welcome home.
 //   * Liberia and Ghana are both in ECOWAS: a citizen of one may visit the other for up to 90
-//     days without a visa. Staying longer, working or studying needs a visa or permit, which is
-//     applied for before travelling (the visa office comes later; until then those are refused).
+//     days without a visa. Staying longer, or working, needs a visa applied for before
+//     travelling (20261022100000_oal_visas.sql): a long-stay visa allows a stay to its end; a
+//     work visa allows work, and someone coming to work is not asked for a ticket home or money.
+//     Studying needs a student visa (not in the game yet).
 //   * The officer asks why you have come, how long you will stay, where you will stay, what you
 //     do for a living, whether you have a ticket home, and how much money you carry. Every
 //     answer that can be checked is checked against what the game knows: the passport, the
@@ -57,6 +59,8 @@ export type BorderFacts = {
    * travelling), and whether they have a phone to answer it on.
    */
   host?: { self: boolean; here: boolean; phone: boolean } | null
+  /** The visa held for this country and valid on arrival, if any (a work visa first). */
+  visa?: { kind: 'long_visit' | 'work'; until: string; number: string } | null
   /** What they really carry, in whole US dollars at the game's rates. */
   fundsUsd: number
 }
@@ -65,6 +69,7 @@ export type Reason =
   | 'NO_PASSPORT'
   | 'PASSPORT_EXPIRED'
   | 'STAY_TOO_LONG'
+  | 'BEYOND_VISA'
   | 'PURPOSE_NEEDS_VISA'
   | 'NO_TICKET_OUT'
   | 'FALSE_TICKET'
@@ -128,12 +133,20 @@ export function decide(facts: BorderFacts, answers: Answers | null): Decision {
   const leaving = addDays(facts.arrival, answers.days)
   if (facts.passport.expires < leaving) reasons.push('PASSPORT_EXPIRED')
 
-  // What the ECOWAS visit allows.
-  if (answers.purpose === 'work' || answers.purpose === 'study') reasons.push('PURPOSE_NEEDS_VISA')
-  if (answers.days > ECOWAS_VISIT_DAYS) reasons.push('STAY_TOO_LONG')
+  // What the ECOWAS visit allows, or the visa held: a long stay up to its end; work with a work
+  // visa. (Study needs a student visa: not in the game yet.)
+  const visa = facts.visa ?? null
+  const working = visa?.kind === 'work'
+  if (answers.purpose === 'study' || (answers.purpose === 'work' && !working)) reasons.push('PURPOSE_NEEDS_VISA')
+  if (visa) {
+    if (leaving > visa.until) reasons.push('BEYOND_VISA')
+  } else if (answers.days > ECOWAS_VISIT_DAYS) reasons.push('STAY_TOO_LONG')
 
-  // The ticket home: claimed, and real; its date agreeing with the stay they describe.
-  if (!answers.returnTicket) reasons.push('NO_TICKET_OUT')
+  // The ticket home: claimed, and real; its date agreeing with the stay they describe. Someone
+  // coming to work on a work visa has come to live: no ticket home is asked for.
+  if (working) {
+    // (nothing asked)
+  } else if (!answers.returnTicket) reasons.push('NO_TICKET_OUT')
   else if (!facts.ticketOut) reasons.push('FALSE_TICKET')
   else if (Math.abs(daysBetween(leaving, facts.ticketOut)) > 3) reasons.push('TICKET_DOES_NOT_MATCH')
 
@@ -158,7 +171,7 @@ export function decide(facts: BorderFacts, answers: Answers | null): Decision {
   // The money: what they say they carry must be what they carry (a little either way is
   // forgiven), and enough for the days not already paid for.
   if (answers.fundsUsd > facts.fundsUsd * 1.1 + 10) reasons.push('FALSE_FUNDS')
-  else if (facts.fundsUsd < (answers.days - paidDays) * daily) reasons.push('NOT_ENOUGH_MONEY')
+  else if (!working && facts.fundsUsd < (answers.days - paidDays) * daily) reasons.push('NOT_ENOUGH_MONEY')
 
   if (reasons.length) return refuse()
   return { decision: 'admitted', category: 'ecowas_visitor', permittedUntil: leaving, reasons: [] }

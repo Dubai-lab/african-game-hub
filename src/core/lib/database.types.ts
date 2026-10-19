@@ -2220,6 +2220,54 @@ export type Database = {
           },
         ]
       }
+      oal_visas: {
+        Row: {
+          application_id: number
+          country: string
+          id: number
+          issued_on: string
+          kind: string
+          number: string
+          user_id: string
+          valid_until: string
+        }
+        Insert: {
+          application_id: number
+          country: string
+          id?: never
+          issued_on: string
+          kind: string
+          number: string
+          user_id: string
+          valid_until: string
+        }
+        Update: {
+          application_id?: number
+          country?: string
+          id?: never
+          issued_on?: string
+          kind?: string
+          number?: string
+          user_id?: string
+          valid_until?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oal_visas_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: true
+            referencedRelation: "oal_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oal_visas_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "oal_lives"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       oware_games: {
         Row: {
           draw_offer_by: string | null

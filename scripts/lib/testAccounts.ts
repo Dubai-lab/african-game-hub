@@ -107,6 +107,7 @@ export async function resetTestAccounts() {
     update public.oal_lives set trip_id = null, shift_id = null where user_id in ${theirIds};
     delete from public.oal_shifts where user_id in ${theirIds};
     delete from public.oal_employments where user_id in ${theirIds};
+    delete from public.oal_visas where user_id in ${theirIds};
     delete from public.oal_applications where user_id in ${theirIds};
     delete from public.oal_licences where user_id in ${theirIds};
     delete from public.oal_sims where user_id in ${theirIds};

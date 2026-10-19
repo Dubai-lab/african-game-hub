@@ -77,6 +77,21 @@ describe('the immigration officer', () => {
   })
 })
 
+describe('a visa', () => {
+  it('a long-stay visa allows more than 90 days, up to its end, not beyond', () => {
+    const visa = { kind: 'long_visit' as const, until: '2027-05-02', number: 'GV0000001' }
+    expect(decide(facts({ visa, ticketOut: '2027-04-01', fundsUsd: 5000 }), answers({ days: 150, fundsUsd: 5000 }))).toMatchObject({ decision: 'admitted', permittedUntil: '2027-04-01' })
+    expect(decide(facts({ visa, ticketOut: '2027-06-01', fundsUsd: 9000 }), answers({ days: 211, fundsUsd: 9000 })).reasons).toContain('BEYOND_VISA')
+    // It is not a work visa.
+    expect(decide(facts({ visa }), answers({ purpose: 'work' })).reasons).toContain('PURPOSE_NEEDS_VISA')
+  })
+
+  it('a work visa lets the holder come to work, with no ticket home and no money asked for', () => {
+    const visa = { kind: 'work' as const, until: '2027-11-02', number: 'GV0000002' }
+    expect(decide(facts({ visa, ticketOut: null, fundsUsd: 20 }), answers({ purpose: 'work', days: 300, returnTicket: false, fundsUsd: 20 }))).toMatchObject({ decision: 'admitted', permittedUntil: '2027-08-29' })
+  })
+})
+
 describe('the answers', () => {
   it('accepts only what the questions allow', () => {
     expect(checkAnswers(answers({ stay: { kind: 'hotel', reference: ' hb-7kq2p9 ' } }))).toMatchObject({ stay: { reference: 'HB-7KQ2P9' } })

@@ -18,7 +18,7 @@ import { type TravelState, useGameNow } from './Journey'
 type Currency = 'LRD' | 'USD' | 'GHS'
 type Job = { id: string; kind: 'trader' | 'kekeh' | 'office'; country: 'LR' | 'GH'; town: string; place: string; currency: Currency; opens: string; closes: string; pay: Record<string, number> }
 type Licence = { country: string; number: string; expires_on: string }
-type Application = { id: number; kind: 'licence' | 'job'; target: string; ready_at: string; status: 'pending' | 'approved' | 'refused' }
+type Application = { id: number; kind: 'licence' | 'job' | 'visa'; target: string; ready_at: string; status: 'pending' | 'approved' | 'refused' }
 type Employment = { job_id: string; since: string; owed: number }
 type Shift = { id: number; job_id: string; starts_at: string; ends_at: string; status: 'running' | 'done'; stock: number; spent: number; earned: number; outcome: Record<string, number> | null }
 
@@ -250,6 +250,123 @@ export function MoneyChanger({ country }: { country: 'LR' | 'GH' }) {
         </Button>
         <Button variant="ghost" disabled={busy || !Number(amount)} onClick={() => change('USD')} data-testid="oal-sell-usd">
           {t('oal.money.sellUsd', { local: SYMBOL[local] })}
+        </Button>
+      </div>
+    </section>
+  )
+}
+
+// ---- Jobs abroad, and the visa office ----------------------------------------------------
+
+type Visa = { country: 'LR' | 'GH'; kind: 'long_visit' | 'work'; number: string; valid_until: string }
+
+function useVisas() {
+  const { user } = useAuth()
+  return useQuery({
+    queryKey: ['oal-visas', user?.id],
+    enabled: Boolean(user),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('oal_visas').select('country, kind, number, valid_until').eq('user_id', user!.id).order('valid_until', { ascending: false })
+      if (error) throw error
+      return data as Visa[]
+    },
+  })
+}
+
+/** Office jobs in the other country, applied for from here (as people apply online). */
+export function JobsAbroad({ homeCountry }: { homeCountry: 'LR' | 'GH' }) {
+  const { t, i18n } = useTranslation()
+  const work = useWork()
+  const { run, busy } = useWorkStep()
+  if (!work.data) return null
+  const abroad = work.data.jobs.filter((j) => j.kind === 'office' && j.country !== homeCountry)
+  const time = (d: Date) => new Intl.DateTimeFormat(i18n.language, { weekday: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }).format(d)
+  return (
+    <section className="border border-line bg-panel p-4" data-testid="oal-jobs-abroad">
+      <h2 className="text-sm font-semibold text-muted">{t('oal.visa.jobsAbroad')}</h2>
+      {abroad.map((job) => {
+        const employed = work.data.employments.some((e) => e.job_id === job.id)
+        const app = work.data.applications.find((a) => a.kind === 'job' && a.target === job.id)
+        return (
+          <div key={job.id} className="mt-2 flex flex-col gap-1 border-t border-line pt-2">
+            <span className="font-bold">
+              {job.place}, {job.town}
+            </span>
+            <span className="text-sm text-muted">{t('oal.work.about.office', { salary: cash(job.pay.salary ?? 0, job.currency, i18n.language) })}</span>
+            {employed ? (
+              <span className="text-sm">{t('oal.visa.offer')}</span>
+            ) : app?.status === 'pending' ? (
+              <span className="text-sm">{t('oal.work.answerOn', { when: time(at(app.ready_at)) })}</span>
+            ) : (
+              <Button variant="ghost" disabled={busy} onClick={() => void run({ action: 'apply', kind: 'job', target: job.id }).then((r) => r && toast.success(t('oal.work.applied')))} data-testid={`oal-apply-${job.id}`}>
+                {t('oal.work.apply')}
+              </Button>
+            )}
+          </div>
+        )
+      })}
+    </section>
+  )
+}
+
+/** The visa office: visas held, and applications for the other country. */
+export function VisaOffice({ homeCountry }: { homeCountry: 'LR' | 'GH' }) {
+  const { t, i18n } = useTranslation()
+  const visas = useVisas()
+  const work = useWork()
+  const now = useGameNow()()
+  const queryClient = useQueryClient()
+  const { run, busy } = useWorkStep()
+  const [months, setMonths] = useState(6)
+  const other: 'LR' | 'GH' = homeCountry === 'LR' ? 'GH' : 'LR'
+  const today = now.toISOString().slice(0, 10)
+  const held = (visas.data ?? []).filter((v) => v.valid_until > today)
+  const pending = (work.data?.applications ?? []).filter((a) => a.kind === 'visa' && a.status === 'pending')
+  const date = (d: string) => new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${d}T12:00:00Z`))
+  const time = (d: Date) => new Intl.DateTimeFormat(i18n.language, { weekday: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }).format(d)
+  const applyFor = (target: string) =>
+    void run({ action: 'apply', kind: 'visa', target }).then((r) => {
+      if (r) {
+        toast.success(t('oal.visa.applied'))
+        void queryClient.invalidateQueries({ queryKey: ['oal-visas'] })
+      }
+    })
+  const country = t(`oal.countries.${other}`)
+  return (
+    <section className="border border-line bg-panel p-4" data-testid="oal-visa">
+      <h2 className="text-sm font-semibold text-muted">{t('oal.visa.title')}</h2>
+      <p className="mt-1 text-sm text-muted">{t('oal.visa.ecowas', { country })}</p>
+      {held.map((v) => (
+        <p key={v.number} className="mt-2 font-bold" data-testid="oal-visa-held">
+          {t(`oal.visa.held.${v.kind}`, { country: t(`oal.countries.${v.country}`), number: v.number, until: date(v.valid_until) })}
+        </p>
+      ))}
+      {pending.map((a) => (
+        <p key={a.id} className="mt-2 text-sm">
+          {t('oal.visa.pending', { when: time(at(a.ready_at)) })}
+        </p>
+      ))}
+      <div className="mt-3 flex flex-col gap-2 border-t border-line pt-2">
+        <span className="font-bold">{t('oal.visa.longVisit', { country })}</span>
+        <span className="text-sm text-muted">{t('oal.visa.longVisitAbout')}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <select value={months} aria-label={t('oal.visa.months')} onChange={(e) => setMonths(Number(e.target.value))} className="min-h-11 rounded-xl border border-line bg-panel px-2">
+            {[4, 6, 9, 12].map((m) => (
+              <option key={m} value={m}>
+                {t('oal.visa.monthsCount', { count: m })}
+              </option>
+            ))}
+          </select>
+          <Button disabled={busy} onClick={() => applyFor(`${other}:long_visit:${months}`)} data-testid="oal-apply-long-visit">
+            {t('oal.visa.apply', { fee: 'US$100' })}
+          </Button>
+        </div>
+      </div>
+      <div className="mt-3 flex flex-col gap-2 border-t border-line pt-2">
+        <span className="font-bold">{t('oal.visa.work', { country })}</span>
+        <span className="text-sm text-muted">{t('oal.visa.workAbout')}</span>
+        <Button variant="ghost" disabled={busy} onClick={() => applyFor(`${other}:work`)} data-testid="oal-apply-work-visa">
+          {t('oal.visa.apply', { fee: other === 'GH' ? 'US$300' : 'US$250' })}
         </Button>
       </div>
     </section>

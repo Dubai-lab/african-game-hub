@@ -14,7 +14,7 @@ import { toast } from '@/core/ui/toast'
 import { AGE, type Appearance, BUILD, CATALOGUE, checkGameName, defaultAppearance, FACE, HOME_TOWNS, type HomeCountry, type Sex } from '../../../supabase/functions/_shared/oal'
 import type { Framing } from './CreatorScene'
 import { OnTheWay, Travel, useGameNow, useTravel } from './Journey'
-import { AtWork, MoneyChanger, Work } from './Work'
+import { AtWork, JobsAbroad, MoneyChanger, VisaOffice, Work } from './Work'
 import { PhoneSection, RoomSection } from './Home'
 
 const CreatorScene = lazy(() => import('./CreatorScene'))
@@ -288,6 +288,8 @@ function Whereabouts({ life }: { life: Life }) {
           <MoneyChanger country={here.country} />
           <PhoneSection travel={here} homeCountry={life.home_country} />
           <RoomSection travel={here} />
+          <VisaOffice homeCountry={life.home_country} />
+          <JobsAbroad homeCountry={life.home_country} />
           <Travel travel={here} />
         </>
       )}

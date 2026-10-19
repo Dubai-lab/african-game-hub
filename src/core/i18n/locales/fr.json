@@ -129,7 +129,12 @@
       "ALREADY_REGISTERED": "Cette carte SIM est déjà enregistrée.",
       "NO_DOCUMENT": "Il faut une pièce d’identité valide pour enregistrer une carte SIM.",
       "NOT_REGISTERED": "Enregistrez d’abord la carte SIM.",
-      "ALREADY_RENTING": "Vous louez déjà une chambre."
+      "ALREADY_RENTING": "Vous louez déjà une chambre.",
+      "CITIZEN_NO_VISA": "Pas besoin de visa pour votre propre pays.",
+      "PASSPORT_TOO_SHORT": "Votre passeport doit rester valable au moins un mois après le visa.",
+      "NO_JOB_OFFER": "Il faut un emploi là-bas qui vous a retenu.",
+      "NOT_ENOUGH_FUNDS_SHOWN": "Il faut avoir au moins 300 US$ en plus des frais.",
+      "NO_WORK_PERMIT": "Il faut un visa de travail pour travailler dans ce pays."
     },
     "samePassword": "C’est votre mot de passe actuel. Choisissez-en un autre.",
     "captchaFailed": "La vérification de sécurité a échoué. Rechargez la page et réessayez."
@@ -2444,7 +2449,8 @@
         "NOT_ENOUGH_MONEY": "Vous n’avez pas assez d’argent pour votre séjour.",
         "HOST_UNKNOWN": "Aucun téléphone de ce pays n’a ce numéro.",
         "HOST_IS_YOU": "C’est votre propre numéro.",
-        "HOST_NOT_REACHED": "J’ai appelé votre hôte sans pouvoir le joindre."
+        "HOST_NOT_REACHED": "J’ai appelé votre hôte sans pouvoir le joindre.",
+        "BEYOND_VISA": "Vous resteriez au-delà de votre visa."
       },
       "thankYou": "Merci",
       "understood": "Je comprends",
@@ -2541,6 +2547,26 @@
       "rent": "La louer",
       "renew": "Payer les mois suivants",
       "rented": "Louée. Payée jusqu’au {{until}}."
+    },
+    "visa": {
+      "title": "Service des visas",
+      "ecowas": "Citoyen de la CEDEAO, vous pouvez visiter le {{country}} jusqu’à 90 jours sans visa. Pour rester plus longtemps ou y travailler, demandez ici d’abord.",
+      "held": {
+        "long_visit": "Visa long séjour pour le {{country}}, {{number}}, valable jusqu’au {{until}}.",
+        "work": "Visa de travail pour le {{country}}, {{number}}, valable jusqu’au {{until}}."
+      },
+      "pending": "Votre demande de visa aura sa réponse {{when}}.",
+      "longVisit": "Visa long séjour pour le {{country}}",
+      "longVisitAbout": "De 4 à 12 mois. Il faut avoir au moins 300 US$, et un passeport valable au-delà du visa.",
+      "months": "Mois",
+      "monthsCount_one": "{{count}} mois",
+      "monthsCount_other": "{{count}} mois",
+      "work": "Visa de travail pour le {{country}}",
+      "workAbout": "Un an de travail. Il faut un emploi là-bas qui vous a retenu : postulez ci-dessous.",
+      "apply": "Demander ({{fee}})",
+      "applied": "Demande faite. La réponse arrive dans environ une heure.",
+      "jobsAbroad": "Emplois à l’étranger (candidature en ligne)",
+      "offer": "Vous êtes retenu. Obtenez un visa de travail pour commencer."
     }
   }
 }
