@@ -16,6 +16,7 @@ import type { Framing } from './CreatorScene'
 import { OnTheWay, Travel, useGameNow, useTravel } from './Journey'
 import { AtWork, JobsAbroad, MoneyChanger, VisaOffice, Work } from './Work'
 import { PhoneSection, RoomSection } from './Home'
+import { BodyPanel, OverstayWarning, Resting } from './Body'
 
 const CreatorScene = lazy(() => import('./CreatorScene'))
 
@@ -282,8 +283,10 @@ function Whereabouts({ life }: { life: Life }) {
   return (
     <>
       {here.state === 'settled' && <p className="font-semibold">{t('oal.life.where', { town: here.place, country: t(`oal.countries.${here.country}`) })}</p>}
+      <OverstayWarning travel={here} homeCountry={life.home_country} />
       {here.state === 'settled' && (
         <>
+          <BodyPanel travel={here} homeTown={life.home_town} homeCountry={life.home_country} />
           <Work travel={here} />
           <MoneyChanger country={here.country} />
           <PhoneSection travel={here} homeCountry={life.home_country} />
@@ -294,7 +297,8 @@ function Whereabouts({ life }: { life: Life }) {
         </>
       )}
       {here.state === 'working' && <AtWork />}
-      {here.state !== 'settled' && here.state !== 'working' && <OnTheWay travel={here} appearance={life.appearance} homeCountry={life.home_country} />}
+      {(here.state === 'sleeping' || here.state === 'clinic') && <Resting travel={here} />}
+      {['in_flight', 'arrivals', 'cleared', 'held'].includes(here.state) && <OnTheWay travel={here} appearance={life.appearance} homeCountry={life.home_country} />}
     </>
   )
 }

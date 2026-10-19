@@ -92,6 +92,13 @@ describe('a visa', () => {
   })
 })
 
+describe('an earlier overstay', () => {
+  it('more than a month overstayed here in the year: refused; a few days: let in', () => {
+    expect(decide(facts({ overstayedDays: 45 }), answers()).reasons).toContain('PREVIOUS_OVERSTAY')
+    expect(decide(facts({ overstayedDays: 5 }), answers()).decision).toBe('admitted')
+  })
+})
+
 describe('the answers', () => {
   it('accepts only what the questions allow', () => {
     expect(checkAnswers(answers({ stay: { kind: 'hotel', reference: ' hb-7kq2p9 ' } }))).toMatchObject({ stay: { reference: 'HB-7KQ2P9' } })

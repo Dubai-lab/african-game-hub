@@ -30,6 +30,9 @@ const live = async (country = 'LR', town = 'Monrovia') => {
 const apply = (user: string, kind: string, target: string) => one(`select public.oal_apply($1, $2, $3) as r`, [user, kind, target])
 const give = (user: string, currency: string, cents: number) => db.rows(`select private.oal_money($1, $2, $3, 'adjustment')`, [user, currency, cents])
 const usd = async (user: string) => Number((await db.rows<{ a: string }>(`select amount as a from public.oal_balances where user_id = $1 and currency = 'USD'`, [user]))[0]?.a ?? 0)
+// Days pass between these steps with nobody eating or sleeping; before each day's work the life
+// is made fed and rested, as a player would.
+const rested = (user: string) => db.rows(`update public.oal_lives set hunger = 100, energy = 100, health = 100, needs_at = public.oal_game_time() where user_id = $1`, [user])
 const setGameTime = (at: string) =>
   db.pg.query(`update public.oal_settings set clock_epoch = to_timestamp((30 * extract(epoch from now()) - extract(epoch from $1::timestamp at time zone 'UTC')) / 29)`, [at])
 const settle = (user: string) => one(`select public.oal_travel_state($1) as r`, [user])
@@ -86,6 +89,7 @@ describe('a work visa, and work abroad', () => {
     await db.rows(`update public.oal_lives set place = 'Accra', country = 'GH' where user_id = $1`, [kollie])
     await setGameTime('2027-06-01 08:00')
     await give(kollie, 'GHS', 50000)
+    await rested(kollie)
     expect(await one(`select public.oal_start_shift($1, 'makola_trader', 4, 10000) as r`, [kollie])).toEqual({ ok: false, code: 'NO_WORK_PERMIT' })
     // Applied for at the Immigration Service in Accra, then work.
     expect(await apply(kollie, 'visa', 'GH:work')).toMatchObject({ ok: true })
@@ -94,12 +98,14 @@ describe('a work visa, and work abroad', () => {
     const [visa] = await db.rows<Json>(`select kind, valid_until::text as until from public.oal_visas where user_id = $1`, [kollie])
     expect(visa).toEqual({ kind: 'work', until: '2028-06-02' })
     await setGameTime('2027-06-03 08:00')
+    await rested(kollie)
     expect(await one(`select public.oal_start_shift($1, 'makola_trader', 4, 10000) as r`, [kollie])).toMatchObject({ ok: true })
   })
 
   it('a Ghanaian at home works without any visa', async () => {
     await setGameTime('2026-12-09 08:00')
     const ama = await live('GH', 'Accra')
+    await rested(ama)
     expect(await one(`select public.oal_start_shift($1, 'makola_trader', 4, 10000) as r`, [ama])).toMatchObject({ ok: true })
   })
 })

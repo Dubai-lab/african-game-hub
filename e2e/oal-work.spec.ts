@@ -28,6 +28,8 @@ test('a day at Waterside Market, the money changer, and a licence applied for', 
   const [me] = await runSql<{ id: string }>(`select id from auth.users where email = '${account.email}'`)
   await runSql(`select public.oal_start_life('${me!.id}', 'Musu Kollie', 'female', 26, 'LR', 'Monrovia', '${JSON.stringify(APPEARANCE)}'::jsonb)`)
   await setGameTime('2026-12-03 07:00')
+  // Moving the clock weeks ahead would leave her starving: she starts the day fed and rested.
+  await runSql(`update public.oal_lives set hunger = 100, energy = 100, health = 100, needs_at = public.oal_game_time() where user_id = '${me!.id}'`)
 
   await page.goto('/login')
   await page.getByLabel('Email').fill(account.email)

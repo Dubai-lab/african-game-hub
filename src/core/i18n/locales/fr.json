@@ -134,7 +134,13 @@
       "PASSPORT_TOO_SHORT": "Votre passeport doit rester valable au moins un mois après le visa.",
       "NO_JOB_OFFER": "Il faut un emploi là-bas qui vous a retenu.",
       "NOT_ENOUGH_FUNDS_SHOWN": "Il faut avoir au moins 300 US$ en plus des frais.",
-      "NO_WORK_PERMIT": "Il faut un visa de travail pour travailler dans ce pays."
+      "NO_WORK_PERMIT": "Il faut un visa de travail pour travailler dans ce pays.",
+      "UNWELL": "Vous êtes malade : guérissez d’abord, ou allez à la clinique.",
+      "TOO_TIRED": "Vous êtes trop fatigué : dormez d’abord.",
+      "NOT_AT_HOME": "Votre famille est dans votre ville natale.",
+      "ALREADY_ATE_WITH_FAMILY": "Vous avez déjà mangé en famille aujourd’hui.",
+      "NO_KITCHEN": "Pas de cuisine ici : louez une chambre, ou mangez à la gargote.",
+      "OVERSTAY_FINE_UNPAID": "Vous avez dépassé votre séjour : payez l’amende (10 US$ par jour) avant d’embarquer. Vous n’avez pas assez."
     },
     "samePassword": "C’est votre mot de passe actuel. Choisissez-en un autre.",
     "captchaFailed": "La vérification de sécurité a échoué. Rechargez la page et réessayez."
@@ -2450,7 +2456,8 @@
         "HOST_UNKNOWN": "Aucun téléphone de ce pays n’a ce numéro.",
         "HOST_IS_YOU": "C’est votre propre numéro.",
         "HOST_NOT_REACHED": "J’ai appelé votre hôte sans pouvoir le joindre.",
-        "BEYOND_VISA": "Vous resteriez au-delà de votre visa."
+        "BEYOND_VISA": "Vous resteriez au-delà de votre visa.",
+        "PREVIOUS_OVERSTAY": "Vous avez dépassé votre séjour la dernière fois. Je ne peux pas vous laisser entrer."
       },
       "thankYou": "Merci",
       "understood": "Je comprends",
@@ -2567,6 +2574,27 @@
       "applied": "Demande faite. La réponse arrive dans environ une heure.",
       "jobsAbroad": "Emplois à l’étranger (candidature en ligne)",
       "offer": "Vous êtes retenu. Obtenez un visa de travail pour commencer."
+    },
+    "body": {
+      "title": "Votre corps",
+      "food": "Faim",
+      "rest": "Repos",
+      "health": "Santé",
+      "unwell": "Vous êtes malade : pas de travail avant d’aller mieux. La clinique aide.",
+      "tired": "Vous êtes trop fatigué pour travailler : dormez d’abord.",
+      "eatFamily": "Manger en famille (gratuit)",
+      "ateWithFamily": "Vous avez mangé en famille aujourd’hui",
+      "eatOut": "Plat à la gargote ({{price}})",
+      "cook": "Cuisiner à la maison ({{price}} de courses)",
+      "sleepHours": "Heures de sommeil",
+      "sleep": "Dormir",
+      "clinic": "Aller à la clinique ({{price}})",
+      "hint": "La faim et la fatigue montent avec les heures, plus vite au travail. Affamé ou épuisé, votre santé baisse. Dormez dans votre chambre, en famille ou à votre hôtel ; ailleurs, c’est à la dure.",
+      "rough": "Vous n’avez nulle part où dormir : vous dormez dehors, reposez deux fois moins, et votre santé en souffre.",
+      "asleep": "Endormi jusqu’à {{time}}",
+      "atClinic": "À la clinique jusqu’à {{time}}",
+      "stayUntil": "Vous pouvez rester ici jusqu’au {{date}}.",
+      "overstay": "Vous pouviez rester jusqu’au {{date}} : vous avez dépassé de {{days}} jours. À l’aéroport vous paierez {{fine}} avant d’embarquer ; au-delà d’un mois, l’entrée vous sera refusée la prochaine fois."
     }
   }
 }

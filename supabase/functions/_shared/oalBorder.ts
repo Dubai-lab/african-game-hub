@@ -61,6 +61,8 @@ export type BorderFacts = {
   host?: { self: boolean; here: boolean; phone: boolean } | null
   /** The visa held for this country and valid on arrival, if any (a work visa first). */
   visa?: { kind: 'long_visit' | 'work'; until: string; number: string } | null
+  /** Days the traveller overstayed in this country in the year before arriving. */
+  overstayedDays?: number
   /** What they really carry, in whole US dollars at the game's rates. */
   fundsUsd: number
 }
@@ -70,6 +72,7 @@ export type Reason =
   | 'PASSPORT_EXPIRED'
   | 'STAY_TOO_LONG'
   | 'BEYOND_VISA'
+  | 'PREVIOUS_OVERSTAY'
   | 'PURPOSE_NEEDS_VISA'
   | 'NO_TICKET_OUT'
   | 'FALSE_TICKET'
@@ -130,6 +133,8 @@ export function decide(facts: BorderFacts, answers: Answers | null): Decision {
     return refuse()
   }
   if (!answers) return refuse()
+  // Someone who overstayed more than a month here within the year is not let in again.
+  if ((facts.overstayedDays ?? 0) > 30) reasons.push('PREVIOUS_OVERSTAY')
   const leaving = addDays(facts.arrival, answers.days)
   if (facts.passport.expires < leaving) reasons.push('PASSPORT_EXPIRED')
 

@@ -28,6 +28,9 @@ const live = async (country = 'LR', town = 'Monrovia') => {
   expect(await one(`select public.oal_start_life($1, 'Kollie Flomo', 'male', 28, $2, $3, $4) as r`, [user, country, town, JSON.stringify(defaultAppearance('male'))])).toEqual({ ok: true })
   return user
 }
+// Days pass between these steps with nobody eating or sleeping; before each day's work the life
+// is made fed and rested, as a player would.
+const rested = (user: string) => db.rows(`update public.oal_lives set hunger = 100, energy = 100, health = 100, needs_at = public.oal_game_time() where user_id = $1`, [user])
 const setGameTime = (at: string) =>
   db.pg.query(`update public.oal_settings set clock_epoch = to_timestamp((30 * extract(epoch from now()) - extract(epoch from $1::timestamp at time zone 'UTC')) / 29)`, [at])
 const money = async (user: string, currency: string) => Number((await db.rows<{ a: string }>(`select amount as a from public.oal_balances where user_id = $1 and currency = $2`, [user, currency]))[0]?.a ?? 0)
@@ -40,10 +43,12 @@ describe('a market trader', () => {
     await setGameTime('2026-11-10 07:00')
     const user = await live()
     // L$3,000 to start: L$2,000 of stock and L$100 of dues.
+    await rested(user)
     expect(await start(user, 'waterside_trader', 8, 200000)).toMatchObject({ ok: true })
     expect(await money(user, 'LRD')).toBe(300000 - 200000 - 10000)
     expect(await state(user)).toMatchObject({ state: 'working' })
     // A working life cannot go to work again, nor change money.
+    await rested(user)
     expect(await start(user, 'waterside_trader', 8, 100000)).toEqual({ ok: false, code: 'BUSY' })
     await setGameTime('2026-11-10 15:10')
     expect(await state(user)).toMatchObject({ state: 'settled' })
@@ -58,10 +63,14 @@ describe('a market trader', () => {
   it('cannot trade outside market hours, in another town, or with stock it cannot afford', async () => {
     await setGameTime('2026-11-11 19:00')
     const user = await live()
+    await rested(user)
     expect(await start(user, 'waterside_trader', 4, 100000)).toEqual({ ok: false, code: 'CLOSED' })
     await setGameTime('2026-11-12 07:00')
+    await rested(user)
     expect(await start(user, 'makola_trader', 4, 6000)).toEqual({ ok: false, code: 'WRONG_TOWN' })
+    await rested(user)
     expect(await start(user, 'waterside_trader', 4, 900000)).toEqual({ ok: false, code: 'NOT_ENOUGH_MONEY' })
+    await rested(user)
     expect(await start(user, 'waterside_trader', 4, 50000)).toEqual({ ok: false, code: 'BAD_STOCK' })
   })
 
@@ -77,6 +86,7 @@ describe('a kekeh rider', () => {
   it('needs a licence: paid for, ready in two days', async () => {
     await setGameTime('2026-11-14 07:00')
     const user = await live()
+    await rested(user)
     expect(await start(user, 'monrovia_kekeh', 8, null)).toEqual({ ok: false, code: 'NO_LICENCE' })
     expect(await one(`select public.oal_apply($1, 'licence', 'LR') as r`, [user])).toMatchObject({ ok: true })
     expect(await one(`select public.oal_apply($1, 'licence', 'LR') as r`, [user])).toEqual({ ok: false, code: 'ALREADY_APPLIED' })
@@ -98,6 +108,7 @@ describe('a kekeh rider', () => {
     await one(`select public.oal_apply($1, 'licence', 'LR') as r`, [user])
     await setGameTime('2026-11-22 06:30')
     const before = await money(user, 'LRD')
+    await rested(user)
     expect(await start(user, 'monrovia_kekeh', 12, null)).toMatchObject({ ok: true })
     expect(await money(user, 'LRD')).toBe(before - 250000 - 70000)
     await setGameTime('2026-11-22 18:40')
@@ -129,8 +140,10 @@ describe('an office job', () => {
     expect(employed).toBe(true)
     // A weekday in January 2027 (Monday the 25th): in by 08:30, out at 17:00.
     await setGameTime('2027-01-25 08:45')
+    await rested(user)
     expect(await start(user, 'sinkor_clerk', null, null)).toEqual({ ok: false, code: 'TOO_LATE_FOR_WORK' })
     await setGameTime('2027-01-26 08:00')
+    await rested(user)
     expect(await start(user, 'sinkor_clerk', null, null)).toMatchObject({ ok: true, ends_at: '2027-01-26T17:00:00' })
     await setGameTime('2027-01-26 17:05')
     await state(user)
@@ -139,6 +152,7 @@ describe('an office job', () => {
     expect(owed!.owed).toBe(Math.floor(18000 / 22))
     // Saturday: no work.
     await setGameTime('2027-01-30 08:00')
+    await rested(user)
     expect(await start(user, 'sinkor_clerk', null, null)).toEqual({ ok: false, code: 'WEEKEND' })
     // Pay day comes with the new month.
     await setGameTime('2027-02-01 09:00')
@@ -162,6 +176,7 @@ describe('the money changer, and work and travel', () => {
     const user = await live()
     await give(user, 'USD', 100000)
     const ticket = await one(`select public.oal_book_flight($1, 'CL301', '2026-11-26'::date) as r`, [user])
+    await rested(user)
     expect(await start(user, 'waterside_trader', 6, 100000)).toMatchObject({ ok: true })
     await setGameTime('2026-11-26 08:00')
     expect(await one(`select public.oal_board($1, $2) as r`, [user, ticket.ticket_id])).toEqual({ ok: false, code: 'NOT_AT_AIRPORT_TOWN' })
@@ -169,6 +184,7 @@ describe('the money changer, and work and travel', () => {
 
   it('nobody works from the app', async () => {
     const user = await live()
+    await rested(user)
     await expect(db.as('authenticated', user, () => db.rows(`select public.oal_start_shift($1, 'waterside_trader', 4, 100000)`, [user]))).rejects.toThrow(/permission denied/)
     await expect(db.as('authenticated', user, () => db.rows(`update public.oal_employments set owed = 9999999`))).rejects.toThrow(/permission denied/)
     const jobs = await db.as('authenticated', user, () => db.rows(`select id from public.oal_jobs`))

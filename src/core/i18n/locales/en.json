@@ -134,7 +134,13 @@
       "PASSPORT_TOO_SHORT": "Your passport must stay valid at least a month past the visa.",
       "NO_JOB_OFFER": "You need a job there that has taken you on.",
       "NOT_ENOUGH_FUNDS_SHOWN": "You must hold at least US$300 besides the fee.",
-      "NO_WORK_PERMIT": "You need a work visa to work in this country."
+      "NO_WORK_PERMIT": "You need a work visa to work in this country.",
+      "UNWELL": "You are unwell: recover first, or go to the clinic.",
+      "TOO_TIRED": "You are too tired: sleep first.",
+      "NOT_AT_HOME": "Your family is in your home town.",
+      "ALREADY_ATE_WITH_FAMILY": "You have already eaten with family today.",
+      "NO_KITCHEN": "You have no kitchen here: rent a room, or eat at a cookshop.",
+      "OVERSTAY_FINE_UNPAID": "You overstayed: pay the fine (US$10 a day) before you can board. You do not have enough."
     },
     "samePassword": "That is your current password. Choose a different one.",
     "captchaFailed": "The security check did not pass. Reload the page and try again."
@@ -2450,7 +2456,8 @@
         "HOST_UNKNOWN": "No phone in this country has that number.",
         "HOST_IS_YOU": "That is your own number.",
         "HOST_NOT_REACHED": "I called your host and could not reach them.",
-        "BEYOND_VISA": "You would stay beyond your visa."
+        "BEYOND_VISA": "You would stay beyond your visa.",
+        "PREVIOUS_OVERSTAY": "You overstayed here last time. I cannot let you in."
       },
       "thankYou": "Thank you",
       "understood": "I understand",
@@ -2567,6 +2574,27 @@
       "applied": "Applied. The answer comes in about an hour.",
       "jobsAbroad": "Jobs abroad (apply online)",
       "offer": "They have taken you on. Get a work visa to start."
+    },
+    "body": {
+      "title": "Your body",
+      "food": "Food",
+      "rest": "Rest",
+      "health": "Health",
+      "unwell": "You are unwell: you cannot work until you recover. The clinic helps.",
+      "tired": "You are too tired to work: sleep first.",
+      "eatFamily": "Eat with family (free)",
+      "ateWithFamily": "You ate with family today",
+      "eatOut": "Cookshop plate ({{price}})",
+      "cook": "Cook at home ({{price}} of groceries)",
+      "sleepHours": "Hours of sleep",
+      "sleep": "Sleep",
+      "clinic": "Go to the clinic ({{price}})",
+      "hint": "Food and rest fall with the hours, faster at work. Starving or exhausted, your health falls. Sleep at your room, at family's, or at your hotel; anywhere else is rough.",
+      "rough": "You have nowhere proper to sleep: you sleep rough, rest half as well, and it costs your health.",
+      "asleep": "Asleep until {{time}}",
+      "atClinic": "At the clinic until {{time}}",
+      "stayUntil": "You may stay here until {{date}}.",
+      "overstay": "You were allowed to stay until {{date}}: you have overstayed {{days}} days. At the airport you will pay {{fine}} before you can board; overstay more than a month and you will be refused entry next time."
     }
   }
 }

@@ -1734,10 +1734,17 @@ export type Database = {
         Row: {
           appearance: Json
           born_on: string
+          busy_kind: string | null
+          busy_until: string | null
           country: string
+          energy: number
+          family_meal_on: string | null
           game_name: string
+          health: number
           home_country: string
           home_town: string
+          hunger: number
+          needs_at: string
           place: string
           sex: string
           shift_id: number | null
@@ -1749,10 +1756,17 @@ export type Database = {
         Insert: {
           appearance: Json
           born_on: string
+          busy_kind?: string | null
+          busy_until?: string | null
           country: string
+          energy?: number
+          family_meal_on?: string | null
           game_name: string
+          health?: number
           home_country: string
           home_town: string
+          hunger?: number
+          needs_at?: string
           place: string
           sex: string
           shift_id?: number | null
@@ -1764,10 +1778,17 @@ export type Database = {
         Update: {
           appearance?: Json
           born_on?: string
+          busy_kind?: string | null
+          busy_until?: string | null
           country?: string
+          energy?: number
+          family_meal_on?: string | null
           game_name?: string
+          health?: number
           home_country?: string
           home_town?: string
+          hunger?: number
+          needs_at?: string
           place?: string
           sex?: string
           shift_id?: number | null
@@ -1867,6 +1888,44 @@ export type Database = {
           sim_price?: number
         }
         Relationships: []
+      }
+      oal_overstays: {
+        Row: {
+          country: string
+          created_at: string
+          days: number
+          fine: number
+          game_at: string
+          id: number
+          user_id: string
+        }
+        Insert: {
+          country: string
+          created_at?: string
+          days: number
+          fine: number
+          game_at: string
+          id?: never
+          user_id: string
+        }
+        Update: {
+          country?: string
+          created_at?: string
+          days?: number
+          fine?: number
+          game_at?: string
+          id?: never
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oal_overstays_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "oal_lives"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       oal_passports: {
         Row: {
@@ -3934,6 +3993,10 @@ export type Database = {
           entries: number
           user_id: string
         }[]
+      }
+      oal_needs_action: {
+        Args: { p_action: string; p_hours: number; p_user_id: string }
+        Returns: Json
       }
       oal_start_life: {
         Args: {

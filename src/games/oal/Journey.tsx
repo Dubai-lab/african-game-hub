@@ -23,7 +23,8 @@ const ArrivalsScene = lazy(() => import('./ArrivalsScene'))
 
 type Country = 'LR' | 'GH'
 type Trip = { id: number; kind: 'ticket' | 'removal'; flight: string; from: string; to: string; departs_at: string; arrives_at: string }
-export type TravelState = { state: 'settled' | 'in_flight' | 'arrivals' | 'cleared' | 'held' | 'working'; place: string; country: Country; game_now: string; trip: Trip | null }
+export type Body = { food: number; rest: number; health: number; busy_until: string | null; rough: boolean | null; family_meal_on: string | null }
+export type TravelState = { state: 'settled' | 'in_flight' | 'arrivals' | 'cleared' | 'held' | 'working' | 'sleeping' | 'clinic'; place: string; country: Country; game_now: string; body?: Body; trip: Trip | null }
 type Airport = { code: string; name: string; country: Country; town: string }
 type Flight = { code: string; airline: string; from_airport: string; to_airport: string; departs: string; minutes: number; fare: number }
 type Hotel = { id: string; country: Country; town: string; name: string; area: string; nightly: number }
@@ -59,7 +60,7 @@ export function useTravel() {
     },
     refetchInterval: (query) => {
       const s = query.state.data?.state
-      return s === 'in_flight' || s === 'held' || s === 'working' ? 5000 : 30000
+      return s === 'in_flight' || s === 'held' || s === 'working' || s === 'sleeping' || s === 'clinic' ? 5000 : 30000
     },
     refetchOnWindowFocus: true,
   })
