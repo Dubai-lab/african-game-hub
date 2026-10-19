@@ -45,7 +45,7 @@ const board = (user: string, ticket: number) => one(`select public.oal_board($1,
 const hotel = (user: string, id: string, from: string, nights: number) => one(`select public.oal_book_hotel($1, $2, $3::date, $4) as r`, [user, id, from, nights])
 /** What the oal-travel Edge Function does at the immigration desk. */
 const immigration = async (user: string, answers: Answers | null) => {
-  const gathered = await one(`select public.oal_border_facts($1, $2) as r`, [user, answers?.stay.kind === 'hotel' ? answers.stay.reference : null])
+  const gathered = await one(`select public.oal_border_facts($1, $2, $3) as r`, [user, answers?.stay.kind === 'hotel' ? answers.stay.reference : null, answers?.stay.kind === 'host' ? answers.stay.phone : null])
   if (!gathered.ok) return gathered
   const decision = decide(gathered.facts as BorderFacts, answers)
   return one(`select public.oal_border_record($1, $2, $3, $4, $5::date, $6, $7) as r`, [
@@ -101,11 +101,11 @@ describe('a journey', () => {
     expect(await board(user, out.ticket_id)).toMatchObject({ ok: true })
     expect(await state(user)).toMatchObject({ state: 'in_flight', trip: { from: 'ROB', to: 'ACC', flight: 'CL301' } })
     // Nobody leaves the plane mid-air, nor before it lands at 11:45.
-    expect(await one(`select public.oal_border_facts($1, null) as r`, [user])).toEqual({ ok: false, code: 'NOT_AT_ARRIVALS' })
+    expect(await one(`select public.oal_border_facts($1, null, null) as r`, [user])).toEqual({ ok: false, code: 'NOT_AT_ARRIVALS' })
     await setGameTime('2026-11-02 11:50')
     expect(await state(user)).toMatchObject({ state: 'arrivals', place: 'ACC', country: 'GH' })
 
-    const facts = (await one(`select public.oal_border_facts($1, $2) as r`, [user, stay.reference])).facts
+    const facts = (await one(`select public.oal_border_facts($1, $2, null) as r`, [user, stay.reference])).facts
     expect(facts).toMatchObject({ country: 'GH', nationality: 'LR', arrival: '2026-11-02', ticketOut: '2026-11-09', booking: { reference: stay.reference, nights: 7 } })
     expect(await immigration(user, visit(stay.reference, { fundsUsd: facts.fundsUsd }))).toMatchObject({ ok: true, decision: 'admitted', permitted_until: '2026-11-09' })
     // Once: the decision cannot be asked for again.

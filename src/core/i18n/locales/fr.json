@@ -123,7 +123,13 @@
       "TOO_LATE_FOR_WORK": "Trop tard : le bureau commence à 08:30.",
       "ALREADY_WORKED_TODAY": "Vous avez déjà travaillé aujourd’hui.",
       "BAD_STOCK": "Apportez au moins 1 000 L$ (ou 60 GH¢) de marchandise.",
-      "NO_LICENCE": "Il vous faut d’abord un permis commercial."
+      "NO_LICENCE": "Il vous faut d’abord un permis commercial.",
+      "ALREADY_HAVE_SIM": "Vous avez déjà une carte SIM sur ce réseau.",
+      "NO_SIM": "Achetez d’abord une carte SIM.",
+      "ALREADY_REGISTERED": "Cette carte SIM est déjà enregistrée.",
+      "NO_DOCUMENT": "Il faut une pièce d’identité valide pour enregistrer une carte SIM.",
+      "NOT_REGISTERED": "Enregistrez d’abord la carte SIM.",
+      "ALREADY_RENTING": "Vous louez déjà une chambre."
     },
     "samePassword": "C’est votre mot de passe actuel. Choisissez-en un autre.",
     "captchaFailed": "La vérification de sécurité a échoué. Rechargez la page et réessayez."
@@ -2402,7 +2408,6 @@
       "reference": "Référence de réservation",
       "hotel": "À l’hôtel",
       "host": "Chez de la famille ou un ami",
-      "hostLater": "L’agent appellerait votre hôte ; les téléphones arriveront plus tard dans le jeu.",
       "askOccupation": "Que faites-vous dans votre pays ?",
       "occupations": {
         "trader": "Commerçant",
@@ -2435,12 +2440,16 @@
         "TICKET_DOES_NOT_MATCH": "Votre billet retour ne correspond pas au séjour que vous décrivez.",
         "FALSE_BOOKING": "Il n’y a pas de réservation de ce nom.",
         "BOOKING_DOES_NOT_MATCH": "Votre réservation d’hôtel ne commence pas à votre arrivée.",
-        "HOST_NOT_AVAILABLE": "Je ne peux pas joindre votre hôte.",
         "FALSE_FUNDS": "Vous n’avez pas l’argent que vous avez dit.",
-        "NOT_ENOUGH_MONEY": "Vous n’avez pas assez d’argent pour votre séjour."
+        "NOT_ENOUGH_MONEY": "Vous n’avez pas assez d’argent pour votre séjour.",
+        "HOST_UNKNOWN": "Aucun téléphone de ce pays n’a ce numéro.",
+        "HOST_IS_YOU": "C’est votre propre numéro.",
+        "HOST_NOT_REACHED": "J’ai appelé votre hôte sans pouvoir le joindre."
       },
       "thankYou": "Merci",
-      "understood": "Je comprends"
+      "understood": "Je comprends",
+      "hostNumber": "Le numéro de votre hôte",
+      "hostHint": "L’agent appelle votre hôte : son numéro doit être enregistré dans ce pays, et il doit être ici."
     },
     "work": {
       "title": "Travailler à {{town}}",
@@ -2491,6 +2500,47 @@
       "buyUsd": "{{local}} → US$",
       "sellUsd": "US$ → {{local}}",
       "changed": "Vous avez reçu {{got}}."
+    },
+    "phone": {
+      "title": "Votre téléphone",
+      "none": "Vous n’avez pas de téléphone. La boutique vend :",
+      "have": {
+        "basic": "Vous avez un téléphone simple.",
+        "smart": "Vous avez un smartphone."
+      },
+      "buy": {
+        "basic": "Téléphone simple ({{price}})",
+        "smart": "Smartphone ({{price}})"
+      },
+      "law": {
+        "LR": "La loi veut qu’une carte SIM ne marche qu’une fois enregistrée à la boutique de son réseau, avec une pièce d’identité (un passeport).",
+        "GH": "La loi veut qu’une carte SIM ne marche qu’une fois enregistrée à la boutique de son réseau : un Ghanéen avec la Ghana Card, un étranger avec un passeport."
+      },
+      "card": "Votre Ghana Card : {{number}}",
+      "buySim": "Acheter une carte SIM ({{price}})",
+      "register": "L’enregistrer avec votre {{document}}",
+      "documents": {
+        "passport": "passeport",
+        "ghana_card": "Ghana Card"
+      },
+      "registered": "Enregistrée. Votre numéro est le {{number}}.",
+      "airtime": "Crédit {{amount}}",
+      "topUpAmount": "Crédit à acheter",
+      "topUp": "Recharger"
+    },
+    "room": {
+      "title": "Où vous vivez",
+      "family": "Vous vivez en famille pour l’instant.",
+      "yours": "Votre {{kind}} à {{area}}, {{town}}, payée jusqu’au {{until}}.",
+      "kinds": {
+        "single": "chambre simple",
+        "chamber_hall": "chambre et salon",
+        "self_contained": "chambre indépendante"
+      },
+      "terms": "{{rent}} par mois ; le propriétaire veut {{months}} mois d’avance : {{total}}.",
+      "rent": "La louer",
+      "renew": "Payer les mois suivants",
+      "rented": "Louée. Payée jusqu’au {{until}}."
     }
   }
 }

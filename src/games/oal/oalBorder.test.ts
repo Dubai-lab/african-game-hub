@@ -54,8 +54,15 @@ describe('the immigration officer', () => {
     expect(decide(facts({ booking: { reference: 'HB-7KQ2P9', from: '2026-11-20', nights: 3 } }), answers()).reasons).toEqual(['BOOKING_DOES_NOT_MATCH'])
   })
 
-  it('cannot check a host yet (phones come later), so does not accept one', () => {
-    expect(decide(facts(), answers({ stay: { kind: 'host', phone: '+233 24 123 4567' } })).reasons).toEqual(['HOST_NOT_AVAILABLE'])
+  it('calls the host: the number must be someone else\'s, registered here, who is here and has a phone', () => {
+    const host = (h: BorderFacts['host']) => decide(facts({ booking: null, host: h, fundsUsd: 100 }), answers({ stay: { kind: 'host', phone: '+233241234567' }, fundsUsd: 100 }))
+    expect(host({ self: false, here: true, phone: true })).toMatchObject({ decision: 'admitted', permittedUntil: '2026-11-12' })
+    expect(host(null).reasons).toContain('HOST_UNKNOWN')
+    expect(host({ self: true, here: true, phone: true }).reasons).toContain('HOST_IS_YOU')
+    expect(host({ self: false, here: false, phone: true }).reasons).toContain('HOST_NOT_REACHED')
+    expect(host({ self: false, here: true, phone: false }).reasons).toContain('HOST_NOT_REACHED')
+    // With a host, ten dollars a day is enough: $100 for ten days.
+    expect(host({ self: false, here: true, phone: true }).decision).toBe('admitted')
   })
 
   it('catches a lie about money, and wants enough for the days not paid for', () => {

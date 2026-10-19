@@ -9,8 +9,9 @@
 //   * The officer asks why you have come, how long you will stay, where you will stay, what you
 //     do for a living, whether you have a ticket home, and how much money you carry. Every
 //     answer that can be checked is checked against what the game knows: the passport, the
-//     tickets bought, the hotel booking (by its reference), the money actually carried. A false
-//     answer is a refusal, as it would be at a real border.
+//     tickets bought, the hotel booking (by its reference), the host (by calling the number
+//     given: registered in this country to someone there now), the money actually carried. A
+//     false answer is a refusal, as it would be at a real border.
 //
 // The server decides (supabase/functions/oal-travel); the app only offers the questions. No
 // library: read by the Edge Functions (Deno) and by the app.
@@ -50,6 +51,12 @@ export type BorderFacts = {
   ticketOut: string | null
   /** The hotel booking with the reference they gave, if it is theirs, in this country. */
   booking: { reference: string; from: string; nights: number } | null
+  /**
+   * What calling the host's number found: null when no SIM in this country has that number;
+   * else whether it is the traveller's own, whether its owner is in the country now (not
+   * travelling), and whether they have a phone to answer it on.
+   */
+  host?: { self: boolean; here: boolean; phone: boolean } | null
   /** What they really carry, in whole US dollars at the game's rates. */
   fundsUsd: number
 }
@@ -64,7 +71,9 @@ export type Reason =
   | 'TICKET_DOES_NOT_MATCH'
   | 'FALSE_BOOKING'
   | 'BOOKING_DOES_NOT_MATCH'
-  | 'HOST_NOT_AVAILABLE'
+  | 'HOST_UNKNOWN'
+  | 'HOST_IS_YOU'
+  | 'HOST_NOT_REACHED'
   | 'FALSE_FUNDS'
   | 'NOT_ENOUGH_MONEY'
 
@@ -75,6 +84,8 @@ export type Decision =
 
 /** Money a visitor must show for each day not already paid for, in US dollars. */
 export const DAILY_FUNDS_USD = 25
+/** Staying with someone costs less: what a visitor must show a day then. */
+export const DAILY_FUNDS_HOSTED_USD = 10
 
 /** The game's dates, as YYYY-MM-DD, moved by whole days. */
 export function addDays(date: string, days: number): string {
@@ -128,9 +139,14 @@ export function decide(facts: BorderFacts, answers: Answers | null): Decision {
 
   // Where they will stay: a booking that exists, theirs, here, starting when they arrive.
   let paidDays = 0
+  let daily = DAILY_FUNDS_USD
   if (answers.stay.kind === 'host') {
-    // A host is checked by calling their phone; phones are not in the game yet.
-    reasons.push('HOST_NOT_AVAILABLE')
+    // The officer calls the host: a number registered here, not the traveller's own, its owner
+    // here now and with a phone to answer.
+    if (!facts.host) reasons.push('HOST_UNKNOWN')
+    else if (facts.host.self) reasons.push('HOST_IS_YOU')
+    else if (!facts.host.here || !facts.host.phone) reasons.push('HOST_NOT_REACHED')
+    else daily = DAILY_FUNDS_HOSTED_USD
   } else if (!facts.booking || facts.booking.reference !== answers.stay.reference) {
     reasons.push('FALSE_BOOKING')
   } else if (Math.abs(daysBetween(facts.arrival, facts.booking.from)) > 1) {
@@ -142,7 +158,7 @@ export function decide(facts: BorderFacts, answers: Answers | null): Decision {
   // The money: what they say they carry must be what they carry (a little either way is
   // forgiven), and enough for the days not already paid for.
   if (answers.fundsUsd > facts.fundsUsd * 1.1 + 10) reasons.push('FALSE_FUNDS')
-  else if (facts.fundsUsd < (answers.days - paidDays) * DAILY_FUNDS_USD) reasons.push('NOT_ENOUGH_MONEY')
+  else if (facts.fundsUsd < (answers.days - paidDays) * daily) reasons.push('NOT_ENOUGH_MONEY')
 
   if (reasons.length) return refuse()
   return { decision: 'admitted', category: 'ecowas_visitor', permittedUntil: leaving, reasons: [] }

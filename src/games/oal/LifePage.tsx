@@ -15,6 +15,7 @@ import { AGE, type Appearance, BUILD, CATALOGUE, checkGameName, defaultAppearanc
 import type { Framing } from './CreatorScene'
 import { OnTheWay, Travel, useGameNow, useTravel } from './Journey'
 import { AtWork, MoneyChanger, Work } from './Work'
+import { PhoneSection, RoomSection } from './Home'
 
 const CreatorScene = lazy(() => import('./CreatorScene'))
 
@@ -285,6 +286,8 @@ function Whereabouts({ life }: { life: Life }) {
         <>
           <Work travel={here} />
           <MoneyChanger country={here.country} />
+          <PhoneSection travel={here} homeCountry={life.home_country} />
+          <RoomSection travel={here} />
           <Travel travel={here} />
         </>
       )}

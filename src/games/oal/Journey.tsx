@@ -504,6 +504,7 @@ export function Desk({ country, citizen, onDone }: { country: Country; citizen: 
   const [answers, setAnswers] = useState<Partial<Answers>>({})
   const [days, setDays] = useState('7')
   const [reference, setReference] = useState('')
+  const [hostPhone, setHostPhone] = useState('')
   const [funds, setFunds] = useState('')
   const [result, setResult] = useState<{ admitted: boolean; lines: string[] } | null>(null)
 
@@ -579,10 +580,13 @@ export function Desk({ country, citizen, onDone }: { country: Country; citizen: 
               {say('hotel')}
             </Button>
           </div>
-          <Button variant="ghost" disabled title={say('hostLater')}>
-            {say('host')}
-          </Button>
-          <p className="text-xs text-muted">{say('hostLater')}</p>
+          <div className="flex flex-wrap gap-2 border-t border-line pt-2">
+            <input value={hostPhone} onChange={(e) => setHostPhone(e.target.value.replace(/[^0-9+ ]/g, ''))} placeholder="024 123 4567" inputMode="tel" className="min-h-12 w-40 rounded-xl border border-line bg-panel px-3 tabular-nums" aria-label={say('hostNumber')} data-testid="oal-host-phone" />
+            <Button variant="ghost" disabled={hostPhone.replace(/[^0-9]/g, '').length < 9} onClick={() => next({ stay: { kind: 'host', phone: hostPhone.trim() } }, 'occupation')} data-testid="oal-stay-host">
+              {say('host')}
+            </Button>
+          </div>
+          <p className="text-xs text-muted">{say('hostHint')}</p>
         </>
       )}
       {step === 'occupation' && (

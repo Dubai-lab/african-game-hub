@@ -5,7 +5,8 @@
 // (public.oal_travel_state and the others in 20261019100000_oal_travel.sql). The immigration
 // officer's decision is made HERE, by the rules in ../_shared/oalBorder.ts, on facts the
 // database gathers (passport, tickets, the booking for the reference given, the money really
-// carried). The app sends only the traveller's answers; it can never send a decision.
+// carried, what calling a host's number finds). The app sends only the traveller's answers; it
+// can never send a decision.
 import { z } from 'npm:zod@4'
 import { admin, json, refuse, serve } from '../_shared/http.ts'
 import { type BorderFacts, checkAnswers, decide } from '../_shared/oalBorder.ts'
@@ -44,7 +45,8 @@ serve(body, async ({ userId, body }) => {
       const answers = body.answers ? checkAnswers(body.answers) : null
       if (body.answers && !answers) return refuse('BAD_REQUEST')
       const reference = answers?.stay.kind === 'hotel' ? answers.stay.reference : null
-      const gathered = await call('oal_border_facts', { p_user_id: userId, p_reference: reference })
+      const phone = answers?.stay.kind === 'host' ? answers.stay.phone : null
+      const gathered = await call('oal_border_facts', { p_user_id: userId, p_reference: reference, p_phone: phone })
       if (!gathered.ok) return refuse(gathered.code ?? 'SERVER_ERROR')
       const facts = gathered.facts as BorderFacts
       // A visitor must answer the officer's questions; a citizen is only welcomed home.

@@ -123,7 +123,13 @@
       "TOO_LATE_FOR_WORK": "Too late: the office starts at 08:30.",
       "ALREADY_WORKED_TODAY": "You have already worked today.",
       "BAD_STOCK": "Bring at least L$1,000 (or GH¢60) of stock.",
-      "NO_LICENCE": "You need a commercial licence first."
+      "NO_LICENCE": "You need a commercial licence first.",
+      "ALREADY_HAVE_SIM": "You already have a SIM on that network.",
+      "NO_SIM": "Buy a SIM first.",
+      "ALREADY_REGISTERED": "That SIM is already registered.",
+      "NO_DOCUMENT": "You need a valid identity document to register a SIM.",
+      "NOT_REGISTERED": "Register the SIM first.",
+      "ALREADY_RENTING": "You already rent a room."
     },
     "samePassword": "That is your current password. Choose a different one.",
     "captchaFailed": "The security check did not pass. Reload the page and try again."
@@ -2402,7 +2408,6 @@
       "reference": "Booking reference",
       "hotel": "At a hotel",
       "host": "With family or a friend",
-      "hostLater": "The officer would call your host; phones come later in the game.",
       "askOccupation": "What do you do back home?",
       "occupations": {
         "trader": "Trader",
@@ -2435,12 +2440,16 @@
         "TICKET_DOES_NOT_MATCH": "Your ticket home does not match the stay you describe.",
         "FALSE_BOOKING": "There is no such booking in your name.",
         "BOOKING_DOES_NOT_MATCH": "Your hotel booking does not start when you arrive.",
-        "HOST_NOT_AVAILABLE": "I cannot reach your host.",
         "FALSE_FUNDS": "You do not carry the money you said.",
-        "NOT_ENOUGH_MONEY": "You do not have enough money for your stay."
+        "NOT_ENOUGH_MONEY": "You do not have enough money for your stay.",
+        "HOST_UNKNOWN": "No phone in this country has that number.",
+        "HOST_IS_YOU": "That is your own number.",
+        "HOST_NOT_REACHED": "I called your host and could not reach them."
       },
       "thankYou": "Thank you",
-      "understood": "I understand"
+      "understood": "I understand",
+      "hostNumber": "Your host's number",
+      "hostHint": "The officer calls your host: their number must be registered in this country, and they must be here."
     },
     "work": {
       "title": "Work in {{town}}",
@@ -2491,6 +2500,47 @@
       "buyUsd": "{{local}} → US$",
       "sellUsd": "US$ → {{local}}",
       "changed": "You received {{got}}."
+    },
+    "phone": {
+      "title": "Your phone",
+      "none": "You have no phone. The phone shop sells:",
+      "have": {
+        "basic": "You have a basic phone.",
+        "smart": "You have a smartphone."
+      },
+      "buy": {
+        "basic": "Basic phone ({{price}})",
+        "smart": "Smartphone ({{price}})"
+      },
+      "law": {
+        "LR": "By law a SIM works only once it is registered at its network's shop, with an identity document (a passport).",
+        "GH": "By law a SIM works only once it is registered at its network's shop: a Ghanaian with the Ghana Card, a foreigner with a passport."
+      },
+      "card": "Your Ghana Card: {{number}}",
+      "buySim": "Buy a SIM ({{price}})",
+      "register": "Register it with your {{document}}",
+      "documents": {
+        "passport": "passport",
+        "ghana_card": "Ghana Card"
+      },
+      "registered": "Registered. Your number is {{number}}.",
+      "airtime": "Airtime {{amount}}",
+      "topUpAmount": "Airtime to buy",
+      "topUp": "Top up"
+    },
+    "room": {
+      "title": "Where you live",
+      "family": "You live with family for now.",
+      "yours": "Your {{kind}} in {{area}}, {{town}}, paid until {{until}}.",
+      "kinds": {
+        "single": "single room",
+        "chamber_hall": "chamber and hall",
+        "self_contained": "self-contained room"
+      },
+      "terms": "{{rent}} a month; the landlord wants {{months}} months in advance: {{total}}.",
+      "rent": "Rent it",
+      "renew": "Pay the next months",
+      "rented": "Rented. Paid until {{until}}."
     }
   }
 }

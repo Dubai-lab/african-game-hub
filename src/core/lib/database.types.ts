@@ -1534,6 +1534,27 @@ export type Database = {
           },
         ]
       }
+      oal_handsets: {
+        Row: {
+          country: string
+          id: string
+          kind: string
+          price: number
+        }
+        Insert: {
+          country: string
+          id: string
+          kind: string
+          price: number
+        }
+        Update: {
+          country?: string
+          id?: string
+          kind?: string
+          price?: number
+        }
+        Relationships: []
+      }
       oal_hotels: {
         Row: {
           area: string
@@ -1560,6 +1581,38 @@ export type Database = {
           town?: string
         }
         Relationships: []
+      }
+      oal_id_cards: {
+        Row: {
+          country: string
+          expires_on: string
+          issued_on: string
+          number: string
+          user_id: string
+        }
+        Insert: {
+          country: string
+          expires_on: string
+          issued_on: string
+          number: string
+          user_id: string
+        }
+        Update: {
+          country?: string
+          expires_on?: string
+          issued_on?: string
+          number?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oal_id_cards_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "oal_lives"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       oal_jobs: {
         Row: {
@@ -1596,6 +1649,51 @@ export type Database = {
           town?: string
         }
         Relationships: []
+      }
+      oal_leases: {
+        Row: {
+          created_at: string
+          ends_on: string
+          id: number
+          paid: number
+          room_id: string
+          starts_on: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          ends_on: string
+          id?: never
+          paid: number
+          room_id: string
+          starts_on: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          ends_on?: string
+          id?: never
+          paid?: number
+          room_id?: string
+          starts_on?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oal_leases_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "oal_rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oal_leases_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "oal_lives"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       oal_licences: {
         Row: {
@@ -1743,6 +1841,33 @@ export type Database = {
           },
         ]
       }
+      oal_networks: {
+        Row: {
+          colour: string
+          country: string
+          id: string
+          name: string
+          prefixes: string[]
+          sim_price: number
+        }
+        Insert: {
+          colour: string
+          country: string
+          id: string
+          name: string
+          prefixes: string[]
+          sim_price: number
+        }
+        Update: {
+          colour?: string
+          country?: string
+          id?: string
+          name?: string
+          prefixes?: string[]
+          sim_price?: number
+        }
+        Relationships: []
+      }
       oal_passports: {
         Row: {
           country: string
@@ -1774,6 +1899,65 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      oal_phones: {
+        Row: {
+          bought_on: string
+          kind: string
+          user_id: string
+        }
+        Insert: {
+          bought_on: string
+          kind: string
+          user_id: string
+        }
+        Update: {
+          bought_on?: string
+          kind?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oal_phones_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "oal_lives"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      oal_rooms: {
+        Row: {
+          advance: number
+          area: string
+          country: string
+          currency: string
+          id: string
+          kind: string
+          rent: number
+          town: string
+        }
+        Insert: {
+          advance: number
+          area: string
+          country: string
+          currency: string
+          id: string
+          kind: string
+          rent: number
+          town: string
+        }
+        Update: {
+          advance?: number
+          area?: string
+          country?: string
+          currency?: string
+          id?: string
+          kind?: string
+          rent?: number
+          town?: string
+        }
+        Relationships: []
       }
       oal_settings: {
         Row: {
@@ -1855,6 +2039,57 @@ export type Database = {
           },
           {
             foreignKeyName: "oal_shifts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "oal_lives"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      oal_sims: {
+        Row: {
+          airtime: number
+          bought_on: string
+          id: number
+          id_kind: string | null
+          id_number: string | null
+          network: string
+          number: string | null
+          registered_on: string | null
+          user_id: string
+        }
+        Insert: {
+          airtime?: number
+          bought_on: string
+          id?: never
+          id_kind?: string | null
+          id_number?: string | null
+          network: string
+          number?: string | null
+          registered_on?: string | null
+          user_id: string
+        }
+        Update: {
+          airtime?: number
+          bought_on?: string
+          id?: never
+          id_kind?: string | null
+          id_number?: string | null
+          network?: string
+          number?: string | null
+          registered_on?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oal_sims_network_fkey"
+            columns: ["network"]
+            isOneToOne: false
+            referencedRelation: "oal_networks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oal_sims_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "oal_lives"
@@ -3613,7 +3848,7 @@ export type Database = {
         Returns: Json
       }
       oal_border_facts: {
-        Args: { p_reference: string; p_user_id: string }
+        Args: { p_phone: string; p_reference: string; p_user_id: string }
         Returns: Json
       }
       oal_border_record: {
@@ -3633,6 +3868,15 @@ export type Database = {
         Returns: Json
       }
       oal_game_time: { Args: { p_at?: string }; Returns: string }
+      oal_home_action: {
+        Args: {
+          p_action: string
+          p_amount: number
+          p_target: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       oal_leave_airport: { Args: { p_user_id: string }; Returns: Json }
       oal_money_problems: {
         Args: never
