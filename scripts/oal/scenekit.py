@@ -424,6 +424,51 @@ def thing(model_name, at, yaw=0.0, scale=1.0, z=0.0, name=None):
     return made[0] if made else None
 
 
+def water(name='water', colour=(0.11, 0.16, 0.12), scale=6.0):
+    """Water: a dark, glossy surface whose ripples are a normal picture made here (waves of many
+    sizes and directions summed, tiling), every scale metres. The game moves the ripples."""
+    path = os.path.join(TEX, 'water_ripples_nor.png')
+    if not os.path.exists(path):
+        import numpy as np
+        n = 512
+        y, x = np.mgrid[0:n, 0:n] / n * 2 * np.pi
+        h = np.zeros((n, n))
+        rng = np.random.default_rng(7)
+        for _ in range(24):
+            kx, ky = rng.integers(-9, 10, 2)
+            if kx == 0 and ky == 0:
+                continue
+            h += np.sin(kx * x + ky * y + rng.uniform(0, 6.3)) / np.hypot(kx, ky) ** 1.3
+        gy, gx = np.gradient(h)
+        nz = np.full_like(h, 0.6)
+        length = np.sqrt(gx ** 2 + gy ** 2 + nz ** 2)
+        rgb = np.stack([-gx / length, -gy / length, nz / length], axis=-1) * 0.5 + 0.5
+        img = bpy.data.images.new('water_ripples_nor', n, n, alpha=False)
+        img.pixels.foreach_set(np.concatenate([rgb, np.ones((n, n, 1))], axis=-1)[::-1].astype(np.float32).ravel())
+        img.filepath_raw = path
+        img.file_format = 'PNG'
+        img.save()
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    nt = m.node_tree
+    bsdf = nt.nodes['Principled BSDF']
+    bsdf.inputs['Base Color'].default_value = (*colour, 1)
+    bsdf.inputs['Roughness'].default_value = 0.08
+    uvn = nt.nodes.new('ShaderNodeUVMap')
+    mp = nt.nodes.new('ShaderNodeMapping')
+    mp.inputs['Scale'].default_value = (1 / scale, 1 / scale, 1)
+    nt.links.new(uvn.outputs['UV'], mp.inputs['Vector'])
+    t = nt.nodes.new('ShaderNodeTexImage')
+    t.image = bpy.data.images.load(path, check_existing=True)
+    t.image.colorspace_settings.name = 'Non-Color'
+    nt.links.new(mp.outputs['Vector'], t.inputs['Vector'])
+    nm = nt.nodes.new('ShaderNodeNormalMap')
+    nm.inputs['Strength'].default_value = 0.6
+    nt.links.new(t.outputs['Color'], nm.inputs['Color'])
+    nt.links.new(nm.outputs['Normal'], bsdf.inputs['Normal'])
+    return m
+
+
 # The owner's grass (Mat_025, a photographed lawn) as a material: verges, airport lawns, pitches.
 GRASS = os.path.join(ART, 'ground', '2048_mat_025_grass', '2048_Mat_025_grass', '2048_Texture')
 
@@ -730,7 +775,7 @@ def beam_seats(at, yaw, seats=5):
 # ---- The game's copy of a scene --------------------------------------------------------------
 
 
-def game_export(root, keep_world, drop, path, blend=None):
+def game_export(root, keep_world, drop, path, blend=None, merge=False):
     """Turns a test scene into the game's: everything in root's frame (the world objects named
     in keep_world, or all if None, are brought into it), what drop(object) says removed, people removed (the game
     draws its own), instanced props made real, text made meshes; materials simplified so glTF
@@ -770,6 +815,15 @@ def game_export(root, keep_world, drop, path, blend=None):
             bpy.data.collections.remove(c)
     root.matrix_world.identity()
     bpy.context.view_layer.update()
+    # merge: every one-off mesh joined into one, so a phone draws the scene in one call per
+    # material rather than one per stall and sign (models shared by many stay shared).
+    if merge:
+        alone = [o for o in scene().objects if o.type == 'MESH' and o.data.users == 1]
+        if len(alone) > 1:
+            for o in scene().objects:
+                o.select_set(o in alone)
+            bpy.context.view_layer.objects.active = alone[0]
+            bpy.ops.object.join()
 
     # Materials glTF can carry: the photo straight into the colour, its tint as the colour
     # factor (a Multiply node, which the exporter reads as one), its scale as a texture

@@ -2632,21 +2632,35 @@
       "overstay": "Vous pouviez rester jusqu’au {{date}} : vous avez dépassé de {{days}} jours. À l’aéroport vous paierez {{fine}} avant d’embarquer ; au-delà d’un mois, l’entrée vous sera refusée la prochaine fois."
     },
     "street": {
-      "goOut": "Sortir sur Tubman Boulevard",
-      "where": "Tubman Boulevard, Sinkor",
-      "places": {
-        "cookshop": "Gargote Ma Hawa",
-        "phone": "Blessed Hands, réparation de téléphones",
-        "changer": "Changeur",
-        "kekeh": "Station de kekeh",
-        "clinic": "Clinique communautaire de Sinkor"
+      "towns": {
+        "sinkor": {
+          "goOut": "Sortir sur Tubman Boulevard",
+          "where": "Tubman Boulevard, Sinkor",
+          "places": {
+            "cookshop": "Gargote Ma Hawa",
+            "phone": "Blessed Hands, réparation de téléphones",
+            "changer": "Changeur",
+            "kekeh": "Station de kekeh",
+            "clinic": "Clinique communautaire de Sinkor"
+          }
+        },
+        "waterside": {
+          "goOut": "Aller au marché de Waterside",
+          "where": "Water Street, marché de Waterside",
+          "places": {
+            "stall": "Table 14, marché de Waterside",
+            "changer": "Changeur",
+            "cookshop": "Gargote Ma Kebbeh"
+          }
+        }
       },
       "open": {
         "cookshop": "Manger ici",
         "phone": "Téléphones et cartes SIM",
         "changer": "Changer de l’argent",
         "kekeh": "Conduire un kekeh",
-        "clinic": "Voir une infirmière"
+        "clinic": "Voir une infirmière",
+        "stall": "Vendre à votre table"
       },
       "done": "Terminé",
       "cookshop": "Riz et sauce, palm butter ou feuilles de patate : une assiette pour 250 L$.",

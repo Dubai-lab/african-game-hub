@@ -1,8 +1,8 @@
-// One Africa Life: out on Tubman Boulevard. The 3D street (./StreetScene.tsx, loaded only when
-// opened), the thumb stick and the drag to look, and, standing at one of the street's places,
-// what can be done there: eat at Ma Hawa Cookshop, the phone shop and SIM agent, the money
-// changer, the kekeh stop, the clinic. Each uses the same server steps as the life's page.
-// Other players out on Tubman Boulevard at the same time are seen walking it.
+// One Africa Life: out in town, on Tubman Boulevard or at Waterside Market. The 3D place
+// (./StreetScene.tsx, loaded only when opened), the thumb stick and the drag to look, and,
+// standing at one of its places, what can be done there: eat at a cookshop, the phone shop and
+// SIM agent, a money changer, the kekeh stop, the clinic, the trader's own table. Each uses the
+// same server steps as the life's page. Other players out in the same place are seen walking it.
 import { useQueryClient } from '@tanstack/react-query'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
@@ -17,7 +17,7 @@ import type { Appearance } from '../../../supabase/functions/_shared/oal'
 import type { Stick } from './ArrivalsScene'
 import { PhoneSection } from './Home'
 import type { TravelState } from './Journey'
-import type { OtherPlayer, Place } from './StreetScene'
+import type { OtherPlayer, Place, TownId } from './StreetScene'
 import { MoneyChanger, Work } from './Work'
 
 const StreetScene = lazy(() => import('./StreetScene'))
@@ -27,7 +27,7 @@ const StreetScene = lazy(() => import('./StreetScene'))
  * (presence), where they are (a few times a second, only while moving, or once in a while).
  * Nothing in it is trusted for anything but drawing.
  */
-function useStreetCompany(name: string, appearance: Appearance) {
+function useStreetCompany(town: TownId, name: string, appearance: Appearance) {
   const { user } = useAuth()
   const others = useRef(new Map<string, OtherPlayer>())
   const [present, setPresent] = useState<string[]>([])
@@ -36,7 +36,7 @@ function useStreetCompany(name: string, appearance: Appearance) {
   useEffect(() => {
     if (!user) return
     const me = user.id
-    const ch = supabase.channel('oal-street:sinkor', { config: { presence: { key: me }, broadcast: { self: false } } })
+    const ch = supabase.channel(`oal-street:${town}`, { config: { presence: { key: me }, broadcast: { self: false } } })
     ch.on('presence', { event: 'sync' }, () => {
       const state = ch.presenceState() as Record<string, { name: string; appearance: Appearance; x: number; y: number }[]>
       const ids = Object.keys(state).filter((id) => id !== me)
@@ -60,7 +60,7 @@ function useStreetCompany(name: string, appearance: Appearance) {
       channel.current = null
       void supabase.removeChannel(ch)
     }
-  }, [user, name, appearance])
+  }, [user, town, name, appearance])
   const share = (x: number, y: number, f: number, m: boolean) => {
     const now = Date.now()
     const moved = Math.hypot(x - last.current.x, y - last.current.y) > 0.05
@@ -71,9 +71,9 @@ function useStreetCompany(name: string, appearance: Appearance) {
   return { others, present, share }
 }
 
-export function StreetView({ travel, appearance, name, homeCountry, onClose }: { travel: TravelState; appearance: Appearance; name: string; homeCountry: 'LR' | 'GH'; onClose: () => void }) {
+export function StreetView({ town, travel, appearance, name, homeCountry, onClose }: { town: TownId; travel: TravelState; appearance: Appearance; name: string; homeCountry: 'LR' | 'GH'; onClose: () => void }) {
   const { t } = useTranslation()
-  const company = useStreetCompany(name, appearance)
+  const company = useStreetCompany(town, name, appearance)
   const queryClient = useQueryClient()
   const stick = useRef<Stick>({ x: 0, y: 0 })
   const look = useRef<number | null>(null)
@@ -115,6 +115,7 @@ export function StreetView({ travel, appearance, name, homeCountry, onClose }: {
       >
         <Suspense fallback={<Skeleton className="h-full rounded-none" />}>
           <StreetScene
+            town={town}
             appearance={appearance}
             stick={stick}
             look={look}
@@ -138,7 +139,7 @@ export function StreetView({ travel, appearance, name, homeCountry, onClose }: {
           {t('oal.back')}
         </Button>
         <p className="glass rounded-full border border-line px-4 py-2 text-sm font-semibold" data-testid="oal-street-chip">
-          {place ? t(`oal.street.places.${place}`) : t('oal.street.where')}
+          {place ? t(`oal.street.towns.${town}.places.${place}`) : t(`oal.street.towns.${town}.where`)}
           {company.present.length > 0 && <span className="ml-2 text-muted">· {t('oal.street.company', { count: company.present.length })}</span>}
         </p>
       </div>
@@ -198,7 +199,7 @@ export function StreetView({ travel, appearance, name, homeCountry, onClose }: {
           )}
           {place === 'phone' && <PhoneSection travel={travel} homeCountry={homeCountry} />}
           {place === 'changer' && <MoneyChanger country={travel.country} />}
-          {place === 'kekeh' && <Work travel={travel} />}
+          {(place === 'kekeh' || place === 'stall') && <Work travel={travel} />}
         </div>
       )}
     </div>

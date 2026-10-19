@@ -18,6 +18,7 @@ import { AtWork, JobsAbroad, MoneyChanger, VisaOffice, Work } from './Work'
 import { PhoneSection, RoomSection } from './Home'
 import { BodyPanel, OverstayWarning, Resting } from './Body'
 import { StreetView } from './Street'
+import type { TownId } from './StreetScene'
 
 const CreatorScene = lazy(() => import('./CreatorScene'))
 
@@ -270,7 +271,7 @@ function LifeHome({ life }: { life: Life }) {
 function Whereabouts({ life }: { life: Life }) {
   const { t } = useTranslation()
   const travel = useTravel()
-  const [outside, setOutside] = useState(false)
+  const [outside, setOutside] = useState<TownId | null>(null)
   if (travel.isPending) return <Skeleton className="h-32" />
   if (travel.isError)
     return (
@@ -283,15 +284,20 @@ function Whereabouts({ life }: { life: Life }) {
     )
   const here = travel.data
   // Out on the street, the street is everything (its places offer what the page would).
-  if (outside && here.state === 'settled') return <StreetView travel={here} appearance={life.appearance} name={life.game_name} homeCountry={life.home_country} onClose={() => setOutside(false)} />
+  if (outside && here.state === 'settled') return <StreetView town={outside} travel={here} appearance={life.appearance} name={life.game_name} homeCountry={life.home_country} onClose={() => setOutside(null)} />
   return (
     <>
       {here.state === 'settled' && <p className="font-semibold">{t('oal.life.where', { town: here.place, country: t(`oal.countries.${here.country}`) })}</p>}
       <OverstayWarning travel={here} homeCountry={life.home_country} />
       {here.state === 'settled' && here.place === 'Monrovia' && (
-        <Button className="min-h-14 text-lg" onClick={() => setOutside(true)} data-testid="oal-go-out">
-          {t('oal.street.goOut')}
-        </Button>
+        <div className="flex flex-col gap-2">
+          <Button className="min-h-14 text-lg" onClick={() => setOutside('sinkor')} data-testid="oal-go-out">
+            {t('oal.street.towns.sinkor.goOut')}
+          </Button>
+          <Button variant="ghost" className="min-h-14 text-lg" onClick={() => setOutside('waterside')} data-testid="oal-go-waterside">
+            {t('oal.street.towns.waterside.goOut')}
+          </Button>
+        </div>
       )}
       {here.state === 'settled' && (
         <>

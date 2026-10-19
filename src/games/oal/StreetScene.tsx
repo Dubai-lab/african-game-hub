@@ -1,10 +1,12 @@
-// One Africa Life: Tubman Boulevard in Sinkor, Monrovia, in 3D, walked by the player's own
-// character. Made by scripts/oal/makeStreet.py (STREET_EXPORT) from the real map: the street
-// (public/oal/sinkor-street.v2.glb) and its plan (./sinkorStreet.json, metres east (x) and north
-// (y) of the junction with 16th Street; here x = x and z = -y): every building, compound wall,
-// kiosk, palm and pole as a shape to walk against, and the places on the street: Ma Hawa
-// Cookshop, the phone shop, the money changer, the kekeh stop, the clinic. Standing at one, the
-// page offers what can be done there. Other players out on the street walk it too.
+// One Africa Life: a piece of a real town in 3D, walked by the player's own character. Each is
+// made from the real map by a script, a file and its plan (metres east (x) and north (y) of its
+// centre; here x = x and z = -y): every building, wall, stall, palm and pole as a shape to walk
+// against, and its places, where the page offers what can be done.
+//   sinkor     Tubman Boulevard in Sinkor (scripts/oal/makeStreet.py, STREET_EXPORT): Ma Hawa
+//              Cookshop, the phone shop, the money changer, the kekeh stop, the clinic.
+//   waterside  Waterside Market on Water Street, by the Mesurado River (makeWaterside.py,
+//              WATERSIDE_EXPORT): the trader's own table, a money changer, Ma Kebbeh's Cookshop.
+// Other players out in the same place walk it too.
 //
 // Loaded only here (three.js stays out of the rest of the app).
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
@@ -16,28 +18,49 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { type Appearance, defaultAppearance } from '../../../supabase/functions/_shared/oal'
 import { person, type Stick } from './ArrivalsScene'
 import { CHARACTER_URL } from './character'
-import street from './sinkorStreet.json'
+import sinkor from './sinkorStreet.json'
+import waterside from './watersideMarket.json'
 
-export const STREET_URL = '/oal/sinkor-street.v2.glb'
-export type Place = 'cookshop' | 'phone' | 'changer' | 'kekeh' | 'clinic'
+export type Place = 'cookshop' | 'phone' | 'changer' | 'kekeh' | 'clinic' | 'stall'
+export type TownId = 'sinkor' | 'waterside'
 const WALK_SPEED = 1.45
 const RADIUS = 0.3
 const NEAR = 2.6
 
 type Point = { x: number; y: number }
 type Poly = { points: number[][]; minX: number; maxX: number; minY: number; maxY: number }
-const POLYS: Poly[] = (street.solids as number[][][]).map((points) => ({
-  points,
-  minX: Math.min(...points.map((q) => q[0]!)) - 1,
-  maxX: Math.max(...points.map((q) => q[0]!)) + 1,
-  minY: Math.min(...points.map((q) => q[1]!)) - 1,
-  maxY: Math.max(...points.map((q) => q[1]!)) + 1,
-}))
-const PLACES = street.places as Record<Place, { x: number; y: number; face: number[] }>
+type At = { x: number; y: number; face: number[] }
+type Plan = { reach: number; spawn: At; places: Partial<Record<Place, At>>; solids: number[][][] }
+/** Someone at their work at a place: how they differ from the default look, and what they do. */
+type Local = [Place, Partial<Appearance>, string]
 
 /** The yaw that looks along a direction on the map (forward is (sin yaw, -cos yaw) in x, y). */
 export const yawFacing = (face: number[]) => Math.atan2(face[0]!, -face[1]!)
-export const SPAWN_YAW = yawFacing(street.spawn.face)
+
+function town(url: string, plan: Plan, locals: (sex: 'male' | 'female') => Local[]) {
+  const polys: Poly[] = plan.solids.map((points) => ({
+    points,
+    minX: Math.min(...points.map((q) => q[0]!)) - 1,
+    maxX: Math.max(...points.map((q) => q[0]!)) + 1,
+    minY: Math.min(...points.map((q) => q[1]!)) - 1,
+    maxY: Math.max(...points.map((q) => q[1]!)) + 1,
+  }))
+  return { url, plan, polys, places: plan.places, spawnYaw: yawFacing(plan.spawn.face), locals }
+}
+
+export const TOWNS = {
+  sinkor: town('/oal/sinkor-street.v2.glb', sinkor as Plan, (sex) => [
+    ['cookshop', { skin: 0.85, build: { weight: 0.5, muscle: 0, height: -0.2 }, outfit: sex === 'male' ? 'tee_jeans' : 'blouse_skirt' }, 'talk'],
+    ['phone', { skin: 0.7, build: { weight: -0.1, muscle: 0.2, height: 0.2 }, outfit: sex === 'male' ? 'shirt_jeans' : 'tee_jeans' }, 'idle'],
+    ['changer', { skin: 0.9, build: { weight: 0.2, muscle: 0.3, height: 0.1 }, outfit: sex === 'male' ? 'jacket_jeans' : 'sport' }, 'talk'],
+    ['kekeh', { skin: 0.78, build: { weight: -0.2, muscle: 0.4, height: 0 }, outfit: sex === 'male' ? 'tee_jeans' : 'tee_shorts' }, 'idle'],
+  ]),
+  waterside: town('/oal/waterside-market.v1.glb', waterside as Plan, (sex) => [
+    ['cookshop', { skin: 0.88, build: { weight: 0.6, muscle: 0, height: -0.1 }, outfit: sex === 'male' ? 'tee_jeans' : 'blouse_skirt' }, 'talk'],
+    ['changer', { skin: 0.82, build: { weight: 0.1, muscle: 0.3, height: 0.1 }, outfit: sex === 'male' ? 'shirt_jeans' : 'sport' }, 'talk'],
+  ]),
+}
+type Town = (typeof TOWNS)[TownId]
 
 function inside(p: Point, poly: number[][]) {
   let hit = false
@@ -50,8 +73,8 @@ function inside(p: Point, poly: number[][]) {
 }
 
 /** Pushes a walker (a circle) out of every shape it overlaps, and keeps it within the street. */
-function collide(p: Point) {
-  for (const poly of POLYS) {
+function collide(p: Point, where: Town) {
+  for (const poly of where.polys) {
     if (p.x < poly.minX || p.x > poly.maxX || p.y < poly.minY || p.y > poly.maxY) continue
     let best = Infinity
     let cx = 0
@@ -87,7 +110,7 @@ function collide(p: Point) {
     p.x = cx + nx * RADIUS
     p.y = cy + ny * RADIUS
   }
-  const reach = street.reach - 4
+  const reach = where.plan.reach - 4
   const r = Math.hypot(p.x, p.y)
   if (r > reach) {
     p.x *= reach / r
@@ -95,15 +118,30 @@ function collide(p: Point) {
   }
 }
 
-function placeAt(p: Point): Place | null {
-  for (const [name, at] of Object.entries(PLACES) as [Place, (typeof PLACES)[Place]][]) {
+function placeAt(p: Point, where: Town): Place | null {
+  for (const [name, at] of Object.entries(where.places) as [Place, At][]) {
     if (Math.hypot(p.x - at.x, p.y - at.y) < NEAR) return name
   }
   return null
 }
 
-function Street() {
-  const gltf = useLoader(GLTFLoader, STREET_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+function Street({ where }: { where: Town }) {
+  const gltf = useLoader(GLTFLoader, where.url, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  // Water (a material named so) has its ripples drift.
+  const ripples = useMemo(() => {
+    const maps: { offset: { x: number; y: number } }[] = []
+    gltf.scene.traverse((o) => {
+      const mesh = o as unknown as { material?: { name?: string; normalMap?: { offset: { x: number; y: number } } } }
+      if (mesh.material?.name?.startsWith('water') && mesh.material.normalMap && !maps.includes(mesh.material.normalMap)) maps.push(mesh.material.normalMap)
+    })
+    return maps
+  }, [gltf])
+  useFrame((_, dt) => {
+    for (const map of ripples) {
+      map.offset.x += dt * 0.004
+      map.offset.y += dt * 0.0025
+    }
+  })
   return <primitive object={gltf.scene} />
 }
 
@@ -146,16 +184,17 @@ function Other({ entry }: { entry: OtherPlayer }) {
   return <primitive object={them.root} />
 }
 
-function People({ appearance, stick, look, paused, onPlace, onPosition }: Props) {
+function People({ town: id, appearance, stick, look, paused, onPlace, onPosition }: Props) {
+  const where = TOWNS[id]
   const gltf = useLoader(GLTFLoader, CHARACTER_URL(appearance.sex), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const { camera } = useThree()
   const keys = useRef(new Set<string>())
-  // Arriving a few steps apart along the shoulder, so two players never stand in one another.
+  // Arriving a few steps apart along the street, so two players never stand in one another.
   const state = useRef(
     (() => {
       const along = (Math.random() - 0.5) * 6
-      const f = street.spawn.face
-      return { x: street.spawn.x + f[0]! * along, y: street.spawn.y + f[1]! * along, facing: SPAWN_YAW, speed: 0, place: null as Place | null, told: 0 }
+      const { spawn } = where.plan
+      return { x: spawn.x + spawn.face[0]! * along, y: spawn.y + spawn.face[1]! * along, facing: where.spawnYaw, speed: 0, place: null as Place | null, told: 0 }
     })(),
   )
 
@@ -164,17 +203,12 @@ function People({ appearance, stick, look, paused, onPlace, onPosition }: Props)
     player.actions.idle?.play()
     player.actions.walk?.play()
     if (player.actions.walk) player.actions.walk.weight = 0
-    // People at the places, standing at their work and facing the street: the cook, the man at
-    // the phone shop, the changer, a kekeh rider. (From the same file as the player.)
+    // People at the places, standing at their work and facing the street (the cook, the man at
+    // the phone shop, the changer...), from the same file as the player.
     const base = defaultAppearance(appearance.sex)
-    const looks: [Place, Partial<Appearance>, string][] = [
-      ['cookshop', { skin: 0.85, build: { weight: 0.5, muscle: 0, height: -0.2 }, outfit: appearance.sex === 'male' ? 'tee_jeans' : 'blouse_skirt' }, 'talk'],
-      ['phone', { skin: 0.7, build: { weight: -0.1, muscle: 0.2, height: 0.2 }, outfit: appearance.sex === 'male' ? 'shirt_jeans' : 'tee_jeans' }, 'idle'],
-      ['changer', { skin: 0.9, build: { weight: 0.2, muscle: 0.3, height: 0.1 }, outfit: appearance.sex === 'male' ? 'jacket_jeans' : 'sport' }, 'talk'],
-      ['kekeh', { skin: 0.78, build: { weight: -0.2, muscle: 0.4, height: 0 }, outfit: appearance.sex === 'male' ? 'tee_jeans' : 'tee_shorts' }, 'idle'],
-    ]
+    const looks = where.locals(appearance.sex).filter(([place]) => where.places[place])
     const locals = looks.map(([place, patch, clip], i) => {
-      const at = PLACES[place]
+      const at = where.places[place]!
       const local = person(gltf.scene, gltf.animations, { ...base, ...patch, build: { ...base.build, ...patch.build } })
       // A step from where the player stops, toward the kiosk, looking back at the street.
       const x = at.x + at.face[0]! * 1.1
@@ -187,12 +221,12 @@ function People({ appearance, stick, look, paused, onPlace, onPosition }: Props)
       return local
     })
     return { player, locals }
-  }, [gltf, appearance])
+  }, [gltf, appearance, where])
 
   // The camera starts looking along the street.
   useEffect(() => {
-    if (look.current === null) (look as { current: number | null }).current = SPAWN_YAW
-  }, [look])
+    if (look.current === null) (look as { current: number | null }).current = where.spawnYaw
+  }, [look, where])
   useEffect(() => {
     const down = (e: KeyboardEvent) => keys.current.add(e.key.toLowerCase())
     const up = (e: KeyboardEvent) => keys.current.delete(e.key.toLowerCase())
@@ -217,7 +251,7 @@ function People({ appearance, stick, look, paused, onPlace, onPosition }: Props)
     if (k.has('arrowdown') || k.has('s')) y = -1
     if (k.has('arrowleft') || k.has('a')) x = -1
     if (k.has('arrowright') || k.has('d')) x = 1
-    const yaw = look.current ?? SPAWN_YAW
+    const yaw = look.current ?? where.spawnYaw
     let dx = 0
     let dy = 0
     if (!paused) {
@@ -232,7 +266,7 @@ function People({ appearance, stick, look, paused, onPlace, onPosition }: Props)
       for (let i = 0; i < steps; i++) {
         s.x += ((dx / n) * distance) / steps
         s.y += ((dy / n) * distance) / steps
-        collide(s)
+        collide(s, where)
       }
       const want = Math.atan2(dx, -dy)
       let turn = want - s.facing
@@ -255,7 +289,7 @@ function People({ appearance, stick, look, paused, onPlace, onPosition }: Props)
       s.told = 0
       onPosition?.(s.x, s.y, s.facing, s.speed > 0.2)
     }
-    const place = placeAt(s)
+    const place = placeAt(s, where)
     if (place !== s.place) {
       s.place = place
       onPlace(place)
@@ -295,6 +329,7 @@ function Sky() {
 export type OtherPlayer = { name: string; appearance: Appearance; x: number; y: number; f: number; m: boolean }
 
 type Props = {
+  town: TownId
   appearance: Appearance
   /** The others out on the street, by id (positions change in place, without re-rendering). */
   others: RefObject<Map<string, OtherPlayer>>
@@ -310,15 +345,17 @@ type Props = {
 }
 
 export default function StreetScene(props: Props) {
+  const where = TOWNS[props.town]
+  const { spawn } = where.plan
   return (
-    <Canvas dpr={[1, 1.5]} camera={{ fov: 60, near: 0.1, far: 160, position: [street.spawn.x, 2.4, -(street.spawn.y - 3)] }} gl={{ antialias: true, toneMappingExposure: 1.0 }} style={{ touchAction: 'none' }}>
+    <Canvas dpr={[1, 1.5]} camera={{ fov: 60, near: 0.1, far: 160, position: [spawn.x, 2.4, -(spawn.y - 3)] }} gl={{ antialias: true, toneMappingExposure: 1.0 }} style={{ touchAction: 'none' }}>
       <color attach="background" args={['#a9c9ea']} />
       <fog attach="fog" args={['#c4d6e6', 70, 155]} />
       <Sky />
       <hemisphereLight args={['#eaf2ff', '#7a5a3c', 1.0]} />
       <directionalLight position={[-60, 90, 40]} intensity={2.2} color="#fff1dc" />
       <Suspense fallback={null}>
-        <Street />
+        <Street where={where} />
         <People {...props} />
         {props.present.map((id) => {
           const entry = props.others.current?.get(id)
