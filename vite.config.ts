@@ -82,7 +82,7 @@ export default defineConfig({
         // (The flag font is for computers that cannot draw flags; phones must not be made to fetch it.)
         // Nor the 3D library, street basketball and One Africa Life's characters (only those who
         // play them fetch them).
-        globIgnores: ['**/HeroScene-*.js', '**/three-*.js', '**/BasketballPracticePage-*.js', 'landing/**', 'engine/**', 'words/**', 'fonts/**', 'basketball/**', 'oal/**', '**/CreatorScene-*.js', '**/*-{math,symbols,vietnamese}-*.woff2'],
+        globIgnores: ['**/HeroScene-*.js', '**/three-*.js', '**/BasketballPracticePage-*.js', 'landing/**', 'engine/**', 'words/**', 'fonts/**', 'basketball/**', 'oal/**', '**/CreatorScene-*.js', '**/ArrivalsScene-*.js', '**/StreetScene-*.js', '**/*-{math,symbols,vietnamese}-*.woff2'],
         // App routes open the empty shell; '/' itself is the prerendered landing page.
         navigateFallback: '/app.html',
         navigateFallbackDenylist: [/^\/$/],

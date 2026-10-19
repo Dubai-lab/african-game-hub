@@ -78,9 +78,9 @@ function collide(plan: Plan, p: { u: number; v: number }, open: string | null) {
   }
 }
 
-type Person = { root: Object3D; mixer: AnimationMixer; actions: Record<string, AnimationAction> }
+export type Person = { root: Object3D; mixer: AnimationMixer; actions: Record<string, AnimationAction> }
 
-function person(source: Object3D, animations: AnimationClip[], appearance: Appearance, tint?: string): Person {
+export function person(source: Object3D, animations: AnimationClip[], appearance: Appearance, tint?: string): Person {
   const root = clone(source)
   prepare(root).apply(appearance, { outfitTint: tint })
   const mixer = new AnimationMixer(root)

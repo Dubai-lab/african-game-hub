@@ -2595,6 +2595,29 @@
       "atClinic": "At the clinic until {{time}}",
       "stayUntil": "You may stay here until {{date}}.",
       "overstay": "You were allowed to stay until {{date}}: you have overstayed {{days}} days. At the airport you will pay {{fine}} before you can board; overstay more than a month and you will be refused entry next time."
+    },
+    "street": {
+      "goOut": "Go out on Tubman Boulevard",
+      "where": "Tubman Boulevard, Sinkor",
+      "places": {
+        "cookshop": "Ma Hawa Cookshop",
+        "phone": "Blessed Hands Phone Repair",
+        "changer": "Money changer",
+        "kekeh": "Kekeh stop",
+        "clinic": "Sinkor Community Clinic"
+      },
+      "open": {
+        "cookshop": "Eat here",
+        "phone": "Phones and SIMs",
+        "changer": "Change money",
+        "kekeh": "Ride a kekeh",
+        "clinic": "See a nurse"
+      },
+      "done": "Done",
+      "cookshop": "Rice and soup, palm butter or potato greens: a plate for L$250.",
+      "ate": "You ate.",
+      "clinic": "A nurse sees you, and a doctor if you need one. It takes three hours.",
+      "seen": "You are at the clinic."
     }
   }
 }

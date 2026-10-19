@@ -17,6 +17,7 @@ import { OnTheWay, Travel, useGameNow, useTravel } from './Journey'
 import { AtWork, JobsAbroad, MoneyChanger, VisaOffice, Work } from './Work'
 import { PhoneSection, RoomSection } from './Home'
 import { BodyPanel, OverstayWarning, Resting } from './Body'
+import { StreetView } from './Street'
 
 const CreatorScene = lazy(() => import('./CreatorScene'))
 
@@ -269,6 +270,7 @@ function LifeHome({ life }: { life: Life }) {
 function Whereabouts({ life }: { life: Life }) {
   const { t } = useTranslation()
   const travel = useTravel()
+  const [outside, setOutside] = useState(false)
   if (travel.isPending) return <Skeleton className="h-32" />
   if (travel.isError)
     return (
@@ -280,10 +282,17 @@ function Whereabouts({ life }: { life: Life }) {
       </div>
     )
   const here = travel.data
+  // Out on the street, the street is everything (its places offer what the page would).
+  if (outside && here.state === 'settled') return <StreetView travel={here} appearance={life.appearance} homeCountry={life.home_country} onClose={() => setOutside(false)} />
   return (
     <>
       {here.state === 'settled' && <p className="font-semibold">{t('oal.life.where', { town: here.place, country: t(`oal.countries.${here.country}`) })}</p>}
       <OverstayWarning travel={here} homeCountry={life.home_country} />
+      {here.state === 'settled' && here.place === 'Monrovia' && (
+        <Button className="min-h-14 text-lg" onClick={() => setOutside(true)} data-testid="oal-go-out">
+          {t('oal.street.goOut')}
+        </Button>
+      )}
       {here.state === 'settled' && (
         <>
           <BodyPanel travel={here} homeTown={life.home_town} homeCountry={life.home_country} />

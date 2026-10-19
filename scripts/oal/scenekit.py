@@ -708,12 +708,12 @@ def beam_seats(at, yaw, seats=5):
 
 def game_export(root, keep_world, drop, path, blend=None):
     """Turns a test scene into the game's: everything in root's frame (the world objects named
-    in keep_world are brought into it), what drop(object) says removed, people removed (the game
+    in keep_world, or all if None, are brought into it), what drop(object) says removed, people removed (the game
     draws its own), instanced props made real, text made meshes; materials simplified so glTF
     carries them, pictures at 512 pixels; exported to path (.glb), root's frame as the world."""
     inv = root.matrix_world.inverted()
     for o in list(scene().objects):
-        if o.parent is None and o is not root and o.type in ('MESH', 'FONT', 'EMPTY') and o.name.split('.')[0] in keep_world:
+        if o.parent is None and o is not root and o.type in ('MESH', 'FONT', 'EMPTY') and (keep_world is None or o.name.split('.')[0] in keep_world):
             o.parent = root
             o.matrix_parent_inverse = inv
     for o in list(scene().objects):

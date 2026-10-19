@@ -2595,6 +2595,29 @@
       "atClinic": "À la clinique jusqu’à {{time}}",
       "stayUntil": "Vous pouvez rester ici jusqu’au {{date}}.",
       "overstay": "Vous pouviez rester jusqu’au {{date}} : vous avez dépassé de {{days}} jours. À l’aéroport vous paierez {{fine}} avant d’embarquer ; au-delà d’un mois, l’entrée vous sera refusée la prochaine fois."
+    },
+    "street": {
+      "goOut": "Sortir sur Tubman Boulevard",
+      "where": "Tubman Boulevard, Sinkor",
+      "places": {
+        "cookshop": "Gargote Ma Hawa",
+        "phone": "Blessed Hands, réparation de téléphones",
+        "changer": "Changeur",
+        "kekeh": "Station de kekeh",
+        "clinic": "Clinique communautaire de Sinkor"
+      },
+      "open": {
+        "cookshop": "Manger ici",
+        "phone": "Téléphones et cartes SIM",
+        "changer": "Changer de l’argent",
+        "kekeh": "Conduire un kekeh",
+        "clinic": "Voir une infirmière"
+      },
+      "done": "Terminé",
+      "cookshop": "Riz et sauce, palm butter ou feuilles de patate : une assiette pour 250 L$.",
+      "ate": "Vous avez mangé.",
+      "clinic": "Une infirmière vous reçoit, et un médecin s’il le faut. Cela prend trois heures.",
+      "seen": "Vous êtes à la clinique."
     }
   }
 }

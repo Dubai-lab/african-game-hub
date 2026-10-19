@@ -27,6 +27,29 @@ from scenekit import box, flat, photo, srgb  # noqa: E402
 
 args = sys.argv[sys.argv.index('--') + 1:]
 OSM, OUT = args[0], os.path.expanduser(args[1])
+# STREET_EXPORT=<path>.glb: the game's copy instead of pictures (and <path>.json, its plan: the
+# solid shapes to walk against and the places to stop at, in metres east and north of the
+# junction).
+EXPORT = os.environ.get('STREET_EXPORT')
+kit.REAL_MODELS = not EXPORT
+SOLIDS = []   # polygons [[x, y], ...]
+PLACES = {}   # what: {x, y, face: [dx, dy]}
+
+
+# Props from Poly Haven: in pictures, all; in the game's copy only the light ones (an air
+# conditioner alone is 100,000 triangles).
+LIGHT_PROPS = {'painted_wooden_bench'}
+
+
+def prop(name, *args, **kwargs):
+    if EXPORT and (name[0] if isinstance(name, tuple) else name) not in LIGHT_PROPS:
+        return None
+    return kit.place(kit.model(name[0] if isinstance(name, tuple) else name), *args, **kwargs)
+
+
+def solid_box(centre, along, across, yaw):
+    c, s_ = math.cos(yaw), math.sin(yaw)
+    SOLIDS.append([[round(centre.x + x * c - y * s_, 2), round(centre.y + x * s_ + y * c, 2)] for x, y in ((-along / 2, -across / 2), (along / 2, -across / 2), (along / 2, across / 2), (-along / 2, across / 2))])
 os.makedirs(OUT, exist_ok=True)
 random.seed(4)
 RADIUS = 170  # metres around the centre that are built
@@ -347,7 +370,7 @@ def build(pts, storeys, big, road_point):
                         box(bm, uv, (q.x, q.y, z + h_ * bz), (w_, 0.025, 0.025), yaw, mat=1)
                 if random.random() < (0.25 if big else 0.12):
                     q = p + d * (w_ / 2 + 0.6) + out * 0.05
-                    kit.place(kit.model('exterior_aircon_unit'), q, yaw, z=z + 0.2)
+                    prop('exterior_aircon_unit', q, yaw, z=z + 0.2)
     kit.new_object('openings', bm, [m_glass, m_bars, m_frame, random.choice(m_doors)])
 
 
@@ -373,6 +396,7 @@ for pts, tags in footprints:
     c = sum(pts, Vector((0, 0))) / len(pts)
     dist, near = nearest_road(c)
     build(pts, storeys, big, near if near is not None else c)
+    SOLIDS.append([[round(q.x, 2), round(q.y, 2)] for q in pts])
     for p in pts:
         mark_disk(p, 1.2)
     xs, ys = [p.x for p in pts], [p.y for p in pts]
@@ -403,6 +427,7 @@ def flush(run):
             seg = p1 - p0
             mid = (p0 + p1) / 2
             box(walls_bm, walls_uv, (mid.x, mid.y, 0), (seg.length + 0.02, 0.22, 2.2), math.atan2(seg.y, seg.x), mat=colour)
+            solid_box(mid, seg.length + 0.02, 0.3, math.atan2(seg.y, seg.x))
         walls_made += 1
     run.clear()
 
@@ -425,6 +450,7 @@ for pts, width, trunk in road_lines:
                     gw = random.choice([1.2, 3.2])
                     gp = run[-1][0] + d * gw / 2
                     box(gates, gates_uv, (gp.x, gp.y, 0), (gw, 0.08, 2.0), math.atan2(d.y, d.x), mat=random.randrange(len(m_gate)))
+                    solid_box(gp, gw, 0.2, math.atan2(d.y, d.x))
                     flush(run)
                     t += gw
                     continue
@@ -466,6 +492,9 @@ def shoulder_spots(w, offset, every):
 
 
 kiosks = 0
+SPECIAL = {'MA HAWA COOKSHOP': 'cookshop', 'BLESSED HANDS\nPHONE REPAIR': 'phone', 'MOBILE MONEY\nHERE': 'changer'}
+used_specials = set()
+others = [x for x in signs if x not in SPECIAL]
 for w in tubman:
     width = road_width(w)
     for side in (1, -1):
@@ -492,20 +521,29 @@ for w in tubman:
             board = (colour + 3) % len(m_kiosk)
             kit.new_object('kiosk', k, [m_kiosk[colour], m_shutter, m_zinc_rust, m_glass, m_kiosk[board]])
             ink = '#1a1a1a' if KIOSK_COLOURS[board] in ('#e2b62a', '#e8e0d0') else '#f4efe2'
-            name = signs[kiosks % len(signs)]
+            # The kiosks that are places in the game stand near the junction.
+            special = next((x for x in SPECIAL if x not in used_specials), None) if p.length < 60 else None
+            if special:
+                used_specials.add(special)
+                name = special
+                front_at = p - n * 1.3
+                PLACES[SPECIAL[special]] = {'x': round(front_at.x, 2), 'y': round(front_at.y, 2), 'face': [round(n.x, 3), round(n.y, 3)]}
+            else:
+                name = others[kiosks % len(others)]
+            solid_box(back, wide, 2.0, yaw)
             kit.text(name, p - n * 0.1, kit.facing(-n), 0.2 if '\n' in name else 0.24, ink, 2.8)
             mark_disk(back, 2.2)
             # In front: white plastic chairs, someone sitting, a generator, jerrycans, crates.
             front = p - n * 1.2
             if random.random() < 0.7:
-                kit.place(kit.model('plastic_monobloc_chair_01'), front + d * 0.9, yaw + random.uniform(-0.6, 0.6) + (math.pi if side == 1 else 0))
+                prop('plastic_monobloc_chair_01', front + d * 0.9, yaw + random.uniform(-0.6, 0.6) + (math.pi if side == 1 else 0))
                 if random.random() < 0.6:
                     sitter = random.choice(['man_sit', 'woman_sit'])
                     kit.place(kit.person(sitter), front + d * 0.9, kit.facing(-n) + random.uniform(-0.4, 0.4), z=0.0)
             if random.random() < 0.5:
-                kit.place(kit.model('portable_generator'), back + d * (wide / 2 + 0.6), yaw)
+                prop('portable_generator', back + d * (wide / 2 + 0.6), yaw)
             for _ in range(random.randint(0, 3)):
-                kit.place(kit.model(random.choice(['plastic_jerrycan', 'metal_jerrycan_green', 'plastic_crate_01', 'cardboard_box_01'])), front - d * random.uniform(0.6, 1.4) + n * random.uniform(-0.3, 0.6), random.uniform(0, 6.3))
+                prop(random.choice(['plastic_jerrycan', 'metal_jerrycan_green', 'plastic_crate_01', 'cardboard_box_01']), front - d * random.uniform(0.6, 1.4) + n * random.uniform(-0.3, 0.6), random.uniform(0, 6.3))
             if random.random() < 0.55:
                 who = random.choice(STANDING)
                 kit.place(kit.person(who), front - d * random.uniform(0.2, 1.2) - n * random.uniform(0, 0.8), kit.facing(-n.lerp(d, random.uniform(-0.6, 0.6))))
@@ -519,10 +557,10 @@ for w in tubman[:1]:
         if not free(p) or p.length > 60:
             continue
         yaw = math.atan2(d.y, d.x)
-        kit.place(kit.model('painted_wooden_bench'), p, yaw)
-        kit.place(kit.model('bananas'), p + d * 0.3, yaw, z=0.45)
-        kit.place(kit.model('bananas'), p - d * 0.3, yaw + 1.2, z=0.45)
-        kit.place(kit.model('wicker_basket_01'), p - n * 0.8, yaw)
+        prop('painted_wooden_bench', p, yaw)
+        prop('bananas', p + d * 0.3, yaw, z=0.45)
+        prop('bananas', p - d * 0.3, yaw + 1.2, z=0.45)
+        prop('wicker_basket_01', p - n * 0.8, yaw)
         kit.place(kit.person('woman_idle'), p - n * 0.9, kit.facing(n))
         # The umbrella: eight coloured panels on a pole.
         bm = bmesh.new()
@@ -546,7 +584,7 @@ for w in tubman:
                 continue
             r = random.random()
             if r < 0.25:
-                kit.place(kit.model(random.choice(['trashbag', 'old_tyre', 'cardboard_box_01'])), p, random.uniform(0, 6.3))
+                prop(random.choice(['trashbag', 'old_tyre', 'cardboard_box_01']), p, random.uniform(0, 6.3))
             elif r < 0.6:
                 kit.place(kit.person(random.choice(WALKING)), p, kit.facing(d if random.random() < 0.5 else -d))
 
@@ -564,29 +602,43 @@ for w in tubman:
             heading = d if lane == 1 else -d
             p = p + n * random.uniform(-0.4, 0.4)
             yaw = math.atan2(heading.y, heading.x)
+            solid_box(p, 4.8, 2.0, yaw)
             r = random.random()
             if r < 0.42:
                 kit.car(p, yaw, '#e9b51c', 'saloon', taxi=True)
             elif r < 0.62:
                 kit.kekeh(p, yaw)
             elif r < 0.7:
-                kit.vehicle(random.choice(['bus', 'toy_bus']), p, yaw + kit.FRONT['bus'])
+                if EXPORT:
+                    kit.car(p, yaw, '#2f6fb8', 'suv')
+                else:
+                    kit.vehicle(random.choice(['bus', 'toy_bus']), p, yaw + kit.FRONT['bus'])
             else:
                 kit.car(p, yaw, random.choice(CAR_COLOURS), random.choice(['saloon', 'saloon', 'suv']))
             vehicles += 1
-# The kekeh stop.
-for w in tubman[:1]:
+# The kekeh stop: four or so kekehs waiting at the roadside near the junction.
+stop = 0
+for w in tubman:
     width = road_width(w)
     for i, (p, d, n) in enumerate(shoulder_spots(w, -(width / 2 - 1.0), 3.2)):
-        if p.length < 25:
+        if p.length < 40 and stop < 5:
+            stop += 1
             kit.kekeh(p, math.atan2(d.y, d.x) + random.uniform(-0.15, 0.15), random.choice(['#e8b41c', '#e8b41c', '#2a6ab8']))
+            solid_box(p, 2.8, 1.4, math.atan2(d.y, d.x))
+            if 'kekeh' not in PLACES:
+                side_at = p - n * 1.8
+                PLACES['kekeh'] = {'x': round(side_at.x, 2), 'y': round(side_at.y, 2), 'face': [round(n.x, 3), round(n.y, 3)]}
             vehicles += 1
 # A police car parked on the shoulder near the junction.
 for w in tubman[:1]:
     width = road_width(w)
     for p, d, n in list(shoulder_spots(w, width / 2 + 1.4, 12))[:6]:
         if 12 < p.length < 45 and free(p):
-            kit.vehicle('police_car', p, math.atan2(d.y, d.x) + kit.FRONT['police_car'])
+            if EXPORT:
+                kit.car(p, math.atan2(d.y, d.x), '#1d2b55', 'saloon')
+            else:
+                kit.vehicle('police_car', p, math.atan2(d.y, d.x) + kit.FRONT['police_car'])
+            solid_box(p, 4.9, 1.9, math.atan2(d.y, d.x))
             mark_disk(p, 3)
             vehicles += 1
             break
@@ -616,9 +668,10 @@ def pole_line(points, offset):
         if pole:
             p, yaw = pole
             box(bm, uv, (p.x, p.y, 0), (0.24, 0.24, 9.5), yaw)
+            solid_box(p, 0.3, 0.3, yaw)
             box(bm, uv, (p.x, p.y, 8.6), (0.1, 1.8, 0.1), yaw)
             if random.random() < 0.4:
-                kit.place(kit.model('security_light'), p, yaw, z=7.5)
+                prop('security_light', p, yaw, z=7.5)
     kit.new_object('poles', bm, [m_wood])
     for p0, p1 in zip(poles, poles[1:]):
         if not p0 or not p1:
@@ -652,9 +705,70 @@ for _ in range(4000):
     dist, _near = nearest_road(p)
     if random.random() < (0.5 if dist < 14 else 0.12):
         kit.palm(p)
+        SOLIDS.append([[round(p.x + 0.35 * math.cos(k * math.pi / 4), 2), round(p.y + 0.35 * math.sin(k * math.pi / 4), 2)] for k in range(8)])
         mark_disk(p, 3)
         placed += 1
 print('PALMS', placed)
+
+# The clinic: the nearest sizeable building to the junction, with its sign over the door side.
+best = None
+for pts, tags in footprints:
+    c = sum(pts, Vector((0, 0))) / len(pts)
+    if abs(area(pts)) > 120 and c.length < 70 and (best is None or c.length < best[0]):
+        best = (c.length, pts)
+if best:
+    pts = best[1]
+    dist, near = nearest_road(sum(pts, Vector((0, 0))) / len(pts))
+    i = min(range(len(pts)), key=lambda k: ((pts[k] + pts[(k + 1) % len(pts)]) / 2 - near).length)
+    a, b = pts[i], pts[(i + 1) % len(pts)]
+    d = (b - a).normalized()
+    out = Vector((d.y, -d.x))
+    mid = (a + b) / 2
+    bm = bmesh.new()
+    uv = bm.loops.layers.uv.new()
+    q = mid + out * 0.12
+    box(bm, uv, (q.x, q.y, 3.2), (4.2, 0.1, 0.9), math.atan2(d.y, d.x))
+    kit.new_object('clinic_sign', bm, [flat('clinic_white', (0.9, 0.9, 0.9), 0.5)])
+    kit.text('SINKOR COMMUNITY CLINIC', mid + out * 0.2, kit.facing(out), 0.26, '#b0101c', 3.65)
+    door = mid + out * 1.6
+    PLACES['clinic'] = {'x': round(door.x, 2), 'y': round(door.y, 2), 'face': [round(-out.x, 3), round(-out.y, 3)]}
+
+if EXPORT:
+    import json as _json
+    REACH = 120.0
+    root = bpy.data.objects.new('street', None)
+    scene.collection.objects.link(root)
+
+    def far(o):
+        if o.type not in ('MESH', 'FONT'):
+            return False
+        cs = [o.matrix_world @ Vector(c) for c in o.bound_box]
+        cx = sum(c.x for c in cs) / 8
+        cy = sum(c.y for c in cs) / 8
+        span = max(max(c.x for c in cs) - min(c.x for c in cs), max(c.y for c in cs) - min(c.y for c in cs))
+        return span < 60 and math.hypot(cx, cy) > REACH
+
+    kit.game_export(root, None, far, EXPORT, os.path.join(OUT, 'sinkor_game.blend'))
+    near_solids = [poly for poly in SOLIDS if min(math.hypot(x, y) for x, y in poly) < REACH + 5]
+    line = []
+    for w in tubman:
+        line += [xy(n) for n in w['nodes']]
+    mid = min(line, key=lambda p: p.length)
+    along = next((p for p in line if 20 < (p - mid).length < 80), line[-1]) - mid
+    along.normalize()
+    side = Vector((-along.y, along.x))
+    spawn = mid + side * (road_width(tubman[0]) / 2 + 2.0)
+    plan = {
+        'frame': 'x east, y north, metres from the junction of Tubman Boulevard and 16th Street',
+        'reach': REACH,
+        'spawn': {'x': round(spawn.x, 2), 'y': round(spawn.y, 2), 'face': [round(along.x, 3), round(along.y, 3)]},
+        'places': PLACES,
+        'solids': near_solids,
+    }
+    with open(EXPORT.replace('.glb', '.json'), 'w') as f:
+        _json.dump(plan, f, separators=(',', ':'))
+    print('EXPORTED', EXPORT, os.path.getsize(EXPORT), 'solids', len(near_solids), 'places', sorted(PLACES))
+    sys.exit(0)
 
 # ---- Light and cameras ---------------------------------------------------------------------
 
