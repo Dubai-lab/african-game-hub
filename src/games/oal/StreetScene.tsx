@@ -321,10 +321,15 @@ function People({ town: id, start, appearance, stick, look, pitch, paused, onPla
 
     // The camera: behind and a little above.
     // Looking up (pitch above 0) lowers the camera and lifts what it looks at; down, the other way.
+    // As in a game: the camera goes round the character at a fixed distance (turned by a drag
+    // sideways, raised or lowered by a drag up or down), always looking at the character; it
+    // never comes in close.
     const tilt = pitch?.current ?? 0
-    target.set(s.x, 1.55 + tilt * 5, -s.y)
-    const back = paused ? 2.0 : 3.6
-    eye.set(s.x - Math.sin(yaw) * back, Math.max(0.5, (paused ? 1.8 : 2.4) - tilt * 1.4), -(s.y + Math.cos(yaw) * back))
+    const elev = Math.max(-0.12, Math.min(1.15, 0.3 - tilt * 0.75))
+    const back = paused ? 3.4 : 4.6
+    const flat = Math.cos(elev) * back
+    target.set(s.x, 1.45 + Math.max(0, -elev) * 2 + Math.max(0, tilt - 0.6) * 1.5, -s.y)
+    eye.set(s.x - Math.sin(yaw) * flat, Math.max(0.35, 1.45 + Math.sin(elev) * back), -(s.y + Math.cos(yaw) * flat))
     camera.position.lerp(eye, Math.min(1, dt * 5))
     camera.lookAt(target)
   })

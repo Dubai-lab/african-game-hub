@@ -642,10 +642,15 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
       s.place = near
       onPlace(near)
     }
+    // As in a game: the camera goes round the character at a fixed distance (turned by a drag
+    // sideways, raised or lowered by a drag up or down), always looking at the character; it
+    // never comes in close.
     const tilt = pitch?.current ?? 0
-    target.set(s.x, 1.55 + tilt * 5, -s.y)
-    const back = paused ? 2.0 : 3.6
-    eye.set(s.x - Math.sin(yaw) * back, Math.max(0.5, (paused ? 1.8 : 2.4) - tilt * 1.4), -(s.y + Math.cos(yaw) * back))
+    const elev = Math.max(-0.12, Math.min(1.15, 0.3 - tilt * 0.75))
+    const back = paused ? 3.4 : 4.6
+    const flat = Math.cos(elev) * back
+    target.set(s.x, 1.45 + Math.max(0, -elev) * 2 + Math.max(0, tilt - 0.6) * 1.5, -s.y)
+    eye.set(s.x - Math.sin(yaw) * flat, Math.max(0.35, 1.45 + Math.sin(elev) * back), -(s.y + Math.cos(yaw) * flat))
     // Never inside a wall: pulled in to the first solid between the character and the camera.
     let pull = 1
     const ex = eye.x
@@ -660,10 +665,17 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
           pull = Math.min(pull, segmentHit(s.x, s.y, ex, ey, poly))
         }
     if (pull < 1) {
-      const t = Math.max(0.15, pull - 0.08)
-      eye.x = s.x + (ex - s.x) * t
-      eye.z = -(s.y + (ey - s.y) * t)
-      eye.y = Math.max(eye.y, 1.9)
+      // A wall between: in front of it if that is not too close; else up over the character's
+      // head, looking down on them (never in on them).
+      const t = pull - 0.08
+      if (t * back >= 2.2) {
+        eye.x = s.x + (ex - s.x) * t
+        eye.z = -(s.y + (ey - s.y) * t)
+      } else {
+        const high = Math.max(elev, 1.0)
+        const f2 = Math.cos(high) * 2.6
+        eye.set(s.x - Math.sin(yaw) * f2, 1.45 + Math.sin(high) * 4.4, -(s.y + Math.cos(yaw) * f2))
+      }
     }
     // First seen: there at once (not flying in from the town's centre).
     if (first.current) {

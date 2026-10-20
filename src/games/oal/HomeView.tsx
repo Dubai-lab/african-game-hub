@@ -100,7 +100,9 @@ export function HomeView({ kind, travel, appearance, homeTown, homeCountry, hud,
   const charging = mine?.charge === 'charging' && mine.charged_at !== null && new Date(`${mine.charged_at}Z`).getTime() > now().getTime()
   const homeStep = (action: 'unbox' | 'charge') => {
     setHandling(true)
-    act({ reach: true, to: 'table' })
+    // At the table, the hands go to it; anywhere else in the house, where one stands.
+    if (place === 'table') act({ reach: true, to: 'table' })
+    else if (place) act({ reach: true, to: `place:${place}` })
     later(1000, () => void run({ action }).then((r) => r && toast.success(t(action === 'unbox' ? 'oal.home.phone.unboxed' : 'oal.home.phone.charged'))))
     later(3400, () => setHandling(false))
   }
@@ -253,11 +255,11 @@ export function HomeView({ kind, travel, appearance, homeTown, homeCountry, hud,
               <Button onClick={takeBox} data-testid="oal-take-box">
                 {t('oal.shop.takeBox')}
               </Button>
-            ) : atHome && place === 'table' && mine && !mine.unboxed ? (
+            ) : atHome && mine && !mine.unboxed ? (
               <Button onClick={() => homeStep('unbox')} data-testid="oal-unbox">
                 {t('oal.home.phone.unbox')}
               </Button>
-            ) : atHome && place === 'table' && mine?.unboxed && mine.charge === 'flat' ? (
+            ) : atHome && mine?.unboxed && mine.charge === 'flat' ? (
               <Button onClick={() => homeStep('charge')} data-testid="oal-charge">
                 {t('oal.home.phone.charge')}
               </Button>

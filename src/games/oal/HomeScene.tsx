@@ -581,7 +581,13 @@ function Body({ kind, appearance, asleep, stick, view, onPlace, shelf, carrying,
     const turnBy = view?.current?.yaw ?? 0
     const tilt = view?.current?.pitch ?? 0.35
     const indoors = (plan.inside ?? []).some(([x0, y0, x1, y1]) => fx > x0! && fx < x1! && fy > y0! && fy < y1!)
-    const dist = asleep ? 3.2 : indoors ? 2.7 : 4.2
+    const dist = asleep ? 3.2 : indoors ? 3.3 : 4.6
+    // A wider view indoors, as a game has it (the rooms are small).
+    const fov = indoors ? 72 : 60
+    if ((camera as { fov?: number }).fov !== fov) {
+      ;(camera as unknown as { fov: number; updateProjectionMatrix: () => void }).fov = fov
+      ;(camera as unknown as { updateProjectionMatrix: () => void }).updateProjectionMatrix()
+    }
     const flatDist = Math.cos(tilt) * dist
     target.set(fx, asleep ? 0.6 : sitting.current?.phase === 'sat' ? 1.05 : 1.45, -fy)
     want.set(fx + Math.sin(turnBy) * flatDist, target.y + Math.sin(tilt) * dist, -(fy - Math.cos(turnBy) * flatDist))
@@ -595,12 +601,21 @@ function Body({ kind, appearance, asleep, stick, view, onPlace, shelf, carrying,
         return h.distance > 0.2 && !(m && !Array.isArray(m) && m.transparent)
       })
       if (hit) {
-        const back = Math.max(0.3, hit.distance - 0.25)
-        want.copy(target).add(want.clone().sub(target).normalize().multiplyScalar(back))
-        // Too close behind to see past the character: up over its shoulder instead.
-        if (back < 1.2) want.y = Math.min(target.y + 0.9, (indoors && plan.ceiling ? plan.ceiling - 0.25 : target.y + 0.9))
+        const back = hit.distance - 0.25
+        const dir = want.clone().sub(target).normalize()
+        if (back >= 1.6) want.copy(target).add(dir.multiplyScalar(back))
+        else {
+          // No room behind: up under the ceiling (or over the head outside), a little behind,
+          // looking down on the character, never in on them.
+          dir.y = 0
+          dir.normalize()
+          want.copy(target).add(dir.multiplyScalar(Math.max(0.5, back)))
+          want.y = indoors && plan.ceiling ? plan.ceiling - 0.12 : target.y + 2.4
+        }
       }
     }
+    // Ever so close (a corner): the character not drawn, rather than filling the view.
+    me.root.visible = camera.position.distanceTo(target) > 0.7 || asleep
     camera.position.lerp(want, Math.min(1, dt * 6))
     camera.lookAt(target)
   })
