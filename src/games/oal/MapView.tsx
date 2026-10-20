@@ -39,7 +39,7 @@ export function useTownMap(town: string) {
     queryKey: ['oal-map', town],
     staleTime: Infinity,
     queryFn: async () => {
-      const res = await fetch(`/oal/maps/${mapOf(town)}.v2.json`)
+      const res = await fetch(`/oal/maps/${mapOf(town)}.v3.json`)
       if (!res.ok) throw new Error(String(res.status))
       return (await res.json()) as TownMap
     },

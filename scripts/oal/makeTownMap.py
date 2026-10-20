@@ -8,7 +8,7 @@
 #
 # In: art-src/one-africa-life/osm/map_<town>.json (Overpass: roads) and map_<town>_water.json
 # (water, coastline, airfields, with their tags).
-# Out: public/oal/maps/<town>.v2.json.
+# Out: public/oal/maps/<town>.v3.json.
 import json
 import math
 import os
@@ -60,9 +60,11 @@ TOWNS = {
         'places': {'home': (8.4245, -9.7505), 'jobs': (8.4200, -9.7460), 'station': (8.4232, -9.7449)},
     },
 }
-MAJOR = {'motorway', 'trunk', 'primary', 'secondary'}
-MIDDLE = {'tertiary'}
-MINOR = {'residential', 'unclassified'}
+MAJOR = {'motorway', 'trunk', 'primary', 'secondary', 'motorway_link', 'trunk_link', 'primary_link', 'secondary_link'}
+MIDDLE = {'tertiary', 'tertiary_link'}
+MINOR = {'residential', 'unclassified', 'service', 'living_street', 'track'}
+# Walked only: footpaths through the communities (the game's people walk them).
+PATH = {'path', 'footway', 'pedestrian', 'steps'}
 
 
 def simplify(pts, tol):
@@ -104,7 +106,7 @@ def build(name, cfg):
     r = lambda p: [round(p[0]), round(p[1])]
     flat = lambda line: [c for p in line for c in r(p)]
 
-    roads = {'major': [], 'middle': [], 'minor': []}
+    roads = {'major': [], 'middle': [], 'minor': [], 'path': []}
     water, wetland, rivers, coast, airfields = [], [], [], [], []
     for w in ways.values():
         tags = w.get('tags', {})
@@ -112,12 +114,16 @@ def build(name, cfg):
         if len(pts) < 2:
             continue
         hw = tags.get('highway')
-        if hw in MAJOR | MIDDLE | MINOR:
-            cls = 'major' if hw in MAJOR else 'middle' if hw in MIDDLE else 'minor'
-            if cls == 'minor' and sum(math.dist(a, b) for a, b in zip(pts, pts[1:])) < 60:
+        if hw in MAJOR | MIDDLE | MINOR | PATH:
+            cls = 'major' if hw in MAJOR else 'middle' if hw in MIDDLE else 'minor' if hw in MINOR else 'path'
+            if cls in ('minor', 'path') and sum(math.dist(a, b) for a, b in zip(pts, pts[1:])) < 15:
                 continue
-            line = simplify(pts, 2.5 if cls != 'minor' else 7.0)
-            roads[cls].append({'p': flat(line), **({'n': tags['name']} if tags.get('name') and cls != 'minor' else {})})
+            line = simplify(pts, 2.5 if cls in ('major', 'middle') else 4.0)
+            # One way (a dual carriageway is two of them): its traffic goes the way it is drawn.
+            one = tags.get('oneway') in ('yes', '1', 'true') or hw in ('motorway', 'motorway_link')
+            if tags.get('oneway') == '-1':
+                line, one = line[::-1], True
+            roads[cls].append({'p': flat(line), **({'n': tags['name']} if tags.get('name') and cls != 'path' else {}), **({'o': 1} if one else {})})
         elif tags.get('natural') == 'coastline':
             coast.append(pts)
         elif tags.get('natural') == 'water' and len(pts) > 3:
@@ -200,7 +206,7 @@ def build(name, cfg):
         'airfields': airfields, 'buildings': buildings, 'places': places, 'far': far,
     }
     os.makedirs(OUT, exist_ok=True)
-    path = os.path.join(OUT, f'{name}.v2.json')
+    path = os.path.join(OUT, f'{name}.v3.json')
     with open(path, 'w') as f:
         json.dump(out, f, separators=(',', ':'))
     print('MAP', name, round(os.path.getsize(path) / 1024), 'KB', {k: len(v) for k, v in roads.items()}, 'water', len(water), 'sea', len(sea) // 2)

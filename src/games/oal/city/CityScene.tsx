@@ -34,6 +34,7 @@ import { CHARACTER_URL } from '../character'
 import { type TownMap, useTownMap } from '../MapView'
 import { TOWNS } from '../StreetScene'
 import { keepOutOf, type Moving, Traffic } from '../Traffic'
+import { CityTraffic, CityWalkers } from './CityTraffic'
 import { buildChunk, buildCity, CHUNK, type City, type ChunkParts, type Keep, nearestRoad, segsNear, type Solid, toSeg, type TownMapData, waterGeometry } from './cityGen'
 
 const WALK_SPEED = 1.45
@@ -470,6 +471,7 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
       s.x = local.x + h.x
       s.y = local.y + h.y
     }
+    keepOutOf(s, cityMoving.current, RADIUS)
     const cx = Math.floor(s.x / CHUNK)
     const cy = Math.floor(s.y / CHUNK)
     for (let dx = -1; dx <= 1; dx++)
@@ -599,7 +601,8 @@ function namedRoad(city: City, x: number, y: number): string | null {
   for (const id of segsNear(city, x, y, 150)) {
     const sg = city.segs[id]!
     if (!sg.name) continue
-    const d = toSeg(sg, x, y).d
+    // Measured from the road's edge, so a wide road one stands on wins over a lane near by.
+    const d = toSeg(sg, x, y).d - sg.w / 2
     if (d < 150 && (!best || d < best.d)) best = { d, name: sg.name }
   }
   return best?.name ?? null
@@ -607,6 +610,8 @@ function namedRoad(city: City, x: number, y: number): string | null {
 
 /** The vehicles on the streets built by hand, to walk against (their own metres). */
 const hubMoving: { current: Moving[] } = { current: [] }
+/** The town's own traffic (town metres). */
+const cityMoving: { current: Moving[] } = { current: [] }
 
 /** A compound's walls (with the gate's gap), as solids. */
 function compoundSolids(c: Compound): Solid[] {
@@ -752,6 +757,8 @@ export default function CityScene(props: Props) {
             {hubs.map((h) => (
               <HubStreet key={h.town} hub={h} player={player} moving={hubMoving} local={local} />
             ))}
+            <CityTraffic city={city} keep={keep} player={player} moving={cityMoving} />
+            <CityWalkers city={city} keep={keep} player={player} />
             {start && <Walker props={props} city={city} start={start} compounds={compounds} hubs={hubs} places={places} solids={solids} player={player} />}
           </Suspense>
         </>

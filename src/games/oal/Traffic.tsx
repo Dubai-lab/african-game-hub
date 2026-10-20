@@ -7,7 +7,7 @@
 // the player to walk against (./StreetScene.tsx).
 import { useFrame, useLoader } from '@react-three/fiber'
 import { useMemo } from 'react'
-import { Color, type Material, type Mesh, type Object3D } from 'three'
+import { type AnimationClip, Color, type Material, type Mesh, type Object3D } from 'three'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { CATALOGUE, defaultAppearance } from '../../../supabase/functions/_shared/oal'
@@ -16,14 +16,14 @@ import { CHARACTER_URL } from './character'
 
 export const VEHICLES_URL = '/oal/vehicles.v1.glb'
 
-type Kind = 'taxi' | 'car' | 'kekeh' | 'bus' | 'police'
+export type Kind = 'taxi' | 'car' | 'kekeh' | 'bus' | 'police'
 /** A vehicle's box on the map, for walking against: centre, heading, half length and width. */
 export type Moving = { x: number; y: number; yaw: number; hl: number; hw: number }
 
 const MODEL: Record<Kind, string> = { taxi: 'sedan', car: 'sedan', kekeh: 'kekeh', bus: 'bus', police: 'police_car' }
-const SIZE: Record<Kind, [number, number]> = { taxi: [4.6, 2.0], car: [4.6, 2.0], kekeh: [2.7, 1.4], bus: [7.6, 2.6], police: [4.9, 1.8] }
+export const SIZE: Record<Kind, [number, number]> = { taxi: [4.6, 2.0], car: [4.6, 2.0], kekeh: [2.7, 1.4], bus: [7.6, 2.6], police: [4.9, 1.8] }
 // Town speeds, metres a second (about 30, 25, 25, 30 km/h).
-const SPEED: Record<Kind, number> = { taxi: 8.5, car: 8.0, kekeh: 7.0, bus: 7.0, police: 8.5 }
+export const SPEED: Record<Kind, number> = { taxi: 8.5, car: 8.0, kekeh: 7.0, bus: 7.0, police: 8.5 }
 const PAINTS: Record<Kind, string[]> = {
   taxi: ['#e9b51c'],
   car: ['#f0f0ee', '#c8c8c8', '#202020', '#1f2f5a', '#7a1a1a', '#d0c8b0', '#2a5a3a'],
@@ -62,6 +62,49 @@ function pointAt(lane: Lane, s: number): { x: number; y: number; yaw: number } {
   return { x: a[0] + (b[0] - a[0]) * t, y: a[1] + (b[1] - a[1]) * t, yaw: Math.atan2(b[1] - a[1], b[0] - a[0]) }
 }
 
+/** The vehicles' models in their file, by name. */
+export function vehicleModels(scene: Object3D) {
+  return Object.fromEntries(['sedan', 'kekeh', 'bus', 'police_car'].map((n) => [n, scene.getObjectByName(n)!])) as Record<string, Object3D | undefined>
+}
+
+/** A vehicle of a kind: its model in a paint of its kind, its driver seated at the wheel. */
+export function buildVehicle(models: Record<string, Object3D | undefined>, people: { scene: Object3D; animations: AnimationClip[] }, kind: Kind, rand: () => number): Object3D | null {
+  const model = models[MODEL[kind]]
+  if (!model) return null
+  const root = model.clone(true)
+  const paint = pick(PAINTS[kind], rand())
+  if (paint) {
+    root.traverse((o) => {
+      const mesh = o as Mesh
+      if (!mesh.isMesh) return
+      const mats = (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).map((m: Material) => {
+        if (!m.name.startsWith('paint')) return m
+        const c = m.clone() as Material & { color: Color }
+        c.color = new Color(paint)
+        return c
+      })
+      mesh.material = Array.isArray(mesh.material) ? mats : mats[0]!
+    })
+  }
+  // The driver: seated at the wheel, posed once (a still figure costs a phone little).
+  const base = defaultAppearance('male')
+  const driver = person(people.scene, people.animations, {
+    ...base,
+    skin: 0.6 + rand() * 0.35,
+    outfit: kind === 'police' ? 'shirt_jeans' : pick([...CATALOGUE.outfit.male], rand()),
+    hair: pick([...CATALOGUE.hair.male], rand()),
+  })
+  const sit = driver.actions.sit ?? driver.actions.idle
+  sit?.play()
+  driver.mixer.update(0.4 + rand())
+  const [sx, sy, sz] = SEAT[kind]
+  driver.root.position.set(sx, sy, sz)
+  driver.root.rotation.y = Math.PI / 2
+  driver.root.scale.setScalar(0.94)
+  root.add(driver.root)
+  return root
+}
+
 function pick<T>(list: T[], r: number) {
   return list[Math.floor(r * list.length) % list.length]!
 }
@@ -71,7 +114,7 @@ export function Traffic({ lanes, reach, player, moving, spacing = 35 }: { lanes:
   const people = useLoader(GLTFLoader, CHARACTER_URL('male'), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const { cars, roads, group } = useMemo(() => {
     const roads = lanes.map((l) => laneOf(l, reach)).filter((l) => l.length > 40)
-    const models = Object.fromEntries(['sedan', 'kekeh', 'bus', 'police_car'].map((n) => [n, gltf.scene.getObjectByName(n)!]))
+    const models = vehicleModels(gltf.scene)
     const cars: Car[] = []
     // A fixed seed: the same street each visit (and the same for everyone).
     let seed = 7
@@ -82,39 +125,8 @@ export function Traffic({ lanes, reach, player, moving, spacing = 35 }: { lanes:
       for (let k = 0; k < count; k++) {
         const r = rand()
         const kind: Kind = r < 0.42 ? 'taxi' : r < 0.67 ? 'car' : r < 0.88 ? 'kekeh' : r < 0.95 ? 'bus' : 'police'
-        const model = models[MODEL[kind]]
-        if (!model) continue
-        const root = model.clone(true)
-        const paint = pick(PAINTS[kind], rand())
-        if (paint) {
-          root.traverse((o) => {
-            const mesh = o as Mesh
-            if (!mesh.isMesh) return
-            const mats = (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).map((m: Material) => {
-              if (!m.name.startsWith('paint')) return m
-              const c = m.clone() as Material & { color: Color }
-              c.color = new Color(paint)
-              return c
-            })
-            mesh.material = Array.isArray(mesh.material) ? mats : mats[0]!
-          })
-        }
-        // The driver: seated at the wheel, posed once (a still figure costs a phone little).
-        const base = defaultAppearance('male')
-        const driver = person(people.scene, people.animations, {
-          ...base,
-          skin: 0.6 + rand() * 0.35,
-          outfit: kind === 'police' ? 'shirt_jeans' : pick([...CATALOGUE.outfit.male], rand()),
-          hair: pick([...CATALOGUE.hair.male], rand()),
-        })
-        const sit = driver.actions.sit ?? driver.actions.idle
-        sit?.play()
-        driver.mixer.update(0.4 + rand())
-        const [sx, sy, sz] = SEAT[kind]
-        driver.root.position.set(sx, sy, sz)
-        driver.root.rotation.y = Math.PI / 2
-        driver.root.scale.setScalar(0.94)
-        root.add(driver.root)
+        const root = buildVehicle(models, people, kind, rand)
+        if (!root) continue
         cars.push({ kind, lane: li, s: ((k + rand() * 0.5) / count) * lane.length, v: SPEED[kind], want: SPEED[kind] * (0.85 + rand() * 0.3), root })
       }
     })

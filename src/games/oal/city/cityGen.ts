@@ -12,7 +12,7 @@ import { BufferAttribute, BufferGeometry, Color, ShapeUtils, Vector2 } from 'thr
 export type RoadKind = 'major' | 'middle' | 'minor'
 /** The town's map, as the map screen has it (metres east and north of its centre). */
 export type TownMapData = {
-  roads: Record<RoadKind, { p: number[]; n?: string }[]>
+  roads: Record<RoadKind, { p: number[]; n?: string; o?: 1 }[]>
   water: number[][]
   wetland: number[][]
   rivers: { p: number[] }[]
@@ -37,7 +37,8 @@ export type City = {
   wet: Poly[]
   /** The road network as a graph: its nodes (where roads meet or bend) and edges. */
   nodes: { x: number; y: number; edges: number[] }[]
-  edges: { a: number; b: number; len: number; kind: RoadKind; w: number }[]
+  /** One way: driven from a to b only. */
+  edges: { a: number; b: number; len: number; kind: RoadKind; w: number; one: boolean }[]
 }
 
 const CELL = 50
@@ -104,7 +105,7 @@ export function buildCity(map: TownMapData): City {
         const a = node(ax, ay)
         const b = node(bx, by)
         if (a !== b) {
-          edges.push({ a, b, len, kind, w: ROAD_WIDTH[kind] })
+          edges.push({ a, b, len, kind, w: ROAD_WIDTH[kind], one: r.o === 1 })
           nodes[a]!.edges.push(edges.length - 1)
           nodes[b]!.edges.push(edges.length - 1)
         }
@@ -498,7 +499,7 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[]): Ch
           continue
         }
         if (roll > 0.9) continue
-        const setback = big ? 3 + rand() * 3 : 2 + rand() * 3
+        const setback = big ? 3 + rand() * 3 : 1 + rand() * 2
         const off = s.w / 2 + PAVEMENT[s.kind] + setback + d / 2
         const bx = fx + nx * off
         const by = fy + ny * off
@@ -542,15 +543,15 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[]): Ch
   }
   // Between the roads: the town's own houses, close together as a community builds them, each
   // turned to the nearest road, with paths between.
-  for (let gx = x0 + 6; gx < x0 + CHUNK; gx += 13)
-    for (let gy = y0 + 6; gy < y0 + CHUNK; gy += 13) {
-      if (rand() > 0.78) continue
+  for (let gx = x0 + 5; gx < x0 + CHUNK; gx += 11)
+    for (let gy = y0 + 5; gy < y0 + CHUNK; gy += 11) {
+      if (rand() > 0.88) continue
       const bx = gx + (rand() - 0.5) * 5
       const by = gy + (rand() - 0.5) * 5
       const w = 6.5 + rand() * 4
       const d = 6 + rand() * 3
       const r = Math.max(w, d) / 2
-      if (!free(bx, by, r) || !clear(bx, by, r * 0.9 + 1.5)) continue
+      if (!free(bx, by, r * 0.9) || !clear(bx, by, r * 0.85 + 0.8)) continue
       const road = nearestRoad(city, bx, by, 90)
       // Far from any road (a swamp, the bush): left as it is.
       if (!road) continue
