@@ -190,7 +190,7 @@ class Reader(osmium.SimpleHandler):
                 width = float(t.get('width', '')) if t.get('width') else max(1, int(lanes)) * 3.4 if lanes.isdigit() else 0
             except ValueError:
                 width = 0
-            self.roads.append((cls, ids, t.get('name'), one, width, t.get('bridge') in ('yes', 'viaduct')))
+            self.roads.append((cls, ids, t.get('name'), one, width, t.get('bridge') in ('yes', 'viaduct'), t.get('junction') in ('roundabout', 'circular')))
             for n in set(ids):
                 self.uses[n] += 1
             return
@@ -287,7 +287,7 @@ def main(pbf):
 
     # The main roads (for the businesses along them): their segments by 50 m cell.
     main = defaultdict(list)
-    for cls, ids, _name, _one, _w, _b in r.roads:
+    for cls, ids, _name, _one, _w, _b, _j in r.roads:
         if cls not in ('major', 'middle'):
             continue
         pts = [r.loc[n] for n in ids if n in r.loc]
@@ -383,7 +383,7 @@ def main(pbf):
 
     # The roads, every one, kept joined where they meet (their shared points never simplified away).
     roads = {'major': [], 'middle': [], 'minor': [], 'path': []}
-    for cls, ids, name, one, width, bridge in r.roads:
+    for cls, ids, name, one, width, bridge, ring in r.roads:
         ids = [n for n in ids if n in r.loc]
         if len(ids) < 2:
             continue
@@ -404,6 +404,8 @@ def main(pbf):
             entry['w'] = round(width, 1)
         if bridge:
             entry['b'] = 1
+        if ring:
+            entry['j'] = 1
         roads[cls].append(entry)
     with open(os.path.join(MAPS, 'monrovia.v3.json')) as f:
         town = json.load(f)

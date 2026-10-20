@@ -44,6 +44,7 @@ import { keepOutOf, type Moving, Traffic } from '../Traffic'
 import { CityTraffic, CityWalkers } from './CityTraffic'
 import { type Destination, newRide, PASSENGER, type RidePhase, type RideState } from './ride'
 import { type Sign, SIGNAL_LAMPS, type Signal, type SignalLamp, signalState, type TilePlace } from './cityGen'
+import { groundHeight } from './cityGen'
 import { buildChunk, buildCity, CHUNK, type City, type ChunkParts, type Keep, nearestRoad, segsNear, type Solid, type Tile, toSeg, type TownMapData, waterGeometry } from './cityGen'
 
 const WALK_SPEED = 1.45
@@ -121,8 +122,74 @@ function useTextures() {
 function makeTextures() {
   return (() => {
     const ground = canvasTexture(512, (g, s) => blobs(g, s, '#94684a', [['#6f8a3a', 90, 60], ['#5f7f34', 50, 90], ['#a8774f', 260, 24], ['#7a5236', 300, 10], ['#86a04a', 120, 30]]))
-    const dirt = canvasTexture(256, (g, s) => noise(g, s, '#9a5a38', [['#b06a42', 500, 5], ['#7a4428', 300, 4], ['#c08058', 200, 3]]))
-    const asphalt = canvasTexture(256, (g, s) => noise(g, s, '#4a4a4c', [['#3a3a3c', 800, 3], ['#5a5a5c', 600, 2], ['#2e2e30', 60, 18]]))
+    // Laterite, 4 m along by the road's width across: red earth and stones, two tyre ruts worn
+    // darker along it, potholes now and then with rain standing in them.
+    const dirt = canvasTexture(512, (g, s) => {
+      noise(g, s, '#9a5a38', [['#b06a42', 900, 6], ['#7a4428', 500, 5], ['#c08058', 400, 3], ['#6a3a22', 120, 9]])
+      for (const v of [0.3, 0.7]) {
+        const grd = g.createLinearGradient(0, s * (v - 0.08), 0, s * (v + 0.08))
+        grd.addColorStop(0, 'rgba(90,45,25,0)')
+        grd.addColorStop(0.5, 'rgba(90,45,25,0.45)')
+        grd.addColorStop(1, 'rgba(90,45,25,0)')
+        g.fillStyle = grd
+        g.fillRect(0, s * (v - 0.08), s, s * 0.16)
+      }
+      let seed = 5
+      const r = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646
+      for (let i = 0; i < 5; i++) {
+        const x = r() * s
+        const y = s * (0.2 + r() * 0.6)
+        const w = 14 + r() * 26
+        g.fillStyle = 'rgba(70,35,20,0.75)'
+        g.beginPath()
+        g.ellipse(x, y, w, w * 0.55, r() * 3, 0, Math.PI * 2)
+        g.fill()
+        if (r() < 0.5) {
+          g.fillStyle = 'rgba(120,130,140,0.55)'
+          g.beginPath()
+          g.ellipse(x, y, w * 0.6, w * 0.3, 0, 0, Math.PI * 2)
+          g.fill()
+        }
+      }
+    })
+    // Tarmac, 4 m along: its stones, the tyres' polish in two bands, patches, cracks, oil.
+    const asphalt = canvasTexture(512, (g, s) => {
+      noise(g, s, '#45464a', [['#36373a', 1400, 3], ['#55565a', 1000, 2], ['#2e2f32', 80, 16]])
+      for (const v of [0.27, 0.73]) {
+        const grd = g.createLinearGradient(0, s * (v - 0.1), 0, s * (v + 0.1))
+        grd.addColorStop(0, 'rgba(20,20,22,0)')
+        grd.addColorStop(0.5, 'rgba(20,20,22,0.28)')
+        grd.addColorStop(1, 'rgba(20,20,22,0)')
+        g.fillStyle = grd
+        g.fillRect(0, s * (v - 0.1), s, s * 0.2)
+      }
+      let seed = 9
+      const r = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646
+      for (let i = 0; i < 4; i++) {
+        g.fillStyle = r() < 0.5 ? 'rgba(30,30,32,0.55)' : 'rgba(90,90,92,0.35)'
+        g.fillRect(r() * s, r() * s, 40 + r() * 90, 30 + r() * 70)
+      }
+      g.strokeStyle = 'rgba(15,15,16,0.7)'
+      g.lineWidth = 1.5
+      for (let i = 0; i < 9; i++) {
+        let x = r() * s
+        let y = r() * s
+        g.beginPath()
+        g.moveTo(x, y)
+        for (let k = 0; k < 6; k++) {
+          x += (r() - 0.5) * 40
+          y += (r() - 0.5) * 40
+          g.lineTo(x, y)
+        }
+        g.stroke()
+      }
+      for (let i = 0; i < 3; i++) {
+        g.fillStyle = 'rgba(10,10,12,0.3)'
+        g.beginPath()
+        g.ellipse(r() * s, s * (0.3 + r() * 0.4), 12 + r() * 14, 6 + r() * 6, 0, 0, Math.PI * 2)
+        g.fill()
+      }
+    })
     const pavement = canvasTexture(256, (g, s) => {
       noise(g, s, '#b8b0a2', [['#a49c8e', 500, 3], ['#c8c0b2', 300, 3], ['#8a6a4a', 60, 10]])
       g.strokeStyle = 'rgba(80,70,60,0.5)'
@@ -227,7 +294,7 @@ function makeMaterials(tex: ReturnType<typeof useTextures>) {
   return {
       ground: new MeshStandardMaterial({ map: tex.ground, roughness: 1 }),
       dirt: new MeshStandardMaterial({ map: tex.dirt, roughness: 1, vertexColors: true, side: DoubleSide }),
-      asphalt: new MeshStandardMaterial({ map: tex.asphalt, roughness: 0.9, vertexColors: true, side: DoubleSide }),
+      asphalt: new MeshStandardMaterial({ map: tex.asphalt, roughness: 0.85, vertexColors: true, side: DoubleSide }),
       pavement: new MeshStandardMaterial({ map: tex.pavement, roughness: 0.95, vertexColors: true, side: DoubleSide }),
       marks: new MeshStandardMaterial({ color: '#f2f0e6', roughness: 0.8, vertexColors: true, side: DoubleSide }),
       walls: new MeshStandardMaterial({ map: tex.facade, roughness: 0.9, vertexColors: true, side: DoubleSide, emissiveMap: tex.windowsLit, emissive: new Color('#ffcf80'), emissiveIntensity: 0 }),
@@ -261,6 +328,7 @@ const signMaterials = new Set<MeshStandardMaterial>()
 
 /** How each kind of place's sign board looks: its ground, its letters, a mark. */
 const SIGN_STYLE: Record<string, { bg: string; fg: string; mark?: string }> = {
+  street: { bg: '#1f5a3a', fg: '#ffffff' },
   health: { bg: '#ffffff', fg: '#c8281e', mark: '+' },
   pharmacy: { bg: '#2f8a4a', fg: '#ffffff', mark: '+' },
   school: { bg: '#1f4fa8', fg: '#ffffff' },
@@ -998,7 +1066,8 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
       s.facing += turn * Math.min(1, dt * 10)
     }
     s.speed += (amount - s.speed) * Math.min(1, dt * 8)
-    me.root.position.set(s.x, 0.05, -s.y)
+    const ground = groundHeight(city, s.x, s.y)
+    me.root.position.set(s.x, 0.05 + ground, -s.y)
     me.root.rotation.y = s.facing
     if (player.current) {
       player.current.x = s.x
@@ -1046,8 +1115,8 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
     const elev = Math.max(-0.12, Math.min(1.15, 0.3 - tilt * 0.75))
     const back = paused ? 3.4 : 4.6
     const flat = Math.cos(elev) * back
-    target.set(s.x, 1.45 + Math.max(0, -elev) * 2 + Math.max(0, tilt - 0.6) * 1.5, -s.y)
-    eye.set(s.x - Math.sin(yaw) * flat, Math.max(0.35, 1.45 + Math.sin(elev) * back), -(s.y + Math.cos(yaw) * flat))
+    target.set(s.x, ground + 1.45 + Math.max(0, -elev) * 2 + Math.max(0, tilt - 0.6) * 1.5, -s.y)
+    eye.set(s.x - Math.sin(yaw) * flat, ground + Math.max(0.35, 1.45 + Math.sin(elev) * back), -(s.y + Math.cos(yaw) * flat))
     // Never inside a wall: pulled in to the first solid between the character and the camera.
     let pull = 1
     const ex = eye.x

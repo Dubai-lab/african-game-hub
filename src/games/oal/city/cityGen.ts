@@ -13,7 +13,7 @@ export type RoadKind = 'major' | 'middle' | 'minor' | 'path'
 /** The town's map, as the map screen has it (metres east and north of its centre). */
 export type TownMapData = {
   /** Each road: its points, its name, one way, its width (metres, when the map says), a bridge. */
-  roads: Partial<Record<RoadKind, { p: number[]; n?: string; o?: 1; w?: number; b?: 1 }[]>>
+  roads: Partial<Record<RoadKind, { p: number[]; n?: string; o?: 1; w?: number; b?: 1; j?: 1 }[]>>
   water: number[][]
   wetland: number[][]
   rivers: { p: number[] }[]
@@ -26,7 +26,27 @@ export const ROAD_WIDTH: Record<RoadKind, number> = { major: 12, middle: 8, mino
 const PAVEMENT: Record<RoadKind, number> = { major: 3, middle: 2, minor: 0, path: 0 }
 export const CHUNK = 200
 
-export type Seg = { ax: number; ay: number; bx: number; by: number; kind: RoadKind; w: number; len: number; ux: number; uy: number; road: number; name?: string }
+export type Seg = {
+  ax: number
+  ay: number
+  bx: number
+  by: number
+  kind: RoadKind
+  w: number
+  len: number
+  ux: number
+  uy: number
+  road: number
+  name?: string
+  /** The edge (between two nodes of the network) this piece is of, how far along it the piece
+   * starts, and its length: for where the junctions are. */
+  edge: number
+  t0: number
+  elen: number
+  one: boolean
+  /** On a bridge: how far along the bridge the piece starts, and the bridge's length. */
+  bridge?: { s: number; total: number }
+}
 type Poly = { pts: number[]; minX: number; maxX: number; minY: number; maxY: number }
 
 export type City = {
@@ -41,7 +61,9 @@ export type City = {
   /** A node by its 4 m cell (where roads' points meet). */
   nodeAt?: Map<string, number>
   /** One way: driven from a to b only. */
-  edges: { a: number; b: number; len: number; kind: RoadKind; w: number; one: boolean }[]
+  edges: { a: number; b: number; len: number; kind: RoadKind; w: number; one: boolean; name?: string; ring?: boolean }[]
+  /** The roundabouts: each one's middle, its ring's radius and the ring road's width. */
+  rings: { x: number; y: number; r: number; w: number }[]
 }
 
 const CELL = 50
@@ -82,6 +104,7 @@ export function buildCity(map: TownMapData): City {
   const nodes: City['nodes'] = []
   const edges: City['edges'] = []
   const nodeAt = new Map<string, number>()
+  const rings: City['rings'] = []
   const node = (x: number, y: number) => {
     // Where roads meet, their points are the same (within a few metres once simplified).
     const k = key(Math.round(x / 4), Math.round(y / 4))
@@ -100,6 +123,23 @@ export function buildCity(map: TownMapData): City {
       // The map's own width where it gives one (within reason for its kind).
       const width = r.w && kind !== 'path' ? Math.max(kind === 'minor' ? 4 : 6, Math.min(30, r.w)) : ROAD_WIDTH[kind]
       road++
+      // A bridge: its length (for its rise and fall), and how far along it each piece is.
+      let bridgeTotal = 0
+      if (r.b) for (let i = 0; i + 3 < p.length; i += 2) bridgeTotal += Math.hypot(p[i + 2]! - p[i]!, p[i + 3]! - p[i + 1]!)
+      let along = 0
+      // A roundabout: its ring (a closed road) round its middle.
+      if (r.j && p.length >= 8) {
+        let cx = 0
+        let cy = 0
+        const n = p.length / 2
+        for (let i = 0; i < p.length; i += 2) {
+          cx += p[i]! / n
+          cy += p[i + 1]! / n
+        }
+        let rr = 0
+        for (let i = 0; i < p.length; i += 2) rr += Math.hypot(p[i]! - cx, p[i + 1]! - cy) / n
+        rings.push({ x: cx, y: cy, r: rr, w: width })
+      }
       for (let i = 0; i + 3 < p.length; i += 2) {
         const ax = p[i]!
         const ay = p[i + 1]!
@@ -109,12 +149,14 @@ export function buildCity(map: TownMapData): City {
         if (len < 0.5) continue
         const a = node(ax, ay)
         const b = node(bx, by)
+        const edgeId = edges.length
         if (a !== b) {
-          edges.push({ a, b, len, kind, w: width, one: r.o === 1 })
+          edges.push({ a, b, len, kind, w: width, one: r.o === 1, name: r.n, ring: r.j === 1 })
           nodes[a]!.edges.push(edges.length - 1)
           nodes[b]!.edges.push(edges.length - 1)
         }
-        const pieces = Math.ceil(len / 30)
+        // Pieces of 30 m (on a bridge 6 m, for its ramps' slope).
+        const pieces = Math.ceil(len / (r.b ? 6 : 30))
         for (let k = 0; k < pieces; k++) {
           const s: Seg = {
             ax: ax + ((bx - ax) * k) / pieces,
@@ -128,6 +170,11 @@ export function buildCity(map: TownMapData): City {
             uy: (by - ay) / len,
             road,
             name: r.n,
+            edge: a !== b ? edgeId : -1,
+            t0: (len * k) / pieces,
+            elen: len,
+            one: r.o === 1,
+            bridge: r.b ? { s: along + (len * k) / pieces, total: bridgeTotal } : undefined,
           }
           const id = segs.length
           segs.push(s)
@@ -142,6 +189,7 @@ export function buildCity(map: TownMapData): City {
               else grid.set(key(cx, cy), [id])
             }
         }
+        along += len
       }
     }
   }
@@ -154,7 +202,52 @@ export function buildCity(map: TownMapData): City {
     nodes,
     edges,
     nodeAt,
+    rings,
   }
+}
+
+/** A bridge's deck height a distance along it (rising from its ends over its first and last
+ * stretch, to a little over a metre over the water). */
+export function deckHeight(s: number, total: number) {
+  const top = Math.min(1.4, total * 0.04)
+  const ramp = Math.max(4, Math.min(14, total / 3))
+  const up = Math.min(1, Math.max(0, s / ramp))
+  const down = Math.min(1, Math.max(0, (total - s) / ramp))
+  const e = (t: number) => t * t * (3 - 2 * t)
+  return top * Math.min(e(up), e(down))
+}
+
+/** How high the ground is at a point: on a bridge, its deck; else the ground (0). */
+export function groundHeight(city: City, x: number, y: number) {
+  let h = 0
+  for (const id of segsNear(city, x, y, 12)) {
+    const s = city.segs[id]!
+    if (!s.bridge) continue
+    const n = toSeg(s, x, y)
+    if (n.d < s.w / 2 + PAVEMENT[s.kind] + 0.4) h = Math.max(h, deckHeight(s.bridge.s + n.t, s.bridge.total))
+  }
+  return h
+}
+
+/** A junction's size (how far from its middle the roads meeting there keep their own markings):
+ * 0 where fewer than three roads meet. */
+export function junctionRadius(city: City, n: number) {
+  const roads = city.nodes[n]!.edges.filter((e) => city.edges[e]!.kind !== 'path')
+  if (roads.length < 3) return 0
+  let w = 0
+  let big = false
+  for (const e of roads) {
+    w = Math.max(w, city.edges[e]!.w)
+    if (city.edges[e]!.kind === 'major' || city.edges[e]!.kind === 'middle') big = true
+  }
+  return w / 2 + (big ? 2.5 : 1.2)
+}
+
+/** A junction with traffic lights (big roads' arms, three or more; never on a roundabout). */
+export function signalled(city: City, n: number) {
+  const edges = city.nodes[n]!.edges
+  if (edges.some((e) => city.edges[e]!.ring)) return false
+  return edges.filter((e) => city.edges[e]!.kind === 'major' || city.edges[e]!.kind === 'middle').length >= 3
 }
 
 /** How far a point is from a segment, and the nearest point on it. */
@@ -242,6 +335,30 @@ class Mesher {
         [bx - nx, h, -(by - ny)],
         [bx + nx, h, -(by + ny)],
         [ax + nx, h, -(ay + ny)],
+      ],
+      0,
+      1,
+      0,
+      [
+        [0, 0],
+        [len * uScale, 0],
+        [len * uScale, 1],
+        [0, 1],
+      ],
+      colour,
+    )
+  }
+  /** A strip rising from one height to another (a bridge's ramp), its uv along its length. */
+  slope(ax: number, ay: number, bx: number, by: number, w: number, ha: number, hb: number, colour: string, uScale = 0.25) {
+    const len = Math.hypot(bx - ax, by - ay) || 1
+    const nx = (-(by - ay) / len) * (w / 2)
+    const ny = ((bx - ax) / len) * (w / 2)
+    this.quad(
+      [
+        [ax - nx, ha, -(ay - ny)],
+        [bx - nx, hb, -(by - ny)],
+        [bx + nx, hb, -(by + ny)],
+        [ax + nx, ha, -(ay + ny)],
       ],
       0,
       1,
@@ -784,8 +901,7 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
   for (const n of nodesHere) {
     const node = city.nodes[n]!
     const roads = node.edges.filter((e) => city.edges[e]!.kind !== 'path')
-    const big = roads.filter((e) => city.edges[e]!.kind === 'major' || city.edges[e]!.kind === 'middle')
-    if (big.length < 3 || kept(node.x, node.y, 10)) continue
+    if (!signalled(city, n) || kept(node.x, node.y, 10)) continue
     const groups: Record<number, 'A' | 'B'> = {}
     let ref: number | null = null
     for (const e of roads) {
@@ -804,7 +920,7 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
       const group = diff < Math.PI / 4 ? 'A' : 'B'
       groups[e] = group
       // Traffic comes in along -u; its right is (-uy, ux) turned: for travel (-ux, -uy), right is (-uy, ux).
-      const back = ed.w / 2 + 3
+      const back = junctionRadius(city, n) + 4.6
       const px = node.x + ux * back + -uy * (ed.w / 2 + 1.2)
       const py = node.y + uy * back + ux * (ed.w / 2 + 1.2)
       if (!free(px, py, 0.3)) continue
@@ -823,33 +939,208 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
     }
     signals.push({ node: n, x: node.x, y: node.y, groups })
   }
+  // At the corner of a junction of two named streets: the street-name signs on their post, each
+  // plate along its street (read from both sides).
+  for (const n of nodesHere) {
+    const node = city.nodes[n]!
+    const r = junctionRadius(city, n)
+    if (!r || kept(node.x, node.y, 6)) continue
+    const named: { name: string; ux: number; uy: number }[] = []
+    for (const ei of node.edges) {
+      const ed = city.edges[ei]!
+      if (ed.kind === 'path' || !ed.name || named.some((x) => x.name === ed.name)) continue
+      const o = city.nodes[ed.a === n ? ed.b : ed.a]!
+      const l = Math.hypot(o.x - node.x, o.y - node.y) || 1
+      named.push({ name: ed.name, ux: (o.x - node.x) / l, uy: (o.y - node.y) / l })
+    }
+    if (named.length < 2) continue
+    const [A, B] = named as [(typeof named)[number], (typeof named)[number]]
+    let dx = A.ux + B.ux
+    let dy = A.uy + B.uy
+    const dl = Math.hypot(dx, dy)
+    if (dl < 0.2) {
+      dx = -A.uy
+      dy = A.ux
+    } else {
+      dx /= dl
+      dy /= dl
+    }
+    const px = node.x + dx * (r + 1.8)
+    const py = node.y + dy * (r + 1.8)
+    if (!free(px, py, 0.3)) continue
+    plain.post(px, py, 0.05, 0.05, 0, 3.0, '#2c4a36', 6)
+    for (const [k, road] of [A, B].entries()) {
+      const yaw = Math.atan2(road.uy, road.ux) + Math.PI / 2
+      for (const flip of [0, Math.PI]) signs.push({ text: road.name, cat: 'street', x: px + Math.cos(yaw + flip) * 0.03, y: py + Math.sin(yaw + flip) * 0.03, z: 2.78 - k * 0.42, yaw: yaw + flip, w: 1.9, h: 0.34 })
+    }
+  }
+  // A roundabout's island: grass inside its kerb, a palm in the middle.
+  for (const ring of city.rings) {
+    if (!inChunk(ring.x, ring.y) || kept(ring.x, ring.y)) continue
+    const ri = ring.r - ring.w / 2 - 0.4
+    if (ri < 2) continue
+    land.disc(ring.x, ring.y, ri, 0.09, '#6f9a44')
+    for (let k = 0; k < 28; k++) {
+      const a0 = (k / 28) * Math.PI * 2
+      const a1 = ((k + 1) / 28) * Math.PI * 2
+      const cxk = ring.x + Math.cos((a0 + a1) / 2) * ri
+      const cyk = ring.y + Math.sin((a0 + a1) / 2) * ri
+      plain.box(cxk, cyk, (a0 + a1) / 2 + Math.PI / 2, ((a1 - a0) * ri) + 0.05, 0.25, 0, 0.22, k % 2 ? '#e8e4da' : '#2a2a2a', [1, 1])
+    }
+    const pts: number[][] = []
+    for (let k = 0; k < 16; k++) pts.push([ring.x + Math.cos((k / 16) * Math.PI * 2) * ri, ring.y + Math.sin((k / 16) * Math.PI * 2) * ri])
+    solids.push(solidOf(pts))
+    palm(plain, leaves, ring.x, ring.y, rand)
+  }
 
   for (const id of mine) {
     const s = city.segs[id]!
     const mx = (s.ax + s.bx) / 2
     const my = (s.ay + s.by) / 2
     if (kept(mx, my, 0, true)) continue
-    // The road: tarred (the big ones, with pavements and a dashed line) or laterite.
+    // The road, by the junctions at its edge's ends (how big each is): its surface, kerbs and
+    // markings stopping short of them, the stop lines and zebra crossings before them.
+    const e = s.edge >= 0 ? city.edges[s.edge]! : null
+    const ra = e ? junctionRadius(city, e.a) : 0
+    const rb = e ? junctionRadius(city, e.b) : 0
+    const t0 = s.t0
+    const t1 = s.t0 + s.len
+    // A point t along the edge; the way to the right of its direction (a to b).
+    const at = (t: number): [number, number] => [s.ax + s.ux * (t - t0), s.ay + s.uy * (t - t0)]
+    const rx = s.uy
+    const ry = -s.ux
+    const lift = (t: number) => (s.bridge ? deckHeight(s.bridge.s + (t - t0), s.bridge.total) : 0)
+    const hA = lift(t0)
+    const hB = lift(t1)
     if (s.kind === 'path') {
       // A footpath: a trodden strip of laterite.
-      dirt.ground(s.ax, s.ay, s.bx, s.by, s.w, 0.025, '#e0c8b8')
+      dirt.slope(s.ax, s.ay, s.bx, s.by, s.w, 0.025 + hA, 0.025 + hB, '#e0c8b8')
     } else if (s.kind === 'minor') {
-      dirt.ground(s.ax, s.ay, s.bx, s.by, s.w, 0.03, '#ffffff')
-      dirt.disc(s.bx, s.by, s.w / 2, 0.03, '#ffffff')
-      dirt.disc(s.ax, s.ay, s.w / 2, 0.03, '#ffffff')
-    } else {
-      pavement.ground(s.ax, s.ay, s.bx, s.by, s.w + PAVEMENT[s.kind] * 2, 0.05, '#ffffff')
-      pavement.disc(s.bx, s.by, s.w / 2 + PAVEMENT[s.kind], 0.05, '#ffffff')
-      pavement.disc(s.ax, s.ay, s.w / 2 + PAVEMENT[s.kind], 0.05, '#ffffff')
-      asphalt.ground(s.ax, s.ay, s.bx, s.by, s.w, 0.07, '#ffffff')
-      asphalt.disc(s.bx, s.by, s.w / 2, 0.07, '#ffffff')
-      asphalt.disc(s.ax, s.ay, s.w / 2, 0.07, '#ffffff')
-      // The dashed centre line: 3 m painted, 3 m not.
-      for (let t = 1.5; t + 3 < s.len; t += 6) {
-        const ax = s.ax + s.ux * t
-        const ay = s.ay + s.uy * t
-        marks.ground(ax, ay, ax + s.ux * 3, ay + s.uy * 3, 0.15, 0.075, '#f2f0e6')
+      dirt.slope(s.ax, s.ay, s.bx, s.by, s.w, 0.03 + hA, 0.03 + hB, '#ffffff')
+      if (!s.bridge) {
+        dirt.disc(s.bx, s.by, s.w / 2, 0.03, '#ffffff')
+        dirt.disc(s.ax, s.ay, s.w / 2, 0.03, '#ffffff')
       }
+    } else {
+      const pw = PAVEMENT[s.kind]
+      pavement.slope(s.ax, s.ay, s.bx, s.by, s.w + pw * 2, 0.05 + hA, 0.05 + hB, '#ffffff')
+      asphalt.slope(s.ax, s.ay, s.bx, s.by, s.w, 0.07 + hA, 0.07 + hB, '#ffffff')
+      if (!s.bridge) {
+        pavement.disc(s.bx, s.by, s.w / 2 + pw, 0.05, '#ffffff')
+        pavement.disc(s.ax, s.ay, s.w / 2 + pw, 0.05, '#ffffff')
+        asphalt.disc(s.bx, s.by, s.w / 2, 0.07, '#ffffff')
+        asphalt.disc(s.ax, s.ay, s.w / 2, 0.07, '#ffffff')
+      }
+      const hm = (t: number) => 0.078 + lift(t)
+      // The markings, clear of the junctions: lane lines on a one-way carriageway, the dashed
+      // centre line on a two-way road, solid edge lines on the main roads.
+      const m0 = Math.max(t0, ra ? ra + 1.2 : 0)
+      const m1 = Math.min(t1, rb ? s.elen - rb - 1.2 : s.elen)
+      const lanes = Math.max(1, Math.round(s.w / 3.4))
+      const dashes: number[] = []
+      if (s.one) for (let k = 1; k < lanes; k++) dashes.push(-s.w / 2 + (s.w * k) / lanes)
+      else if (lanes >= 2) dashes.push(0)
+      for (const o of dashes)
+        for (let t = Math.ceil(m0 / 6) * 6; t + 3 <= m1; t += 6) {
+          const [px, py] = at(t)
+          const [qx, qy] = at(t + 3)
+          marks.slope(px + rx * o, py + ry * o, qx + rx * o, qy + ry * o, 0.14, hm(t), hm(t + 3), '#f2f0e6')
+        }
+      if (s.kind === 'major' && m1 > m0 + 0.5)
+        for (const o of [-s.w / 2 + 0.35, s.w / 2 - 0.35]) {
+          const [px, py] = at(m0)
+          const [qx, qy] = at(m1)
+          marks.slope(px + rx * o, py + ry * o, qx + rx * o, qy + ry * o, 0.12, hm(m0), hm(m1), '#ece6d6')
+        }
+      // The kerbs: raised concrete along both edges, ending at the corners.
+      const k0 = Math.max(t0, ra ? ra - 0.4 : 0)
+      const k1 = Math.min(t1, rb ? s.elen - rb + 0.4 : s.elen)
+      if (k1 > k0 + 0.3 && !s.bridge && !e?.ring)
+        for (const side of [-1, 1]) {
+          const o = side * (s.w / 2 + 0.09)
+          const [px, py] = at(k0)
+          const [qx, qy] = at(k1)
+          plain.box((px + qx) / 2 + rx * o, (py + qy) / 2 + ry * o, Math.atan2(s.uy, s.ux), k1 - k0, 0.18, 0, 0.19, '#bab4a8', [1, 1])
+        }
+      // Before a junction of the big roads: the zebra crossing; before a signalled one, the stop
+      // line too, across the lanes coming in.
+      for (const end of ['a', 'b'] as const) {
+        const r = end === 'a' ? ra : rb
+        // (Never on a roundabout's ring itself: its entries have them.)
+        if (!r || !e || e.ring) continue
+        const node = end === 'a' ? e.a : e.b
+        const z0 = end === 'a' ? r + 0.4 : s.elen - r - 3.4
+        const z1 = z0 + 3
+        if (z1 > t0 && z0 < t1)
+          for (let o = -s.w / 2 + 0.45; o <= s.w / 2 - 0.4; o += 1.0) {
+            const [px, py] = at(Math.max(z0, t0))
+            const [qx, qy] = at(Math.min(z1, t1))
+            marks.slope(px + rx * o, py + ry * o, qx + rx * o, qy + ry * o, 0.5, hm(Math.max(z0, t0)) + 0.002, hm(Math.min(z1, t1)) + 0.002, '#f4f2ea')
+          }
+        if (signalled(city, node) && !(s.one && end === 'a')) {
+          const ts = end === 'a' ? r + 4.2 : s.elen - r - 4.2
+          if (ts >= t0 && ts <= t1) {
+            const [lo, hi] = s.one ? [-s.w / 2, s.w / 2] : end === 'b' ? [0, s.w / 2] : [-s.w / 2, 0]
+            const [px, py] = at(ts)
+            marks.slope(px + rx * lo, py + ry * lo, px + rx * hi, py + ry * hi, 0.45, hm(ts) + 0.002, hm(ts) + 0.002, '#f4f2ea')
+          }
+        }
+      }
+    }
+    // A bridge: its parapets (walked against), its sides down to the water, its piers.
+    if (s.bridge) {
+      const half = (s.kind === 'path' ? s.w / 2 : s.w / 2 + PAVEMENT[s.kind]) + 0.15
+      for (const side of [-1, 1]) {
+        const o = side * half
+        const ax = s.ax + rx * o
+        const ay = s.ay + ry * o
+        const bx = s.bx + rx * o
+        const by = s.by + ry * o
+        plain.quad(
+          [
+            [ax, hA + 0.04, -ay],
+            [bx, hB + 0.04, -by],
+            [bx, hB + (s.kind === 'path' ? 1.0 : 0.9), -by],
+            [ax, hA + (s.kind === 'path' ? 1.0 : 0.9), -ay],
+          ],
+          rx * side,
+          0,
+          -ry * side,
+          [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 1],
+          ],
+          s.kind === 'path' ? '#6a5a4a' : '#cfc9bc',
+        )
+        plain.quad(
+          [
+            [ax, -1.5, -ay],
+            [bx, -1.5, -by],
+            [bx, hB + 0.04, -by],
+            [ax, hA + 0.04, -ay],
+          ],
+          rx * side,
+          0,
+          -ry * side,
+          [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 1],
+          ],
+          '#a49e92',
+        )
+        solids.push(solidOf([
+          [ax - rx * side * 0.1, ay - ry * side * 0.1],
+          [bx - rx * side * 0.1, by - ry * side * 0.1],
+          [bx + rx * side * 0.15, by + ry * side * 0.15],
+          [ax + rx * side * 0.15, ay + ry * side * 0.15],
+        ]))
+      }
+      if (s.kind !== 'path' && Math.floor(s.bridge.s / 14) !== Math.floor((s.bridge.s + s.len) / 14) && s.bridge.s > 4 && s.bridge.s + s.len < s.bridge.total - 4)
+        for (const o of [-s.w / 3, s.w / 3]) plain.post(mx + rx * o, my + ry * o, 0.5, 0.45, -2, Math.min(hA, hB) - 0.1, '#9a948a', 8)
     }
     // Street lamps: every 30 m or so along the big roads, sides by turns; now and then on a lane.
     if (s.kind === 'major' || s.kind === 'middle' || (s.kind === 'minor' && rand() < 0.3)) {
@@ -860,8 +1151,8 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
       const ly = my + s.ux * (off + (s.kind === 'minor' ? 1 : 0)) * side
       lamp(lx, ly, s.uy * side, -s.ux * side, rand() > 0.12)
     }
-    // Wooden poles and wires along the big roads.
-    if ((s.kind === 'major' || s.kind === 'middle') && rand() < 0.75) {
+    // Wooden poles and wires along the big roads (not on a bridge).
+    if ((s.kind === 'major' || s.kind === 'middle') && !s.bridge && rand() < 0.75) {
       const side = rand() < 0.5 ? 1 : -1
       const off = s.w / 2 + PAVEMENT[s.kind] - 0.4
       const px = mx - s.uy * off * side

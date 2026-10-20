@@ -15,7 +15,7 @@ import { CATALOGUE, defaultAppearance, type Sex } from '../../../../supabase/fun
 import { person } from '../ArrivalsScene'
 import { CHARACTER_URL } from '../character'
 import { buildVehicle, type Kind, type Moving, SIZE, SPEED, vehicleModels, VEHICLES_URL } from '../Traffic'
-import { type City, type Keep, nearestNode, route, toSeg } from './cityGen'
+import { type City, groundHeight, type Keep, nearestNode, route, toSeg } from './cityGen'
 import type { RidePhase, RideState } from './ride'
 
 const CARS = 26
@@ -157,7 +157,7 @@ export function CityTraffic({
         const e = city.edges[i]!
         const a = city.nodes[e.a]!
         const b = city.nodes[e.b]!
-        const seg = { ax: a.x, ay: a.y, bx: b.x, by: b.y, ux: (b.x - a.x) / e.len, uy: (b.y - a.y) / e.len, len: e.len, w: e.w, kind: e.kind, road: 0 }
+        const seg = { ax: a.x, ay: a.y, bx: b.x, by: b.y, ux: (b.x - a.x) / e.len, uy: (b.y - a.y) / e.len, len: e.len, w: e.w, kind: e.kind, road: 0, edge: i, t0: 0, elen: e.len, one: e.one }
         const n = toSeg(seg, p.x, p.y)
         if (!best || n.d < best.d) best = { edge: i, t: n.t, d: n.d }
       }
@@ -236,7 +236,7 @@ export function CityTraffic({
     let left = city.edges[cur.edge]!.len - r.s
     for (let i = r.leg + 1; i < r.legs.length; i++) left += city.edges[r.legs[i]!.edge]!.len
     r.left = r.phase === 'riding' ? left : 0
-    car.position.set(r.pos.x, 0.08, -r.pos.y)
+    car.position.set(r.pos.x, 0.08 + groundHeight(city, r.pos.x, r.pos.y), -r.pos.y)
     car.rotation.y = r.pos.yaw
     const [len, wide] = SIZE[r.kind]
     boxes.push({ x: r.pos.x, y: r.pos.y, yaw: r.pos.yaw, hl: len / 2, hw: wide / 2 })
@@ -322,7 +322,7 @@ export function CityTraffic({
       let turn = at.yaw - car.yaw
       turn = Math.atan2(Math.sin(turn), Math.cos(turn))
       car.yaw += turn * Math.min(1, dt * 6)
-      car.root.position.set(at.x, 0.08, -at.y)
+      car.root.position.set(at.x, 0.08 + groundHeight(city, at.x, at.y), -at.y)
       car.root.rotation.y = car.yaw
       boxes.push({ x: at.x, y: at.y, yaw: car.yaw, hl: len / 2, hw: wide / 2 })
     }
@@ -409,7 +409,7 @@ export function CityWalkers({ city, keep, player }: { city: City; keep: Keep[]; 
       let turn = want - w.yaw
       turn = Math.atan2(Math.sin(turn), Math.cos(turn))
       w.yaw += turn * Math.min(1, dt * 6)
-      w.root.position.set(at.x, 0.06, -at.y)
+      w.root.position.set(at.x, 0.06 + groundHeight(city, at.x, at.y), -at.y)
       w.root.rotation.y = w.yaw
       // Only the near ones are moved frame by frame (the far ones are small).
       if (Math.hypot(at.x - p.x, at.y - p.y) < 80) w.mixer.update(dt)
