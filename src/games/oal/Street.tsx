@@ -17,6 +17,7 @@ import type { Appearance } from '../../../supabase/functions/_shared/oal'
 import type { Stick } from './ArrivalsScene'
 import { PhoneSection } from './Home'
 import { type TravelState, useGameNow } from './Journey'
+import { Loading } from './Loading'
 import { newRide, type Destination, type RideKind, type RidePhase, type RideState } from './city/ride'
 import type { OtherPlayer, Place, TownId } from './StreetScene'
 import { MoneyChanger, Work } from './Work'
@@ -187,6 +188,11 @@ export function StreetView({
   const company = useStreetCompany(city ? (`city-${city.town.toLowerCase()}` as TownId) : town, name, appearance)
   const [streetName, setStreetName] = useState<string | null>(null)
   const placeName = (p: string) => {
+    // A business of the town: its name, and what it is.
+    if (p.startsWith('biz:')) {
+      const [, cat, ...name] = p.split(':')
+      return `${name.join(':')} · ${t(`oal.city.cats.${cat}`, { defaultValue: '' })}`
+    }
     if (COMPOUND_NAME[p]) return t(COMPOUND_NAME[p]!)
     const [hub, own] = p.includes(':') ? p.split(':') : [town, p]
     return t(`oal.street.towns.${hub}.places.${own}`)
@@ -207,6 +213,7 @@ export function StreetView({
   const queryClient = useQueryClient()
   const kind = ride.current.kind
   const gameNow = useGameNow()
+  const [ready, setReady] = useState(!city)
   const goTo = async (d: Destination) => {
     setPaying(true)
     try {
@@ -279,6 +286,7 @@ export function StreetView({
               onRoadside={setRoadside}
               onDestinations={setDestinations}
               clock={gameNow}
+              onDrawn={() => setReady(true)}
               onPosition={(x, y, facing, moving) => {
                 view.current?.setAttribute('data-x', x.toFixed(2))
                 view.current?.setAttribute('data-y', y.toFixed(2))
@@ -311,6 +319,7 @@ export function StreetView({
           )}
         </Suspense>
       </div>
+      {!ready && <Loading what={t('oal.loading.town', { town: city?.town ?? '' })} />}
       {hud}
       <div className="pointer-events-none absolute inset-x-0 top-44 flex justify-center px-3">
         <p className="glass rounded-full border border-line px-4 py-2 text-sm font-semibold" data-testid="oal-street-chip">
@@ -407,7 +416,7 @@ export function StreetView({
           </Button>
         </div>
       )}
-      {place && !open && phase === 'none' && (
+      {place && !place.startsWith('biz:') && !open && phase === 'none' && (
         <div className="absolute bottom-6 right-6">
           <Button className="min-h-14 px-6 text-lg" onClick={() => (onEnter?.(place) ? undefined : setOpen(true))} data-testid="oal-place-open">
             {COMPOUNDS.includes(place) ? t(`oal.city.enter.${place}`) : t(`oal.street.open.${place.split(':').pop()}`)}

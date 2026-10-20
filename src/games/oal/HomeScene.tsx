@@ -256,13 +256,16 @@ type Props = {
   staffAct?: { index: number; seq: number } | null
   /** A compound's gate, opened by its guards. */
   gateOpen?: boolean
+  /** The place is drawn (its files fetched, the character in it). */
+  onReady?: () => void
   /** Seated on this seat (by its place in the plan's seats), or standing; the seat the character
    * is by (to sit on). */
   seat?: number | null
   onSeat?: (index: number | null) => void
 }
 
-function Body({ kind, appearance, asleep, stick, view, onPlace, shelf, carrying, onDisplay, gesture, hold, laid, staffSeq, staffAct, gateOpen, seat, onSeat }: Props) {
+function Body(props: Props) {
+  const { kind, appearance, asleep, stick, view, onPlace, shelf, carrying, onDisplay, gesture, hold, laid, staffSeq, staffAct, gateOpen, seat, onSeat } = props
   const plan = PLANS[kind]
   const gltf = useLoader(GLTFLoader, CHARACTER_URL(appearance.sex), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const { camera } = useThree()
@@ -433,6 +436,11 @@ function Body({ kind, appearance, asleep, stick, view, onPlace, shelf, carrying,
     }
   }, [])
   const wasAsleep = useRef(asleep)
+  // Here (the Suspense above has its files): drawn from the next frame.
+  useEffect(() => {
+    const id = requestAnimationFrame(() => props.onReady?.())
+    return () => cancelAnimationFrame(id)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const target = useMemo(() => new Vector3(), [])
   const want = useMemo(() => new Vector3(), [])
   const ray = useMemo(() => new Raycaster(), [])

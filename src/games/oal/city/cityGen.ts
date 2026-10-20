@@ -402,8 +402,12 @@ export function solidOf(pts: number[][]): Solid {
 export type Tile = { b: number[][]; l: (string | number)[][]; p: (string | number)[][]; n: string[] }
 /** What a building is (the tile's first number). */
 export const BUILDING_KINDS = ['house', 'block', 'shop', 'church', 'mosque', 'school', 'clinic', 'office', 'hotel', 'industrial', 'shed', 'other'] as const
-/** A named place in a tile: what kind of place, its name, where (town metres). */
-export type TilePlace = { cat: string; name: string; x: number; y: number }
+/** A named place in a tile: what kind of place, its name, where (town metres); its door (on
+ * the building's front, toward the road) and the way one faces it there. */
+export type TilePlace = { cat: string; name: string; x: number; y: number; door?: [number, number]; face?: [number, number]; everyday?: boolean }
+/** A place's sign board on its building's front: what it says and is, where, which way it faces
+ * (map radians), its width and height. */
+export type Sign = { text: string; cat: string; x: number; y: number; z: number; yaw: number; w: number; h: number }
 
 /** The traffic lights' lamps, by which way they face (A: the first road's line, B: across it)
  * and colour: each lit in turn by the town's one cycle (signalState). */
@@ -434,6 +438,7 @@ export function signalState(seconds: number): { A: 'r' | 'y' | 'g'; B: 'r' | 'y'
 }
 
 export type ChunkParts = {
+  signs: Sign[]
   /** The traffic lights' lamps (one mesh each way and colour) and the junctions they keep. */
   signalLamps: Partial<Record<SignalLamp, BufferGeometry | null>>
   signals: Signal[]
@@ -534,6 +539,9 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
   const signals: Signal[] = []
   const lamps: number[][] = []
   const places: TilePlace[] = []
+  const signs: Sign[] = []
+  // Each real building drawn: its footprint, height, whether a shopfront (for its sign).
+  const drawn = new Map<number, { pts: number[][]; h: number; shop: boolean }>()
   /** A street lamp at the kerb, its arm over the road (toward rx, ry): a galvanised steel post on
    * its concrete base, the arm, the lamp head and its glass; most work (a few are broken, as in
    * town), each throwing its pool of light at night. */
@@ -715,10 +723,48 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
         if (kind !== 'industrial' && r() < 0.55) plain.post(box.x + (r() - 0.5) * box.w * 0.5, box.y + (r() - 0.5) * box.d * 0.5, 0.75, 0.75, h, h + 1.5, '#1c1c20', 8)
       }
       solids.push(solidOf(pts))
+      drawn.set(i, { pts, h, shop: mesh === shops })
       take(box.x, box.y, Math.min(box.w, box.d) / 2)
       for (const [x, y] of pts) take(x!, y!, 0.5)
     })
-    for (const p of tile.p) places.push({ cat: p[0] as string, name: tile.n[p[1] as number] ?? '', x: x0 + (p[2] as number) / 10, y: y0 + (p[3] as number) / 10 })
+    // The places: each on its building's front (the wall facing the nearest road), its sign
+    // board over the shopfront or the door, its door below.
+    // Boards already on each building (a second place in it: its board lower; more: none).
+    const boards = new Map<number, number>()
+    for (const p of tile.p) {
+      const place: TilePlace = { cat: p[0] as string, name: tile.n[p[1] as number] ?? '', x: x0 + (p[2] as number) / 10, y: y0 + (p[3] as number) / 10, everyday: p[5] === 1 }
+      const b = drawn.get(p[4] as number)
+      if (b && place.name) {
+        const road = nearestRoad(city, place.x, place.y, 60)
+        let best: { score: number; mx: number; my: number; nx: number; ny: number; len: number } | null = null
+        for (let k = 0; k < b.pts.length; k++) {
+          const [ax, ay] = b.pts[k]!
+          const [bx, by] = b.pts[(k + 1) % b.pts.length]!
+          const len = Math.hypot(bx! - ax!, by! - ay!)
+          if (len < 2.2) continue
+          const nx = (by! - ay!) / len
+          const ny = -(bx! - ax!) / len
+          const mx = (ax! + bx!) / 2
+          const my = (ay! + by!) / 2
+          const tx = road ? road.px - mx : nx
+          const ty = road ? road.py - my : ny
+          const tl = Math.hypot(tx, ty) || 1
+          const score = (nx * tx + ny * ty) / tl + Math.min(len, 8) * 0.03
+          if (!best || score > best.score) best = { score, mx, my, nx, ny, len }
+        }
+        const already = boards.get(p[4] as number) ?? 0
+        boards.set(p[4] as number, already + 1)
+        if (best && already < 2) {
+          const w = Math.min(best.len * 0.88, 7.5) * (already ? 0.7 : 1)
+          const hgt = Math.max(0.55, Math.min(1.0, w * 0.15))
+          const z = (b.shop ? 2.75 : Math.min(b.h - 0.45, 3.0)) - already * (hgt + 0.15)
+          signs.push({ text: place.name, cat: place.cat, x: best.mx + best.nx * 0.07, y: best.my + best.ny * 0.07, z, yaw: Math.atan2(best.ny, best.nx), w, h: hgt })
+          place.door = [best.mx + best.nx * 1.4, best.my + best.ny * 1.4]
+          place.face = [-best.nx, -best.ny]
+        }
+      }
+      places.push(place)
+    }
   }
 
   // Traffic lights where big roads meet (three big roads' arms or more): for each
@@ -926,6 +972,7 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
       }
     }
   return {
+    signs,
     signalLamps: Object.fromEntries(SIGNAL_LAMPS.map((k) => [k, signalMesh[k].geometry()])) as Partial<Record<SignalLamp, BufferGeometry | null>>,
     signals,
     glow: glow.geometry(),

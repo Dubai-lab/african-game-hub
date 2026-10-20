@@ -15,6 +15,7 @@ import {
   BoxGeometry,
   BufferAttribute,
   type BufferGeometry,
+  BufferGeometry as BufferGeometryClass,
   CanvasTexture,
   Color,
   DoubleSide,
@@ -41,7 +42,7 @@ import { TOWNS } from '../StreetScene'
 import { keepOutOf, type Moving, Traffic } from '../Traffic'
 import { CityTraffic, CityWalkers } from './CityTraffic'
 import { type Destination, newRide, PASSENGER, type RidePhase, type RideState } from './ride'
-import { SIGNAL_LAMPS, type Signal, type SignalLamp, signalState } from './cityGen'
+import { type Sign, SIGNAL_LAMPS, type Signal, type SignalLamp, signalState, type TilePlace } from './cityGen'
 import { buildChunk, buildCity, CHUNK, type City, type ChunkParts, type Keep, nearestRoad, segsNear, type Solid, type Tile, toSeg, type TownMapData, waterGeometry } from './cityGen'
 
 const WALK_SPEED = 1.45
@@ -248,11 +249,136 @@ type Materials = ReturnType<typeof useMaterials>
 
 // ---- The town, chunk by chunk ----------------------------------------------------------------
 
-type Built = { group: Group; parts: ChunkParts }
+type Built = { group: Group; parts: ChunkParts; dispose?: () => void }
 
 /** The chunks round the player, built as they come near and let go behind. */
 /** The working street lamps of the chunks built (town metres and height), by chunk. */
 const lampsByChunk = new Map<string, number[][]>()
+/** The places of the chunks built (their doors, by chunk), and the signs' materials (lit at night). */
+const placesByChunk = new Map<string, TilePlace[]>()
+const signMaterials = new Set<MeshStandardMaterial>()
+
+/** How each kind of place's sign board looks: its ground, its letters, a mark. */
+const SIGN_STYLE: Record<string, { bg: string; fg: string; mark?: string }> = {
+  health: { bg: '#ffffff', fg: '#c8281e', mark: '+' },
+  pharmacy: { bg: '#2f8a4a', fg: '#ffffff', mark: '+' },
+  school: { bg: '#1f4fa8', fg: '#ffffff' },
+  church: { bg: '#f4f0e6', fg: '#3a2a6a', mark: '✝' },
+  mosque: { bg: '#1f6a3a', fg: '#ffffff', mark: '☪' },
+  government: { bg: '#1f5a3a', fg: '#f4efe2' },
+  embassy: { bg: '#1a2440', fg: '#ffffff' },
+  hotel: { bg: '#1a2440', fg: '#e2b62a' },
+  food: { bg: '#c8281e', fg: '#ffe08a' },
+  fun: { bg: '#141414', fg: '#ff4fa0' },
+  video: { bg: '#141414', fg: '#4fd0ff' },
+  fuel: { bg: '#e2b62a', fg: '#c8281e' },
+  bank: { bg: '#13306a', fg: '#ffffff' },
+  momo: { bg: '#f2c200', fg: '#1a2440' },
+  market: { bg: '#e86a1c', fg: '#ffffff' },
+  salon: { bg: '#8a2a8a', fg: '#ffffff' },
+  barber: { bg: '#1f4fa8', fg: '#ffffff' },
+  materials: { bg: '#f2c200', fg: '#141414' },
+  phones: { bg: '#ff7900', fg: '#ffffff' },
+  provisions: { bg: '#2f8a4a', fg: '#ffffff' },
+  tailor: { bg: '#6a3a8a', fg: '#ffffff' },
+  boutique: { bg: '#e8b8c8', fg: '#5a1a3a' },
+  parts: { bg: '#3a3a3a', fg: '#f2c200' },
+}
+
+/** A chunk's sign boards: their faces drawn on one picture (256 x 64 each), one mesh. */
+function signMesh(signs: Sign[]): { mesh: Mesh; dispose: () => void } | null {
+  if (signs.length === 0) return null
+  const rows = Math.ceil(signs.length / 2)
+  let height = 64
+  while (height < rows * 64) height *= 2
+  const canvas = document.createElement('canvas')
+  canvas.width = 512
+  canvas.height = height
+  const g = canvas.getContext('2d')!
+  const pos: number[] = []
+  const uv: number[] = []
+  signs.forEach((sg, i) => {
+    const cx = (i % 2) * 256
+    const cy = Math.floor(i / 2) * 64
+    const style = SIGN_STYLE[sg.cat] ?? { bg: '#f4efe2', fg: '#1a1a1a' }
+    g.fillStyle = style.bg
+    g.fillRect(cx, cy, 256, 64)
+    g.strokeStyle = 'rgba(0,0,0,0.35)'
+    g.lineWidth = 4
+    g.strokeRect(cx + 2, cy + 2, 252, 60)
+    g.fillStyle = style.fg
+    g.textAlign = 'center'
+    g.textBaseline = 'middle'
+    const text = (style.mark ? `${style.mark} ` : '') + sg.text.toUpperCase()
+    // As big as fits; a long name on two lines.
+    let size = 30
+    g.font = `bold ${size}px sans-serif`
+    while (g.measureText(text).width > 236 && size > 17) {
+      size -= 1
+      g.font = `bold ${size}px sans-serif`
+    }
+    if (g.measureText(text).width <= 236) g.fillText(text, cx + 128, cy + 33)
+    else {
+      const words = text.split(' ')
+      const half = Math.ceil(words.length / 2)
+      size = 22
+      g.font = `bold ${size}px sans-serif`
+      for (const [k, line] of [words.slice(0, half).join(' '), words.slice(half).join(' ')].entries()) {
+        while (g.measureText(line).width > 240 && size > 12) {
+          size -= 1
+          g.font = `bold ${size}px sans-serif`
+        }
+        g.fillText(line, cx + 128, cy + 20 + k * 24)
+      }
+    }
+    // The board: across the wall (its right toward the reader's right), facing out.
+    const nx = Math.cos(sg.yaw)
+    const ny = Math.sin(sg.yaw)
+    const tx = -ny
+    const ty = nx
+    const c = (u: number, v: number) => [sg.x + tx * u, sg.z + v, -(sg.y + ty * u)]
+    const a = c(-sg.w / 2, -sg.h / 2)
+    const b = c(sg.w / 2, -sg.h / 2)
+    const d = c(sg.w / 2, sg.h / 2)
+    const e = c(-sg.w / 2, sg.h / 2)
+    const u0 = cx / 512
+    const u1 = (cx + 256) / 512
+    const v0 = 1 - (cy + 64) / height
+    const v1 = 1 - cy / height
+    for (const [p, q] of [
+      [a, [u0, v0]],
+      [b, [u1, v0]],
+      [d, [u1, v1]],
+      [a, [u0, v0]],
+      [d, [u1, v1]],
+      [e, [u0, v1]],
+    ] as [number[], number[]][]) {
+      pos.push(p[0]!, p[1]!, p[2]!)
+      uv.push(q[0]!, q[1]!)
+    }
+  })
+  const tex = new CanvasTexture(canvas)
+  tex.colorSpace = SRGBColorSpace
+  tex.anisotropy = 4
+  const geo = new BufferGeometryClass()
+  geo.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3))
+  geo.setAttribute('uv', new BufferAttribute(new Float32Array(uv), 2))
+  geo.computeVertexNormals()
+  const mat = new MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: new Color('#ffffff'), emissiveIntensity: 0, roughness: 0.7, side: DoubleSide })
+  signMaterials.add(mat)
+  const mesh = new Mesh(geo, mat)
+  mesh.matrixAutoUpdate = false
+  return {
+    mesh,
+    dispose: () => {
+      signMaterials.delete(mat)
+      geo.dispose()
+      mat.dispose()
+      tex.dispose()
+    },
+  }
+}
+
 /** The signalled junctions of the chunks built, by chunk (for the traffic to obey). */
 export const signalsByChunk = new Map<string, Signal[]>()
 
@@ -291,7 +417,10 @@ function Chunks({ city, keep, player, solids, town }: { city: City; keep: Keep[]
   useEffect(() => {
     const map = built.current
     return () => {
-      for (const b of map.values()) disposeParts(b.parts)
+      for (const b of map.values()) {
+        disposeParts(b.parts)
+        b.dispose?.()
+      }
       map.clear()
     }
   }, [])
@@ -382,9 +511,12 @@ function Chunks({ city, keep, player, solids, town }: { city: City; keep: Keep[]
       signalsByChunk.set(`${cx},${cy}`, parts.signals)
       add(parts.pools, 'pools')
       lampsByChunk.set(`${cx},${cy}`, parts.lamps)
+      placesByChunk.set(`${cx},${cy}`, parts.places)
+      const board = signMesh(parts.signs)
+      if (board) g.add(board.mesh)
       group.add(g)
       const k = `${cx},${cy}`
-      built.current.set(k, { group: g, parts })
+      built.current.set(k, { group: g, parts, dispose: board?.dispose })
       solids.current?.set(k, parts.solids)
     }
     // Let go of what is far behind.
@@ -393,6 +525,8 @@ function Chunks({ city, keep, player, solids, town }: { city: City; keep: Keep[]
       if (Math.abs(cx - pcx) > AROUND + 1 || Math.abs(cy - pcy) > AROUND + 1) {
         group.remove(b.group)
         disposeParts(b.parts)
+        b.dispose?.()
+        placesByChunk.delete(k)
         lampsByChunk.delete(k)
         signalsByChunk.delete(k)
         built.current.delete(k)
@@ -531,6 +665,7 @@ function DayNight({ clock, player }: { clock?: () => Date; player: RefObject<{ x
       mats.shops.emissiveIntensity = night * 0.8
       mats.glow.color.set(night > 0.4 ? '#ffe2a8' : '#b8b8b0')
       mats.pools.opacity = night * 0.32
+      for (const m of signMaterials) m.emissiveIntensity = night * 0.55
       mats.pools.visible = night > 0.05
     }
     // The nearest working lamps really light the street.
@@ -697,6 +832,8 @@ type Props = {
   onDestinations?: (list: Destination[]) => void
   /** The game's time (its day and night). */
   clock?: () => Date
+  /** The town is drawn round the player (the first streets built, the character there). */
+  onDrawn?: () => void
 }
 
 function Walker({ props, city, start, compounds, hubs, places, solids, player }: { props: Props; city: City; start: { x: number; y: number; f: number }; compounds: Compound[]; hubs: Hub[]; places: CityPlace[]; solids: RefObject<Map<string, Solid[]>>; player: RefObject<{ x: number; y: number }> }) {
@@ -705,6 +842,7 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
   const first = useRef(true)
   const roadside = useRef<boolean | undefined>(undefined)
   const seated = useRef(false)
+  const told = useRef(false)
   const gltf = useLoader(GLTFLoader, CHARACTER_URL(appearance.sex), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const { camera } = useThree()
   const keys = useRef(new Set<string>())
@@ -762,6 +900,11 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
   useFrame((_, raw) => {
     const dt = Math.min(raw, 0.25)
     const s = state.current
+    // Ready once the street under the player is built.
+    if (!told.current && solids.current?.has(`${Math.floor(s.x / CHUNK)},${Math.floor(s.y / CHUNK)}`)) {
+      told.current = true
+      props.onDrawn?.()
+    }
     const r = props.ride?.current
     // In the vehicle: seated in the back, the town going by; the camera behind the vehicle.
     if (r && (r.phase === 'riding' || r.phase === 'arrived')) {
@@ -869,6 +1012,11 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
     }
     let near: string | null = null
     for (const p of places) if (Math.hypot(s.x - p.x, s.y - p.y) < NEAR) near = p.name
+    // A business's door (the town's places: "biz:" its category and name).
+    if (!near) {
+      const ck = `${Math.floor(s.x / CHUNK)},${Math.floor(s.y / CHUNK)}`
+      for (const p of placesByChunk.get(ck) ?? []) if (p.door && Math.hypot(s.x - p.door[0], s.y - p.door[1]) < 2.2) near = `biz:${p.cat}:${p.name}`
+    }
     if (near !== s.place) {
       s.place = near
       onPlace(near)

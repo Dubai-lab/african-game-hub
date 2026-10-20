@@ -3003,7 +3003,41 @@
         },
         "faster": "Aller plus vite",
         "out": "Descendre"
+      },
+      "cats": {
+        "health": "Clinique / hôpital",
+        "pharmacy": "Pharmacie",
+        "school": "École",
+        "church": "Église",
+        "mosque": "Mosquée",
+        "government": "Administration",
+        "embassy": "Ambassade",
+        "hotel": "Hôtel",
+        "food": "Restauration",
+        "fun": "Bar / boîte",
+        "video": "Vidéo club",
+        "fuel": "Station-service",
+        "bank": "Banque",
+        "momo": "Mobile money",
+        "market": "Marché",
+        "salon": "Salon de beauté",
+        "barber": "Coiffeur",
+        "materials": "Matériaux de construction",
+        "phones": "Téléphones",
+        "provisions": "Épicerie",
+        "tailor": "Tailleur",
+        "boutique": "Vêtements",
+        "parts": "Pièces détachées",
+        "shop": "Boutique",
+        "office": "Bureau",
+        "transport": "Gare routière",
+        "sport": "Terrain de sport"
       }
+    },
+    "loading": {
+      "inside": "On entre…",
+      "town": "Chargement de {{town}}…",
+      "slow": "Avec les données mobiles, la première fois peut prendre un moment."
     }
   }
 }

@@ -220,6 +220,57 @@ def tile_of(x, y):
     return (math.floor(x / TILE), math.floor(y / TILE))
 
 
+def point_in(poly, x, y):
+    hit = False
+    j = len(poly) - 1
+    for i in range(len(poly)):
+        xi, yi = poly[i]
+        xj, yj = poly[j]
+        if (yi > y) != (yj > y) and x < (xj - xi) * (y - yi) / (yj - yi) + xi:
+            hit = not hit
+        j = i
+    return hit
+
+
+# The everyday places of a Monrovia street that the map does not have: what they are (and how
+# often), and names as Monrovia names them.
+EVERYDAY = [('provisions', 20), ('food', 13), ('salon', 9), ('barber', 8), ('phones', 7), ('tailor', 5), ('pharmacy', 5), ('materials', 6), ('fun', 6), ('boutique', 6),
+            ('momo', 6), ('parts', 4), ('church', 2), ('video', 3)]
+OWNERS = ['Ma Kebbeh', 'Mama Fatu', 'Ma Hawa', 'Musu', 'Old Lady Dolo', 'J.B.', 'Sumo', 'Flomo', 'Kollie', 'Varney', 'Massaquoi', 'Togba', 'Kpoto', 'Gbessay', 'Tarnue', 'Kamara',
+          'Sirleaf', 'Weah', 'Boakai', 'Doe', 'Johnson', 'Tubman', 'Kromah', 'Sheriff', 'Konneh', 'Zubah', 'Yeaney', 'Garteh', 'Saye', 'Morris', 'Pewee', 'Barclay', 'Cooper']
+BLESSINGS = ["God's Grace", 'Blessed', 'Jehovah Jireh', 'Peace & Love', 'God Is Able', 'No Condition Is Permanent', 'Jah Guide', 'Faith', 'Divine', 'Mercy', 'Hope', 'Unity',
+             'Victory', 'New Generation', 'Golden', 'Royal', 'Liberty', 'Lone Star', 'Glory', 'Hallelujah', 'Prince of Peace', 'El-Shaddai', 'Abundant Life', 'Shalom', 'Grace & Mercy',
+             'Trust God', 'Patience', 'Sweet Mother', 'Pepper Bush', 'Lofa', 'Nimba', 'Bassa', 'Kru Town', 'Sinkor', 'Congo Town', 'Old Road', 'Paynesville', 'Red Light']
+KIND_WORDS = {
+    'provisions': ['Provision Shop', 'General Store', 'Supermarket', 'Mini Mart', 'Enterprise', 'Variety Store'],
+    'food': ['Cookshop', 'Restaurant', 'Fast Food', 'Kitchen', 'Chop Bar', 'Food Center'],
+    'salon': ['Beauty Salon', 'Hair Salon', 'Beauty Palace', 'Braiding Center', 'Hair & Nails'],
+    'barber': ['Barbing Saloon', 'Barber Shop', 'Cuts & Shave', 'Barbing Palace'],
+    'phones': ['Phone & Accessories', 'Phone Repair', 'Phones & Scratch Cards', 'Mobile World', 'Electronics'],
+    'tailor': ['Tailoring', 'Fashion Design', 'Tailoring Shop', 'Lappa & Fashion'],
+    'pharmacy': ['Pharmacy', 'Medicine Store', 'Drug Store'],
+    'materials': ['Building Materials', 'Hardware', 'Hardware & Building Materials', 'Zinc & Cement Store', 'Paint & Hardware'],
+    'fun': ['Entertainment Center', 'Bar & Lounge', 'Night Club', 'Video Club', 'Sports Bar', 'Spot'],
+    'boutique': ['Boutique', 'Fashion House', 'Clothing Store', 'Shoe Palace'],
+    'momo': ['Mobile Money', 'Money Transfer', 'MoMo & Orange Money', 'Exchange Bureau'],
+    'parts': ['Spare Parts', 'Auto Parts', 'Tyre Shop', 'Motor Parts'],
+    'church': ['Ministries', 'Gospel Church', 'Pentecostal Church', 'Fellowship'],
+    'video': ['Video Club', 'Cinema Hall', 'Football Viewing Center'],
+}
+
+
+def everyday_name(rnd, cat):
+    words = KIND_WORDS[cat]
+    form = rnd.random()
+    if cat in ('food',) and form < 0.6:
+        return f'{rnd.choice(OWNERS[:5] + OWNERS)} {rnd.choice(words)}'
+    if form < 0.45:
+        return f'{rnd.choice(BLESSINGS)} {rnd.choice(words)}'
+    if form < 0.8:
+        return f'{rnd.choice(OWNERS)} {rnd.choice(words)}'
+    return f'{rnd.choice(OWNERS)} & Sons {rnd.choice(words)}'
+
+
 def main(pbf):
     r = Reader()
     r.apply_file(pbf, locations=True)
@@ -234,7 +285,30 @@ def main(pbf):
         tile['n'].append(name)
         return len(tile['n']) - 1
 
+    # The main roads (for the businesses along them): their segments by 50 m cell.
+    main = defaultdict(list)
+    for cls, ids, _name, _one, _w, _b in r.roads:
+        if cls not in ('major', 'middle'):
+            continue
+        pts = [r.loc[n] for n in ids if n in r.loc]
+        for (ax, ay), (bx, by) in zip(pts, pts[1:]):
+            for gx in range(math.floor(min(ax, bx) / 50) - 1, math.floor(max(ax, bx) / 50) + 2):
+                for gy in range(math.floor(min(ay, by) / 50) - 1, math.floor(max(ay, by) / 50) + 2):
+                    main[(gx, gy)].append((ax, ay, bx, by))
+
+    def to_main(x, y):
+        best = 1e9
+        for ax, ay, bx, by in main.get((math.floor(x / 50), math.floor(y / 50)), []):
+            dx, dy = bx - ax, by - ay
+            ln = dx * dx + dy * dy or 1
+            t = max(0, min(1, ((x - ax) * dx + (y - ay) * dy) / ln))
+            best = min(best, math.hypot(x - ax - dx * t, y - ay - dy * t))
+        return best
+
+    import random
     building_at = {}
+    rings = defaultdict(list)   # per tile: (index, ring) for finding which building a place is in
+    everyday = []               # (category, name, x, y, tile, building index)
     for kind, storeys, name, coords, _ in r.buildings:
         ring = coords[:-1] if len(coords) > 1 and coords[0] == coords[-1] else coords
         if len(ring) < 3:
@@ -249,7 +323,16 @@ def main(pbf):
         ox, oy = k[0] * TILE, k[1] * TILE
         flat = [v for p in ring for v in (round((p[0] - ox) * 10), round((p[1] - oy) * 10))]
         t['b'].append([KINDS.index(kind), storeys, name_in(t, name)] + flat)
-        building_at[(k, round(cx), round(cy))] = len(t['b']) - 1
+        index = len(t['b']) - 1
+        building_at[(k, round(cx), round(cy))] = index
+        rings[k].append((index, ring))
+        # A business on the main road (the map's shops, and many of the houses there open on it).
+        area = abs(sum(ring[i - 1][0] * ring[i][1] - ring[i][0] * ring[i - 1][1] for i in range(len(ring)))) / 2
+        if kind in ('shop', 'house', 'block') and 25 < area < 500 and not name and to_main(cx, cy) < 22:
+            rnd = random.Random(round(cx * 7919 + cy * 104729))
+            if kind == 'shop' or rnd.random() < 0.55:
+                cat = rnd.choices([c for c, _ in EVERYDAY], [w for _, w in EVERYDAY])[0]
+                everyday.append((cat, everyday_name(rnd, cat), cx, cy, k, index))
     for kind, coords in r.land:
         cx = sum(p[0] for p in coords) / len(coords)
         cy = sum(p[1] for p in coords) / len(coords)
@@ -259,6 +342,7 @@ def main(pbf):
         tiles[k]['l'].append([kind] + [v for p in ring for v in (round((p[0] - ox) * 10), round((p[1] - oy) * 10))])
     every = []
     seen = set()
+    taken = set()
     for cat, name, x, y in r.places:
         key = (name, round(x / 20), round(y / 20))
         if key in seen:
@@ -266,8 +350,26 @@ def main(pbf):
         seen.add(key)
         k = tile_of(x, y)
         ox, oy = k[0] * TILE, k[1] * TILE
-        tiles[k]['p'].append([cat, name_in(tiles[k], name), round((x - ox) * 10), round((y - oy) * 10), building_at.get((k, round(x), round(y)), -1)])
+        # The building it is in (or the one whose middle it is).
+        b = building_at.get((k, round(x), round(y)), -1)
+        if b < 0:
+            for index, ring in rings[k]:
+                if point_in(ring, x, y):
+                    b = index
+                    break
+        if b >= 0:
+            taken.add((k, b))
+        tiles[k]['p'].append([cat, name_in(tiles[k], name), round((x - ox) * 10), round((y - oy) * 10), b])
         every.append([cat, name, round(x, 1), round(y, 1)])
+    made = 0
+    for cat, name, x, y, k, b in everyday:
+        if (k, b) in taken:
+            continue
+        ox, oy = k[0] * TILE, k[1] * TILE
+        tiles[k]['p'].append([cat, name_in(tiles[k], name), round((x - ox) * 10), round((y - oy) * 10), b, 1])
+        every.append([cat, name, round(x, 1), round(y, 1), 1])
+        made += 1
+    print('everyday places', made)
     os.makedirs(os.path.join(OUT, 't'), exist_ok=True)
     total = 0
     for (cx, cy), t in tiles.items():

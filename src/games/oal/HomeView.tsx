@@ -17,6 +17,7 @@ import { toast } from '@/core/ui/toast'
 import { PhoneCard, RoomSection, ShopCounter, useHome, useHomeStep } from './Home'
 import { useGameNow } from './Journey'
 import type { Gesture, Hold, HomeKind, HomePlace, Laid, ShownPhone } from './HomeScene'
+import { Loading } from './Loading'
 import { type BirthForm, MinistryOfHealth, NetworkDesk, type Ticket } from './Offices'
 import type { TravelState } from './Journey'
 
@@ -141,6 +142,7 @@ export function HomeView({ kind, travel, appearance, homeTown, homeCountry, hud,
   const [staffAct, setStaffAct] = useState<{ index: number; seq: number } | null>(null)
   // Sitting: the seat the character is by, the seat it sits on.
   const [bySeat, setBySeat] = useState<number | null>(null)
+  const [ready, setReady] = useState(false)
   const [seated, setSeated] = useState<number | null>(null)
   const leave = () => {
     // Not out of the shop with a phone not paid for: it goes back on its stand.
@@ -170,8 +172,9 @@ export function HomeView({ kind, travel, appearance, homeTown, homeCountry, hud,
       onPointerCancel={() => (drag.current = null)}
     >
       <Suspense fallback={<Skeleton className="h-full rounded-none" />}>
-        <HomeScene kind={kind} appearance={appearance} asleep={asleep} stick={stick} view={view} onPlace={setPlace} shelf={shelf} carrying={carrying} onDisplay={setDisplay} gesture={gesture} hold={hold} laid={laid} staffSeq={staffSeq} staffAct={staffAct} gateOpen={admitted} seat={seated} onSeat={setBySeat} />
+        <HomeScene kind={kind} appearance={appearance} asleep={asleep} stick={stick} view={view} onPlace={setPlace} shelf={shelf} carrying={carrying} onDisplay={setDisplay} gesture={gesture} hold={hold} laid={laid} staffSeq={staffSeq} staffAct={staffAct} gateOpen={admitted} seat={seated} onSeat={setBySeat} onReady={() => setReady(true)} />
       </Suspense>
+      {!ready && <Loading what={t('oal.loading.inside')} />}
       {hud}
       {flash && <div className="pointer-events-none absolute inset-0 z-20 bg-white/80" aria-hidden />}
       {asleep ? (
