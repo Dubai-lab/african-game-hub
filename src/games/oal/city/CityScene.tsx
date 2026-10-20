@@ -5,7 +5,7 @@
 // family's compound and the Ministry of Health where they are, each with its gate. The ground,
 // the haze and the sky go on to the horizon. Loaded only here.
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
-import { type RefObject, Suspense, useEffect, useMemo, useRef } from 'react'
+import { type RefObject, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import {
   BackSide,
   BoxGeometry,
@@ -35,6 +35,7 @@ import { type TownMap, useTownMap } from '../MapView'
 import { TOWNS } from '../StreetScene'
 import { keepOutOf, type Moving, Traffic } from '../Traffic'
 import { CityTraffic, CityWalkers } from './CityTraffic'
+import { type Destination, newRide, PASSENGER, type RidePhase, type RideState } from './ride'
 import { buildChunk, buildCity, CHUNK, type City, type ChunkParts, type Keep, nearestRoad, segsNear, type Solid, toSeg, type TownMapData, waterGeometry } from './cityGen'
 
 const WALK_SPEED = 1.45
@@ -344,8 +345,18 @@ function Light() {
 /** A street built by hand, set into the town at its place (its own metres plus where it is). */
 type Hub = { town: keyof typeof TOWNS; x: number; y: number }
 
-function HubStreet({ hub, player, moving, local }: { hub: Hub; player: RefObject<{ x: number; y: number }>; moving: RefObject<Moving[]>; local: RefObject<{ x: number; y: number }> }) {
+/** Each hub's vehicles (in its own metres), for walking against. */
+const hubTraffic = new Map<string, { current: Moving[] }>()
+
+function HubStreet({ hub, player }: { hub: Hub; player: RefObject<{ x: number; y: number }> }) {
   const where = TOWNS[hub.town]
+  const local = useRef({ x: 0, y: 0 })
+  const moving = useMemo(() => {
+    const m = { current: [] as Moving[] }
+    hubTraffic.set(hub.town, m)
+    return m
+  }, [hub.town])
+  useEffect(() => () => void hubTraffic.delete(hub.town), [hub.town])
   const gltf = useLoader(GLTFLoader, where.url, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const scene = useMemo(() => gltf.scene.clone(true), [gltf])
   useFrame(() => {
@@ -360,7 +371,7 @@ function HubStreet({ hub, player, moving, local }: { hub: Hub; player: RefObject
       <primitive object={scene} />
       {where.plan.lanes && where.plan.lanes.length > 0 && (
         <Suspense fallback={null}>
-          <Traffic lanes={where.plan.lanes} reach={where.plan.reach + 30} player={local} moving={moving as { current: Moving[] }} spacing={35} />
+          <Traffic lanes={where.plan.lanes} reach={where.plan.reach + 30} player={local} moving={moving} spacing={35} />
         </Suspense>
       )}
     </group>
@@ -369,6 +380,31 @@ function HubStreet({ hub, player, moving, local }: { hub: Hub; player: RefObject
 
 /** A compound the game places: its wall round, its gate to the road, what stands inside. */
 export type Compound = { name: string; x: number; y: number; yaw: number; w: number; d: number; building: { w: number; d: number; h: number; colour: string; roof: 'hip' | 'flat' }; wall: string }
+
+/** The hubs within reach of the player (loaded as they come near: each is a download). */
+function NearHubs({ hubs, player }: { hubs: Hub[]; player: RefObject<{ x: number; y: number }> }) {
+  const [near, setNear] = useState<string[]>([])
+  const last = useRef(0)
+  useFrame(({ clock }) => {
+    if (clock.elapsedTime - last.current < 1) return
+    last.current = clock.elapsedTime
+    const p = player.current
+    if (!p) return
+    const now = hubs.filter((h) => Math.hypot(p.x - h.x, p.y - h.y) < TOWNS[h.town].plan.reach + 500).map((h) => h.town)
+    if (now.join() !== near.join()) setNear(now)
+  })
+  return (
+    <>
+      {hubs
+        .filter((h) => near.includes(h.town))
+        .map((h) => (
+          <Suspense key={h.town} fallback={null}>
+            <HubStreet hub={h} player={player} />
+          </Suspense>
+        ))}
+    </>
+  )
+}
 
 // ---- The player -------------------------------------------------------------------------------
 
@@ -423,12 +459,21 @@ type Props = {
   onReady?: (places: CityPlace[]) => void
   /** The street the player is on (its name on the map), as it changes. */
   onStreet?: (name: string | null) => void
+  /** A ride waved down (shared with the page, which asks for it and pays). */
+  ride?: RefObject<RideState>
+  onRide?: (phase: RidePhase) => void
+  /** Whether the player stands by a road a taxi or kekeh can stop on. */
+  onRoadside?: (by: boolean) => void
+  /** Where a ride can take one in this town (once the town is ready). */
+  onDestinations?: (list: Destination[]) => void
 }
 
 function Walker({ props, city, start, compounds, hubs, places, solids, player }: { props: Props; city: City; start: { x: number; y: number; f: number }; compounds: Compound[]; hubs: Hub[]; places: CityPlace[]; solids: RefObject<Map<string, Solid[]>>; player: RefObject<{ x: number; y: number }> }) {
   const { appearance, stick, look, pitch, paused, onPlace, onPosition, onStreet } = props
   const street = useRef<string | null | undefined>(undefined)
   const first = useRef(true)
+  const roadside = useRef<boolean | undefined>(undefined)
+  const seated = useRef(false)
   const gltf = useLoader(GLTFLoader, CHARACTER_URL(appearance.sex), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const { camera } = useThree()
   const keys = useRef(new Set<string>())
@@ -463,7 +508,7 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
       const ly = s.y - h.y
       if (Math.hypot(lx, ly) > where.plan.reach + 10) continue
       const local = { x: lx, y: ly }
-      keepOutOf(local, hubMoving.current, RADIUS)
+      keepOutOf(local, hubTraffic.get(h.town)?.current ?? [], RADIUS)
       for (const poly of where.polys) {
         if (local.x < poly.minX || local.x > poly.maxX || local.y < poly.minY || local.y > poly.maxY) continue
         pushOut(local, poly.points)
@@ -486,6 +531,52 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
   useFrame((_, raw) => {
     const dt = Math.min(raw, 0.25)
     const s = state.current
+    const r = props.ride?.current
+    // In the vehicle: seated in the back, the town going by; the camera behind the vehicle.
+    if (r && (r.phase === 'riding' || r.phase === 'arrived')) {
+      const [sx, sy, sz] = PASSENGER[r.kind]
+      const c = Math.cos(r.pos.yaw)
+      const sn = Math.sin(r.pos.yaw)
+      // Ahead (c, sn) and to the right (sn, -c) on the map.
+      const px = r.pos.x + c * sx + sn * sz
+      const py = r.pos.y + sn * sx - c * sz
+      if (!seated.current) {
+        seated.current = true
+        me.actions.walk && (me.actions.walk.weight = 0)
+        me.actions.idle && (me.actions.idle.weight = 0)
+        me.actions.wave?.stop()
+        me.actions.sit?.reset().play()
+      }
+      me.root.position.set(px, 0.08 + sy, -py)
+      me.root.rotation.y = r.pos.yaw + Math.PI / 2
+      me.mixer.update(dt)
+      s.x = r.pos.x
+      s.y = r.pos.y
+      if (player.current) {
+        player.current.x = s.x
+        player.current.y = s.y
+      }
+      target.set(r.pos.x, 1.3, -r.pos.y)
+      eye.set(r.pos.x - c * 7.5, 3.4, -(r.pos.y - sn * 7.5))
+      camera.position.lerp(eye, Math.min(1, dt * 3))
+      camera.lookAt(target)
+      return
+    }
+    if (seated.current) {
+      // Out on the kerb, standing again.
+      seated.current = false
+      me.actions.sit?.stop()
+      if (r?.exit) {
+        s.x = r.exit.x
+        s.y = r.exit.y
+        s.facing = r.exit.f
+        r.exit = null
+      }
+    }
+    // Waving down the ride as it comes.
+    const waving = r?.phase === 'coming' && me.actions.wave
+    if (waving && !me.actions.wave!.isRunning()) me.actions.wave!.reset().play()
+    if (!waving && me.actions.wave?.isRunning()) me.actions.wave.stop()
     const k = keys.current
     let x = stick.current?.x ?? 0
     let y = stick.current?.y ?? 0
@@ -522,8 +613,9 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
       player.current.y = s.y
     }
     if (me.actions.walk && me.actions.idle) {
-      me.actions.walk.weight = s.speed
-      me.actions.idle.weight = 1 - s.speed
+      const w = waving ? 0 : 1
+      me.actions.walk.weight = s.speed * w
+      me.actions.idle.weight = (1 - s.speed) * w
       me.actions.walk.timeScale = 0.6 + s.speed * 0.5
     }
     me.mixer.update(dt)
@@ -532,6 +624,13 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
       s.told = 0
       onPosition?.(s.x, s.y, s.facing, s.speed > 0.2)
       const name = namedRoad(city, s.x, s.y)
+      // By a road a vehicle can pull in on (within a few metres of its edge).
+      const road = nearestRoad(city, s.x, s.y, 30)
+      const by = Boolean(road && road.d < road.seg.w / 2 + 6)
+      if (by !== roadside.current) {
+        roadside.current = by
+        props.onRoadside?.(by)
+      }
       if (name !== street.current) {
         street.current = name
         onStreet?.(name)
@@ -608,8 +707,6 @@ function namedRoad(city: City, x: number, y: number): string | null {
   return best?.name ?? null
 }
 
-/** The vehicles on the streets built by hand, to walk against (their own metres). */
-const hubMoving: { current: Moving[] } = { current: [] }
 /** The town's own traffic (town metres). */
 const cityMoving: { current: Moving[] } = { current: [] }
 
@@ -677,8 +774,12 @@ function CompoundModel({ c }: { c: Compound }) {
 /** The streets built by hand in each town, where they are on its map. */
 function hubsOf(town: string, map: TownMap): Hub[] {
   if (town !== 'Monrovia') return []
-  const s = map.places.sinkor
-  return s ? [{ town: 'sinkor', x: s.x, y: s.y }] : []
+  const out: Hub[] = []
+  for (const t of ['sinkor', 'waterside'] as const) {
+    const at = map.places[t]
+    if (at) out.push({ town: t, x: at.x, y: at.y })
+  }
+  return out
 }
 
 /** The game's own compounds in each town, at their places on its map: the family's house, the
@@ -705,7 +806,23 @@ export default function CityScene(props: Props) {
   // The places: the hubs' own (in town metres), the compounds' gates.
   const places = useMemo<CityPlace[]>(() => {
     const out: CityPlace[] = []
-    for (const h of hubs) for (const [name, at] of Object.entries(TOWNS[h.town].places)) out.push({ name, x: at!.x + h.x, y: at!.y + h.y, face: at!.face })
+    // A hub's own places (Sinkor's by their names; any other hub's as "hub:place").
+    for (const h of hubs) for (const [name, at] of Object.entries(TOWNS[h.town].places)) out.push({ name: h.town === 'sinkor' ? name : `${h.town}:${name}`, x: at!.x + h.x, y: at!.y + h.y, face: at!.face })
+    // The places the game has no building for yet (the job board, the embassies, the motor park):
+    // by the road nearest them.
+    for (const name of ['jobs', 'visa', 'station']) {
+      const at = map.data?.places[name]
+      if (!at || !city) continue
+      const road = nearestRoad(city, at.x, at.y, 200)
+      if (!road) continue
+      let nx = at.x - road.px
+      let ny = at.y - road.py
+      const n = Math.hypot(nx, ny) || 1
+      nx /= n
+      ny /= n
+      const off = road.seg.w / 2 + 2.5
+      out.push({ name, x: road.px + nx * off, y: road.py + ny * off, face: [nx, ny] })
+    }
     for (const c of compounds) {
       const cs = Math.cos(c.yaw)
       const sn = Math.sin(c.yaw)
@@ -715,8 +832,26 @@ export default function CityScene(props: Props) {
       out.push({ name: c.name, x: c.x + cs * u - sn * v, y: c.y + sn * u + cs * v, face: [-sn, cs] })
     }
     return out
-  }, [hubs, compounds])
+  }, [hubs, compounds, map.data, city])
   useEffect(() => props.onReady?.(places), [places]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Where a ride can take one: the family's gate, the hubs where they are entered, the Ministry,
+  // the job board, the embassies, the motor park.
+  useEffect(() => {
+    if (!city) return
+    const list: Destination[] = []
+    const of = (name: string) => places.find((p) => p.name === name)
+    for (const name of ['home', 'sinkor', 'health', 'waterside', 'jobs', 'visa', 'station']) {
+      const hub = hubs.find((h) => h.town === name)
+      if (hub) {
+        const sp = TOWNS[hub.town].plan.spawn
+        list.push({ name, x: sp.x + hub.x, y: sp.y + hub.y })
+      } else {
+        const p = of(name)
+        if (p) list.push({ name, x: p.x, y: p.y })
+      }
+    }
+    props.onDestinations?.(list)
+  }, [places, hubs, city]) // eslint-disable-line react-hooks/exhaustive-deps
   // Where to start: the point given; out of a place's door (a step toward the street, facing it);
   // where a hub street is entered.
   const start = useMemo(() => {
@@ -736,7 +871,8 @@ export default function CityScene(props: Props) {
   const player = useRef({ x: 0, y: 0 })
   if (start && player.current.x === 0 && player.current.y === 0) player.current = { x: start.x, y: start.y }
   const solids = useRef(new Map<string, Solid[]>())
-  const local = useRef({ x: 0, y: 0 })
+  const ownRide = useRef<RideState>(newRide())
+  const ride = props.ride ?? ownRide
   return (
     <Canvas dpr={[1, 1.5]} camera={{ fov: 60, near: 0.1, far: 700, position: [0, 2.4, 3] }} gl={{ antialias: true }} style={{ touchAction: 'none' }}>
       <color attach="background" args={['#c9d9e6']} />
@@ -754,10 +890,8 @@ export default function CityScene(props: Props) {
             <CompoundModel key={c.name} c={c} />
           ))}
           <Suspense fallback={null}>
-            {hubs.map((h) => (
-              <HubStreet key={h.town} hub={h} player={player} moving={hubMoving} local={local} />
-            ))}
-            <CityTraffic city={city} keep={keep} player={player} moving={cityMoving} />
+            <NearHubs hubs={hubs} player={player} />
+            <CityTraffic city={city} keep={keep} player={player} moving={cityMoving} ride={ride} onRide={(p) => props.onRide?.(p)} />
             <CityWalkers city={city} keep={keep} player={player} />
             {start && <Walker props={props} city={city} start={start} compounds={compounds} hubs={hubs} places={places} solids={solids} player={player} />}
           </Suspense>

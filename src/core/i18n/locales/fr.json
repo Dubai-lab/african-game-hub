@@ -2976,7 +2976,33 @@
       },
       "enter": {
         "home": "Entrer par le portail",
-        "health": "Aller au portail"
+        "health": "Aller au portail",
+        "jobs": "Entrer",
+        "visa": "Entrer",
+        "station": "Entrer"
+      },
+      "ride": {
+        "hail": {
+          "taxi": "Héler un taxi",
+          "kekeh": "Héler un kekeh"
+        },
+        "coming": {
+          "taxi": "Un taxi se gare…",
+          "kekeh": "Un kekeh se gare…"
+        },
+        "never": "Laisser tomber",
+        "driver": {
+          "taxi": "« Tu vas où ? » demande le chauffeur de taxi.",
+          "kekeh": "« Tu vas où ? » demande le chauffeur du kekeh."
+        },
+        "fare": "La course coûte {{fare}}, payée au chauffeur.",
+        "paid": "Vous avez payé {{fare}} au chauffeur.",
+        "riding": {
+          "taxi": "En taxi vers {{place}} · {{km}} km",
+          "kekeh": "En kekeh vers {{place}} · {{km}} km"
+        },
+        "faster": "Aller plus vite",
+        "out": "Descendre"
       }
     }
   }

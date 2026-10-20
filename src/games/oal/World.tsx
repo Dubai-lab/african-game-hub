@@ -242,6 +242,7 @@ export function World({ life }: { life: Life }) {
           onEnter={(p) => {
             // In through a gate or a door.
             if (p === ('home' as Place)) arrive({ area: 'home' })
+            else if (['jobs', 'visa', 'station'].includes(p)) arrive({ area: p as Area, place: p as Other })
             else if (p === ('health' as Place)) arrive({ area: 'health', place: 'health' })
             else if (!(p in INSIDE)) return false
             else arrive({ area: 'sinkor', place: p })

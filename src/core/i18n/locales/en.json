@@ -2976,7 +2976,33 @@
       },
       "enter": {
         "home": "Go in at the gate",
-        "health": "Go to the gate"
+        "health": "Go to the gate",
+        "jobs": "Go in",
+        "visa": "Go in",
+        "station": "Go in"
+      },
+      "ride": {
+        "hail": {
+          "taxi": "Wave down a taxi",
+          "kekeh": "Wave down a kekeh"
+        },
+        "coming": {
+          "taxi": "A taxi is pulling in…",
+          "kekeh": "A kekeh is pulling in…"
+        },
+        "never": "Never mind",
+        "driver": {
+          "taxi": "“Where you going?” the taxi driver asks.",
+          "kekeh": "“Where you going?” the kekeh driver asks."
+        },
+        "fare": "The fare is {{fare}}, paid to the driver.",
+        "paid": "You paid the driver {{fare}}.",
+        "riding": {
+          "taxi": "By taxi to {{place}} · {{km}} km",
+          "kekeh": "By kekeh to {{place}} · {{km}} km"
+        },
+        "faster": "Ride faster",
+        "out": "Get out"
       }
     }
   }

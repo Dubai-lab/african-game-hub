@@ -309,6 +309,8 @@ CLIPS = {
     # up again (forward again): the seated pose between is 'sit'.
     'sitDown': 'Stand To Sit.fbx',
     'standUp': 'Sit To Stand.fbx',
+    # Waving down a taxi or a kekeh at the roadside.
+    'wave': 'Waving.fbx',
 }
 for clip, file in CLIPS.items():
     path = os.path.join(ANIMATIONS, file)

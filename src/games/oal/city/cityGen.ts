@@ -37,6 +37,8 @@ export type City = {
   wet: Poly[]
   /** The road network as a graph: its nodes (where roads meet or bend) and edges. */
   nodes: { x: number; y: number; edges: number[] }[]
+  /** A node by its 4 m cell (where roads' points meet). */
+  nodeAt?: Map<string, number>
   /** One way: driven from a to b only. */
   edges: { a: number; b: number; len: number; kind: RoadKind; w: number; one: boolean }[]
 }
@@ -148,6 +150,7 @@ export function buildCity(map: TownMapData): City {
     wet: (map.wetland ?? []).map(poly),
     nodes,
     edges,
+    nodeAt,
   }
 }
 
@@ -627,4 +630,71 @@ export function waterGeometry(city: City, which: 'sea' | 'water' | 'wet'): Buffe
   g.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3))
   g.computeVertexNormals()
   return g
+}
+
+// ---- Finding the way ---------------------------------------------------------------------------
+
+/** One step of a route: an edge, driven from one of its nodes to the other. */
+export type Leg = { edge: number; from: number; to: number }
+
+/** The nearest node to a point among the roads a vehicle may use (within r). */
+export function nearestNode(city: City, x: number, y: number, ok: (e: City['edges'][number]) => boolean, r = 400): number | null {
+  let best: number | null = null
+  let bestD = Infinity
+  for (const id of segsNear(city, x, y, r)) {
+    const s = city.segs[id]!
+    for (const [px, py] of [
+      [s.ax, s.ay],
+      [s.bx, s.by],
+    ] as const) {
+      const d = Math.hypot(px - x, py - y)
+      if (d >= bestD) continue
+      const k = `${Math.round(px / 4)},${Math.round(py / 4)}`
+      const n = city.nodeAt?.get(k)
+      if (n === undefined || !city.nodes[n]!.edges.some((e) => ok(city.edges[e]!))) continue
+      best = n
+      bestD = d
+    }
+  }
+  return best
+}
+
+/** The shortest way by road from one node to another (A*, one-way roads the right way). */
+export function route(city: City, from: number, to: number, ok: (e: City['edges'][number]) => boolean): Leg[] | null {
+  const goal = city.nodes[to]!
+  const g = new Map<number, number>([[from, 0]])
+  const came = new Map<number, Leg>()
+  const open: [number, number][] = [[Math.hypot(city.nodes[from]!.x - goal.x, city.nodes[from]!.y - goal.y), from]]
+  const done = new Set<number>()
+  while (open.length) {
+    // The open list is small enough to keep sorted by hand.
+    let bi = 0
+    for (let i = 1; i < open.length; i++) if (open[i]![0] < open[bi]![0]) bi = i
+    const [, n] = open.splice(bi, 1)[0]!
+    if (n === to) break
+    if (done.has(n)) continue
+    done.add(n)
+    if (done.size > 20000) return null
+    for (const ei of city.nodes[n]!.edges) {
+      const e = city.edges[ei]!
+      if (!ok(e)) continue
+      if (e.one && e.a !== n) continue
+      const m = e.a === n ? e.b : e.a
+      const cost = g.get(n)! + e.len * (e.kind === 'minor' ? 1.4 : 1)
+      if (cost < (g.get(m) ?? Infinity)) {
+        g.set(m, cost)
+        came.set(m, { edge: ei, from: n, to: m })
+        const nm = city.nodes[m]!
+        open.push([cost + Math.hypot(nm.x - goal.x, nm.y - goal.y), m])
+      }
+    }
+  }
+  if (!came.has(to) && from !== to) return null
+  const legs: Leg[] = []
+  for (let n = to; n !== from; ) {
+    const leg = came.get(n)!
+    legs.unshift(leg)
+    n = leg.from
+  }
+  return legs
 }

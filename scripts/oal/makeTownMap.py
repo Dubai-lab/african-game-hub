@@ -107,6 +107,23 @@ def build(name, cfg):
     flat = lambda line: [c for p in line for c in r(p)]
 
     roads = {'major': [], 'middle': [], 'minor': [], 'path': []}
+    # Where roads meet (a node in two of them or more): kept through simplifying, so the game's
+    # road network stays joined at its junctions.
+    uses = {}
+    for w in ways.values():
+        if w.get('tags', {}).get('highway') in MAJOR | MIDDLE | MINOR | PATH:
+            for n in set(w.get('nodes', [])):
+                uses[n] = uses.get(n, 0) + 1
+
+    def keep_junctions(w, tol):
+        ids = [n for n in w.get('nodes', []) if n in nodes]
+        pts = [nodes[n] for n in ids]
+        cuts = [0] + [i for i in range(1, len(ids) - 1) if uses.get(ids[i], 0) > 1] + [len(ids) - 1]
+        out = []
+        for a, b in zip(cuts, cuts[1:]):
+            piece = simplify(pts[a:b + 1], tol)
+            out += piece if not out else piece[1:]
+        return out
     water, wetland, rivers, coast, airfields = [], [], [], [], []
     for w in ways.values():
         tags = w.get('tags', {})
@@ -118,7 +135,7 @@ def build(name, cfg):
             cls = 'major' if hw in MAJOR else 'middle' if hw in MIDDLE else 'minor' if hw in MINOR else 'path'
             if cls in ('minor', 'path') and sum(math.dist(a, b) for a, b in zip(pts, pts[1:])) < 15:
                 continue
-            line = simplify(pts, 2.5 if cls in ('major', 'middle') else 4.0)
+            line = keep_junctions(w, 2.5 if cls in ('major', 'middle') else 4.0)
             # One way (a dual carriageway is two of them): its traffic goes the way it is drawn.
             one = tags.get('oneway') in ('yes', '1', 'true') or hw in ('motorway', 'motorway_link')
             if tags.get('oneway') == '-1':

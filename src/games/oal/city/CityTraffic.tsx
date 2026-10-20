@@ -15,7 +15,8 @@ import { CATALOGUE, defaultAppearance, type Sex } from '../../../../supabase/fun
 import { person } from '../ArrivalsScene'
 import { CHARACTER_URL } from '../character'
 import { buildVehicle, type Kind, type Moving, SIZE, SPEED, vehicleModels, VEHICLES_URL } from '../Traffic'
-import type { City, Keep } from './cityGen'
+import { type City, type Keep, nearestNode, route, toSeg } from './cityGen'
+import type { RidePhase, RideState } from './ride'
 
 const CARS = 26
 const WALKERS = 16
@@ -94,11 +95,26 @@ function onward(city: City, usable: boolean[], g: Going, rand: () => number, all
 
 type Car = { kind: Kind; root: Object3D; going: Going | null; v: number; want: number; yaw: number }
 
-export function CityTraffic({ city, keep, player, moving }: { city: City; keep: Keep[]; player: RefObject<{ x: number; y: number }>; moving: RefObject<Moving[]> }) {
+export function CityTraffic({
+  city,
+  keep,
+  player,
+  moving,
+  ride,
+  onRide,
+}: {
+  city: City
+  keep: Keep[]
+  player: RefObject<{ x: number; y: number }>
+  moving: RefObject<Moving[]>
+  /** A ride the player has hailed (one vehicle of its own, a taxi or a kekeh, driven for them). */
+  ride: RefObject<RideState>
+  onRide: (phase: RidePhase) => void
+}) {
   const gltf = useLoader(GLTFLoader, VEHICLES_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const people = useLoader(GLTFLoader, CHARACTER_URL('male'), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const index = useMemo(() => edgeIndex(city, keep), [city, keep])
-  const { cars, rand } = useMemo(() => {
+  const { cars, rand, hire } = useMemo(() => {
     let seed = 99
     const rand = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646
     const models = vehicleModels(gltf.scene)
@@ -111,15 +127,127 @@ export function CityTraffic({ city, keep, player, moving }: { city: City; keep: 
       root.visible = false
       cars.push({ kind, root, going: null, v: 0, want: SPEED[kind] * (0.8 + rand() * 0.35), yaw: 0 })
     }
-    return { cars, rand }
+    // The vehicles that come when waved down: a taxi and a kekeh, kept apart from the rest.
+    const hire = { taxi: buildVehicle(models, people, 'taxi', rand)!, kekeh: buildVehicle(models, people, 'kekeh', rand)! }
+    hire.taxi.visible = false
+    hire.kekeh.visible = false
+    return { cars, rand, hire }
   }, [gltf, people])
   const allowed = (kind: Kind) => (e: Edge) => (kind === 'bus' ? e.kind !== 'minor' : true)
+
+  const drives = (e: Edge) => e.w > 0
+  const say = (r: RideState, phase: RidePhase) => {
+    r.phase = phase
+    onRide(phase)
+  }
+  /** The hired vehicle: waved down, coming, waiting, driving the player, pulled in. */
+  const hired = (dt: number, p: { x: number; y: number }, boxes: Moving[]) => {
+    const r = ride.current
+    if (!r) return
+    const req = r.request
+    r.request = null
+    const car = hire[r.kind]
+    if (req?.type === 'hail' && r.phase === 'none') {
+      r.kind = req.kind
+      // The road nearest the player: a vehicle comes along it (on the player's side, unless the
+      // road is one-way), from a way back.
+      let best: { edge: number; t: number; d: number } | null = null
+      for (const i of edgesNear(index, p.x, p.y, 60)) {
+        const e = city.edges[i]!
+        const a = city.nodes[e.a]!
+        const b = city.nodes[e.b]!
+        const seg = { ax: a.x, ay: a.y, bx: b.x, by: b.y, ux: (b.x - a.x) / e.len, uy: (b.y - a.y) / e.len, len: e.len, w: e.w, kind: e.kind, road: 0 }
+        const n = toSeg(seg, p.x, p.y)
+        if (!best || n.d < best.d) best = { edge: i, t: n.t, d: n.d }
+      }
+      if (!best) return
+      const e = city.edges[best.edge]!
+      const a = city.nodes[e.a]!
+      const b = city.nodes[e.b]!
+      const right = ((p.x - a.x) * (b.y - a.y) - (p.y - a.y) * (b.x - a.x)) / e.len
+      const forward = e.one || right > 0
+      const at = forward ? best.t : e.len - best.t
+      r.legs = [{ edge: best.edge, from: forward ? e.a : e.b, to: forward ? e.b : e.a }]
+      r.leg = 0
+      r.s = Math.max(0, at - 90)
+      r.stop = at
+      r.v = 8
+      r.to = null
+      r.exit = null
+      hire[r.kind].visible = true
+      say(r, 'coming')
+    }
+    if (req?.type === 'cancel' && (r.phase === 'coming' || r.phase === 'waiting')) {
+      car.visible = false
+      say(r, 'none')
+      return
+    }
+    if (req?.type === 'go' && r.phase === 'waiting') {
+      // The shortest way there by road, from where the vehicle stands.
+      const here = r.legs[r.leg]!
+      const target = nearestNode(city, req.to.x, req.to.y, drives)
+      const way = target === null ? null : route(city, here.to, target, drives)
+      if (!way) return
+      r.legs = [here, ...way]
+      r.leg = 0
+      r.stop = Infinity
+      r.to = req.to
+      say(r, 'riding')
+    }
+    if (req?.type === 'out' && r.phase === 'arrived') {
+      say(r, 'none')
+      // It drives off (gone, a little later).
+      setTimeout(() => (car.visible = false), 1500)
+      return
+    }
+    if (r.phase === 'none') return
+    const leg = r.legs[r.leg]
+    if (!leg) return
+    const e = city.edges[leg.edge]!
+    const end = r.leg === r.legs.length - 1 ? Math.min(r.stop, e.len) : Infinity
+    if (r.phase === 'coming' || r.phase === 'riding') {
+      const top = (e.kind === 'minor' ? 7 : 11) * (r.fast && r.phase === 'riding' ? 3 : 1)
+      const toEnd = end === Infinity ? Infinity : end - r.s
+      const want = Math.min(top, toEnd === Infinity ? top : Math.max(0, toEnd * 1.1))
+      r.v += Math.max(-7 * dt, Math.min(3 * dt * (r.fast ? 3 : 1), want - r.v))
+      r.v = Math.max(0, r.v)
+      r.s += r.v * dt
+      if (r.s >= e.len && r.leg < r.legs.length - 1) {
+        r.s -= e.len
+        r.leg++
+      } else if (toEnd < 0.4 && r.v < 0.3) {
+        r.v = 0
+        if (r.phase === 'coming') say(r, 'waiting')
+        else {
+          // Pulled in: the passenger steps out on the kerb side, facing on.
+          const at = placeOn(city, { ...leg, s: r.s }, e.w / 4)
+          r.exit = { x: at.x + at.uy * (e.w / 4 + 1.8), y: at.y - at.ux * (e.w / 4 + 1.8), f: Math.atan2(at.ux, -at.uy) }
+          say(r, 'arrived')
+        }
+      }
+    }
+    const cur = r.legs[r.leg]!
+    const at = placeOn(city, { ...cur, s: r.s }, city.edges[cur.edge]!.w / 4)
+    let turn = at.yaw - r.pos.yaw
+    turn = Math.atan2(Math.sin(turn), Math.cos(turn))
+    r.pos = { x: at.x, y: at.y, yaw: r.pos.yaw + turn * Math.min(1, dt * 6) }
+    // Metres left: the rest of this edge and the legs after it.
+    let left = city.edges[cur.edge]!.len - r.s
+    for (let i = r.leg + 1; i < r.legs.length; i++) left += city.edges[r.legs[i]!.edge]!.len
+    r.left = r.phase === 'riding' ? left : 0
+    car.position.set(r.pos.x, 0.08, -r.pos.y)
+    car.rotation.y = r.pos.yaw
+    const [len, wide] = SIZE[r.kind]
+    boxes.push({ x: r.pos.x, y: r.pos.y, yaw: r.pos.yaw, hl: len / 2, hw: wide / 2 })
+  }
 
   useFrame((_, raw) => {
     const dt = Math.min(raw, 0.1)
     const p = player.current
     if (!p) return
     const boxes: Moving[] = []
+    // While riding, the town is round the vehicle (the player is in it).
+    hired(dt, p, boxes)
     for (const car of cars) {
       // Far behind, or not yet out: put on a road round the player, out of sight.
       const here = car.going ? placeOn(city, car.going, city.edges[car.going.edge]!.w / 4) : null
@@ -204,6 +332,8 @@ export function CityTraffic({ city, keep, player, moving }: { city: City; keep: 
       {cars.map((c, i) => (
         <primitive key={i} object={c.root} />
       ))}
+      <primitive object={hire.taxi} />
+      <primitive object={hire.kekeh} />
     </>
   )
 }
