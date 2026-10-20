@@ -32,7 +32,7 @@ export type CityOpen = {
   start: { x: number; y: number; f: number } | { place: string }
 }
 /** The town's places that are not a hub street's own, and what they are called. */
-const COMPOUND_NAME: Record<string, string> = { home: 'oal.city.places.home', health: 'oal.city.places.health', jobs: 'oal.world.places.jobs', visa: 'oal.world.places.visa', station: 'oal.world.places.stationMonrovia', sinkor: 'oal.street.towns.sinkor.where', waterside: 'oal.street.towns.waterside.where' }
+const COMPOUND_NAME: Record<string, string> = { home: 'oal.city.places.home', health: 'oal.city.places.health', jobs: 'oal.world.places.jobs', visa: 'oal.world.places.visa', station: 'oal.world.places.stationMonrovia', sinkor: 'oal.street.towns.sinkor.where', waterside: 'oal.street.towns.waterside.where', skd: 'oal.street.towns.skd.where' }
 const COMPOUNDS = ['home', 'health', 'jobs', 'visa', 'station']
 /** A ride's fare in town (the server's: public.oal_road_action 'town'). */
 const FARE: Record<'LR' | 'GH', Record<RideKind, string>> = { LR: { taxi: 'L$150', kekeh: 'L$100' }, GH: { taxi: 'GH¢15', kekeh: 'GH¢10' } }

@@ -46,6 +46,7 @@ import { CityTraffic, CityWalkers } from './CityTraffic'
 import { type Destination, newRide, PASSENGER, type RidePhase, type RideState } from './ride'
 import { type Sign, SIGNAL_LAMPS, type Signal, type SignalLamp, signalState, type TilePlace } from './cityGen'
 import { groundHeight } from './cityGen'
+import { type Landmark, LANDMARKS, landmarkPoint, landmarkSolids } from './landmarks'
 import { buildChunk, buildCity, CHUNK, type City, type ChunkParts, type Keep, nearestRoad, segsNear, type Solid, type Tile, toSeg, type TownMapData, waterGeometry } from './cityGen'
 
 const WALK_SPEED = 1.45
@@ -114,6 +115,217 @@ function blobs(g: CanvasRenderingContext2D, s: number, base: string, spots: [str
         }
     }
   }
+}
+
+/** A seeded random for drawing. */
+function drawRandom(seed: number) {
+  return () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646
+}
+
+/** The facade atlas (512 px, four 256 px tiles; tile n at column n % 2, row n / 2 from the
+ * bottom, v up): each tile is a wall 4 m wide, 3.1 m high. Lit: black but the windows. */
+function facadeAtlas(g: CanvasRenderingContext2D, lit: boolean) {
+  const s = 256
+  g.fillStyle = '#000000'
+  g.fillRect(0, 0, 512, 512)
+  const tile = (n: number, draw: (window: (x: number, y: number, w: number, h: number) => void) => void) => {
+    g.save()
+    g.translate((n % 2) * s, (1 - Math.floor(n / 2)) * s)
+    g.beginPath()
+    g.rect(0, 0, s, s)
+    g.clip()
+    draw((x, y, w, h) => {
+      if (!lit) return
+      g.fillStyle = '#ffd890'
+      g.fillRect(x, y, w, h)
+    })
+    g.restore()
+  }
+  const plaster = (base: string, seed: number) => {
+    if (lit) return
+    g.fillStyle = base
+    g.fillRect(0, 0, s, s)
+    const r = drawRandom(seed)
+    for (let i = 0; i < 260; i++) {
+      g.globalAlpha = 0.08 + r() * 0.12
+      g.fillStyle = r() < 0.5 ? '#c8c4bc' : '#ffffff'
+      const w = 4 + r() * 14
+      g.fillRect(r() * s, r() * s, w, w * (0.4 + r()))
+    }
+    // Rain streaks down from the top, the red dust splashed up the foot.
+    for (let i = 0; i < 7; i++) {
+      g.globalAlpha = 0.06 + r() * 0.08
+      g.fillStyle = '#5a5248'
+      g.fillRect(r() * s, 0, 2 + r() * 5, s * (0.2 + r() * 0.5))
+    }
+    g.globalAlpha = 1
+    const grd = g.createLinearGradient(0, s, 0, s * 0.82)
+    grd.addColorStop(0, 'rgba(150,80,50,0.5)')
+    grd.addColorStop(1, 'rgba(150,80,50,0)')
+    g.fillStyle = grd
+    g.fillRect(0, s * 0.82, s, s * 0.18)
+  }
+  const rect = (colour: string, x: number, y: number, w: number, h: number) => {
+    if (lit) return
+    g.fillStyle = colour
+    g.fillRect(x, y, w, h)
+  }
+  const glass = (x: number, y: number, w: number, h: number, tone: string, curtain: string) => {
+    rect(tone, x, y, w, h)
+    rect(curtain, x + w * 0.05, y + h * 0.08, w * 0.4, h * 0.84)
+    rect('rgba(255,255,255,0.12)', x + w * 0.55, y + h * 0.08, w * 0.4, h * 0.3)
+  }
+  const line = (colour: string, width: number, pts: number[][]) => {
+    if (lit) return
+    g.strokeStyle = colour
+    g.lineWidth = width
+    g.beginPath()
+    g.moveTo(pts[0]![0]!, pts[0]![1]!)
+    for (const p of pts.slice(1)) g.lineTo(p[0]!, p[1]!)
+    g.stroke()
+  }
+
+  // 0, a house: white plaster, the maroon base and sill, a wide window behind burglar bars
+  // (squares, a diamond in each), the fascia's maroon line at the top.
+  tile(0, (window) => {
+    plaster('#f4f4f2', 3)
+    const wx = s * 0.16
+    const wy = s * 0.24
+    const ww = s * 0.68
+    const wh = s * 0.4
+    glass(wx, wy, ww, wh, '#1c2428', '#4a3a3a')
+    window(wx + 3, wy + 3, ww - 6, wh - 6)
+    for (let i = 0; i <= 6; i++) line('#3a1a16', 3, [[wx + (ww * i) / 6, wy], [wx + (ww * i) / 6, wy + wh]])
+    for (let j = 0; j <= 3; j++) line('#3a1a16', 3, [[wx, wy + (wh * j) / 3], [wx + ww, wy + (wh * j) / 3]])
+    for (let i = 0; i < 6; i++)
+      for (let j = 0; j < 3; j++) {
+        const cx = wx + (ww * (i + 0.5)) / 6
+        const cy = wy + (wh * (j + 0.5)) / 3
+        const rx = ww / 12
+        const ry = wh / 6
+        line('#3a1a16', 2, [[cx, cy - ry], [cx + rx, cy], [cx, cy + ry], [cx - rx, cy], [cx, cy - ry]])
+      }
+    rect('#7a2420', wx - 6, wy + wh, ww + 12, 9)
+    rect('rgba(0,0,0,0.25)', wx - 6, wy + wh + 9, ww + 12, 3)
+    rect('#7a2420', 0, s * 0.84, s, s * 0.16)
+    rect('rgba(0,0,0,0.2)', 0, s * 0.84, s, 3)
+    rect('#7a2420', 0, 0, s, 7)
+  })
+
+  // 1, a painted wall (compounds, rows of shops' upper floors): a darker band at the foot, a
+  // small louvre window with its green glass, a drain pipe.
+  tile(1, (window) => {
+    plaster('#f2f0e8', 5)
+    rect('rgba(60,50,40,0.35)', 0, s * 0.88, s, s * 0.12)
+    const wx = s * 0.34
+    const wy = s * 0.3
+    const ww = s * 0.36
+    const wh = s * 0.3
+    rect('#d8d8d4', wx - 5, wy - 5, ww + 10, wh + 10)
+    rect('#2a4a3a', wx, wy, ww, wh)
+    window(wx + 2, wy + 2, ww - 4, wh - 4)
+    for (let y = wy + 5; y < wy + wh; y += 7) rect('rgba(150,200,170,0.45)', wx + 2, y, ww - 4, 3)
+    line('#9a9a96', 3, [[wx + ww / 2, wy], [wx + ww / 2, wy + wh]])
+    rect('rgba(0,0,0,0.2)', wx - 5, wy + wh + 5, ww + 10, 4)
+    rect('#d0ccc4', s * 0.92, 0, 6, s)
+    rect('rgba(0,0,0,0.15)', s * 0.92 + 6, 0, 2, s)
+  })
+
+  // 2, concrete blocks not yet plastered: grey courses (40 by 20 cm), mortar, stains, a
+  // window opening with wire mesh and a wooden frame.
+  tile(2, (window) => {
+    if (!lit) {
+      g.fillStyle = '#b4b0a8'
+      g.fillRect(0, 0, s, s)
+      const r = drawRandom(13)
+      const bh = s / 15.5
+      const bw = s / 10
+      for (let row = 0; row < 16; row++)
+        for (let col = -1; col < 11; col++) {
+          const x = col * bw + (row % 2 ? bw / 2 : 0)
+          const y = row * bh
+          const v = 160 + Math.floor(r() * 40)
+          g.fillStyle = `rgb(${v},${v - 4},${v - 10})`
+          g.fillRect(x + 1.5, y + 1.5, bw - 3, bh - 3)
+          if (r() < 0.25) {
+            g.fillStyle = 'rgba(90,85,75,0.25)'
+            g.fillRect(x + r() * bw * 0.5, y + 2, bw * 0.4, bh - 4)
+          }
+        }
+      const grd = g.createLinearGradient(0, s, 0, s * 0.7)
+      grd.addColorStop(0, 'rgba(70,60,40,0.55)')
+      grd.addColorStop(1, 'rgba(70,60,40,0)')
+      g.fillStyle = grd
+      g.fillRect(0, s * 0.7, s, s * 0.3)
+    }
+    const wx = s * 0.3
+    const wy = s * 0.28
+    const ww = s * 0.4
+    const wh = s * 0.32
+    rect('#5a4430', wx - 6, wy - 6, ww + 12, wh + 12)
+    rect('#181410', wx, wy, ww, wh)
+    window(wx, wy, ww, wh)
+    for (let x = wx; x <= wx + ww; x += 5) line('rgba(120,120,110,0.6)', 1, [[x, wy], [x, wy + wh]])
+    for (let y = wy; y <= wy + wh; y += 5) line('rgba(120,120,110,0.6)', 1, [[wx, y], [wx + ww, y]])
+  })
+
+  // 3, a storey of flats or offices: the slab's band at the top, two windows in aluminium
+  // frames with green glass, a balcony rail before them, an AC box.
+  tile(3, (window) => {
+    plaster('#f4f2ea', 7)
+    rect('rgba(90,80,60,0.28)', 0, 0, s, s * 0.09)
+    rect('rgba(0,0,0,0.18)', 0, s * 0.09, s, 3)
+    for (const wx of [s * 0.08, s * 0.54]) {
+      const wy = s * 0.24
+      const ww = s * 0.38
+      const wh = s * 0.42
+      rect('#c8ccd0', wx - 4, wy - 4, ww + 8, wh + 8)
+      glass(wx, wy, ww, wh, '#2a4a44', '#6a7a70')
+      window(wx + 2, wy + 2, ww - 4, wh - 4)
+      line('#c8ccd0', 3, [[wx + ww / 2, wy], [wx + ww / 2, wy + wh]])
+    }
+    // The rail along the storey, its uprights.
+    line('#3a3a3a', 3, [[0, s * 0.62], [s, s * 0.62]])
+    for (let x = 4; x < s; x += 10) line('#3a3a3a', 1.5, [[x, s * 0.62], [x, s * 0.8]])
+    rect('#e8e4d8', 0, s * 0.8, s, s * 0.06)
+    rect('rgba(0,0,0,0.2)', 0, s * 0.86, s, 3)
+    rect('#d8d8d4', s * 0.78, s * 0.08 + 6, s * 0.16, s * 0.1)
+    rect('rgba(0,0,0,0.3)', s * 0.8, s * 0.1 + 6, s * 0.12, 2)
+  })
+}
+
+/** The walls' material reads the facade atlas: the tile (v / 100, WALL_STYLE) and, within it,
+ * where on the wall (fract), its slope kept so mipmaps don't seam. At night some windows lit. */
+function atlasWalls(m: MeshStandardMaterial) {
+  m.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+vec2 atlasUv(vec2 uv) {
+  float st = floor(uv.y / 100.0);
+  vec2 f = clamp(fract(vec2(uv.x, uv.y - st * 100.0)), 0.006, 0.994);
+  return (f + vec2(mod(st, 2.0), floor(st / 2.0))) * 0.5;
+}`,
+      )
+      .replace(
+        '#include <map_fragment>',
+        `#ifdef USE_MAP
+  vec4 sampledDiffuseColor = textureGrad(map, atlasUv(vMapUv), dFdx(vMapUv) * 0.5, dFdy(vMapUv) * 0.5);
+  diffuseColor *= sampledDiffuseColor;
+#endif`,
+      )
+      .replace(
+        '#include <emissivemap_fragment>',
+        `#ifdef USE_EMISSIVEMAP
+  vec4 emissiveColor = textureGrad(emissiveMap, atlasUv(vEmissiveMapUv), dFdx(vEmissiveMapUv) * 0.5, dFdy(vEmissiveMapUv) * 0.5);
+  vec2 cell = floor(vEmissiveMapUv);
+  totalEmissiveRadiance *= emissiveColor.rgb * step(0.45, fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453));
+#endif`,
+      )
+  }
+  m.customProgramCacheKey = () => 'oal-walls-atlas'
+  return m
 }
 
 let sharedTextures: ReturnType<typeof makeTextures> | null = null
@@ -202,34 +414,10 @@ function makeTextures() {
         g.stroke()
       }
     })
-    // A wall 4 m wide, 3 m high: plaster, a barred window, the dust splashed up its foot.
-    const facade = canvasTexture(256, (g, s) => {
-      noise(g, s, '#f2f2f2', [['#dcdcdc', 300, 6], ['#ffffff', 200, 8]])
-      const grd = g.createLinearGradient(0, s, 0, s * 0.8)
-      grd.addColorStop(0, 'rgba(150,90,60,0.55)')
-      grd.addColorStop(1, 'rgba(150,90,60,0)')
-      g.fillStyle = grd
-      g.fillRect(0, s * 0.8, s, s * 0.2)
-      const wx = s * 0.3
-      const wy = s * 0.3
-      const ww = s * 0.4
-      const wh = s * 0.32
-      g.fillStyle = '#1e2a30'
-      g.fillRect(wx, wy, ww, wh)
-      g.fillStyle = '#3a5060'
-      g.fillRect(wx + 4, wy + 4, ww / 2 - 6, wh - 8)
-      g.strokeStyle = '#141414'
-      g.lineWidth = 3
-      for (let i = 1; i < 6; i++) {
-        g.beginPath()
-        g.moveTo(wx + (ww * i) / 6, wy)
-        g.lineTo(wx + (ww * i) / 6, wy + wh)
-        g.stroke()
-      }
-      g.strokeStyle = '#9a9a96'
-      g.lineWidth = 6
-      g.strokeRect(wx - 3, wy - 3, ww + 6, wh + 6)
-    })
+    // The walls, four styles (WALL_STYLE) in one atlas, each 4 m wide and a storey high, as
+    // Monrovia's photos show them; at night, their windows lit.
+    const facade = canvasTexture(512, (g) => facadeAtlas(g, false), false)
+    const windowsLit = canvasTexture(512, (g) => facadeAtlas(g, true), false)
     // Corrugated zinc, gone to rust in streaks.
     const zinc = canvasTexture(128, (g, s) => {
       g.fillStyle = '#d8d8d8'
@@ -267,13 +455,7 @@ function makeTextures() {
       g.lineWidth = 6
       g.strokeRect(s * 0.08, s * 0.3, s * 0.84, s * 0.7)
     })
-    // At night: the windows lit (where the facade's window is), and a shop's inside.
-    const windowsLit = canvasTexture(256, (g, s) => {
-      g.fillStyle = '#000000'
-      g.fillRect(0, 0, s, s)
-      g.fillStyle = '#ffd890'
-      g.fillRect(s * 0.3 + 4, s * 0.3 + 4, s * 0.4 - 8, s * 0.32 - 8)
-    })
+    // At night: a shop's inside lit.
     const shopLit = canvasTexture(256, (g, s) => {
       g.fillStyle = '#000000'
       g.fillRect(0, 0, s, s)
@@ -298,7 +480,7 @@ function makeMaterials(tex: ReturnType<typeof useTextures>) {
       asphalt: new MeshStandardMaterial({ map: tex.asphalt, roughness: 0.85, vertexColors: true, side: DoubleSide }),
       pavement: new MeshStandardMaterial({ map: tex.pavement, roughness: 0.95, vertexColors: true, side: DoubleSide }),
       marks: new MeshStandardMaterial({ color: '#f2f0e6', roughness: 0.8, vertexColors: true, side: DoubleSide }),
-      walls: new MeshStandardMaterial({ map: tex.facade, roughness: 0.9, vertexColors: true, side: DoubleSide, emissiveMap: tex.windowsLit, emissive: new Color('#ffcf80'), emissiveIntensity: 0 }),
+      walls: atlasWalls(new MeshStandardMaterial({ map: tex.facade, roughness: 0.9, vertexColors: true, side: DoubleSide, emissiveMap: tex.windowsLit, emissive: new Color('#ffcf80'), emissiveIntensity: 0 })),
       shops: new MeshStandardMaterial({ map: tex.shopfront, roughness: 0.85, vertexColors: true, side: DoubleSide, emissiveMap: tex.shopLit, emissive: new Color('#ffd9a0'), emissiveIntensity: 0 }),
       // The lamps' glass (grey by day, lit at night) and the pools of light under them.
       glow: new MeshBasicMaterial({ color: '#b8b8b0', toneMapped: false }),
@@ -840,6 +1022,35 @@ function NearHubs({ hubs, player }: { hubs: Hub[]; player: RefObject<{ x: number
   )
 }
 
+/** The landmarks within sight (each its own file, loaded as one comes near it). */
+function NearLandmarks({ player }: { player: RefObject<{ x: number; y: number }> }) {
+  const [near, setNear] = useState<string[]>([])
+  const last = useRef(0)
+  useFrame(({ clock }) => {
+    if (clock.elapsedTime - last.current < 1) return
+    last.current = clock.elapsedTime
+    const p = player.current
+    if (!p) return
+    const now = LANDMARKS.filter((l) => Math.hypot(p.x - l.x, p.y - l.y) < 550).map((l) => l.name)
+    if (now.join() !== near.join()) setNear(now)
+  })
+  return (
+    <>
+      {LANDMARKS.filter((l) => near.includes(l.name)).map((l) => (
+        <Suspense key={l.name} fallback={null}>
+          <LandmarkModel l={l} />
+        </Suspense>
+      ))}
+    </>
+  )
+}
+
+function LandmarkModel({ l }: { l: Landmark }) {
+  const gltf = useLoader(GLTFLoader, l.url, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const [x, y] = landmarkPoint(l, 0, 0)
+  return <primitive object={gltf.scene} position={[x, 0.01, -y]} rotation={[0, l.yaw, 0]} />
+}
+
 // ---- The player -------------------------------------------------------------------------------
 
 function pushOut(p: { x: number; y: number }, poly: number[][]) {
@@ -1254,7 +1465,7 @@ function CompoundModel({ c }: { c: Compound }) {
 function hubsOf(town: string, map: TownMap): Hub[] {
   if (town !== 'Monrovia') return []
   const out: Hub[] = []
-  for (const t of ['sinkor', 'waterside'] as const) {
+  for (const t of ['sinkor', 'waterside', 'skd'] as const) {
     const at = map.places[t]
     if (at) out.push({ town: t, x: at.x, y: at.y })
   }
@@ -1279,8 +1490,12 @@ export default function CityScene(props: Props) {
   const hubs = useMemo(() => (map.data ? hubsOf(props.town, map.data) : []), [map.data, props.town])
   const compounds = useMemo(() => (map.data && city ? compoundsOf(props.town, map.data, city) : []), [map.data, city, props.town])
   const keep = useMemo<Keep[]>(
-    () => [...hubs.map((h) => ({ x: h.x, y: h.y, r: TOWNS[h.town].plan.reach + 4 })), ...compounds.map((c) => ({ x: c.x, y: c.y, r: Math.max(c.w, c.d) / 2 + 3, roads: false }))],
-    [hubs, compounds],
+    () => [
+      ...hubs.map((h) => ({ x: h.x, y: h.y, r: TOWNS[h.town].plan.reach + 4 })),
+      ...compounds.map((c) => ({ x: c.x, y: c.y, r: Math.max(c.w, c.d) / 2 + 3, roads: false })),
+      ...(props.town === 'Monrovia' ? LANDMARKS : []).map((l) => ({ x: l.x, y: l.y, r: l.clear, roads: false, solids: landmarkSolids(l) })),
+    ],
+    [hubs, compounds, props.town],
   )
   // The places: the hubs' own (in town metres), the compounds' gates.
   const places = useMemo<CityPlace[]>(() => {
@@ -1319,7 +1534,7 @@ export default function CityScene(props: Props) {
     if (!city) return
     const list: Destination[] = []
     const of = (name: string) => places.find((p) => p.name === name)
-    for (const name of ['home', 'sinkor', 'health', 'waterside', 'jobs', 'visa', 'station']) {
+    for (const name of ['home', 'sinkor', 'health', 'waterside', 'skd', 'jobs', 'visa', 'station']) {
       const hub = hubs.find((h) => h.town === name)
       if (hub) {
         const sp = TOWNS[hub.town].plan.spawn
@@ -1370,6 +1585,7 @@ export default function CityScene(props: Props) {
           ))}
           <Suspense fallback={null}>
             <NearHubs hubs={hubs} player={player} />
+            {props.town === 'Monrovia' && <NearLandmarks player={player} />}
             <CityTraffic city={city} keep={keep} player={player} moving={cityMoving} ride={ride} onRide={(p) => props.onRide?.(p)} />
             <CityWalkers city={city} keep={keep} player={player} />
             {start && <Walker props={props} city={city} start={start} compounds={compounds} hubs={hubs} places={places} solids={solids} player={player} />}

@@ -579,12 +579,17 @@ export type ChunkParts = {
 }
 
 /** A circle the chunk leaves alone (a hub built by hand, a compound placed by the game). */
-export type Keep = { x: number; y: number; r: number; roads?: boolean }
+/** Ground kept for something of its own (a hub's street, a compound, a landmark): the city builds
+ * nothing there (but roads, unless roads is false); its walls, if given, solid. */
+export type Keep = { x: number; y: number; r: number; roads?: boolean; solids?: number[][][] }
 
 const PLASTER = ['#efe6d2', '#e8d6a6', '#d9e6ea', '#f2d9c4', '#e6efd8', '#f4f0e6', '#e2c9a0', '#cfe0d0', '#f0e0a8', '#d8d0e8']
 const ZINC = ['#8a4a2c', '#7a3f26', '#9a5a3a', '#6e4a3a', '#a06040', '#8a8a86']
 const KIOSK = ['#2f6fb8', '#c8281e', '#2f8a4a', '#e2b62a', '#e86a1c', '#6a3a8a']
 const WALL = ['#d8d0c0', '#cfc6b4', '#e4ddcc', '#bdb3a0']
+const BLOCK = ['#f4f2ee', '#e8e4dc', '#ece6da']
+/** The walls' styles: the facade atlas's four tiles (CityScene), picked by v (style × 100). */
+export const WALL_STYLE = { house: 0, painted: 1, blocks: 2, storeys: 3 } as const
 const GATE = ['#1f3a5a', '#2a2a2a', '#3a5a2a', '#5a2a1c']
 
 const LAND_COLOUR: Record<string, string> = {
@@ -755,9 +760,14 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
       }
       const h = kind === 'church' || kind === 'mosque' ? Math.max(7, storeys * 3.2) : kind === 'industrial' ? 6 : kind === 'shed' ? 2.4 : storeys * 3.1
       const paints = PAINT[kind] ?? PAINT.other!
-      const tint = paints[Math.floor(r() * paints.length)]!
+      let tint = paints[Math.floor(r() * paints.length)]!
       // The walls: windows and burglar bars for homes and offices; shopfronts on the ground floor.
       const mesh = kind === 'shop' || (onMain && kind !== 'church' && kind !== 'mosque' && kind !== 'shed' && r() < 0.5) ? shops : kind === 'shed' || kind === 'industrial' ? plain : walls
+      // Which wall (WALL_STYLE): flats and offices their storeys; a house its maroon base and
+      // bars, or its painted wall and louvres, or (now and then) its blocks not yet plastered.
+      const style = kind === 'block' || kind === 'hotel' || kind === 'office' || storeys >= 3 ? WALL_STYLE.storeys : mesh === shops ? WALL_STYLE.painted : r() < 0.14 ? WALL_STYLE.blocks : r() < 0.55 ? WALL_STYLE.house : WALL_STYLE.painted
+      if (style === WALL_STYLE.blocks) tint = BLOCK[Math.floor(r() * BLOCK.length)]!
+      const sv = style * 100
       for (let k = 0; k < pts.length; k++) {
         const [ax, ay] = pts[k]!
         const [bx, by] = pts[(k + 1) % pts.length]!
@@ -798,10 +808,10 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
             0,
             -ny,
             [
-              [0, ground / 3.1],
-              [len / 4, ground / 3.1],
-              [len / 4, h / 3.1],
-              [0, h / 3.1],
+              [0, sv + ground / 3.1],
+              [len / 4, sv + ground / 3.1],
+              [len / 4, sv + h / 3.1],
+              [0, sv + h / 3.1],
             ],
             tint,
           )
@@ -1261,6 +1271,13 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
         const py = by + (rand() - 0.5) * 10
         if (free(px, py, 0.6) && clear(px, py, 0.6)) palm(plain, leaves, px, py, rand)
       }
+    }
+  // What is kept here and has walls of its own (a landmark): solid in each chunk it reaches.
+  for (const k of keep)
+    for (const poly of k.solids ?? []) {
+      const sol = solidOf(poly.map((p) => [p[0]!, p[1]!]))
+      const [a, b, c, d] = sol.bb!
+      if (c >= x0 && a < x0 + CHUNK && d >= y0 && b < y0 + CHUNK) solids.push(sol)
     }
   return {
     signs,
