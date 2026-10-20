@@ -127,7 +127,9 @@ export function StreetView({ town, travel, appearance, name, homeCountry, hud, s
   const look = useRef<number | null>(null)
   const [place, setPlace] = useState<Place | null>(null)
   const [open, setOpen] = useState(false)
-  const drag = useRef<{ x: number; look: number } | null>(null)
+  // Dragged up or down, the camera looks up at the sky or down at the ground.
+  const pitch = useRef(0)
+  const drag = useRef<{ x: number; y: number; look: number; pitch: number } | null>(null)
   const base = useRef<{ x: number; y: number } | null>(null)
   const view = useRef<HTMLDivElement>(null)
 
@@ -138,10 +140,12 @@ export function StreetView({ town, travel, appearance, name, homeCountry, hud, s
         onPointerDown={(e) => {
           if ((e.target as HTMLElement).closest('button, a, [data-stick], [data-panel], [data-hud]')) return
           e.currentTarget.setPointerCapture(e.pointerId)
-          drag.current = { x: e.clientX, look: look.current ?? 0 }
+          drag.current = { x: e.clientX, y: e.clientY, look: look.current ?? 0, pitch: pitch.current }
         }}
         onPointerMove={(e) => {
-          if (drag.current) look.current = drag.current.look - (e.clientX - drag.current.x) * 0.008
+          if (!drag.current) return
+          look.current = drag.current.look - (e.clientX - drag.current.x) * 0.008
+          pitch.current = Math.max(-0.5, Math.min(1.1, drag.current.pitch - (e.clientY - drag.current.y) * 0.006))
         }}
         onPointerUp={() => (drag.current = null)}
         onPointerCancel={() => (drag.current = null)}
@@ -153,6 +157,7 @@ export function StreetView({ town, travel, appearance, name, homeCountry, hud, s
             appearance={appearance}
             stick={stick}
             look={look}
+            pitch={pitch}
             paused={open}
             others={company.others}
             present={company.present}

@@ -55,10 +55,12 @@ type Props = {
   /** Asleep: lying on the bed, not walking. */
   asleep: boolean
   stick: RefObject<Stick>
+  /** The camera's turn round the character and its tilt (radians above the floor). */
+  view?: RefObject<{ yaw: number; pitch: number }>
   onPlace: (place: HomePlace | null) => void
 }
 
-function Body({ kind, appearance, asleep, stick, onPlace }: Props) {
+function Body({ kind, appearance, asleep, stick, view, onPlace }: Props) {
   const plan = PLANS[kind]
   const gltf = useLoader(GLTFLoader, CHARACTER_URL(appearance.sex), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const { camera } = useThree()
@@ -120,13 +122,18 @@ function Body({ kind, appearance, asleep, stick, onPlace }: Props) {
       if (k.has('arrowright') || k.has('d')) x = 1
       const amount = Math.min(1, Math.hypot(x, y))
       if (amount > 0.05) {
+        // As the camera faces: up on the stick is away from it, right is its right.
+        const yaw = view?.current?.yaw ?? 0
+        const mx = x * Math.cos(yaw) - y * Math.sin(yaw)
+        const my = x * Math.sin(yaw) + y * Math.cos(yaw)
+        const n = Math.hypot(mx, my)
         const steps = Math.ceil((amount * WALK_SPEED * dt) / 0.05)
         for (let i = 0; i < steps; i++) {
-          s.x += (x / Math.hypot(x, y)) * ((amount * WALK_SPEED * dt) / steps)
-          s.y += (y / Math.hypot(x, y)) * ((amount * WALK_SPEED * dt) / steps)
+          s.x += (mx / n) * ((amount * WALK_SPEED * dt) / steps)
+          s.y += (my / n) * ((amount * WALK_SPEED * dt) / steps)
           collide(s, plan)
         }
-        let turn = Math.atan2(x, -y) - s.facing
+        let turn = Math.atan2(mx, -my) - s.facing
         turn = Math.atan2(Math.sin(turn), Math.cos(turn))
         s.facing += turn * Math.min(1, dt * 10)
       }
@@ -151,8 +158,13 @@ function Body({ kind, appearance, asleep, stick, onPlace }: Props) {
     // From above and to the south, as a house is seen in a game.
     const fx = asleep ? plan.places.bed.x : s.x
     const fy = asleep ? plan.places.bed.y : s.y
-    target.set(fx, 0.6, -fy)
-    camera.position.lerp(new Vector3(fx, 7.5, -(fy - 4.6)), Math.min(1, dt * 4))
+    // Round the character at a turn and a tilt (from above, to the south, at first).
+    const turnBy = view?.current?.yaw ?? 0
+    const tilt = view?.current?.pitch ?? 0.95
+    const dist = 8.8
+    const flatDist = Math.cos(tilt) * dist
+    target.set(fx, 0.9, -fy)
+    camera.position.lerp(new Vector3(fx + Math.sin(turnBy) * flatDist, 0.9 + Math.sin(tilt) * dist, -(fy - Math.cos(turnBy) * flatDist)), Math.min(1, dt * 4))
     camera.lookAt(target)
   })
   return <primitive object={me.root} />

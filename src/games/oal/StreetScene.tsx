@@ -202,7 +202,7 @@ function Other({ entry }: { entry: OtherPlayer }) {
   return <primitive object={them.root} />
 }
 
-function People({ town: id, start, appearance, stick, look, paused, onPlace, onPosition }: Props) {
+function People({ town: id, start, appearance, stick, look, pitch, paused, onPlace, onPosition }: Props) {
   const where = TOWNS[id]
   const gltf = useLoader(GLTFLoader, CHARACTER_URL(appearance.sex), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const { camera } = useThree()
@@ -320,9 +320,11 @@ function People({ town: id, start, appearance, stick, look, paused, onPlace, onP
     }
 
     // The camera: behind and a little above.
-    target.set(s.x, 1.55, -s.y)
+    // Looking up (pitch above 0) lowers the camera and lifts what it looks at; down, the other way.
+    const tilt = pitch?.current ?? 0
+    target.set(s.x, 1.55 + tilt * 5, -s.y)
     const back = paused ? 2.0 : 3.6
-    eye.set(s.x - Math.sin(yaw) * back, paused ? 1.8 : 2.4, -(s.y + Math.cos(yaw) * back))
+    eye.set(s.x - Math.sin(yaw) * back, Math.max(0.5, (paused ? 1.8 : 2.4) - tilt * 1.4), -(s.y + Math.cos(yaw) * back))
     camera.position.lerp(eye, Math.min(1, dt * 5))
     camera.lookAt(target)
   })
@@ -364,6 +366,8 @@ type Props = {
   stick: RefObject<Stick>
   /** Where the camera looks, as an angle (a drag turns it); null until the scene sets it. */
   look: RefObject<number | null>
+  /** How far up (or down, below 0) the camera looks: radians, from a vertical drag. */
+  pitch?: RefObject<number>
   /** No walking while dealing at a place. */
   paused: boolean
   onPlace: (place: Place | null) => void

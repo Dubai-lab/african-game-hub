@@ -33,10 +33,30 @@ export function HomeView({ kind, travel, appearance, homeTown, homeCountry, hud,
   const [place, setPlace] = useState<HomePlace | null>(null)
   const [open, setOpen] = useState(false)
   const asleep = travel.state === 'sleeping'
+  // Dragged, the camera turns round the character (sideways) and tilts (up and down).
+  const view = useRef({ yaw: 0, pitch: 0.95 })
+  const drag = useRef<{ x: number; y: number; yaw: number; pitch: number } | null>(null)
   return (
-    <div className="fixed inset-0 z-40 bg-bg" data-testid="oal-home-view" data-kind={kind}>
+    <div
+      className="fixed inset-0 z-40 bg-bg"
+      data-testid="oal-home-view"
+      data-kind={kind}
+      onPointerDown={(e) => {
+        if ((e.target as HTMLElement).closest('button, a, select, [data-stick], [data-panel], [data-hud]')) return
+        drag.current = { x: e.clientX, y: e.clientY, ...view.current }
+      }}
+      onPointerMove={(e) => {
+        if (!drag.current) return
+        view.current = {
+          yaw: drag.current.yaw - (e.clientX - drag.current.x) * 0.008,
+          pitch: Math.max(0.25, Math.min(1.45, drag.current.pitch + (e.clientY - drag.current.y) * 0.006)),
+        }
+      }}
+      onPointerUp={() => (drag.current = null)}
+      onPointerCancel={() => (drag.current = null)}
+    >
       <Suspense fallback={<Skeleton className="h-full rounded-none" />}>
-        <HomeScene kind={kind} appearance={appearance} asleep={asleep} stick={stick} onPlace={setPlace} />
+        <HomeScene kind={kind} appearance={appearance} asleep={asleep} stick={stick} view={view} onPlace={setPlace} />
       </Suspense>
       {hud}
       {asleep ? (
