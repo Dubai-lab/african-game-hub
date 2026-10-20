@@ -16,6 +16,8 @@ import { BodyPanel, Resting } from './Body'
 import { toast } from '@/core/ui/toast'
 import { PhoneCard, RoomSection, ShopCounter, useHome, useHomeStep } from './Home'
 import { useGameNow } from './Journey'
+import { BusinessPanel } from './Business'
+import { BUSINESS_KINDS, type BusinessKind } from './city/business'
 import type { Gesture, Hold, HomeKind, HomePlace, Laid, ShownPhone } from './HomeScene'
 import { Loading } from './Loading'
 import { type BirthForm, MinistryOfHealth, NetworkDesk, type Ticket } from './Offices'
@@ -33,7 +35,28 @@ export function useHomeKind(travel: TravelState, homeTown: string, homeCountry: 
   return here ? 'room' : null
 }
 
-export function HomeView({ kind, travel, appearance, homeTown, homeCountry, hud, onDoor }: { kind: HomeKind; travel: TravelState; appearance: Appearance; homeTown: string; homeCountry: 'LR' | 'GH'; hud: ReactNode; onDoor: () => void }) {
+export function HomeView({
+  kind,
+  travel,
+  appearance,
+  homeTown,
+  homeCountry,
+  hud,
+  onDoor,
+  title: ownTitle,
+  cat,
+}: {
+  kind: HomeKind
+  travel: TravelState
+  appearance: Appearance
+  homeTown: string
+  homeCountry: 'LR' | 'GH'
+  hud: ReactNode
+  onDoor: () => void
+  /** One of the town's businesses: its own name, what it is. */
+  title?: string
+  cat?: string
+}) {
   const { t } = useTranslation()
   const stick = useRef<Stick>({ x: 0, y: 0 })
   const base = useRef<{ x: number; y: number } | null>(null)
@@ -50,8 +73,9 @@ export function HomeView({ kind, travel, appearance, homeTown, homeCountry, hud,
   const shown = display !== null ? shopHandsets[display] : undefined
   const carried = shopHandsets.find((h) => h.id === carrying) ?? null
   const network = kind === 'starline' || kind === 'citrus' ? `${travel.country === 'LR' ? 'lr' : 'gh'}_${kind}` : null
-  const title =
-    kind === 'phoneshop' || network ? t(`oal.street.towns.sinkor.places.${kind === 'phoneshop' ? 'phone' : kind}`) : kind === 'health' ? t('oal.world.places.health') : kind === 'house' ? t('oal.world.places.familyHome') : t('oal.world.places.room')
+  const business = (BUSINESS_KINDS as readonly string[]).includes(kind) ? (kind as BusinessKind) : null
+  const title = ownTitle ?? (
+    kind === 'phoneshop' || network ? t(`oal.street.towns.sinkor.places.${kind === 'phoneshop' ? 'phone' : kind}`) : kind === 'health' ? t('oal.world.places.health') : kind === 'house' ? t('oal.world.places.familyHome') : t('oal.world.places.room'))
   // What the character does: reaching for a phone on its stand, a finger on the reader, turning
   // to the camera. Taking (or putting back) a phone: it changes hands as the hand reaches it.
   const [gesture, setGesture] = useState<Gesture | null>(null)
@@ -314,6 +338,8 @@ export function HomeView({ kind, travel, appearance, homeTown, homeCountry, hud,
                 ) : (
                   <p className="border border-line bg-panel p-4 text-sm">{t('oal.office.hint')}</p>
                 )
+              ) : business ? (
+                <BusinessPanel kind={business} name={title} cat={cat} travel={travel} homeCountry={homeCountry} />
               ) : kind === 'health' ? (
                 <MinistryOfHealth
                   travel={travel}

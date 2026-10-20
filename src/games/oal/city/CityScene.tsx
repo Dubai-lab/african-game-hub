@@ -41,6 +41,7 @@ import { CHARACTER_URL } from '../character'
 import { type TownMap, useTownMap } from '../MapView'
 import { TOWNS } from '../StreetScene'
 import { keepOutOf, type Moving, Traffic } from '../Traffic'
+import { businessKey } from './business'
 import { CityTraffic, CityWalkers } from './CityTraffic'
 import { type Destination, newRide, PASSENGER, type RidePhase, type RideState } from './ride'
 import { type Sign, SIGNAL_LAMPS, type Signal, type SignalLamp, signalState, type TilePlace } from './cityGen'
@@ -1102,7 +1103,7 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
     // A business's door (the town's places: "biz:" its category and name).
     if (!near) {
       const ck = `${Math.floor(s.x / CHUNK)},${Math.floor(s.y / CHUNK)}`
-      for (const p of placesByChunk.get(ck) ?? []) if (p.door && Math.hypot(s.x - p.door[0], s.y - p.door[1]) < 2.2) near = `biz:${p.cat}:${p.name}`
+      for (const p of placesByChunk.get(ck) ?? []) if (p.door && p.face && Math.hypot(s.x - p.door[0], s.y - p.door[1]) < 2.2) near = businessKey({ cat: p.cat, name: p.name, door: p.door, face: p.face })
     }
     if (near !== s.place) {
       s.place = near

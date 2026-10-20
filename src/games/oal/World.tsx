@@ -29,6 +29,7 @@ import { PhoneDevice } from './Phone'
 import { OnTheRoad, Station } from './Road'
 import { PlacePanel, StreetView } from './Street'
 import type { Place, TownId } from './StreetScene'
+import { type Business, businessKey, businessOf, INSIDE_OF } from './city/business'
 import type { HomeKind } from './HomeScene'
 import { AtWork, JobsAbroad, VisaOffice, Work } from './Work'
 
@@ -37,9 +38,9 @@ type Balance = { currency: string; amount: number }
 
 /** Where in town the player is: a 3D street (walking, maybe come to one of its places), or one
  * of the town's places shown on a picture. */
-type Spot = { area: Area; place?: Place | Other; walking?: boolean; at?: { x: number; y: number; f: number } }
+type Spot = { area: Area; place?: Place | Other; walking?: boolean; at?: { x: number; y: number; f: number }; biz?: Business }
 type Other = 'home' | 'airport' | 'visa' | 'jobs' | 'station' | 'health'
-type Area = TownId | 'town' | 'home' | 'airport' | 'visa' | 'jobs' | 'station' | 'health' | 'city'
+type Area = TownId | 'town' | 'home' | 'airport' | 'visa' | 'jobs' | 'station' | 'health' | 'city' | 'biz'
 
 /** Each town's areas and their places (3D where a street has been built). */
 type AreaInfo = { area: Area; places: (Place | Other)[]; walk?: TownId }
@@ -66,7 +67,7 @@ function areasOf(town: string, country: 'LR' | 'GH'): AreaInfo[] {
  * (Roberts International is at Harbel, 48 km), a taxi. */
 function districtOf(town: string, area: Area): string {
   if (area === 'airport') return 'airport'
-  if (town === 'Monrovia') return ({ city: 'sinkor', home: 'sinkor', sinkor: 'sinkor', waterside: 'downtown', jobs: 'downtown', visa: 'downtown', station: 'paynesville', skd: 'paynesville', health: 'congotown' } as Record<string, string>)[area] ?? 'sinkor'
+  if (town === 'Monrovia') return ({ city: 'sinkor', biz: 'sinkor', home: 'sinkor', sinkor: 'sinkor', waterside: 'downtown', jobs: 'downtown', visa: 'downtown', station: 'paynesville', skd: 'paynesville', health: 'congotown' } as Record<string, string>)[area] ?? 'sinkor'
   return 'town'
 }
 type Ride = 'walk' | 'kekeh' | 'taxi' | 'airport'
@@ -153,7 +154,7 @@ export function World({ life }: { life: Life }) {
   // Monrovia is one town to walk (./city/CityScene.tsx): its streets, the family's compound, the
   // Ministry of Health's, the shops on Tubman Boulevard, all in it.
   const whole = here.place === 'Monrovia' && here.country === 'LR'
-  const valid = spot && (areas.some((a) => a.area === spot.area) || (whole && spot.area === 'city')) ? spot : { area: (atHomeTown ? 'home' : (areas.find((a) => a.walk)?.area ?? 'town')) as Area }
+  const valid = spot && (areas.some((a) => a.area === spot.area) || (whole && (spot.area === 'city' || (spot.area === 'biz' && spot.biz)))) ? spot : { area: (atHomeTown ? 'home' : (areas.find((a) => a.walk)?.area ?? 'town')) as Area }
   /** Out into the town: at a place's door, or where it was left. */
   const outTo = (place: string) => arrive({ area: 'city', place: place as Place })
   const hud = <Hud life={life} travel={here} onMap={() => setSheet('map')} onPhone={() => setSheet('phone')} />
@@ -245,7 +246,13 @@ export function World({ life }: { life: Life }) {
             if (user) saveSpot(user.id, { area: 'city', at: { x, y, f: facing } })
           }}
           onEnter={(p) => {
-            // In through a gate or a door.
+            // In through a gate or a door: a business of the town into its kind's inside.
+            const biz = businessOf(p)
+            if (biz) {
+              if (!INSIDE_OF[biz.cat]) return false
+              arrive({ area: 'biz', biz })
+              return true
+            }
             if (p === ('home' as Place)) arrive({ area: 'home' })
             else if (['jobs', 'visa', 'station'].includes(p)) arrive({ area: p as Area, place: p as Other })
             else if (p === ('health' as Place)) arrive({ area: 'health', place: 'health' })
@@ -284,6 +291,30 @@ export function World({ life }: { life: Life }) {
         {sheets}
       </>
     )
+
+  // Inside one of the town's businesses (its kind's inside, its own name): out of its door onto
+  // the street before it.
+  if (whole && valid.area === 'biz' && valid.biz) {
+    const b = valid.biz
+    const kind = INSIDE_OF[b.cat]!
+    return (
+      <>
+        <HomeView
+          key={businessKey(b)}
+          kind={kind}
+          title={b.name}
+          cat={b.cat}
+          travel={here}
+          appearance={life.appearance}
+          homeTown={life.home_town}
+          homeCountry={life.home_country}
+          hud={hud}
+          onDoor={() => arrive({ area: 'city', at: { x: b.door[0], y: b.door[1], f: Math.atan2(-b.face[0], b.face[1]) } })}
+        />
+        {sheets}
+      </>
+    )
+  }
 
   // Inside the Ministry of Health: out of its door, where next (on the map, walked or ridden).
   if (valid.area === 'health')

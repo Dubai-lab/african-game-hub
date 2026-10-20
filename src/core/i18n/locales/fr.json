@@ -2979,7 +2979,8 @@
         "health": "Aller au portail",
         "jobs": "Entrer",
         "visa": "Entrer",
-        "station": "Entrer"
+        "station": "Entrer",
+        "business": "Entrer"
       },
       "ride": {
         "hail": {
@@ -3059,6 +3060,23 @@
         "phones": "Téléphones",
         "materials": "Matériaux"
       }
+    },
+    "business": {
+      "provisions": "Riz, huile de palme, sucre, savon, Maggi et boissons fraîches en rayon ; le commerçant au comptoir. Acheter ici viendra avec la mise à jour des boutiques.",
+      "restaurant": "",
+      "bar": "Musique, une boisson fraîche au bar, la piste de danse. Boire et danser viendront avec les prochaines mises à jour.",
+      "salon": "Tresses, tissages, coupes et rasages devant les miroirs ; asseyez-vous en attendant. Changer de coiffure ici viendra bientôt.",
+      "pharmacy": "Les médicaments derrière le comptoir. Les acheter viendra avec la mise à jour de l’hôpital.",
+      "clinic": "",
+      "bank": "",
+      "office": "Des bancs pour ceux qui attendent, les guichets du bureau. Ses services viendront avec les mises à jour des documents.",
+      "classroom": "Des tables-bancs devant le tableau, l’enseignant à son bureau. L’école viendra avec la mise à jour des écoles.",
+      "church": "Des bancs de part et d’autre de l’allée, l’autel et la chaire. Asseyez-vous un moment.",
+      "mosque": "La salle de prière couverte de tapis, le mihrab. Les chaussures au casier près de la porte.",
+      "hotel": "La réception et ses clés, des canapés. Les chambres se réservent sur le téléphone (Vols et hôtels).",
+      "market": "Des rangées de tables chargées de marchandises, les commerçants. Acheter ici viendra avec la mise à jour des boutiques.",
+      "hardware": "Ciment, tôles, fers à béton, peinture et plomberie. Acheter des matériaux viendra avec la mise à jour des maisons.",
+      "boutique": "Des portants de vêtements et de pagnes, le tailleur à sa machine. Acheter des vêtements viendra bientôt."
     }
   }
 }

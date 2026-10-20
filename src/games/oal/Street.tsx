@@ -17,6 +17,7 @@ import type { Appearance } from '../../../supabase/functions/_shared/oal'
 import type { Stick } from './ArrivalsScene'
 import { PhoneSection } from './Home'
 import { type TravelState, useGameNow } from './Journey'
+import { businessOf, INSIDE_OF } from './city/business'
 import { Loading } from './Loading'
 import { newRide, type Destination, type RideKind, type RidePhase, type RideState } from './city/ride'
 import type { OtherPlayer, Place, TownId } from './StreetScene'
@@ -194,10 +195,8 @@ export function StreetView({
   const [streetName, setStreetName] = useState<string | null>(null)
   const placeName = (p: string) => {
     // A business of the town: its name, and what it is.
-    if (p.startsWith('biz:')) {
-      const [, cat, ...name] = p.split(':')
-      return `${name.join(':')} · ${t(`oal.city.cats.${cat}`, { defaultValue: '' })}`
-    }
+    const biz = businessOf(p)
+    if (biz) return `${biz.name} · ${t(`oal.city.cats.${biz.cat}`, { defaultValue: '' })}`
     if (COMPOUND_NAME[p]) return t(COMPOUND_NAME[p]!)
     const [hub, own] = p.includes(':') ? p.split(':') : [town, p]
     return t(`oal.street.towns.${hub}.places.${own}`)
@@ -452,10 +451,10 @@ export function StreetView({
           </Button>
         </div>
       )}
-      {place && !place.startsWith('biz:') && !open && phase === 'none' && (
+      {place && (!businessOf(place) || INSIDE_OF[businessOf(place)!.cat]) && !open && phase === 'none' && (
         <div className="absolute bottom-6 right-6">
           <Button className="min-h-14 px-6 text-lg" onClick={() => (onEnter?.(place) ? undefined : setOpen(true))} data-testid="oal-place-open">
-            {COMPOUNDS.includes(place) ? t(`oal.city.enter.${place}`) : t(`oal.street.open.${place.split(':').pop()}`)}
+            {businessOf(place) ? t('oal.city.enter.business') : COMPOUNDS.includes(place) ? t(`oal.city.enter.${place}`) : t(`oal.street.open.${place.split(':').pop()}`)}
           </Button>
         </div>
       )}

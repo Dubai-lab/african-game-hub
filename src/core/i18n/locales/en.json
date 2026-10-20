@@ -2979,7 +2979,8 @@
         "health": "Go to the gate",
         "jobs": "Go in",
         "visa": "Go in",
-        "station": "Go in"
+        "station": "Go in",
+        "business": "Go in"
       },
       "ride": {
         "hail": {
@@ -3059,6 +3060,23 @@
         "phones": "Phones",
         "materials": "Building materials"
       }
+    },
+    "business": {
+      "provisions": "Rice, palm oil, sugar, soap, Maggi and cold soft drinks on the shelves; the shopkeeper at the counter. Buying goods here comes with the shops update.",
+      "restaurant": "",
+      "bar": "Music, a cold drink at the bar, the dance floor. Buying drinks and dancing come with the next updates.",
+      "salon": "Braids, weave, cuts and shaves before the mirrors; take a seat while you wait. Changing your hairstyle here comes soon.",
+      "pharmacy": "Medicines behind the counter. Buying medicine comes with the hospital update.",
+      "clinic": "",
+      "bank": "",
+      "office": "Benches for those waiting, the counters of the office. Its services come with the documents updates.",
+      "classroom": "Desk-benches before the blackboard, the teacher at the desk. Schooling comes with the schools update.",
+      "church": "Pews either side of the aisle, the altar and the pulpit. Sit down and rest a while.",
+      "mosque": "The carpeted prayer hall, the mihrab. Shoes off at the rack by the door.",
+      "hotel": "Reception and its keys, sofas to sit on. Rooms are booked on your phone (Flights and hotels).",
+      "market": "Rows of tables piled with goods, the traders at them. Buying here comes with the shops update.",
+      "hardware": "Cement, zinc, iron rods, paint and plumbing. Buying materials comes with the homes update.",
+      "boutique": "Racks of clothes and lappa, the tailor at the sewing machine. Buying clothes comes soon."
     }
   }
 }

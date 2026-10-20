@@ -17,9 +17,13 @@ import type { Appearance } from '../../../supabase/functions/_shared/oal'
 import { person, type Stick } from './ArrivalsScene'
 import { CHARACTER_URL } from './character'
 import plans from './homePlan.json'
+import interiorPlans from './interiorsPlan.json'
+import { BUSINESS_KINDS, type BusinessKind } from './city/business'
 
 export const HOME_URL = '/oal/home.v5.glb'
-export type HomeKind = 'house' | 'room' | 'phoneshop' | 'starline' | 'citrus' | 'health'
+/** The insides of the town's places, one for each kind (scripts/oal/makeInteriors.py). */
+export const INTERIORS_URL = '/oal/interiors.v1.glb'
+export type HomeKind = 'house' | 'room' | 'phoneshop' | 'starline' | 'citrus' | 'health' | BusinessKind
 export type HomePlace = 'bed' | 'kitchen' | 'table' | 'door' | 'bath' | 'counter' | 'desk' | 'ticket' | 'collect' | 'gate' | 'reception' | 'writing' | 'cashier'
 type At = { x: number; y: number; face: number[]; z?: number; side?: number[] }
 type Door = { name: string; x: number; y: number; yaw: number; swing: number; cx: number; cy: number }
@@ -34,6 +38,8 @@ type HomePlan = {
   ceiling?: number
   /** Staff at their work there (behind a counter or a desk), and customers sitting, waiting. */
   attendants?: At[]
+  /** Coloured lights (a club's). */
+  colourLights?: { x: number; y: number; z: number; colour: string }[]
   waiting?: At[]
   /** Police officers guarding the gate, in uniform. */
   guards?: At[]
@@ -70,7 +76,7 @@ function tableAt(plan: HomePlan): [number, number] | null {
   const t = plan.places.table
   return t ? [t.x + t.face[0]! * 0.65, t.y + t.face[1]! * 0.65] : null
 }
-const PLANS = plans as unknown as Record<HomeKind, HomePlan>
+const PLANS = { ...(plans as unknown as Record<string, HomePlan>), ...(interiorPlans as unknown as Record<string, HomePlan>) } as Record<HomeKind, HomePlan>
 const WALK_SPEED = 1.2
 const RADIUS = 0.25
 const NEAR = 1.3
@@ -191,7 +197,8 @@ const built: { current: Object3D | null } = { current: null }
 const walker = { current: { x: 0, y: 0 } }
 
 function Home({ kind, gateOpen }: { kind: HomeKind; gateOpen: boolean }) {
-  const gltf = useLoader(GLTFLoader, HOME_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const url = (BUSINESS_KINDS as readonly string[]).includes(kind) ? INTERIORS_URL : HOME_URL
+  const gltf = useLoader(GLTFLoader, url, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const plan = PLANS[kind]
   const { home, doors, gate } = useMemo(() => {
     const home = gltf.scene.getObjectByName(kind)!.clone(true)
@@ -226,6 +233,9 @@ function Home({ kind, gateOpen }: { kind: HomeKind; gateOpen: boolean }) {
       <primitive object={home} />
       {(plan.lights ?? []).map((l, i) => (
         <pointLight key={i} position={[l.x, l.z, -l.y]} intensity={6} distance={7} decay={1.6} color="#ffe9c8" />
+      ))}
+      {(plan.colourLights ?? []).map((l, i) => (
+        <pointLight key={`c${i}`} position={[l.x, l.z, -l.y]} intensity={10} distance={9} decay={1.5} color={l.colour} />
       ))}
     </>
   )
