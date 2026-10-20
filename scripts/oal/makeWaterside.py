@@ -26,6 +26,7 @@ from mathutils import Vector
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import scenekit as kit  # noqa: E402
 from scenekit import box, flat, photo, srgb  # noqa: E402
+from market import KINDS, Market, shoulder  # noqa: E402
 from town import Town  # noqa: E402
 
 args = sys.argv[sys.argv.index('--') + 1:]
@@ -52,9 +53,8 @@ scene = bpy.context.scene
 m = town.materials()
 m_bank = photo('bank', 'brushed_concrete', scale=2.0, mul=(0.55, 0.5, 0.42), streaks=0.6)
 m_water = kit.water('water', (0.07, 0.08, 0.05))
-m_timber = flat('timber', srgb('#6b4a2e'), 0.85)
-m_timber_old = flat('timber_old', srgb('#4a3a2c'), 0.9)
-TARPS = [flat(f'tarp{i}', srgb(cl), 0.8) for i, cl in enumerate(['#1f5fa8', '#d2552a', '#2f8a4a', '#c8c2b0', '#b0262c'])]
+mk = Market(town)
+m_timber = mk.timber
 m_steel = flat('steel', (0.5, 0.5, 0.52), 0.5, 0.7)
 
 LIGHT_PROPS = {'painted_wooden_bench', 'wooden_stool_01'}
@@ -172,121 +172,6 @@ print('BUILT', len(town.footprints), 'buildings')
 
 STANDING = ['man_phone', 'man_idle', 'man_talk', 'man_argue', 'woman_idle', 'woman_phone', 'woman_looking']
 WALKING = ['man_walk', 'woman_walk', 'man_carry']
-PRODUCE = [srgb(cl) for cl in ('#c8281e', '#d8401c', '#e8b41c', '#7a3a8a', '#4a8a2a', '#e8d8b8', '#8a5a2a', '#2a6a2a')]
-m_produce = [flat(f'produce{i}', cl, 0.6) for i, cl in enumerate(PRODUCE)]
-m_enamel = [flat(f'enamel{i}', srgb(cl), 0.35) for i, cl in enumerate(['#e8e4dc', '#c8281e', '#2a5aa8', '#e8b41c', '#2a8a5a'])]
-
-
-def lappa_material(i):
-    """A wax-print cloth: bold rings and stripes in two colours on a third, made here."""
-    import numpy as np
-    rng = np.random.default_rng(i)
-    pal = [np.array(srgb(cl)) for cl in rng.choice(['#e8b41c', '#c8281e', '#1f4fa8', '#2a8a4a', '#f2ece0', '#6a2a7a', '#e86a1c', '#141414'], 3, replace=False)]
-    n = 128
-    y, x = np.mgrid[0:n, 0:n] / n
-    r = np.hypot((x * 4) % 1 - 0.5, (y * 4) % 1 - 0.5)
-    ring = (np.sin(r * 30) > 0.2)
-    band = (np.sin(x * 2 * np.pi * 6) > 0.6)
-    col = np.where(ring[..., None], pal[0], np.where(band[..., None], pal[1], pal[2]))
-    img = bpy.data.images.new(f'lappa{i}', n, n)
-    img.pixels.foreach_set(np.concatenate([col, np.ones((n, n, 1))], axis=-1).astype(np.float32).ravel())
-    img.pack()
-    mat = bpy.data.materials.new(f'lappa{i}')
-    mat.use_nodes = True
-    t = mat.node_tree.nodes.new('ShaderNodeTexImage')
-    t.image = img
-    mat.node_tree.links.new(t.outputs['Color'], mat.node_tree.nodes['Principled BSDF'].inputs['Base Color'])
-    mat.node_tree.nodes['Principled BSDF'].inputs['Roughness'].default_value = 0.9
-    return mat
-
-
-m_lappa = [lappa_material(i) for i in range(5)]
-
-
-def stall(at, d, n, kind):
-    """A trader's table under a shade, its goods on it; returns its depth across the street."""
-    yaw = math.atan2(d.y, d.x)
-    bm = bmesh.new()
-    uv = bm.loops.layers.uv.new()
-    w, deep = 2.2, 1.1
-    box(bm, uv, (at.x, at.y, 0.72), (w, deep, 0.06), yaw, mat=0)
-    for sx in (-1, 1):
-        for sy in (-1, 1):
-            q = at + d * sx * (w / 2 - 0.05) + n * sy * (deep / 2 - 0.05)
-            box(bm, uv, (q.x, q.y, 0), (0.06, 0.06, 0.72), yaw, mat=0)
-    # The shade: zinc on four poles, or a tarpaulin.
-    zinc = random.random() < 0.5
-    for sx in (-1, 1):
-        q = at + d * sx * (w / 2) - n * (deep / 2 + 0.3)
-        box(bm, uv, (q.x, q.y, 0), (0.06, 0.06, 2.3), yaw, mat=0)
-        q = at + d * sx * (w / 2) + n * (deep / 2)
-        box(bm, uv, (q.x, q.y, 0), (0.06, 0.06, 2.1), yaw, mat=0)
-    roof = at - n * 0.15
-    box(bm, uv, (roof.x, roof.y, 2.15), (w + 0.4, deep + 1.2, 0.04), yaw, mat=1, pitch=0.0)
-    mats = [random.choice([m_timber, m_timber_old]), m['zinc_rust'] if zinc else random.choice(TARPS)]
-    # The goods.
-    if kind == 'produce':
-        for k in range(random.randint(4, 7)):
-            q = at + d * random.uniform(-0.9, 0.9) + n * random.uniform(-0.35, 0.35)
-            heap = bmesh.ops.create_icosphere(bm, subdivisions=1, radius=random.uniform(0.11, 0.17))
-            for v in heap['verts']:
-                v.co = Vector((v.co.x + q.x, v.co.y + q.y, max(0.0, v.co.z) * 0.8 + 0.76))
-            for f in {f for v in heap['verts'] for f in v.link_faces}:
-                f.material_index = 2 + random.randrange(len(m_produce))
-        mats += m_produce
-    elif kind == 'basins':
-        for k in range(4):
-            q = at + d * (-0.75 + k * 0.5)
-            cyl = bmesh.ops.create_cone(bm, cap_ends=True, segments=10, radius1=0.17, radius2=0.24, depth=0.12 * random.randint(1, 4))
-            for v in cyl['verts']:
-                v.co += Vector((q.x, q.y, 0.76 + 0.06 * random.randint(1, 4)))
-            for f in {f for v in cyl['verts'] for f in v.link_faces}:
-                f.material_index = 2 + k % len(m_enamel)
-        mats += m_enamel
-    elif kind == 'cloth':
-        for k in range(5):
-            q = at + d * (-0.85 + k * 0.42)
-            box(bm, uv, (q.x, q.y, 0.76), (0.36, 0.5, 0.12 * random.randint(2, 4)), yaw, mat=2 + k)
-        mats += m_lappa
-    else:  # second-hand clothes hung on a line under the shade, folded ones on the table
-        for k in range(6):
-            q = at + d * (-0.95 + k * 0.38) - n * 0.55
-            box(bm, uv, (q.x, q.y, 1.25), (0.34, 0.03, 0.75), yaw, mat=2 + k % len(m_lappa))
-        for k in range(3):
-            q = at + d * (-0.6 + k * 0.6)
-            box(bm, uv, (q.x, q.y, 0.76), (0.45, 0.4, 0.1), yaw, mat=2 + (k + 2) % len(m_lappa))
-        mats += m_lappa
-    kit.new_object('stall', bm, mats)
-    town.solid_box(at, w + 0.1, deep + 0.1, yaw)
-    return deep
-
-
-def umbrella(p, colours=('#d23a2a', '#f2e6c8')):
-    bm = bmesh.new()
-    uv = bm.loops.layers.uv.new()
-    top = Vector((p.x, p.y, 2.5))
-    box(bm, uv, (p.x, p.y, 0), (0.04, 0.04, 2.5))
-    for k in range(8):
-        a0, a1 = k / 8 * 2 * math.pi, (k + 1) / 8 * 2 * math.pi
-        face = bm.faces.new((bm.verts.new(top), bm.verts.new((p.x + math.cos(a0) * 1.4, p.y + math.sin(a0) * 1.4, 2.05)), bm.verts.new((p.x + math.cos(a1) * 1.4, p.y + math.sin(a1) * 1.4, 2.05))))
-        face.material_index = 1 + k % 2
-    kit.new_object('umbrella', bm, [m['wood'], flat('umb_' + colours[0], srgb(colours[0]), 0.8), flat('umb_' + colours[1], srgb(colours[1]), 0.8)])
-
-
-def shoulder(pts, offset, every, start=0.0):
-    for a, b in zip(pts, pts[1:]):
-        seg = b - a
-        if seg.length < 0.1:
-            continue
-        d = seg.normalized()
-        n = Vector((-d.y, d.x))
-        t = start
-        while t < seg.length:
-            yield a + d * t + n * offset, d, n
-            t += every
-
-
-KINDS = ['produce', 'produce', 'produce', 'basins', 'cloth', 'clothes']
 width = 7.0  # Water Street's, for what goes on it
 specials = ['stall', 'changer', 'cookshop']
 stalls = 0
@@ -316,7 +201,7 @@ for pts, width, side, row in rows:
                     q = p + d * (-0.3 + k * 0.15)
                     box(bm, uv, (q.x, q.y, 0.75), (0.13, 0.07, 0.04 + 0.02 * k), yaw + random.uniform(-0.3, 0.3), mat=1)
                 kit.new_object('changer_table', bm, [m_timber, flat('notes', srgb('#6a8a5a'), 0.8)])
-                umbrella(p + n_out * 0.3, ('#2a6ab8', '#f2e6c8'))
+                mk.umbrella(p + n_out * 0.3, ('#2a6ab8', '#f2e6c8'))
                 prop('wooden_stool_01', p + n_out * 0.7, yaw)
                 kit.place(kit.person('man_sit'), p + n_out * 0.7, kit.facing(-n_out))
                 kit.text('MONEY EXCHANGE\nUSD  LRD', p + d * 0.0 - n_out * 0.31, kit.facing(-n_out), 0.09, '#141414', 0.62)
@@ -340,7 +225,7 @@ for pts, width, side, row in rows:
                     for f in {f for v in stove['verts'] for f in v.link_faces}:
                         f.material_index = 1
                 kit.new_object('cookshop_pots', bm, [m_steel, flat('coal_pot', (0.05, 0.05, 0.05), 0.9)])
-                umbrella(p, ('#e8b41c', '#2a8a4a'))
+                mk.umbrella(p, ('#e8b41c', '#2a8a4a'))
                 prop('painted_wooden_bench', p - n_out * 1.2, yaw)
                 kit.place(kit.person('woman_idle'), p + n_out * 0.6, kit.facing(-n_out))
                 kit.text("MA KEBBEH'S\nCOOKSHOP", p + n_out * 0.1, kit.facing(-n_out), 0.14, '#141414', 1.0)
@@ -349,7 +234,7 @@ for pts, width, side, row in rows:
                 town.place('cookshop', p - n_out * 1.6, n_out)
                 continue
             kind = random.choice(KINDS)
-            deep = stall(p, d, n_out, kind if special != 'stall' else 'produce')
+            deep = mk.stall(p, d, n_out, kind if special != 'stall' else 'produce')
             town.take_rect(p, 2.3, 1.2, yaw, 0.15, solid=False)
             if special == 'stall':
                 kit.text('TABLE 14 · DUES PAID', p - n_out * (deep / 2 + 0.02), kit.facing(-n_out), 0.1, '#141414', 0.5)
@@ -434,6 +319,10 @@ for pts in water_pts:
                 continue
             heading = d if lane == 1 else -d
             yaw = math.atan2(heading.y, heading.x)
+            if EXPORT:
+                # The game drives its own traffic along the lanes: the same chance taken, nothing put.
+                random.random()
+                continue
             if random.random() < 0.6:
                 kit.car(p, yaw, '#e9b51c', 'saloon', taxi=True)
                 town.solid_box(p, 4.6, 1.9, yaw)
@@ -456,6 +345,19 @@ if ahead.dot(along) < 0:
     along = -along
 spawn = mid + Vector((-along.y, along.x)) * 1.5
 
+# Water Street's two lanes for the game's traffic, driving on the right.
+lanes = []
+for pts in water_pts:
+    if sum((b - a).length for a, b in zip(pts, pts[1:])) < 60:
+        continue
+    for direction in (pts, pts[::-1]):
+        lane = []
+        for i, p in enumerate(direction):
+            d = (direction[min(len(direction) - 1, i + 1)] - direction[max(0, i - 1)]).normalized()
+            q = p + Vector((d.y, -d.x)) * width / 4
+            lane.append([round(q.x, 2), round(q.y, 2)])
+        lanes.append(lane)
+
 if EXPORT:
     root = bpy.data.objects.new('waterside', None)
     scene.collection.objects.link(root)
@@ -473,6 +375,7 @@ if EXPORT:
     plan = {
         'frame': 'x east, y north, metres from Water Street at its nearest to the Mesurado River',
         'reach': REACH,
+        'lanes': lanes,
         'spawn': {'x': round(spawn.x, 2), 'y': round(spawn.y, 2), 'face': [round(along.x, 3), round(along.y, 3)]},
         'places': town.places,
         'solids': [poly for poly in town.solids if min(math.hypot(x, y) for x, y in poly) < REACH + 5 or len(poly) > 40],

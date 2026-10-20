@@ -1,5 +1,7 @@
 // One Africa Life: travelling. Everything a player asks for on a journey: where am I now, buy a
-// ticket, board, book a hotel, answer the immigration officer, leave the airport.
+// ticket, board, book a hotel, answer the immigration officer, leave the airport; by road, a
+// seat in a shared car or the bus up-country, and a ride across town
+// (public.oal_road_action, 20261025100000_oal_road.sql).
 //
 // The database does each step under the life's row lock and applies time's changes first
 // (public.oal_travel_state and the others in 20261019100000_oal_travel.sql). The immigration
@@ -18,6 +20,8 @@ const body = z.discriminatedUnion('action', [
   z.object({ action: z.literal('book_hotel'), hotel: z.string().regex(/^[a-z0-9_]{2,40}$/), from: z.iso.date(), nights: z.int().min(1).max(30) }),
   z.object({ action: z.literal('immigration'), answers: z.optional(z.record(z.string(), z.unknown())) }),
   z.object({ action: z.literal('leave_airport') }),
+  z.object({ action: z.literal('ride'), route: z.string().regex(/^[a-z_]{2,40}$/) }),
+  z.object({ action: z.literal('town_ride'), mode: z.enum(['kekeh', 'taxi', 'walk', 'airport']) }),
 ])
 
 type Outcome = { ok: boolean; code?: string } & Record<string, unknown>
@@ -41,6 +45,10 @@ serve(body, async ({ userId, body }) => {
       return answer(await call('oal_book_hotel', { p_user_id: userId, p_hotel: body.hotel, p_from: body.from, p_nights: body.nights }))
     case 'leave_airport':
       return answer(await call('oal_leave_airport', { p_user_id: userId }))
+    case 'ride':
+      return answer(await call('oal_road_action', { p_user_id: userId, p_action: 'ride', p_target: body.route }))
+    case 'town_ride':
+      return answer(await call('oal_road_action', { p_user_id: userId, p_action: 'town', p_target: body.mode }))
     case 'immigration': {
       const answers = body.answers ? checkAnswers(body.answers) : null
       if (body.answers && !answers) return refuse('BAD_REQUEST')

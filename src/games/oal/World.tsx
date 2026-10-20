@@ -4,22 +4,28 @@
 // health), the money; a map to go anywhere in town (each place opens what can be done there; on a
 // street that is in 3D, the player can walk it from there), and the phone, if the life has one
 // (texts and mobile money, jobs, flights and hotels, rooms). Busy (at work, asleep, at the clinic,
-// on a journey), the screen says so over the world.
+// on a journey), the screen says so over the world. Going from one part of town to another is
+// walked, or ridden by kekeh or taxi for the fare (out to the airport, a taxi); up-country, from
+// the parking station (./Road.tsx), the journey is seen on the road.
 import { useQuery } from '@tanstack/react-query'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { useAuth } from '@/core/auth/AuthContext'
-import { refusalMessage } from '@/core/lib/functions'
+import { callFunction, refusalMessage } from '@/core/lib/functions'
 import { supabase } from '@/core/lib/supabase'
 import { Button, buttonClass } from '@/core/ui/Button'
 import { Skeleton } from '@/core/ui/Skeleton'
+import { toast } from '@/core/ui/toast'
+import { useQueryClient } from '@tanstack/react-query'
 import type { Appearance, HomeCountry, Sex } from '../../../supabase/functions/_shared/oal'
 import { BodyPanel, OverstayWarning, Resting } from './Body'
 import { PhoneSection, RoomSection, useHome } from './Home'
 import { OnTheWay, Travel, type TravelState, useGameNow, useTravel } from './Journey'
 import { type MapPoint, MapView, type Mark } from './MapView'
+import { HomeView, useHomeKind } from './HomeView'
+import { OnTheRoad, Station } from './Road'
 import { PlacePanel, StreetView } from './Street'
 import type { Place, TownId } from './StreetScene'
 import { AtWork, JobsAbroad, VisaOffice, Work } from './Work'
@@ -30,8 +36,8 @@ type Balance = { currency: string; amount: number }
 /** Where in town the player is: a 3D street (walking, maybe come to one of its places), or one
  * of the town's places shown on a picture. */
 type Spot = { area: Area; place?: Place | Other; walking?: boolean }
-type Other = 'home' | 'airport' | 'visa' | 'jobs'
-type Area = TownId | 'town' | 'home' | 'airport' | 'visa' | 'jobs'
+type Other = 'home' | 'airport' | 'visa' | 'jobs' | 'station'
+type Area = TownId | 'town' | 'home' | 'airport' | 'visa' | 'jobs' | 'station'
 
 /** Each town's areas and their places (3D where a street has been built). */
 type AreaInfo = { area: Area; places: (Place | Other)[]; walk?: TownId }
@@ -42,12 +48,25 @@ function areasOf(town: string, country: 'LR' | 'GH'): AreaInfo[] {
       ? [
           { area: 'sinkor', places: ['cookshop', 'phone', 'changer', 'kekeh', 'clinic'], walk: 'sinkor' },
           { area: 'waterside', places: ['stall', 'changer', 'cookshop'], walk: 'waterside' },
+          { area: 'skd', places: ['tickets', 'stand', 'pitch'], walk: 'skd' },
         ]
-      : [{ area: 'town', places: ['cookshop', 'phone', 'changer', 'stall', 'kekeh', 'clinic'] }]
+      : town === 'Voinjama'
+        ? [{ area: 'voinjama', places: ['stall', 'cookshop', 'phone', 'changer', 'kekeh', 'clinic'], walk: 'voinjama' }]
+        : [{ area: 'town', places: ['cookshop', 'phone', 'changer', 'stall', 'kekeh', 'clinic'] }]
   const areas: AreaInfo[] = [{ area: 'home', places: ['home'] }, ...streets, { area: 'jobs', places: ['jobs'] }]
   if (capital) areas.push({ area: 'visa', places: ['visa'] }, { area: 'airport', places: ['airport'] })
+  if (town === 'Monrovia' || town === 'Voinjama') areas.push({ area: 'station', places: ['station'] })
   return areas.filter((a) => country === 'LR' || a.area !== 'waterside')
 }
+
+/** The part of town an area is in: going between parts is walked or ridden; out to the airport
+ * (Roberts International is at Harbel, 48 km), a taxi. */
+function districtOf(town: string, area: Area): string {
+  if (area === 'airport') return 'airport'
+  if (town === 'Monrovia') return ({ home: 'sinkor', sinkor: 'sinkor', waterside: 'downtown', jobs: 'downtown', visa: 'downtown', station: 'paynesville', skd: 'paynesville' } as Record<string, string>)[area] ?? 'sinkor'
+  return 'town'
+}
+type Ride = 'walk' | 'kekeh' | 'taxi' | 'airport'
 
 const BACKDROP: Partial<Record<Area, string>> = { sinkor: '/oal/backdrops/sinkor.webp', waterside: '/oal/backdrops/waterside.webp', home: '/oal/backdrops/home.webp', town: '/oal/backdrops/home.webp' }
 function backdropFor(area: Area, town: string) {
@@ -81,10 +100,32 @@ export function World({ life }: { life: Life }) {
   const [sheet, setSheet] = useState<'map' | 'phone' | null>(null)
   // Where the player last stood on a 3D street (its own metres), for the map's arrow.
   const walked = useRef<{ area: string; x: number; y: number; facing: number } | null>(null)
-  const go = (next: Spot) => {
+  const queryClient = useQueryClient()
+  const [riding, setRiding] = useState<{ to: Spot; rides: Ride[] } | null>(null)
+  const arrive = (next: Spot) => {
     setSpot(next)
     setSheet(null)
+    setRiding(null)
     if (user) saveSpot(user.id, next)
+  }
+  /** To another part of town: how (walking, a kekeh, a taxi; out to the airport, a taxi). */
+  const go = (next: Spot) => {
+    const here_ = travel.data
+    const from = spot ?? { area: 'home' as Area }
+    if (!here_ || districtOf(here_.place, from.area) === districtOf(here_.place, next.area)) return arrive(next)
+    setRiding({ to: next, rides: next.area === 'airport' || from.area === 'airport' ? ['airport'] : ['walk', 'kekeh', 'taxi'] })
+  }
+  const ride = async (how: Ride) => {
+    if (!riding) return
+    try {
+      const reply = await callFunction<{ fare: number }>('oal-travel', { action: 'town_ride', mode: how })
+      if (!reply.ok) return toast.error(refusalMessage(reply.code))
+      arrive(riding.to)
+    } catch {
+      toast.error(t('errors.offline'))
+    } finally {
+      void queryClient.invalidateQueries({ queryKey: ['oal-money'] })
+    }
   }
   if (travel.isPending) return <Skeleton className="fixed inset-0 rounded-none" />
   if (travel.isError)
@@ -102,7 +143,7 @@ export function World({ life }: { life: Life }) {
   const areas = areasOf(here.place, here.country)
   // A spot from another town (or none yet): home in the home town, else the town itself.
   const atHomeTown = here.place === life.home_town && here.country === life.home_country
-  const valid = spot && areas.some((a) => a.area === spot.area) ? spot : { area: (atHomeTown ? 'home' : here.place === 'Monrovia' ? 'sinkor' : 'town') as Area }
+  const valid = spot && areas.some((a) => a.area === spot.area) ? spot : { area: (atHomeTown ? 'home' : (areas.find((a) => a.walk)?.area ?? 'town')) as Area }
   const hud = <Hud life={life} travel={here} onMap={() => setSheet('map')} onPhone={() => setSheet('phone')} />
   const sheets = (
     <>
@@ -118,6 +159,7 @@ export function World({ life }: { life: Life }) {
         />
       )}
       {sheet === 'phone' && <PhoneSheet travel={here} life={life} onClose={() => setSheet(null)} />}
+      {riding && <RideChoice country={here.country} rides={riding.rides} onRide={(how) => void ride(how)} onClose={() => setRiding(null)} />}
     </>
   )
 
@@ -134,9 +176,36 @@ export function World({ life }: { life: Life }) {
         </div>
       </Backdrop>
     )
-  if (here.state === 'working' || here.state === 'sleeping' || here.state === 'clinic')
+  if (here.state === 'on_road')
     return (
-      <Backdrop src={backdropFor(here.state === 'sleeping' ? 'home' : valid.area, here.place)}>
+      <>
+        <OnTheRoad travel={here} appearance={life.appearance} />
+        <div className="pointer-events-none fixed inset-0 z-[45]">{hud}</div>
+        {sheets}
+      </>
+    )
+  // At home (or asleep at home): the home in 3D.
+  if ((valid.area === 'home' && here.state === 'settled') || here.state === 'sleeping')
+    return (
+      <>
+        <AtHome
+          travel={here}
+          life={life}
+          hud={hud}
+          onDoor={() => setSheet('map')}
+          fallback={
+            <Backdrop src={backdropFor(here.state === 'sleeping' ? 'home' : valid.area, here.place)}>
+              {hud}
+              <Middle>{here.state === 'sleeping' ? <Resting travel={here} /> : <OtherPanel place="home" travel={here} life={life} />}</Middle>
+            </Backdrop>
+          }
+        />
+        {sheets}
+      </>
+    )
+  if (here.state === 'working' || here.state === 'clinic')
+    return (
+      <Backdrop src={backdropFor(valid.area, here.place)}>
         {hud}
         <Middle>{here.state === 'working' ? <AtWork /> : <Resting travel={here} />}</Middle>
         {sheets}
@@ -189,6 +258,7 @@ function placeName(area: Area, place: Place | Other, town: string, life: Life, t
   if (place === 'airport') return t(town === 'Accra' ? 'oal.world.places.airportACC' : 'oal.world.places.airportROB')
   if (place === 'visa') return t('oal.world.places.visa')
   if (place === 'jobs') return t('oal.world.places.jobs')
+  if (place === 'station') return t(town === 'Monrovia' ? 'oal.world.places.stationMonrovia' : 'oal.world.places.station', { town })
   if (area === 'town') return t(`oal.world.places.${place}`, { town })
   return t(`oal.street.towns.${area}.places.${place}`)
 }
@@ -202,6 +272,7 @@ function OtherPanel({ place, travel, life }: { place: Place | Other; travel: Tra
       </>
     )
   if (place === 'airport') return <Travel travel={travel} />
+  if (place === 'station') return <Station travel={travel} />
   if (place === 'visa') return <VisaOffice homeCountry={life.home_country} />
   if (place === 'jobs')
     return (
@@ -432,4 +503,33 @@ function PhoneSheet({ travel, life, onClose }: { travel: TravelState; life: Life
       )}
     </Sheet>
   )
+}
+
+const FARES: Record<'LR' | 'GH', Record<Ride, string>> = {
+  LR: { walk: '', kekeh: 'L$100', taxi: 'L$150', airport: 'L$3,000' },
+  GH: { walk: '', kekeh: 'GH¢10', taxi: 'GH¢15', airport: 'GH¢100' },
+}
+
+/** How to get there: walking, or a kekeh or taxi for its fare. */
+function RideChoice({ country, rides, onRide, onClose }: { country: 'LR' | 'GH'; rides: Ride[]; onRide: (how: Ride) => void; onClose: () => void }) {
+  const { t } = useTranslation()
+  return (
+    <Sheet title={t('oal.world.howTitle')} onClose={onClose} testId="oal-ride-choice">
+      <div className="flex flex-col gap-2">
+        {rides.map((how) => (
+          <Button key={how} variant={how === 'walk' ? 'ghost' : undefined} onClick={() => onRide(how)} data-testid={`oal-ride-${how}`}>
+            {t(`oal.world.ride.${how}`, { fare: FARES[country][how] })}
+          </Button>
+        ))}
+      </div>
+    </Sheet>
+  )
+}
+
+/** Home in 3D where the life has one here (the family's house, a rented room); else the picture. */
+function AtHome({ travel, life, hud, onDoor, fallback }: { travel: TravelState; life: Life; hud: ReactNode; onDoor: () => void; fallback: ReactNode }) {
+  const kind = useHomeKind(travel, life.home_town, life.home_country)
+  if (kind === undefined) return <Skeleton className="fixed inset-0 rounded-none" />
+  if (kind === null) return <>{fallback}</>
+  return <HomeView kind={kind} travel={travel} appearance={life.appearance} homeTown={life.home_town} homeCountry={life.home_country} hud={hud} onDoor={onDoor} />
 }

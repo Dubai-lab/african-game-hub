@@ -1746,6 +1746,7 @@ export type Database = {
           hunger: number
           needs_at: string
           place: string
+          road_trip_id: number | null
           sex: string
           shift_id: number | null
           started_at: string
@@ -1768,6 +1769,7 @@ export type Database = {
           hunger?: number
           needs_at?: string
           place: string
+          road_trip_id?: number | null
           sex: string
           shift_id?: number | null
           started_at?: string
@@ -1790,6 +1792,7 @@ export type Database = {
           hunger?: number
           needs_at?: string
           place?: string
+          road_trip_id?: number | null
           sex?: string
           shift_id?: number | null
           started_at?: string
@@ -1798,6 +1801,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "oal_lives_road_trip_id_fkey"
+            columns: ["road_trip_id"]
+            isOneToOne: false
+            referencedRelation: "oal_road_trips"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "oal_lives_shift_id_fkey"
             columns: ["shift_id"]
@@ -1980,6 +1990,102 @@ export type Database = {
             foreignKeyName: "oal_phones_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "oal_lives"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      oal_road_routes: {
+        Row: {
+          closes: string
+          country: string
+          currency: string
+          departs: string | null
+          fare: number
+          from_town: string
+          hours: number
+          id: string
+          km: number
+          mode: string
+          opens: string
+          station: string
+          to_town: string
+        }
+        Insert: {
+          closes?: string
+          country: string
+          currency: string
+          departs?: string | null
+          fare: number
+          from_town: string
+          hours: number
+          id: string
+          km: number
+          mode: string
+          opens?: string
+          station: string
+          to_town: string
+        }
+        Update: {
+          closes?: string
+          country?: string
+          currency?: string
+          departs?: string | null
+          fare?: number
+          from_town?: string
+          hours?: number
+          id?: string
+          km?: number
+          mode?: string
+          opens?: string
+          station?: string
+          to_town?: string
+        }
+        Relationships: []
+      }
+      oal_road_trips: {
+        Row: {
+          arrives_at: string
+          boarded_at: string
+          created_at: string
+          departs_at: string
+          id: number
+          route_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          arrives_at: string
+          boarded_at: string
+          created_at?: string
+          departs_at: string
+          id?: never
+          route_id: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          arrives_at?: string
+          boarded_at?: string
+          created_at?: string
+          departs_at?: string
+          id?: never
+          route_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oal_road_trips_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "oal_road_routes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oal_road_trips_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "oal_lives"
             referencedColumns: ["user_id"]
           },
@@ -4057,6 +4163,10 @@ export type Database = {
           p_number: string
           p_user_id: string
         }
+        Returns: Json
+      }
+      oal_road_action: {
+        Args: { p_action: string; p_target: string; p_user_id: string }
         Returns: Json
       }
       oal_start_life: {

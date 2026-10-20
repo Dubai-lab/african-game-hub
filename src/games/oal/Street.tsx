@@ -111,6 +111,11 @@ export function PlacePanel({ place, travel, homeCountry }: { place: Place; trave
       {place === 'phone' && <PhoneSection travel={travel} homeCountry={homeCountry} />}
       {place === 'changer' && <MoneyChanger country={travel.country} />}
       {(place === 'kekeh' || place === 'stall') && <Work travel={travel} />}
+      {(place === 'tickets' || place === 'stand' || place === 'pitch') && (
+        <div className="border border-line bg-panel flex flex-col gap-2 p-4" data-testid={`oal-stadium-${place}`}>
+          <p>{t(`oal.street.stadium.${place}`)}</p>
+        </div>
+      )}
     </>
   )
 }
@@ -165,7 +170,7 @@ export function StreetView({ town, travel, appearance, name, homeCountry, hud, s
         </Suspense>
       </div>
       {hud}
-      <div className="pointer-events-none absolute inset-x-0 top-24 flex justify-center px-3">
+      <div className="pointer-events-none absolute inset-x-0 top-44 flex justify-center px-3">
         <p className="glass rounded-full border border-line px-4 py-2 text-sm font-semibold" data-testid="oal-street-chip">
           {place ? t(`oal.street.towns.${town}.places.${place}`) : t(`oal.street.towns.${town}.where`)}
           {company.present.length > 0 && <span className="ml-2 text-muted">· {t('oal.street.company', { count: company.present.length })}</span>}

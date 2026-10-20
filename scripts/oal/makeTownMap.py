@@ -26,11 +26,13 @@ SRC = os.path.join(ROOT, 'src', 'games', 'oal')
 TOWNS = {
     'monrovia': {
         'centre': (6.3045, -10.7900), 'sea': ['s', 'sw', 'w', 'nw'],
-        'streets': {'sinkor': ((6.2913452, -10.7781804), 'sinkorStreet.json'), 'waterside': ((6.3186932, -10.8030225), 'watersideMarket.json')},
+        'streets': {'sinkor': ((6.2913452, -10.7781804), 'sinkorStreet.json'), 'waterside': ((6.3186932, -10.8030225), 'watersideMarket.json'),
+                    'skd': ((6.257008812451475, -10.702114100037994), 'skdStadium.json')},
         'places': {
             'home': (6.2886, -10.7745),     # a family house off 16th Street, Sinkor
             'jobs': (6.3127, -10.8018),     # the job board on Broad Street
             'visa': (6.3169, -10.8102),     # the embassies' quarter, Mamba Point
+            'station': (6.2905, -10.7206),  # Red Light parking station, Paynesville
         },
         # Off the map, with the way to it: Roberts International, at Harbel.
         'far': {'airport': ((6.2338, -10.3623), 'Roberts International Airport')},
@@ -53,8 +55,8 @@ TOWNS = {
     },
     'voinjama': {
         'centre': (8.4219, -9.7478), 'sea': [],
-        'streets': {},
-        'places': {'home': (8.4245, -9.7505), 'town': (8.4219, -9.7478), 'jobs': (8.4200, -9.7460)},
+        'streets': {'voinjama': ((8.4229204, -9.7477204), 'voinjamaTown.json')},
+        'places': {'home': (8.4245, -9.7505), 'jobs': (8.4200, -9.7460), 'station': (8.4232, -9.7449)},
     },
 }
 MAJOR = {'motorway', 'trunk', 'primary', 'secondary'}
@@ -169,7 +171,7 @@ def build(name, cfg):
     # Around the streets built in 3D, every building's outline (from those scenes' own maps).
     buildings = []
     for street, ((la, lo), _plan) in cfg['streets'].items():
-        src = os.path.join(OSM, {'sinkor': 'sinkor.json', 'waterside': 'waterside.json'}[street])
+        src = os.path.join(OSM, {'sinkor': 'sinkor.json', 'waterside': 'waterside.json', 'voinjama': 'voinjama.json', 'skd': 'skd.json'}[street])
         sd = json.load(open(src))
         snodes = {e['id']: (e['lat'], e['lon']) for e in sd['elements'] if e['type'] == 'node'}
         cx, cy = xy(la, lo)

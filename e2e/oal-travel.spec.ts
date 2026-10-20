@@ -68,8 +68,10 @@ async function liberian(index: number) {
   const account = TEST_ACCOUNTS[index]!
   const [me] = await runSql<{ id: string }>(`select id from auth.users where email = '${account.email}'`)
   await runSql(`select public.oal_start_life('${me!.id}', 'Kollie Flomo', 'male', 30, 'LR', 'Monrovia', '${JSON.stringify(APPEARANCE)}'::jsonb)`)
-  // Twenty dollars buys no ticket.
+  // Twenty dollars buys no ticket; the taxi out to the airport is paid in the local money.
   await runSql(`select private.oal_money('${me!.id}', 'USD', 300000, 'adjustment')`)
+  await runSql(`select private.oal_money('${me!.id}', 'LRD', 500000, 'adjustment')`)
+  await runSql(`select private.oal_money('${me!.id}', 'GHS', 50000, 'adjustment')`)
   return { account, id: me!.id }
 }
 
@@ -80,8 +82,8 @@ async function logIn(page: Page, account: { email: string }) {
   await page.getByRole('button', { name: 'Log in' }).click()
   await expect(page).toHaveURL(/\/lobby$/, { timeout: 20_000 })
   await page.goto('/life')
-  // To the airport, by the map.
-  await goTo(page, 'airport', 'airport')
+  // To the airport, by the map: a taxi.
+  await goTo(page, 'airport', 'airport', 'airport')
   await expect(page.getByTestId('oal-travel')).toBeVisible({ timeout: 20_000 })
 }
 
@@ -180,7 +182,8 @@ test('Accra to Monrovia: home through Roberts International\'s hall, welcomed as
   await expect(page.getByText('Welcome home.')).toBeVisible({ timeout: 20_000 })
   await page.getByTestId('oal-desk-done').click()
 
-  // Through the gate the officer opened, and out of the landside doors.
+  // Along the barrier to the gate the officer opened, through it, and out of the landside doors.
+  await walkTo(page, 54.05, 25.2)
   await walkTo(page, 54.05, 22.0)
   await walkTo(page, 54.05, 1.0, async () => !(await hall.isVisible()))
   await expect(page.getByTestId('oal-at-airport')).toContainText('Roberts International Airport', { timeout: 20_000 })

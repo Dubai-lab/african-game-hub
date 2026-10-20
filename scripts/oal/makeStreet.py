@@ -618,6 +618,13 @@ for w in tubman:
             heading = d if lane == 1 else -d
             p = p + n * random.uniform(-0.4, 0.4)
             yaw = math.atan2(heading.y, heading.x)
+            if EXPORT:
+                # The game drives its own traffic along the lanes (the plan's "lanes"): nothing
+                # stands in them here, but the same chances are taken, so all after stays put.
+                if random.random() >= 0.7:
+                    random.choice(CAR_COLOURS)
+                    random.choice(['saloon', 'saloon', 'suv'])
+                continue
             solid_box(p, 4.8, 2.0, yaw)
             r = random.random()
             if r < 0.42:
@@ -872,6 +879,37 @@ if best:
     door = mid + out * 1.6
     PLACES['clinic'] = {'x': round(door.x, 2), 'y': round(door.y, 2), 'face': [round(-out.x, 3), round(-out.y, 3)]}
 
+def lanes_of(ways, width):
+    """A road's two lanes for the game's traffic, driving on the right: its ways joined end to
+    end, each direction a quarter of the width to the right of the middle, as points."""
+    chains = []
+    for w in ways:
+        ids = list(w['nodes'])
+        for c in chains:
+            if c[-1] == ids[0]:
+                c += ids[1:]
+                break
+            if c[0] == ids[-1]:
+                c[:0] = ids[:-1]
+                break
+        else:
+            chains.append(ids)
+    lanes = []
+    for c in chains:
+        pts = [xy(n) for n in c]
+        if sum((b - a).length for a, b in zip(pts, pts[1:])) < 60:
+            continue
+        for direction in (pts, pts[::-1]):
+            lane = []
+            for i, p in enumerate(direction):
+                d = (direction[min(len(direction) - 1, i + 1)] - direction[max(0, i - 1)]).normalized()
+                right = Vector((d.y, -d.x))
+                q = p + right * width / 4
+                lane.append([round(q.x, 2), round(q.y, 2)])
+            lanes.append(lane)
+    return lanes
+
+
 if EXPORT:
     import json as _json
     REACH = 120.0
@@ -900,6 +938,7 @@ if EXPORT:
     plan = {
         'frame': 'x east, y north, metres from the junction of Tubman Boulevard and 16th Street',
         'reach': REACH,
+        'lanes': lanes_of(tubman, road_width(tubman[0])),
         'spawn': {'x': round(spawn.x, 2), 'y': round(spawn.y, 2), 'face': [round(along.x, 3), round(along.y, 3)]},
         'places': PLACES,
         'solids': near_solids,

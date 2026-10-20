@@ -57,6 +57,7 @@ test('a Ghanaian in Accra: a phone, a SIM registered with the Ghana Card, airtim
 
   // A single room in Nima: GH¢400 a month, twelve months at once. Not yet (from home).
   await goTo(page, 'home', 'home')
+  await page.getByTestId('oal-home-menu').click({ timeout: 30_000 })
   await expect(page.getByTestId('oal-room').getByText('You live with family for now.')).toBeVisible()
   await page.getByTestId('oal-rent-nima_single').click()
   await expect(page.getByText('You do not have enough money for that.')).toBeVisible({ timeout: 20_000 })

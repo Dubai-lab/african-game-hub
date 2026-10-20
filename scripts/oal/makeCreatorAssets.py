@@ -1,7 +1,7 @@
 # One Africa Life: the character creator's files, one per sex, made with MPFB (the free
 # MakeHuman add-on for Blender) and its CC0 packs.
 #
-#   blender -b --python scripts/oal/makeCreatorAssets.py -- <male|female> art-src/one-africa-life/creator-<sex>.glb (then packed into public/oal/creator-<sex>.v2.glb)
+#   blender -b --python scripts/oal/makeCreatorAssets.py -- <male|female> art-src/one-africa-life/creator-<sex>.glb (then packed into public/oal/creator-<sex>.v3.glb)
 #
 # (Blender's own preferences, not --factory-startup: MPFB is an add-on installed there.)
 #
@@ -293,11 +293,14 @@ for img in list(bpy.data.images):
 
 # 8. The movements, from Mixamo, each a track of its own: standing and breathing (the creator,
 # and anyone waiting); walking, on the spot (the game moves the character); talking (officers,
-# shopkeepers, anyone spoken to).
+# shopkeepers, anyone spoken to); sitting (a seat in a car or bus, a bench); lying asleep (a
+# bed, a hospital bed).
 CLIPS = {
     'idle': 'Breathing Idle.fbx' if SEX == 'male' else 'Standing Idle.fbx',
     'walk': 'Walking.fbx' if SEX == 'male' else 'Female Walk.fbx',
     'talk': 'Talking.fbx',
+    'sit': 'Sitting Idle.fbx',
+    'sleep': 'Sleeping Idle.fbx',
 }
 for clip, file in CLIPS.items():
     path = os.path.join(ANIMATIONS, file)

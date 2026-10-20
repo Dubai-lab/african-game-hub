@@ -111,7 +111,7 @@ test('Waterside Market: from Water Street to the trader\'s table', async ({ page
   await page.getByRole('button', { name: 'Log in' }).click()
   await expect(page).toHaveURL(/\/lobby$/, { timeout: 20_000 })
   await page.goto('/life')
-  await walkIn(page, 'waterside')
+  await walkIn(page, 'waterside', 'walk')
   const view = page.getByTestId('oal-street')
   await expect(view).toHaveAttribute('data-x', /\d/, { timeout: 120_000 })
   await expect(page.getByTestId('oal-street-chip')).toHaveText(/Waterside Market/)

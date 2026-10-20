@@ -18,11 +18,14 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { type Appearance, defaultAppearance } from '../../../supabase/functions/_shared/oal'
 import { person, type Stick } from './ArrivalsScene'
 import { CHARACTER_URL } from './character'
+import { keepOutOf, type Moving, Traffic } from './Traffic'
 import sinkor from './sinkorStreet.json'
+import skd from './skdStadium.json'
+import voinjama from './voinjamaTown.json'
 import waterside from './watersideMarket.json'
 
-export type Place = 'cookshop' | 'phone' | 'changer' | 'kekeh' | 'clinic' | 'stall'
-export type TownId = 'sinkor' | 'waterside'
+export type Place = 'cookshop' | 'phone' | 'changer' | 'kekeh' | 'clinic' | 'stall' | 'tickets' | 'stand' | 'pitch'
+export type TownId = 'sinkor' | 'waterside' | 'voinjama' | 'skd'
 const WALK_SPEED = 1.45
 const RADIUS = 0.3
 const NEAR = 2.6
@@ -30,7 +33,7 @@ const NEAR = 2.6
 type Point = { x: number; y: number }
 type Poly = { points: number[][]; minX: number; maxX: number; minY: number; maxY: number }
 type At = { x: number; y: number; face: number[] }
-type Plan = { reach: number; spawn: At; places: Partial<Record<Place, At>>; solids: number[][][] }
+type Plan = { reach: number; spawn: At; places: Partial<Record<Place, At>>; solids: number[][][]; lanes?: number[][][] }
 /** Someone at their work at a place: how they differ from the default look, and what they do. */
 type Local = [Place, Partial<Appearance>, string]
 
@@ -49,15 +52,24 @@ function town(url: string, plan: Plan, locals: (sex: 'male' | 'female') => Local
 }
 
 export const TOWNS = {
-  sinkor: town('/oal/sinkor-street.v2.glb', sinkor as Plan, (sex) => [
+  sinkor: town('/oal/sinkor-street.v3.glb', sinkor as Plan, (sex) => [
     ['cookshop', { skin: 0.85, build: { weight: 0.5, muscle: 0, height: -0.2 }, outfit: sex === 'male' ? 'tee_jeans' : 'blouse_skirt' }, 'talk'],
     ['phone', { skin: 0.7, build: { weight: -0.1, muscle: 0.2, height: 0.2 }, outfit: sex === 'male' ? 'shirt_jeans' : 'tee_jeans' }, 'idle'],
     ['changer', { skin: 0.9, build: { weight: 0.2, muscle: 0.3, height: 0.1 }, outfit: sex === 'male' ? 'jacket_jeans' : 'sport' }, 'talk'],
     ['kekeh', { skin: 0.78, build: { weight: -0.2, muscle: 0.4, height: 0 }, outfit: sex === 'male' ? 'tee_jeans' : 'tee_shorts' }, 'idle'],
   ]),
-  waterside: town('/oal/waterside-market.v1.glb', waterside as Plan, (sex) => [
+  waterside: town('/oal/waterside-market.v2.glb', waterside as Plan, (sex) => [
     ['cookshop', { skin: 0.88, build: { weight: 0.6, muscle: 0, height: -0.1 }, outfit: sex === 'male' ? 'tee_jeans' : 'blouse_skirt' }, 'talk'],
     ['changer', { skin: 0.82, build: { weight: 0.1, muscle: 0.3, height: 0.1 }, outfit: sex === 'male' ? 'shirt_jeans' : 'sport' }, 'talk'],
+  ]),
+  voinjama: town('/oal/voinjama.v1.glb', voinjama as Plan, (sex) => [
+    ['cookshop', { skin: 0.86, build: { weight: 0.5, muscle: 0, height: -0.1 }, outfit: sex === 'male' ? 'tee_jeans' : 'blouse_skirt' }, 'talk'],
+    ['changer', { skin: 0.9, build: { weight: 0.1, muscle: 0.3, height: 0.2 }, outfit: sex === 'male' ? 'jacket_jeans' : 'sport' }, 'talk'],
+    ['phone', { skin: 0.75, build: { weight: -0.1, muscle: 0.2, height: 0.1 }, outfit: sex === 'male' ? 'shirt_jeans' : 'tee_jeans' }, 'idle'],
+    ['kekeh', { skin: 0.8, build: { weight: -0.2, muscle: 0.4, height: 0 }, outfit: sex === 'male' ? 'tee_jeans' : 'tee_shorts' }, 'idle'],
+  ]),
+  skd: town('/oal/skd-stadium.v1.glb', skd as Plan, (sex) => [
+    ['tickets', { skin: 0.84, build: { weight: 0.3, muscle: 0.1, height: 0 }, outfit: sex === 'male' ? 'shirt_jeans' : 'blouse_skirt' }, 'idle'],
   ]),
 }
 type Town = (typeof TOWNS)[TownId]
@@ -72,8 +84,14 @@ function inside(p: Point, poly: number[][]) {
   return hit
 }
 
+/** The vehicles on the street now (./Traffic.tsx), as boxes to walk against. */
+const moving: { current: Moving[] } = { current: [] }
+/** Where the player stands, for the traffic to stop for. */
+const walker = { current: { x: 0, y: 0 } }
+
 /** Pushes a walker (a circle) out of every shape it overlaps, and keeps it within the street. */
 function collide(p: Point, where: Town) {
+  keepOutOf(p, moving.current, RADIUS)
   for (const poly of where.polys) {
     if (p.x < poly.minX || p.x > poly.maxX || p.y < poly.minY || p.y > poly.maxY) continue
     let best = Infinity
@@ -281,6 +299,7 @@ function People({ town: id, start, appearance, stick, look, paused, onPlace, onP
     s.speed += (amount - s.speed) * Math.min(1, dt * 8)
     player.root.position.set(s.x, 0.05, -s.y)
     player.root.rotation.y = s.facing
+    walker.current = { x: s.x, y: s.y }
     if (player.actions.walk && player.actions.idle) {
       player.actions.walk.weight = s.speed
       player.actions.idle.weight = 1 - s.speed
@@ -363,6 +382,11 @@ export default function StreetScene(props: Props) {
       <directionalLight position={[-60, 90, 40]} intensity={2.2} color="#fff1dc" />
       <Suspense fallback={null}>
         <Street where={where} />
+        {where.plan.lanes && where.plan.lanes.length > 0 && (
+          <Suspense fallback={null}>
+            <Traffic lanes={where.plan.lanes} reach={where.plan.reach + 30} player={walker} moving={moving} spacing={props.town === 'sinkor' ? 35 : 45} />
+          </Suspense>
+        )}
         <People {...props} />
         {props.present.map((id) => {
           const entry = props.others.current?.get(id)

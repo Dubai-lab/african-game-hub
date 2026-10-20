@@ -1,0 +1,167 @@
+// One Africa Life: the traffic on a 3D street. Taxis (yellow), private cars, kekehs, the odd
+// bus and police car (the owner's models, made light by scripts/oal/makeVehicles.py:
+// public/oal/vehicles.v1.glb) drive the street's lanes (its plan's "lanes", on the right), at
+// town speeds, slowing behind whoever is ahead and stopping for the player in front of them;
+// at a lane's end, back to its start (out of sight, in the haze). Where each vehicle is, as a
+// box, is kept for the player to walk against (./StreetScene.tsx).
+import { useFrame, useLoader } from '@react-three/fiber'
+import { useMemo } from 'react'
+import { Color, type Material, type Mesh, type Object3D } from 'three'
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+
+export const VEHICLES_URL = '/oal/vehicles.v1.glb'
+
+type Kind = 'taxi' | 'car' | 'kekeh' | 'bus' | 'police'
+/** A vehicle's box on the map, for walking against: centre, heading, half length and width. */
+export type Moving = { x: number; y: number; yaw: number; hl: number; hw: number }
+
+const MODEL: Record<Kind, string> = { taxi: 'sedan', car: 'sedan', kekeh: 'kekeh', bus: 'bus', police: 'police_car' }
+const SIZE: Record<Kind, [number, number]> = { taxi: [4.6, 2.0], car: [4.6, 2.0], kekeh: [2.7, 1.4], bus: [7.6, 2.6], police: [4.9, 1.8] }
+// Town speeds, metres a second (about 30, 25, 25, 30 km/h).
+const SPEED: Record<Kind, number> = { taxi: 8.5, car: 8.0, kekeh: 7.0, bus: 7.0, police: 8.5 }
+const PAINTS: Record<Kind, string[]> = {
+  taxi: ['#e9b51c'],
+  car: ['#f0f0ee', '#c8c8c8', '#202020', '#1f2f5a', '#7a1a1a', '#d0c8b0', '#2a5a3a'],
+  kekeh: ['#e8b41c', '#e8b41c', '#2a6ab8'],
+  bus: [''],
+  police: [''],
+}
+
+type Lane = { pts: [number, number][]; at: number[]; length: number }
+type Car = { kind: Kind; lane: number; s: number; v: number; want: number; root: Object3D }
+
+/** A lane, the part of it within reach of the street's centre (what can be seen, and a little). */
+function laneOf(points: number[][], reach: number): Lane {
+  const inside = points.map((p) => Math.hypot(p[0]!, p[1]!) < reach)
+  const first = inside.indexOf(true)
+  const last = inside.lastIndexOf(true)
+  const pts = (first < 0 ? points : points.slice(Math.max(0, first - 1), last + 2)).map((p) => [p[0]!, p[1]!] as [number, number])
+  const at = [0]
+  for (let i = 1; i < pts.length; i++) at.push(at[i - 1]! + Math.hypot(pts[i]![0] - pts[i - 1]![0], pts[i]![1] - pts[i - 1]![1]))
+  return { pts, at, length: at.at(-1)! }
+}
+
+/** Where s metres along a lane is, and which way it runs there. */
+function pointAt(lane: Lane, s: number): { x: number; y: number; yaw: number } {
+  let i = 1
+  while (i < lane.at.length - 1 && lane.at[i]! < s) i++
+  const a = lane.pts[i - 1]!
+  const b = lane.pts[i]!
+  const span = lane.at[i]! - lane.at[i - 1]! || 1
+  const t = Math.max(0, Math.min(1, (s - lane.at[i - 1]!) / span))
+  return { x: a[0] + (b[0] - a[0]) * t, y: a[1] + (b[1] - a[1]) * t, yaw: Math.atan2(b[1] - a[1], b[0] - a[0]) }
+}
+
+function pick<T>(list: T[], r: number) {
+  return list[Math.floor(r * list.length) % list.length]!
+}
+
+export function Traffic({ lanes, reach, player, moving, spacing = 35 }: { lanes: number[][][]; reach: number; player: { current: { x: number; y: number } }; moving: { current: Moving[] }; spacing?: number }) {
+  const gltf = useLoader(GLTFLoader, VEHICLES_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const { cars, roads, group } = useMemo(() => {
+    const roads = lanes.map((l) => laneOf(l, reach)).filter((l) => l.length > 40)
+    const models = Object.fromEntries(['sedan', 'kekeh', 'bus', 'police_car'].map((n) => [n, gltf.scene.getObjectByName(n)!]))
+    const cars: Car[] = []
+    // A fixed seed: the same street each visit (and the same for everyone).
+    let seed = 7
+    const rand = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646
+    roads.forEach((lane, li) => {
+      // A car every so many metres, as busy as the street is.
+      const count = Math.max(1, Math.floor(lane.length / spacing))
+      for (let k = 0; k < count; k++) {
+        const r = rand()
+        const kind: Kind = r < 0.42 ? 'taxi' : r < 0.67 ? 'car' : r < 0.88 ? 'kekeh' : r < 0.95 ? 'bus' : 'police'
+        const model = models[MODEL[kind]]
+        if (!model) continue
+        const root = model.clone(true)
+        const paint = pick(PAINTS[kind], rand())
+        if (paint) {
+          root.traverse((o) => {
+            const mesh = o as Mesh
+            if (!mesh.isMesh) return
+            const mats = (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).map((m: Material) => {
+              if (!m.name.startsWith('paint')) return m
+              const c = m.clone() as Material & { color: Color }
+              c.color = new Color(paint)
+              return c
+            })
+            mesh.material = Array.isArray(mesh.material) ? mats : mats[0]!
+          })
+        }
+        cars.push({ kind, lane: li, s: ((k + rand() * 0.5) / count) * lane.length, v: SPEED[kind], want: SPEED[kind] * (0.85 + rand() * 0.3), root })
+      }
+    })
+    const group = cars.map((c) => c.root)
+    return { cars, roads, group }
+  }, [gltf, lanes, reach, spacing])
+
+  useFrame((_, raw) => {
+    const dt = Math.min(raw, 0.1)
+    const boxes: Moving[] = []
+    const p = player.current
+    for (const car of cars) {
+      const lane = roads[car.lane]!
+      const [len, wide] = SIZE[car.kind]
+      const here = pointAt(lane, car.s)
+      // How much room ahead: the next car in the lane, and the player if in the lane's way.
+      let room = Infinity
+      for (const other of cars) {
+        if (other === car || other.lane !== car.lane) continue
+        const gap = other.s - car.s
+        if (gap > 0 && gap < room) room = gap - (len + SIZE[other.kind][0]) / 2
+      }
+      const fx = Math.cos(here.yaw)
+      const fy = Math.sin(here.yaw)
+      const dx = p.x - here.x
+      const dy = p.y - here.y
+      const ahead = dx * fx + dy * fy
+      const side = Math.abs(-dx * fy + dy * fx)
+      if (ahead > 0 && side < wide / 2 + 0.9) room = Math.min(room, ahead - len / 2 - 0.6)
+      // Slow toward a stop two metres short of what is ahead; else back up to speed.
+      const target = room < 2 ? 0 : Math.min(car.want, (room - 2) * 0.9)
+      car.v += Math.max(-6 * dt, Math.min(2.5 * dt, target - car.v))
+      car.v = Math.max(0, car.v)
+      car.s += car.v * dt
+      if (car.s > lane.length) car.s -= lane.length
+      const at = pointAt(lane, car.s)
+      car.root.position.set(at.x, 0.03, -at.y)
+      car.root.rotation.y = at.yaw
+      boxes.push({ x: at.x, y: at.y, yaw: at.yaw, hl: len / 2, hw: wide / 2 })
+    }
+    moving.current = boxes
+  })
+
+  return (
+    <>
+      {group.map((o, i) => (
+        <primitive key={i} object={o} />
+      ))}
+    </>
+  )
+}
+
+/** Pushes a walker (radius r) out of any vehicle box it is in. */
+export function keepOutOf(p: { x: number; y: number }, boxes: Moving[], r: number) {
+  for (const b of boxes) {
+    const c = Math.cos(b.yaw)
+    const s = Math.sin(b.yaw)
+    const dx = p.x - b.x
+    const dy = p.y - b.y
+    const u = dx * c + dy * s
+    const v = -dx * s + dy * c
+    const hl = b.hl + r
+    const hw = b.hw + r
+    if (Math.abs(u) >= hl || Math.abs(v) >= hw) continue
+    // Out by the nearer side.
+    if (hl - Math.abs(u) < hw - Math.abs(v)) {
+      const nu = Math.sign(u || 1) * hl
+      p.x = b.x + nu * c - v * s
+      p.y = b.y + nu * s + v * c
+    } else {
+      const nv = Math.sign(v || 1) * hw
+      p.x = b.x + u * c - nv * s
+      p.y = b.y + u * s + nv * c
+    }
+  }
+}

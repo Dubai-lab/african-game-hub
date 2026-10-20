@@ -38,7 +38,7 @@ test('a day at Waterside Market, the money changer, and a licence applied for', 
   await page.getByRole('button', { name: 'Log in' }).click()
   await expect(page).toHaveURL(/\/lobby$/, { timeout: 20_000 })
   await page.goto('/life')
-  await goTo(page, 'jobs', 'jobs')
+  await goTo(page, 'jobs', 'jobs', 'walk')
   await expect(page.getByTestId('oal-work')).toBeVisible({ timeout: 20_000 })
 
   // L$2,000 of stock, eight hours at the market.
@@ -48,8 +48,9 @@ test('a day at Waterside Market, the money changer, and a licence applied for', 
   await expect(page.getByTestId('oal-at-work')).toBeVisible({ timeout: 20_000 })
   await expect(page.getByText('Selling at Waterside Market')).toBeVisible()
 
-  // Closing time.
-  await setGameTime('2026-12-03 15:10')
+  // Closing time: just after the eight hours (the day began when the test browser got there).
+  const [day] = await runSql<{ until: string }>(`select to_char(ends_at + interval '5 minutes', 'YYYY-MM-DD HH24:MI') as until from public.oal_shifts where user_id = '${me!.id}'`)
+  await setGameTime(day!.until)
   await page.reload()
   await expect(page.getByTestId('oal-last-shift')).toContainText(/of your stock sold/, { timeout: 20_000 })
   const [shift] = await runSql<{ earned: number; status: string }>(`select earned, status from public.oal_shifts where user_id = '${me!.id}'`)
@@ -57,7 +58,7 @@ test('a day at Waterside Market, the money changer, and a licence applied for', 
   expect(Number(shift!.earned)).toBeGreaterThanOrEqual(200000)
 
   // L$1,000 for dollars at the changer on Tubman Boulevard.
-  await goTo(page, 'sinkor', 'changer')
+  await goTo(page, 'sinkor', 'changer', 'walk')
   await page.getByTestId('oal-change-amount').fill('1000')
   await page.getByTestId('oal-buy-usd').click()
   await expect(page.getByText(/You received US\$5/)).toBeVisible({ timeout: 20_000 })
@@ -66,7 +67,7 @@ test('a day at Waterside Market, the money changer, and a licence applied for', 
   // market went is chance).
   await runSql(`select private.oal_money('${me!.id}', 'LRD', 300000, 'adjustment')`)
   await page.reload()
-  await goTo(page, 'jobs', 'jobs')
+  await goTo(page, 'jobs', 'jobs', 'walk')
   await expect(page.getByTestId('oal-apply-licence')).toBeVisible({ timeout: 20_000 })
   await page.getByTestId('oal-apply-licence').click()
   await expect(page.getByRole('status', { name: /Your licence will be ready in two days/ })).toBeVisible({ timeout: 20_000 })

@@ -41,8 +41,7 @@ test('a player makes their character and starts a life in Voinjama', async ({ pa
   await page.getByTestId('oal-start').click()
 
   // In the game: at home, the clock, the body, the money over the world; who she is in the menu.
-  await expect(page.getByTestId('oal-life')).toBeVisible({ timeout: 20_000 })
-  await expect(page.getByTestId('oal-at-home')).toBeVisible()
+  await expect(page.getByTestId('oal-home-view')).toHaveAttribute('data-kind', 'house', { timeout: 30_000 })
   await expect(page.getByTestId('oal-hud-money')).toContainText('L$ 3,000')
   await page.getByTestId('oal-menu').click()
   await expect(page.getByText('Musu Kollie', { exact: true })).toBeVisible()

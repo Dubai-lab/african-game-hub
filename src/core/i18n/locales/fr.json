@@ -146,7 +146,10 @@
       "OWN_NUMBER": "C’est votre propre numéro.",
       "NOT_DELIVERED": "Il n’a pas pu être livré.",
       "NO_AIRTIME": "Pas assez de crédit : rechargez d’abord.",
-      "BAD_TEXT": "Un SMS fait de 1 à 160 caractères."
+      "BAD_TEXT": "Un SMS fait de 1 à 160 caractères.",
+      "NO_CARS_NOW": "Aucun taxi-brousse ne part maintenant : ils partent de 06:00 à 15:00.",
+      "BUS_NOT_BOARDING": "L’embarquement n’est pas encore ouvert : le bus part à 07:00, et l’on embarque une heure et demie avant.",
+      "NOT_HERE": "Cela ne part pas d’où vous êtes."
     },
     "samePassword": "C’est votre mot de passe actuel. Choisissez-en un autre.",
     "captchaFailed": "La vérification de sécurité a échoué. Rechargez la page et réessayez."
@@ -2652,6 +2655,25 @@
             "changer": "Changeur",
             "cookshop": "Gargote Ma Kebbeh"
           }
+        },
+        "voinjama": {
+          "where": "Rue du marché, Voinjama",
+          "places": {
+            "stall": "Table 6, marché de Voinjama",
+            "cookshop": "Gargote Mama Kortu",
+            "phone": "Kiosque de cartes SIM et de recharge",
+            "changer": "Changeur (dollars, dollars libériens, francs guinéens)",
+            "kekeh": "Station de motos et de kekehs",
+            "clinic": "Clinique communautaire de Voinjama"
+          }
+        },
+        "skd": {
+          "where": "Complexe sportif Samuel Kanyon Doe, Paynesville",
+          "places": {
+            "tickets": "Guichet du SKD",
+            "stand": "Une place dans la tribune principale",
+            "pitch": "Le terrain, près de la ligne médiane"
+          }
         }
       },
       "open": {
@@ -2660,7 +2682,10 @@
         "changer": "Changer de l’argent",
         "kekeh": "Conduire un kekeh",
         "clinic": "Voir une infirmière",
-        "stall": "Vendre à votre table"
+        "stall": "Vendre à votre table",
+        "tickets": "Se renseigner sur les matchs",
+        "stand": "S’asseoir ici",
+        "pitch": "Regarder autour"
       },
       "done": "Terminé",
       "cookshop": "Riz et sauce, palm butter ou feuilles de patate : une assiette pour 250 L$.",
@@ -2669,7 +2694,12 @@
       "seen": "Vous êtes à la clinique.",
       "company_one": "{{count}} autre personne dehors",
       "company_other": "{{count}} autres personnes dehors",
-      "cookshopGh": "Jollof, waakye ou banku et tilapia : une assiette pour 30 GH¢."
+      "cookshopGh": "Jollof, waakye ou banku et tilapia : une assiette pour 30 GH¢.",
+      "stadium": {
+        "tickets": "Les matchs du championnat se jouent ici le week-end, et l’équipe nationale y reçoit ses adversaires. L’achat de billets et les matchs arrivent bientôt.",
+        "stand": "La tribune principale, sous son toit, face au terrain et aux tribunes d’en face.",
+        "pitch": "Le terrain du SKD : la pelouse, la piste autour, les tribunes tout autour."
+      }
     },
     "world": {
       "map": "Carte",
@@ -2701,7 +2731,9 @@
         "stall": "Marché, {{town}}",
         "kekeh": "Station de kekeh et trotro, {{town}}",
         "clinic": "Clinique, {{town}}",
-        "townCentre": "Centre-ville, {{town}}"
+        "townCentre": "Centre-ville, {{town}}",
+        "station": "Gare routière, {{town}}",
+        "stationMonrovia": "Gare routière de Red Light, Paynesville"
       },
       "goHere": "Y aller",
       "walkHere": "Y marcher",
@@ -2709,7 +2741,40 @@
       "zoomIn": "Zoomer",
       "zoomOut": "Dézoomer",
       "mapView": "Carte",
-      "listView": "Liste"
+      "listView": "Liste",
+      "howTitle": "Comment y aller ?",
+      "ride": {
+        "walk": "À pied (gratuit)",
+        "kekeh": "Kekeh ({{fare}})",
+        "taxi": "Taxi ({{fare}})",
+        "airport": "Taxi pour l’aéroport ({{fare}})"
+      }
+    },
+    "road": {
+      "station": "Gare routière",
+      "none": "Aucune voiture ni aucun bus ne part d’ici.",
+      "mode": {
+        "car": "Taxi-brousse pour {{to}}",
+        "bus": "Bus pour {{to}}"
+      },
+      "busTimes": "Part à {{time}} chaque matin ; environ {{hours}} heures",
+      "carTimes": "Part quand il est plein, de {{opens}} à {{closes}} ; environ {{hours}} heures",
+      "km": "{{km}} km",
+      "buy": "Acheter une place ({{fare}}, en espèces)",
+      "boarded": "Vous avez une place. En route pour {{to}}.",
+      "waitCar": "La voiture se remplit : elle part vers {{time}}.",
+      "waitBus": "Le bus part à {{time}}.",
+      "arrives": "Sur la route : {{km}} km sur {{total}}. Arrivée à {{time}}."
+    },
+    "home": {
+      "goOut": "Sortir",
+      "things": "Que faire",
+      "at": {
+        "bed": "Près de votre lit",
+        "kitchen": "À la cuisine",
+        "table": "À table",
+        "door": "À la porte"
+      }
     }
   }
 }

@@ -37,7 +37,7 @@ test('a six-month visa for Ghana, applied for and issued', async ({ page }) => {
   await page.getByRole('button', { name: 'Log in' }).click()
   await expect(page).toHaveURL(/\/lobby$/, { timeout: 20_000 })
   await page.goto('/life')
-  await goTo(page, 'jobs', 'jobs')
+  await goTo(page, 'jobs', 'jobs', 'walk')
   await expect(page.getByTestId('oal-jobs-abroad').getByText('Osu Trading, Accra')).toBeVisible({ timeout: 20_000 })
   await goTo(page, 'visa', 'visa')
   const office = page.getByTestId('oal-visa')

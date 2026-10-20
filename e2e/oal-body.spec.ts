@@ -35,6 +35,9 @@ test('hungry and tired: a meal with family, a cookshop plate, a night\'s sleep',
   await page.getByRole('button', { name: 'Log in' }).click()
   await expect(page).toHaveURL(/\/lobby$/, { timeout: 20_000 })
   await page.goto('/life')
+  // At home (the family's house, in 3D): what can be done there.
+  await expect(page.getByTestId('oal-home-view')).toHaveAttribute('data-kind', 'house', { timeout: 30_000 })
+  await page.getByTestId('oal-home-menu').click()
   await expect(page.getByTestId('oal-body')).toBeVisible({ timeout: 20_000 })
   await expect(page.getByText('You are too tired to work: sleep first.')).toBeVisible()
 
@@ -46,8 +49,11 @@ test('hungry and tired: a meal with family, a cookshop plate, a night\'s sleep',
   await page.getByLabel('Hours of sleep').selectOption('8')
   await page.getByTestId('oal-sleep').click()
   await expect(page.getByTestId('oal-resting')).toContainText('Asleep until', { timeout: 20_000 })
-  await setGameTime('2027-01-21 05:10')
+  // Just past the eight hours (the night began when the test browser got there, after 21:00).
+  const [night] = await runSql<{ until: string }>(`select to_char(busy_until + interval '5 minutes', 'YYYY-MM-DD HH24:MI') as until from public.oal_lives where user_id = '${me!.id}'`)
+  await setGameTime(night!.until)
   await page.reload()
+  await page.getByTestId('oal-home-menu').click({ timeout: 30_000 })
   await expect(page.getByTestId('oal-body')).toBeVisible({ timeout: 20_000 })
   await expect.poll(async () => Number(await page.getByTestId('oal-rest').getAttribute('data-value')), { timeout: 20_000 }).toBeGreaterThanOrEqual(99)
   expect(errors).toEqual([])

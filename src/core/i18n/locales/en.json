@@ -146,7 +146,10 @@
       "OWN_NUMBER": "That is your own number.",
       "NOT_DELIVERED": "It could not be delivered.",
       "NO_AIRTIME": "Not enough airtime: top up first.",
-      "BAD_TEXT": "A text is 1 to 160 characters."
+      "BAD_TEXT": "A text is 1 to 160 characters.",
+      "NO_CARS_NOW": "No shared cars leave now: they go from 06:00 to 15:00.",
+      "BUS_NOT_BOARDING": "The bus is not boarding yet: it leaves at 07:00, and boarding opens an hour and a half before.",
+      "NOT_HERE": "That does not leave from where you are."
     },
     "samePassword": "That is your current password. Choose a different one.",
     "captchaFailed": "The security check did not pass. Reload the page and try again."
@@ -2652,6 +2655,25 @@
             "changer": "Money changer",
             "cookshop": "Ma Kebbeh's Cookshop"
           }
+        },
+        "voinjama": {
+          "where": "Market street, Voinjama",
+          "places": {
+            "stall": "Table 6, Voinjama Market",
+            "cookshop": "Mama Kortu's Cookshop",
+            "phone": "SIM and phone-charging kiosk",
+            "changer": "Money changer (dollars, Liberian dollars, Guinean francs)",
+            "kekeh": "Motorbike and kekeh stop",
+            "clinic": "Voinjama Community Clinic"
+          }
+        },
+        "skd": {
+          "where": "Samuel Kanyon Doe Sports Complex, Paynesville",
+          "places": {
+            "tickets": "SKD ticket window",
+            "stand": "A seat in the main stand",
+            "pitch": "The pitch, by the halfway line"
+          }
         }
       },
       "open": {
@@ -2660,7 +2682,10 @@
         "changer": "Change money",
         "kekeh": "Ride a kekeh",
         "clinic": "See a nurse",
-        "stall": "Trade at your table"
+        "stall": "Trade at your table",
+        "tickets": "Ask about matches",
+        "stand": "Sit here",
+        "pitch": "Look around"
       },
       "done": "Done",
       "cookshop": "Rice and soup, palm butter or potato greens: a plate for L$250.",
@@ -2669,7 +2694,12 @@
       "seen": "You are at the clinic.",
       "company_one": "{{count}} other person out here",
       "company_other": "{{count}} other people out here",
-      "cookshopGh": "Jollof, waakye or banku and tilapia: a plate for GH¢30."
+      "cookshopGh": "Jollof, waakye or banku and tilapia: a plate for GH¢30.",
+      "stadium": {
+        "tickets": "League matches are played here at weekends, and the national team plays its home games here. Buying a ticket and watching a match come soon.",
+        "stand": "The main stand, under its roof, looking over the pitch to the far stands.",
+        "pitch": "The pitch at SKD: grass, the track round it, the stands rising all round."
+      }
     },
     "world": {
       "map": "Map",
@@ -2701,7 +2731,9 @@
         "stall": "Market, {{town}}",
         "kekeh": "Kekeh and trotro stop, {{town}}",
         "clinic": "Clinic, {{town}}",
-        "townCentre": "Town centre, {{town}}"
+        "townCentre": "Town centre, {{town}}",
+        "station": "Parking station, {{town}}",
+        "stationMonrovia": "Red Light parking station, Paynesville"
       },
       "goHere": "Go here",
       "walkHere": "Walk here",
@@ -2709,7 +2741,40 @@
       "zoomIn": "Zoom in",
       "zoomOut": "Zoom out",
       "mapView": "Map",
-      "listView": "List"
+      "listView": "List",
+      "howTitle": "How do you go?",
+      "ride": {
+        "walk": "Walk (free)",
+        "kekeh": "Kekeh ({{fare}})",
+        "taxi": "Taxi ({{fare}})",
+        "airport": "Taxi to the airport ({{fare}})"
+      }
+    },
+    "road": {
+      "station": "Parking station",
+      "none": "No cars or buses go from here.",
+      "mode": {
+        "car": "Shared car to {{to}}",
+        "bus": "Bus to {{to}}"
+      },
+      "busTimes": "Leaves at {{time}} each morning; about {{hours}} hours",
+      "carTimes": "Leaves when full, {{opens}} to {{closes}}; about {{hours}} hours",
+      "km": "{{km}} km",
+      "buy": "Buy a seat ({{fare}}, cash)",
+      "boarded": "You have a seat. On the way to {{to}}.",
+      "waitCar": "Waiting for the car to fill: it leaves about {{time}}.",
+      "waitBus": "Waiting for the bus to leave at {{time}}.",
+      "arrives": "On the road: {{km}} of {{total}} km. Gets in at {{time}}."
+    },
+    "home": {
+      "goOut": "Go out",
+      "things": "Things to do",
+      "at": {
+        "bed": "At your bed",
+        "kitchen": "In the kitchen",
+        "table": "At the table",
+        "door": "At the door"
+      }
     }
   }
 }
