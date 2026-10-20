@@ -156,7 +156,9 @@
       "ALREADY_UNBOXED": "Il est déjà sorti de sa boîte.",
       "STILL_BOXED": "Déballez-le d'abord.",
       "ALREADY_CHARGED": "Il est déjà en charge ou chargé.",
-      "PHONE_NOT_READY": "Votre téléphone n'est pas prêt : déballez-le et chargez-le chez vous."
+      "PHONE_NOT_READY": "Votre téléphone n'est pas prêt : déballez-le et chargez-le chez vous.",
+      "ALREADY_PAID": "Vous avez déjà payé.",
+      "NOT_PAID": "Payez d'abord à la caisse."
     },
     "samePassword": "C’est votre mot de passe actuel. Choisissez-en un autre.",
     "captchaFailed": "La vérification de sécurité a échoué. Rechargez la page et réessayez."
@@ -2818,7 +2820,11 @@
         "counter": "Au comptoir",
         "desk": "Au guichet",
         "ticket": "Au distributeur de tickets",
-        "collect": "Au guichet de retrait"
+        "collect": "Au guichet de retrait",
+        "gate": "Au portail",
+        "reception": "À l'accueil",
+        "writing": "À l'écritoire",
+        "cashier": "À la caisse"
       },
       "leaveShop": "Sortir dans la rue",
       "phone": {
@@ -2827,7 +2833,9 @@
         "unboxed": "Sorti de sa boîte. La batterie est vide : mettez-le en charge.",
         "charging": "Téléphone en charge : plein à {{time}}",
         "charged": "En charge. Il sera plein dans une heure."
-      }
+      },
+      "sitDown": "S’asseoir",
+      "standUp": "Se lever"
     },
     "shop": {
       "look": "Regarder le {{name}}",
@@ -2886,12 +2894,15 @@
       "handOver": "Signer et remettre votre {{document}}"
     },
     "health": {
-      "hint": "Les guichets sont au fond : Enregistrement des naissances pour la demande, Retrait pour récupérer votre acte.",
+      "hint": "L'accueil est près de la porte, l'écritoire contre le mur de gauche, les guichets au fond : guichet 1 Enregistrement des naissances, guichet 2 Retrait, la Caisse.",
       "windows": {
         "counter": "Guichet 1 · Enregistrement des naissances",
-        "collect": "Guichet 2 · Retrait"
+        "collect": "Guichet 2 · Retrait",
+        "gate": "Policier au portail",
+        "reception": "Accueil",
+        "writing": "Écritoire",
+        "cashier": "Caisse"
       },
-      "clerk": "« Bonjour. Pour un acte de naissance, remplissez le formulaire : le nom de vos parents. Les frais se paient ici. »",
       "father": "Nom complet du père",
       "mother": "Nom complet de la mère",
       "sex": "Sexe",
@@ -2900,18 +2911,62 @@
         "female": "Féminin"
       },
       "bornIn": "Lieu de naissance",
-      "apply": "Déposer le formulaire et payer {{fee}}",
-      "applied": "Demande reçue. Revenez à partir de demain : nous vous enverrons un SMS quand ce sera prêt.",
+      "applied": "« Merci. Votre demande est déposée. Revenez à partir de demain : nous vous enverrons un SMS quand ce sera prêt. »",
       "processing": "Votre acte est en cours de traitement : prêt à partir de {{time}}.",
       "goCollect": "Votre acte est prêt : retirez-le au guichet 2.",
       "haveIt": "Votre acte de naissance a été délivré.",
       "applyFirst": "« Faites d’abord la demande au guichet 1. »",
-      "collect": "Retirer votre acte de naissance",
+      "collect": {
+        "show": "« Votre reçu, s’il vous plaît. Signez le registre ici. »",
+        "button": "Montrer le reçu {{receipt}} et signer"
+      },
       "collected": "Voici votre acte de naissance.",
       "onlyLiberians": "Ce bureau enregistre les naissances des Libériens, au Liberia.",
       "republic": "RÉPUBLIQUE DU LIBERIA",
       "ministry": "Ministère de la Santé · Division des statistiques vitales",
-      "certificate": "Acte de naissance"
+      "certificate": "Acte de naissance",
+      "called": "Numéro {{mine}}, guichet 1 s’il vous plaît.",
+      "gate": {
+        "ask": "« Bonjour. Police. Qu’est-ce qui vous amène au ministère ? »",
+        "business": "« Je viens pour mon acte de naissance, aux statistiques vitales. »",
+        "goIn": "« Bien, entrez. L’accueil est à votre droite en entrant. »"
+      },
+      "reception": {
+        "hello": "« Bonjour. Enregistrement de naissance ? Prenez un numéro et patientez : on vous appellera au guichet 1. »",
+        "collect": "« Le retrait est au guichet 2, au fond. »",
+        "number": "Prendre un numéro"
+      },
+      "form": {
+        "title": "Demande d'enregistrement de naissance (enregistrement tardif)",
+        "part1": "Partie A : la personne dont la naissance est enregistrée",
+        "part2": "Partie B : les parents",
+        "part3": "Partie C : déclaration d’un témoin de la naissance (un parent, un aîné de la famille ou de la communauté)",
+        "witness": "Nom complet du témoin",
+        "relation": "Lien avec vous (mère, oncle, aîné…)",
+        "sign": "Remplir et signer le formulaire",
+        "done": "Le formulaire est rempli et signé. Apportez-le au guichet 1.",
+        "ready": "Votre formulaire est rempli : apportez-le au guichet 1.",
+        "none": "Prenez d'abord le formulaire au guichet 1."
+      },
+      "counter": {
+        "number": "« Prenez un numéro à l’accueil et attendez d’être appelé. »",
+        "giveForm": "« Voici le formulaire de demande. Remplissez-le à l’écritoire, signez-le et rapportez-le-moi. »",
+        "takeForm": "Prendre le formulaire",
+        "fillFirst": "« Remplissez d’abord le formulaire à l’écritoire. »",
+        "handIn": "« Vous avez rempli votre formulaire ? Montrez-moi. »",
+        "handInForm": "Remettre le formulaire",
+        "assessed": "« Votre formulaire est en ordre. Payez {{fee}} à la caisse et rapportez-moi le reçu. »",
+        "payFirst": "« Payez d’abord {{fee}} à la caisse, puis rapportez-moi le reçu. »",
+        "receipt": "« Vous avez payé ? Montrez-moi le reçu. »",
+        "handInReceipt": "Remettre le reçu {{receipt}}"
+      },
+      "cashier": {
+        "slip": "« Frais d’enregistrement de naissance : {{fee}}. »",
+        "pay": "Payer {{fee}}",
+        "paid": "Payé. Votre reçu est le {{receipt}} : apportez-le au guichet 1.",
+        "done": "« Vous avez déjà payé. Gardez votre reçu. »",
+        "nothing": "« Passez d’abord au guichet 1. »"
+      }
     }
   }
 }

@@ -8,7 +8,7 @@
 //
 // Every step that counts is the server's (the oal-home Edge Function).
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/core/auth/AuthContext'
 import { refusalMessage } from '@/core/lib/functions'
@@ -157,7 +157,7 @@ export function NetworkDesk({
   )
 }
 
-type Certificate = { number: string; full_name: string; sex: 'male' | 'female'; born_on: string; born_in: string; father: string; mother: string; applied_at: string; ready_at: string; collected_on: string | null }
+type Certificate = { number: string; full_name: string; sex: 'male' | 'female'; born_on: string; born_in: string; father: string; mother: string; witness: string | null; witness_relation: string | null; status: 'assessed' | 'paid' | 'lodged'; receipt: string | null; fee: number; applied_at: string; ready_at: string | null; collected_on: string | null }
 
 function useCertificate() {
   const { user } = useAuth()
@@ -167,7 +167,11 @@ function useCertificate() {
     // Read again at each window: it may have become ready since.
     refetchOnMount: 'always',
     queryFn: async () => {
-      const { data, error } = await supabase.from('oal_birth_certificates').select('number, full_name, sex, born_on, born_in, father, mother, applied_at, ready_at, collected_on').eq('user_id', user!.id).maybeSingle()
+      const { data, error } = await supabase
+        .from('oal_birth_certificates')
+        .select('number, full_name, sex, born_on, born_in, father, mother, witness, witness_relation, status, receipt, fee, applied_at, ready_at, collected_on')
+        .eq('user_id', user!.id)
+        .maybeSingle()
       if (error) throw error
       return data as Certificate | null
     },
@@ -201,83 +205,228 @@ export function CertificateView({ c }: { c: Certificate }) {
   )
 }
 
-/** The Vital Statistics office's windows: birth registration (apply), collection. */
-export function BirthOffice({ travel, window: at }: { travel: TravelState; window: 'counter' | 'collect' }) {
+/** The form as filled in at the writing shelf (not yet handed in). */
+export type BirthForm = { father: string; mother: string; witness: string; relation: string }
+/** A visit to the Ministry: let in at the gate, the queue number from reception, the form. */
+export type MinistryVisit = { admitted: boolean; ticket: Ticket | null; form: null | 'blank' | BirthForm }
+/** The windows' staff, as the plan lists them: Window 1, Window 2 (collection), the cashier, reception. */
+const STAFF = { counter: 0, collect: 1, cashier: 2, reception: 3 } as const
+
+/**
+ * The Ministry of Health, step by step. At the gate, the police officer asks your business and
+ * lets you in. At reception, a queue number. At Window 1 when called, the application form;
+ * filled in at the writing shelf (the parents, and an elder who witnesses the birth); handed in,
+ * assessed: the fee to pay at the cashier, for a receipt; the receipt handed in at Window 1:
+ * lodged, ready the next day (a text). At Window 2, the receipt shown, the register signed, the
+ * certificate handed over. Each hand-over seen: the character and the clerk reach across.
+ */
+export function MinistryOfHealth({
+  travel,
+  place,
+  visit,
+  onVisit,
+  onGesture,
+  onStaff,
+  onClose,
+}: {
+  travel: TravelState
+  place: 'gate' | 'reception' | 'writing' | 'counter' | 'cashier' | 'collect' | null
+  visit: MinistryVisit
+  onVisit: (v: MinistryVisit) => void
+  onGesture: (g: Omit<Gesture, 'seq'>) => void
+  onStaff: (index: number) => void
+  onClose: () => void
+}) {
   const { t, i18n } = useTranslation()
   const facts = useLifeFacts()
   const cert = useCertificate()
   const now = useGameNow()
   const { run, busy } = useHomeStep()
   const queryClient = useQueryClient()
-  const [father, setFather] = useState('')
-  const [mother, setMother] = useState('')
+  const [draft, setDraft] = useState<BirthForm>({ father: '', mother: '', witness: '', relation: '' })
+  const [working, setWorking] = useState(false)
   if (facts.isPending || cert.isPending) return <Skeleton className="h-32" />
   if (facts.isError || cert.isError) return <p className="text-alert">{refusalMessage('SERVER_ERROR')}</p>
   const f = facts.data
   const c = cert.data
-  const refresh = () => void queryClient.invalidateQueries({ queryKey: ['oal-birth'] })
+  const fee = cash(150000, 'LRD', i18n.language)
+  const say = (key: string, o?: Record<string, unknown>) => <p className="text-sm italic">{t(key, o)}</p>
   const time = (at: string) => new Intl.DateTimeFormat(i18n.language, { weekday: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }).format(new Date(`${at}Z`))
+  const ready = Boolean(c?.ready_at && new Date(`${c.ready_at}Z`).getTime() <= now().getTime())
+  // Across the window: the character reaches, the clerk reaches, then it is done.
+  const handOver = async (staff: number, then: () => Promise<unknown> | void) => {
+    setWorking(true)
+    onClose()
+    onGesture({ reach: true, to: `place:${place}` })
+    onStaff(staff)
+    await wait(1300)
+    try {
+      await then()
+    } finally {
+      void queryClient.invalidateQueries({ queryKey: ['oal-birth'] })
+      await wait(1800)
+      setWorking(false)
+    }
+  }
+  const field = (k: keyof BirthForm, label: string, max = 60) => (
+    <label className="flex flex-col gap-1 text-sm">
+      {label}
+      <input value={draft[k]} onChange={(e) => setDraft({ ...draft, [k]: e.target.value.slice(0, max) })} required minLength={2} className="min-h-11 rounded-xl border border-line bg-panel px-3" data-testid={`oal-birth-${k}`} />
+    </label>
+  )
+  const called = visit.ticket !== null && visit.ticket.serving >= visit.ticket.mine
   if (f.home_country !== 'LR' || travel.country !== 'LR') return <p className="border border-line bg-panel p-4 text-sm">{t('oal.health.onlyLiberians')}</p>
-  const ready = c && new Date(`${c.ready_at}Z`).getTime() <= now().getTime()
-  return (
-    <section className="flex flex-col gap-3 border border-line bg-panel p-4" data-testid={`oal-health-${at}`}>
-      <p className="font-bold">{t(`oal.health.windows.${at}`)}</p>
-      {at === 'counter' &&
-        (c ? (
-          <p className="text-sm">{c.collected_on ? t('oal.health.haveIt') : ready ? t('oal.health.goCollect') : t('oal.health.processing', { time: time(c.ready_at) })}</p>
-        ) : (
-          <form
-            className="flex flex-col gap-2"
-            data-testid="oal-birth-form"
-            onSubmit={(e) => {
-              e.preventDefault()
-              void run({ action: 'birth_apply', father: father.trim(), mother: mother.trim() }).then((r) => {
-                refresh()
-                if (r) toast.success(t('oal.health.applied'))
-              })
-            }}
-          >
-            <p className="text-sm text-muted">{t('oal.health.clerk')}</p>
-            <p className="text-sm">
-              {t('oal.office.name')}: <b>{f.game_name}</b> · {t(`oal.health.sexes.${f.sex}`)}
-            </p>
-            <p className="text-sm">
-              {t('oal.office.born')}: <b>{dateOf(f.born_on, i18n.language)}</b>, {f.home_town}
-            </p>
-            <label className="flex flex-col gap-1 text-sm">
-              {t('oal.health.father')}
-              <input value={father} onChange={(e) => setFather(e.target.value.slice(0, 60))} required minLength={2} className="min-h-11 rounded-xl border border-line bg-panel px-3" data-testid="oal-birth-father" />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              {t('oal.health.mother')}
-              <input value={mother} onChange={(e) => setMother(e.target.value.slice(0, 60))} required minLength={2} className="min-h-11 rounded-xl border border-line bg-panel px-3" data-testid="oal-birth-mother" />
-            </label>
-            <Button type="submit" disabled={busy || father.trim().length < 2 || mother.trim().length < 2} data-testid="oal-birth-apply">
-              {t('oal.health.apply', { fee: cash(150000, 'LRD', i18n.language) })}
-            </Button>
-          </form>
-        ))}
-      {at === 'collect' &&
-        (!c ? (
-          <p className="text-sm">{t('oal.health.applyFirst')}</p>
-        ) : c.collected_on ? (
-          <CertificateView c={c} />
-        ) : ready ? (
+
+  let body: ReactNode
+  if (place === 'gate') {
+    body = visit.admitted ? (
+      say('oal.health.gate.goIn')
+    ) : (
+      <>
+        {say('oal.health.gate.ask')}
+        <Button
+          onClick={() => {
+            onVisit({ ...visit, admitted: true })
+            toast.info(t('oal.health.gate.goIn'))
+            onClose()
+          }}
+          data-testid="oal-gate-business"
+        >
+          {t('oal.health.gate.business')}
+        </Button>
+      </>
+    )
+  } else if (place === 'reception') {
+    body = (
+      <>
+        {say(c?.status === 'lodged' ? 'oal.health.reception.collect' : 'oal.health.reception.hello')}
+        {!visit.ticket && c?.status !== 'lodged' && (
           <Button
-            disabled={busy}
-            onClick={() =>
-              void run({ action: 'birth_collect' }).then((r) => {
-                refresh()
-                if (r) toast.success(t('oal.health.collected'))
-              })
-            }
-            data-testid="oal-birth-collect"
+            onClick={() => {
+              const mine = 20 + Math.floor(Math.random() * 60)
+              onVisit({ ...visit, ticket: { mine, serving: mine - 3 } })
+              toast.info(t('oal.office.ticket', { mine: `B${mine}`, serving: `B${mine - 3}` }))
+              onClose()
+            }}
+            data-testid="oal-take-number"
           >
-            {t('oal.health.collect')}
+            {t('oal.health.reception.number')}
           </Button>
-        ) : (
-          <p className="text-sm">{t('oal.health.processing', { time: time(c.ready_at) })}</p>
-        ))}
+        )}
+      </>
+    )
+  } else if (place === 'writing') {
+    body =
+      visit.form === 'blank' ? (
+        <form
+          className="flex flex-col gap-2"
+          data-testid="oal-birth-form"
+          onSubmit={(e) => {
+            e.preventDefault()
+            const filled = { father: draft.father.trim(), mother: draft.mother.trim(), witness: draft.witness.trim(), relation: draft.relation.trim() }
+            onClose()
+            onGesture({ reach: true, to: 'place:writing' })
+            setTimeout(() => {
+              onVisit({ ...visit, form: filled })
+              toast.success(t('oal.health.form.done'))
+            }, 3400)
+          }}
+        >
+          <p className="font-semibold">{t('oal.health.form.title')}</p>
+          <p className="text-xs text-muted">{t('oal.health.form.part1')}</p>
+          <p className="text-sm">
+            {t('oal.office.name')}: <b>{f.game_name}</b> · {t(`oal.health.sexes.${f.sex}`)}
+          </p>
+          <p className="text-sm">
+            {t('oal.office.born')}: <b>{dateOf(f.born_on, i18n.language)}</b>, {f.home_town}
+          </p>
+          <p className="text-xs text-muted">{t('oal.health.form.part2')}</p>
+          {field('father', t('oal.health.father'))}
+          {field('mother', t('oal.health.mother'))}
+          <p className="text-xs text-muted">{t('oal.health.form.part3')}</p>
+          {field('witness', t('oal.health.form.witness'))}
+          {field('relation', t('oal.health.form.relation'), 30)}
+          <Button type="submit" disabled={Object.values(draft).some((v) => v.trim().length < 2)} data-testid="oal-birth-sign">
+            {t('oal.health.form.sign')}
+          </Button>
+        </form>
+      ) : visit.form ? (
+        say('oal.health.form.ready')
+      ) : (
+        say('oal.health.form.none')
+      )
+  } else if (place === 'counter') {
+    body = !c ? (
+      !called ? (
+        say(visit.ticket ? 'oal.office.notYet' : 'oal.health.counter.number', visit.ticket ? { mine: `B${visit.ticket.mine}`, serving: `B${visit.ticket.serving}` } : undefined)
+      ) : visit.form === null ? (
+        <>
+          {say('oal.health.counter.giveForm')}
+          <Button disabled={working} onClick={() => void handOver(STAFF.counter, () => onVisit({ ...visit, form: 'blank' }))} data-testid="oal-take-form">
+            {t('oal.health.counter.takeForm')}
+          </Button>
+        </>
+      ) : visit.form === 'blank' ? (
+        say('oal.health.counter.fillFirst')
+      ) : (
+        <>
+          {say('oal.health.counter.handIn')}
+          <Button
+            disabled={working || busy}
+            onClick={() => {
+              const form = visit.form as BirthForm
+              void handOver(STAFF.counter, () => run({ action: 'birth_apply', ...form }).then((r) => r && toast.info(t('oal.health.counter.assessed', { fee }))))
+            }}
+            data-testid="oal-birth-apply"
+          >
+            {t('oal.health.counter.handInForm')}
+          </Button>
+        </>
+      )
+    ) : c.status === 'assessed' ? (
+      say('oal.health.counter.payFirst', { fee })
+    ) : c.status === 'paid' ? (
+      <>
+        {say('oal.health.counter.receipt')}
+        <Button disabled={working || busy} onClick={() => void handOver(STAFF.counter, () => run({ action: 'birth_lodge' }).then((r) => r && toast.success(t('oal.health.applied'))))} data-testid="oal-birth-lodge">
+          {t('oal.health.counter.handInReceipt', { receipt: c.receipt })}
+        </Button>
+      </>
+    ) : (
+      say(c.collected_on ? 'oal.health.haveIt' : ready ? 'oal.health.goCollect' : 'oal.health.processing', c.ready_at ? { time: time(c.ready_at) } : undefined)
+    )
+  } else if (place === 'cashier') {
+    body =
+      c?.status === 'assessed' ? (
+        <>
+          {say('oal.health.cashier.slip', { fee })}
+          <Button disabled={working || busy} onClick={() => void handOver(STAFF.cashier, () => run<{ receipt: string }>({ action: 'birth_pay' }).then((r) => r && toast.success(t('oal.health.cashier.paid', { receipt: r.receipt }))))} data-testid="oal-birth-pay">
+            {t('oal.health.cashier.pay', { fee })}
+          </Button>
+        </>
+      ) : (
+        say(c ? 'oal.health.cashier.done' : 'oal.health.cashier.nothing')
+      )
+  } else if (place === 'collect') {
+    body = !c || c.status !== 'lodged' ? (
+      say('oal.health.applyFirst')
+    ) : c.collected_on ? (
+      <CertificateView c={c} />
+    ) : ready ? (
+      <>
+        {say('oal.health.collect.show')}
+        <Button disabled={working || busy} onClick={() => void handOver(STAFF.collect, () => run({ action: 'birth_collect' }).then((r) => r && toast.success(t('oal.health.collected'))))} data-testid="oal-birth-collect">
+          {t('oal.health.collect.button', { receipt: c.receipt })}
+        </Button>
+      </>
+    ) : (
+      say('oal.health.processing', { time: c.ready_at ? time(c.ready_at) : '' })
+    )
+  } else body = <p className="text-sm">{t('oal.health.hint')}</p>
+  return (
+    <section className="flex flex-col gap-3 border border-line bg-panel p-4" data-testid={`oal-health-${place ?? 'hall'}`}>
+      {place && <p className="font-bold">{t(`oal.health.windows.${place}`)}</p>}
+      {body}
     </section>
   )
 }

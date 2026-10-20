@@ -305,6 +305,10 @@ CLIPS = {
     # standing looking at a phone, texting.
     'pick': 'Picking Up Object.fbx',
     'text': 'Texting While Standing.fbx',
+    # Sitting down on a chair, a bench, a sofa (the hips 0.47 m back onto the seat) and standing
+    # up again (forward again): the seated pose between is 'sit'.
+    'sitDown': 'Stand To Sit.fbx',
+    'standUp': 'Sit To Stand.fbx',
 }
 for clip, file in CLIPS.items():
     path = os.path.join(ANIMATIONS, file)

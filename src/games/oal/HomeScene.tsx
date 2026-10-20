@@ -18,9 +18,9 @@ import { person, type Stick } from './ArrivalsScene'
 import { CHARACTER_URL } from './character'
 import plans from './homePlan.json'
 
-export const HOME_URL = '/oal/home.v4.glb'
+export const HOME_URL = '/oal/home.v5.glb'
 export type HomeKind = 'house' | 'room' | 'phoneshop' | 'starline' | 'citrus' | 'health'
-export type HomePlace = 'bed' | 'kitchen' | 'table' | 'door' | 'bath' | 'counter' | 'desk' | 'ticket' | 'collect'
+export type HomePlace = 'bed' | 'kitchen' | 'table' | 'door' | 'bath' | 'counter' | 'desk' | 'ticket' | 'collect' | 'gate' | 'reception' | 'writing' | 'cashier'
 type At = { x: number; y: number; face: number[]; z?: number; side?: number[] }
 type Door = { name: string; x: number; y: number; yaw: number; swing: number; cx: number; cy: number }
 /** A stand a phone is shown on (in a shop): where it stands, the way its screen faces, where to stand to look at it. */
@@ -35,14 +35,25 @@ type HomePlan = {
   /** Staff at their work there (behind a counter or a desk), and customers sitting, waiting. */
   attendants?: At[]
   waiting?: At[]
+  /** Police officers guarding the gate, in uniform. */
+  guards?: At[]
+  /** Where one sits: the seat, the way the sitter faces, the root's height; tight, no room in
+   * front to sit down from (seated straight away). */
+  seats?: Seat[]
+  /** A compound's gate: its leaf, shut across the gap (solid) until opened, sliding along x. */
+  gate?: { name: string; solid: number[]; slide: number }
   displays?: Display[]
 }
+type Seat = { x: number; y: number; face: number[]; z: number; tight?: boolean }
+// How far in front of a seat the sitting-down movement starts (its hips go this far back).
+const SIT_BACK = 0.47
+const SEAT_NEAR = 0.75
 /** A phone on show: its model, its colour, a keypad phone or a smartphone. */
 export type ShownPhone = { id: string; colour: string; kind: 'basic' | 'smart' }
 /** Something the character does where it stands: turned to a thing (a phone's stand, the desk's
  * fingerprint reader or camera), reaching out to it (taking, putting back, a finger on the
  * reader) or only looking. A new seq, a new gesture. */
-export type Gesture = { reach: boolean; to: `display:${number}` | 'reader' | 'camera' | 'counter' | 'table'; seq: number }
+export type Gesture = { reach: boolean; to: `display:${number}` | `place:${string}` | 'reader' | 'camera' | 'counter' | 'table'; seq: number }
 /** In the hand: a phone, or a new phone in its box. */
 export type Hold = { what: 'phone' | 'box'; phone: ShownPhone }
 /** Lying on the shop's counter or the home's table: a phone, its box (shut, or open with the
@@ -159,8 +170,8 @@ function Shown({ plan, shelf, carrying }: { plan: HomePlan; shelf: ShownPhone[];
 }
 
 /** Out of every rectangle (walls, furniture) the walker is in or against. */
-function collide(p: { x: number; y: number }, plan: HomePlan) {
-  for (const [x0, y0, x1, y1] of plan.solids as [number, number, number, number][]) {
+function collide(p: { x: number; y: number }, plan: HomePlan, extra: number[][] = []) {
+  for (const [x0, y0, x1, y1] of [...plan.solids, ...extra] as [number, number, number, number][]) {
     if (p.x < x0 - RADIUS || p.x > x1 + RADIUS || p.y < y0 - RADIUS || p.y > y1 + RADIUS) continue
     const left = p.x - (x0 - RADIUS)
     const right = x1 + RADIUS - p.x
@@ -179,14 +190,15 @@ const built: { current: Object3D | null } = { current: null }
 /** Where the walker is, for the doors to open to. */
 const walker = { current: { x: 0, y: 0 } }
 
-function Home({ kind }: { kind: HomeKind }) {
+function Home({ kind, gateOpen }: { kind: HomeKind; gateOpen: boolean }) {
   const gltf = useLoader(GLTFLoader, HOME_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const plan = PLANS[kind]
-  const { home, doors } = useMemo(() => {
+  const { home, doors, gate } = useMemo(() => {
     const home = gltf.scene.getObjectByName(kind)!.clone(true)
     home.position.set(0, 0, 0)
     const doors = (plan.doors ?? []).map((d) => ({ ...d, obj: home.getObjectByName(d.name) ?? null, open: 0 }))
-    return { home, doors }
+    const leaf = plan.gate ? home.getObjectByName(plan.gate.name) : undefined
+    return { home, doors, gate: leaf ? { obj: leaf, x: leaf.position.x, open: 0 } : null }
   }, [gltf, kind, plan])
   useEffect(() => {
     built.current = home
@@ -202,6 +214,11 @@ function Home({ kind }: { kind: HomeKind }) {
       const near = Math.hypot(walker.current.x - d.cx, walker.current.y - d.cy) < 1.6
       d.open += ((near ? 1 : 0) - d.open) * Math.min(1, dt * 4)
       d.obj.rotation.y = d.yaw + d.swing * d.open
+    }
+    // The gate slides open along its rail, and shut again.
+    if (gate && plan.gate) {
+      gate.open += ((gateOpen ? 1 : 0) - gate.open) * Math.min(1, dt * 1.5)
+      gate.obj.position.x = gate.x + plan.gate.slide * gate.open
     }
   })
   return (
@@ -234,9 +251,18 @@ type Props = {
   hold?: Hold | null
   laid?: Laid | null
   staffSeq?: number
+  /** One of the staff (by its place in the plan's attendants) reaching across its counter: a new
+   * seq, again. */
+  staffAct?: { index: number; seq: number } | null
+  /** A compound's gate, opened by its guards. */
+  gateOpen?: boolean
+  /** Seated on this seat (by its place in the plan's seats), or standing; the seat the character
+   * is by (to sit on). */
+  seat?: number | null
+  onSeat?: (index: number | null) => void
 }
 
-function Body({ kind, appearance, asleep, stick, view, onPlace, shelf, carrying, onDisplay, gesture, hold, laid, staffSeq }: Props) {
+function Body({ kind, appearance, asleep, stick, view, onPlace, shelf, carrying, onDisplay, gesture, hold, laid, staffSeq, staffAct, gateOpen, seat, onSeat }: Props) {
   const plan = PLANS[kind]
   const gltf = useLoader(GLTFLoader, CHARACTER_URL(appearance.sex), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const { camera } = useThree()
@@ -257,8 +283,9 @@ function Body({ kind, appearance, asleep, stick, view, onPlace, shelf, carrying,
   const others = useMemo(() => {
     const skins = [0.85, 0.7, 0.9, 0.6, 0.78, 0.95, 0.66]
     const outfits = appearance.sex === 'male' ? ['shirt_jeans', 'tee_jeans'] : ['blouse_skirt', 'tee_jeans']
-    const make = (at: At, k: number, sitting: boolean) => {
-      const p = person(gltf.scene, gltf.animations, { ...appearance, skin: skins[k % skins.length]!, outfit: outfits[k % outfits.length]! })
+    const make = (at: At, k: number, sitting: boolean, uniform?: string) => {
+      const outfit = uniform ? (appearance.sex === 'male' ? 'suit' : 'blouse_skirt') : outfits[k % outfits.length]!
+      const p = person(gltf.scene, gltf.animations, { ...appearance, skin: skins[k % skins.length]!, outfit }, uniform)
       if (sitting) {
         ;(p.actions.sit ?? p.actions.idle)?.play()
         p.mixer.update(0.4 + k * 0.3)
@@ -267,15 +294,21 @@ function Body({ kind, appearance, asleep, stick, view, onPlace, shelf, carrying,
       p.root.rotation.y = Math.atan2(at.face[0]!, -at.face[1]!)
       return { p, sitting }
     }
-    return [...(plan.attendants ?? []).map((at, k) => make(at, k, false)), ...(plan.waiting ?? []).map((at, k) => make(at, k + 3, true))]
+    return [
+      ...(plan.attendants ?? []).map((at, k) => make(at, k, false)),
+      ...(plan.waiting ?? []).map((at, k) => make(at, k + 3, true)),
+      // The Liberia National Police's dark blue.
+      ...(plan.guards ?? []).map((at, k) => make(at, k + 1, false, '#1a2440')),
+    ]
   }, [gltf, appearance, plan])
   // What is in the right hand.
   const held = useMemo(() => (hold ? (hold.what === 'box' ? boxModel(hold.phone) : phoneModel(hold.phone)) : null), [hold])
-  // The attendant reaching to the counter: boxing the phone, handing it over.
+  // One of the staff reaching to the counter: boxing the phone, taking a form, handing over.
+  const reachBy = staffAct ?? (staffSeq ? { index: 0, seq: staffSeq } : null)
   useEffect(() => {
-    const staff = others[0]?.p
+    const staff = reachBy ? others[reachBy.index]?.p : undefined
     const pick = staff?.actions.pick
-    if (!staffSeq || !staff || !pick) return
+    if (!reachBy || !staff || !pick) return
     const talk = staff.actions.talk ?? staff.actions.idle
     talk?.stop()
     pick.reset()
@@ -287,7 +320,7 @@ function Body({ kind, appearance, asleep, stick, view, onPlace, shelf, carrying,
       talk?.play()
     }, pick.getClip().duration * 1000)
     return () => clearTimeout(id)
-  }, [staffSeq, others])
+  }, [reachBy?.seq, reachBy?.index, others])
   // The right hand and its fingers' roots: the phone lies in the palm, its back to it, along the
   // fingers, its screen out.
   const bones = useMemo(() => {
@@ -309,7 +342,12 @@ function Body({ kind, appearance, asleep, stick, view, onPlace, shelf, carrying,
     if (!gesture) return
     const s = state.current
     const d = gesture.to.startsWith('display:') ? plan.displays?.[Number(gesture.to.slice(8))] : undefined
-    const [tx, ty] = d ? [d.x, d.y] : ((gesture.to === 'table' ? tableAt(plan) : MARKS[gesture.to]) ?? [s.x, s.y + 1])
+    const spot = gesture.to.startsWith('place:') ? plan.places[gesture.to.slice(6) as HomePlace] : undefined
+    const [tx, ty] = d
+      ? [d.x, d.y]
+      : spot
+        ? [spot.x + spot.face[0]! * 0.8, spot.y + spot.face[1]! * 0.8]
+        : ((gesture.to === 'table' ? tableAt(plan) : MARKS[gesture.to as string]) ?? [s.x, s.y + 1])
     const pick = me.actions.pick
     let length = 0.9
     if (gesture.reach && pick) {
@@ -322,6 +360,51 @@ function Body({ kind, appearance, asleep, stick, view, onPlace, shelf, carrying,
     }
     doing.current = { until: clock.current + length, yaw: Math.atan2(tx - s.x, -(ty - s.y)), reach: gesture.reach && Boolean(pick) }
   }, [gesture, me, plan])
+  // Sitting down and standing up: from in front of the seat, the hips back onto it (or straight
+  // onto a seat with no room in front), then the seated pose; up again, a step forward.
+  const sitting = useRef<{ index: number; phase: 'down' | 'sat' | 'up'; until: number } | null>(null)
+  const nearSeat = useRef<number | null>(null)
+  const playOnce = (name: string) => {
+    const a = me.actions[name]
+    if (!a) return 0
+    a.reset()
+    a.setLoop(LoopOnce, 1)
+    a.clampWhenFinished = true
+    a.weight = 1
+    a.play()
+    return a.getClip().duration
+  }
+  useEffect(() => {
+    const s = state.current
+    const seats = plan.seats ?? []
+    const was = sitting.current
+    if (seat !== null && seat !== undefined && seats[seat] && was?.index !== seat) {
+      const at = seats[seat]!
+      s.facing = Math.atan2(at.face[0]!, -at.face[1]!)
+      if (at.tight || !me.actions.sitDown) {
+        s.x = at.x
+        s.y = at.y
+        me.actions.sit?.reset().play()
+        sitting.current = { index: seat, phase: 'sat', until: 0 }
+      } else {
+        s.x = at.x + at.face[0]! * SIT_BACK
+        s.y = at.y + at.face[1]! * SIT_BACK
+        sitting.current = { index: seat, phase: 'down', until: clock.current + playOnce('sitDown') }
+      }
+    } else if ((seat === null || seat === undefined) && was && was.phase !== 'up') {
+      const at = seats[was.index]!
+      me.actions.sit?.stop()
+      if (at.tight || !me.actions.standUp) {
+        s.x = at.x + at.face[0]! * 0.6
+        s.y = at.y + at.face[1]! * 0.6
+        sitting.current = null
+      } else {
+        s.x = at.x
+        s.y = at.y
+        sitting.current = { index: was.index, phase: 'up', until: clock.current + playOnce('standUp') }
+      }
+    }
+  }, [seat, me, plan])
   // Asleep: on the bed, lying the way it lies, the sleeping movement only.
   useEffect(() => {
     const sleep = me.actions.sleep
@@ -372,10 +455,30 @@ function Body({ kind, appearance, asleep, stick, view, onPlace, shelf, carrying,
       if (k.has('arrowleft') || k.has('a')) x = -1
       if (k.has('arrowright') || k.has('d')) x = 1
       clock.current += dt
+      const sat = sitting.current
+      if (sat && sat.phase !== 'sat' && clock.current >= sat.until) {
+        const at = plan.seats![sat.index]!
+        if (sat.phase === 'down') {
+          me.actions.sitDown?.stop()
+          s.x = at.x
+          s.y = at.y
+          me.actions.sit?.reset().play()
+          sitting.current = { ...sat, phase: 'sat' }
+        } else {
+          me.actions.standUp?.stop()
+          s.x = at.x + at.face[0]! * (SIT_BACK + 0.01)
+          s.y = at.y + at.face[1]! * (SIT_BACK + 0.01)
+          sitting.current = null
+        }
+      }
       const busy = doing.current
       if (busy && clock.current >= busy.until) {
         if (busy.reach) me.actions.pick?.stop()
         doing.current = null
+      }
+      if (sitting.current) {
+        x = 0
+        y = 0
       }
       if (doing.current) {
         x = 0
@@ -395,18 +498,33 @@ function Body({ kind, appearance, asleep, stick, view, onPlace, shelf, carrying,
         for (let i = 0; i < steps; i++) {
           s.x += (mx / n) * ((amount * WALK_SPEED * dt) / steps)
           s.y += (my / n) * ((amount * WALK_SPEED * dt) / steps)
-          collide(s, plan)
+          collide(s, plan, plan.gate && !gateOpen ? [plan.gate.solid] : [])
         }
         let turn = Math.atan2(mx, -my) - s.facing
         turn = Math.atan2(Math.sin(turn), Math.cos(turn))
         s.facing += turn * Math.min(1, dt * 10)
       }
       s.speed += (amount - s.speed) * Math.min(1, dt * 8)
-      me.root.position.set(s.x, 0.02, -s.y)
+      const seated = sitting.current
+      // On the seat (and its height) while seated; on the floor sitting down and standing up.
+      const lift = seated?.phase === 'sat' ? (plan.seats![seated.index]!.z ?? 0) : seated ? (plan.seats![seated.index]!.z ?? 0) * 0.5 : 0
+      me.root.position.set(s.x, 0.02 + lift, -s.y)
       me.root.rotation.y = s.facing
+      // The seat the character is by, standing (to sit on).
+      let by: number | null = null
+      if (!seated && !doing.current)
+        (plan.seats ?? []).forEach((at, i) => {
+          const fx = at.x + at.face[0]! * (at.tight ? 0.3 : SIT_BACK)
+          const fy = at.y + at.face[1]! * (at.tight ? 0.3 : SIT_BACK)
+          if (Math.hypot(s.x - fx, s.y - fy) < SEAT_NEAR && (by === null || Math.hypot(s.x - fx, s.y - fy) < Math.hypot(s.x - plan.seats![by]!.x, s.y - plan.seats![by]!.y))) by = i
+        })
+      if (by !== nearSeat.current) {
+        nearSeat.current = by
+        onSeat?.(by)
+      }
       walker.current = { x: s.x, y: s.y }
       if (me.actions.walk && me.actions.idle) {
-        const reaching = doing.current?.reach ? 1 : 0
+        const reaching = doing.current?.reach || sitting.current ? 1 : 0
         me.actions.walk.weight = s.speed * (1 - reaching)
         me.actions.idle.weight = (1 - s.speed) * (1 - reaching)
       }
@@ -465,7 +583,7 @@ function Body({ kind, appearance, asleep, stick, view, onPlace, shelf, carrying,
     const indoors = (plan.inside ?? []).some(([x0, y0, x1, y1]) => fx > x0! && fx < x1! && fy > y0! && fy < y1!)
     const dist = asleep ? 3.2 : indoors ? 2.7 : 4.2
     const flatDist = Math.cos(tilt) * dist
-    target.set(fx, asleep ? 0.6 : 1.45, -fy)
+    target.set(fx, asleep ? 0.6 : sitting.current?.phase === 'sat' ? 1.05 : 1.45, -fy)
     want.set(fx + Math.sin(turnBy) * flatDist, target.y + Math.sin(tilt) * dist, -(fy - Math.cos(turnBy) * flatDist))
     if (indoors && plan.ceiling) want.y = Math.min(want.y, plan.ceiling - 0.25)
     if (built.current) {
@@ -519,7 +637,7 @@ export default function HomeScene(props: Props) {
       <hemisphereLight args={['#eaf2ff', '#7a5a3c', 0.9]} />
       <directionalLight position={[-30, 50, 20]} intensity={2.0} color="#fff1dc" />
       <Suspense fallback={null}>
-        <Home kind={props.kind} />
+        <Home kind={props.kind} gateOpen={props.gateOpen ?? false} />
         <Body {...props} />
       </Suspense>
     </Canvas>

@@ -1348,9 +1348,14 @@ export type Database = {
           mother: string
           notified: boolean
           number: string
-          ready_at: string
+          paid_at: string | null
+          ready_at: string | null
+          receipt: string | null
           sex: string
+          status: string
           user_id: string
+          witness: string | null
+          witness_relation: string | null
         }
         Insert: {
           applied_at: string
@@ -1364,9 +1369,14 @@ export type Database = {
           mother: string
           notified?: boolean
           number: string
-          ready_at: string
+          paid_at?: string | null
+          ready_at?: string | null
+          receipt?: string | null
           sex: string
+          status?: string
           user_id: string
+          witness?: string | null
+          witness_relation?: string | null
         }
         Update: {
           applied_at?: string
@@ -1380,9 +1390,14 @@ export type Database = {
           mother?: string
           notified?: boolean
           number?: string
-          ready_at?: string
+          paid_at?: string | null
+          ready_at?: string | null
+          receipt?: string | null
           sex?: string
+          status?: string
           user_id?: string
+          witness?: string | null
+          witness_relation?: string | null
         }
         Relationships: [
           {

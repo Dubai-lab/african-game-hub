@@ -156,7 +156,9 @@
       "ALREADY_UNBOXED": "It is already out of its box.",
       "STILL_BOXED": "Unbox it first.",
       "ALREADY_CHARGED": "It is already charging or charged.",
-      "PHONE_NOT_READY": "Your phone is not ready: unbox it and charge it at home."
+      "PHONE_NOT_READY": "Your phone is not ready: unbox it and charge it at home.",
+      "ALREADY_PAID": "You have paid already.",
+      "NOT_PAID": "Pay at the cashier first."
     },
     "samePassword": "That is your current password. Choose a different one.",
     "captchaFailed": "The security check did not pass. Reload the page and try again."
@@ -2818,7 +2820,11 @@
         "counter": "At the counter",
         "desk": "At the desk",
         "ticket": "At the ticket machine",
-        "collect": "At the collection window"
+        "collect": "At the collection window",
+        "gate": "At the gate",
+        "reception": "At reception",
+        "writing": "At the writing shelf",
+        "cashier": "At the cashier"
       },
       "leaveShop": "Out to the street",
       "phone": {
@@ -2827,7 +2833,9 @@
         "unboxed": "Out of the box. The battery is flat: put it on charge.",
         "charging": "Phone charging: full at {{time}}",
         "charged": "On charge. It will be full in an hour."
-      }
+      },
+      "sitDown": "Sit down",
+      "standUp": "Stand up"
     },
     "shop": {
       "look": "Look at the {{name}}",
@@ -2886,12 +2894,15 @@
       "handOver": "Sign and hand over your {{document}}"
     },
     "health": {
-      "hint": "The windows are at the back: Birth Registration to apply, Collection to collect your certificate.",
+      "hint": "Reception is by the door, the writing shelf on the left wall, the windows at the back: Window 1 Birth Registration, Window 2 Collection, the Cashier.",
       "windows": {
         "counter": "Window 1 · Birth Registration",
-        "collect": "Window 2 · Collection"
+        "collect": "Window 2 · Collection",
+        "gate": "Police officer at the gate",
+        "reception": "Reception",
+        "writing": "Writing shelf",
+        "cashier": "Cashier"
       },
-      "clerk": "\"Good day. For a birth certificate, fill in the form: your parents' names. The fee is paid here.\"",
       "father": "Father's full name",
       "mother": "Mother's full name",
       "sex": "Sex",
@@ -2900,18 +2911,62 @@
         "female": "Female"
       },
       "bornIn": "Place of birth",
-      "apply": "Submit the form and pay {{fee}}",
-      "applied": "Application received. Come back from tomorrow: we will text you when it is ready.",
+      "applied": "\"Thank you. Your application is lodged. Come back from tomorrow: we will text you when it is ready.\"",
       "processing": "Your certificate is being processed: ready from {{time}}.",
       "goCollect": "Your certificate is ready: collect it at Window 2.",
       "haveIt": "Your birth certificate has been issued.",
       "applyFirst": "\"Apply first at Window 1, Birth Registration.\"",
-      "collect": "Collect your birth certificate",
+      "collect": {
+        "show": "\"Your receipt, please. Sign the register here.\"",
+        "button": "Show receipt {{receipt}} and sign"
+      },
       "collected": "Here is your birth certificate.",
       "onlyLiberians": "This office registers the births of Liberians, in Liberia.",
       "republic": "REPUBLIC OF LIBERIA",
       "ministry": "Ministry of Health · Vital Statistics Division",
-      "certificate": "Certificate of Birth"
+      "certificate": "Certificate of Birth",
+      "called": "Number {{mine}}, Window 1 please.",
+      "gate": {
+        "ask": "\"Good day. Police. What is your business at the Ministry?\"",
+        "business": "\"I have come for my birth certificate, at Vital Statistics.\"",
+        "goIn": "\"Alright, go in. Reception is on your right as you enter.\""
+      },
+      "reception": {
+        "hello": "\"Good day. Birth registration? Take a number and wait: you will be called to Window 1.\"",
+        "collect": "\"Collection is at Window 2, at the back.\"",
+        "number": "Take a number"
+      },
+      "form": {
+        "title": "Application for Registration of Birth (late registration)",
+        "part1": "Part A: the person whose birth is registered",
+        "part2": "Part B: the parents",
+        "part3": "Part C: declaration by a witness to the birth (a parent, an elder of the family or the community)",
+        "witness": "Witness's full name",
+        "relation": "Relation to you (mother, uncle, elder...)",
+        "sign": "Fill in and sign the form",
+        "done": "The form is filled in and signed. Take it to Window 1.",
+        "ready": "Your form is filled in: take it to Window 1.",
+        "none": "Get the application form at Window 1 first."
+      },
+      "counter": {
+        "number": "\"Please take a number at reception and wait to be called.\"",
+        "giveForm": "\"Here is the application form. Fill it in at the shelf by the wall, sign it, and bring it back to me.\"",
+        "takeForm": "Take the form",
+        "fillFirst": "\"Fill in the form at the shelf by the wall first.\"",
+        "handIn": "\"Have you filled in your form? Let me see.\"",
+        "handInForm": "Hand in the form",
+        "assessed": "\"Your form is in order. Pay {{fee}} at the Cashier and bring me the receipt.\"",
+        "payFirst": "\"Pay {{fee}} at the Cashier first, then bring me the receipt.\"",
+        "receipt": "\"Have you paid? Let me see the receipt.\"",
+        "handInReceipt": "Hand in receipt {{receipt}}"
+      },
+      "cashier": {
+        "slip": "\"Birth registration fee: {{fee}}.\"",
+        "pay": "Pay {{fee}}",
+        "paid": "Paid. Your receipt is {{receipt}}: take it to Window 1.",
+        "done": "\"You have paid already. Keep your receipt.\"",
+        "nothing": "\"Get assessed at Window 1 first.\""
+      }
     }
   }
 }

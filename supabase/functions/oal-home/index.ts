@@ -20,8 +20,8 @@ const body = z.discriminatedUnion('action', [
   z.object({ action: z.literal('send_money'), number: z.string().max(20), amount: z.int().min(100).max(10_000_000_000) }),
   z.object({ action: z.enum(['cash_in', 'cash_out']), amount: z.int().min(100).max(10_000_000_000) }),
   z.object({ action: z.literal('read_texts') }),
-  z.object({ action: z.literal('birth_apply'), father: z.string().min(2).max(60), mother: z.string().min(2).max(60) }),
-  z.object({ action: z.literal('birth_collect') }),
+  z.object({ action: z.literal('birth_apply'), father: z.string().min(2).max(60), mother: z.string().min(2).max(60), witness: z.string().min(2).max(60), relation: z.string().min(2).max(30) }),
+  z.object({ action: z.enum(['birth_pay', 'birth_lodge', 'birth_collect']) }),
   // The new phone at home: out of its box, on charge (public.oal_phone_box_action).
   z.object({ action: z.enum(['unbox', 'charge']) }),
 ])
@@ -31,8 +31,8 @@ const PHONE: Record<string, string> = { text: 'text', send_money: 'send', cash_i
 serve(body, async ({ userId, body }) => {
   const result = body.action === 'unbox' || body.action === 'charge'
     ? await admin.rpc('oal_phone_box_action', { p_user_id: userId, p_action: body.action })
-    : body.action === 'birth_apply' || body.action === 'birth_collect'
-    ? await admin.rpc('oal_office_action', { p_user_id: userId, p_action: body.action, p_data: body.action === 'birth_apply' ? { father: body.father, mother: body.mother } : {} })
+    : body.action.startsWith('birth_')
+    ? await admin.rpc('oal_office_action', { p_user_id: userId, p_action: body.action, p_data: body.action === 'birth_apply' ? { father: body.father, mother: body.mother, witness: body.witness, relation: body.relation } : {} })
     : PHONE[body.action]
     ? await admin.rpc('oal_phone_action', {
         p_user_id: userId,

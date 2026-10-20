@@ -17,7 +17,7 @@ import { toast } from '@/core/ui/toast'
 import { PhoneCard, RoomSection, ShopCounter, useHome, useHomeStep } from './Home'
 import { useGameNow } from './Journey'
 import type { Gesture, Hold, HomeKind, HomePlace, Laid, ShownPhone } from './HomeScene'
-import { BirthOffice, NetworkDesk, type Ticket } from './Offices'
+import { type BirthForm, MinistryOfHealth, NetworkDesk, type Ticket } from './Offices'
 import type { TravelState } from './Journey'
 
 const HomeScene = lazy(() => import('./HomeScene'))
@@ -122,16 +122,24 @@ export function HomeView({ kind, travel, appearance, homeTown, homeCountry, hud,
   // A network's queue: the ticket taken by the door, the number served moving on until it is
   // called; the camera's flash.
   const [ticket, setTicket] = useState<Ticket | null>(null)
+  const letter = kind === 'health' ? 'B' : 'A'
   useEffect(() => {
     if (!ticket || ticket.serving >= ticket.mine) return
     const id = setTimeout(() => {
       const next = { ...ticket, serving: ticket.serving + 1 }
       setTicket(next)
-      if (next.serving === next.mine) toast.info(t('oal.office.called', { mine: `A${next.mine}` }))
+      if (next.serving === next.mine) toast.info(t(kind === 'health' ? 'oal.health.called' : 'oal.office.called', { mine: `${letter}${next.mine}` }))
     }, 3500)
     return () => clearTimeout(id)
-  }, [ticket, t])
+  }, [ticket, t, kind, letter])
   const [flash, setFlash] = useState(false)
+  // The Ministry of Health: let in at the gate, the form taken and filled in; the clerks reaching.
+  const [admitted, setAdmitted] = useState(false)
+  const [form, setForm] = useState<null | 'blank' | BirthForm>(null)
+  const [staffAct, setStaffAct] = useState<{ index: number; seq: number } | null>(null)
+  // Sitting: the seat the character is by, the seat it sits on.
+  const [bySeat, setBySeat] = useState<number | null>(null)
+  const [seated, setSeated] = useState<number | null>(null)
   const leave = () => {
     // Not out of the shop with a phone not paid for: it goes back on its stand.
     if (carried && !paid) toast.info(t('oal.shop.leftBehind', { name: `${carried.brand} ${carried.model}` }))
@@ -160,7 +168,7 @@ export function HomeView({ kind, travel, appearance, homeTown, homeCountry, hud,
       onPointerCancel={() => (drag.current = null)}
     >
       <Suspense fallback={<Skeleton className="h-full rounded-none" />}>
-        <HomeScene kind={kind} appearance={appearance} asleep={asleep} stick={stick} view={view} onPlace={setPlace} shelf={shelf} carrying={carrying} onDisplay={setDisplay} gesture={gesture} hold={hold} laid={laid} staffSeq={staffSeq} />
+        <HomeScene kind={kind} appearance={appearance} asleep={asleep} stick={stick} view={view} onPlace={setPlace} shelf={shelf} carrying={carrying} onDisplay={setDisplay} gesture={gesture} hold={hold} laid={laid} staffSeq={staffSeq} staffAct={staffAct} gateOpen={admitted} seat={seated} onSeat={setBySeat} />
       </Suspense>
       {hud}
       {flash && <div className="pointer-events-none absolute inset-0 z-20 bg-white/80" aria-hidden />}
@@ -195,9 +203,21 @@ export function HomeView({ kind, travel, appearance, homeTown, homeCountry, hud,
             }}
           />
           <div className="absolute bottom-24 right-6 flex flex-col items-end gap-2">
+            {seated !== null ? (
+              <Button onClick={() => setSeated(null)} data-testid="oal-stand-up">
+                {t('oal.home.standUp')}
+              </Button>
+            ) : (
+              bySeat !== null &&
+              !handling && (
+                <Button onClick={() => setSeated(bySeat)} data-testid="oal-sit-down">
+                  {t('oal.home.sitDown')}
+                </Button>
+              )
+            )}
             {ticket && (
               <p className="glass rounded-full border border-line px-3 py-1 text-xs font-semibold tabular-nums" data-testid="oal-ticket">
-                {t('oal.office.board', { mine: `A${ticket.mine}`, serving: `A${ticket.serving}` })}
+                {t('oal.office.board', { mine: `${letter}${ticket.mine}`, serving: `${letter}${ticket.serving}` })}
               </p>
             )}
             {carried && (
@@ -290,11 +310,19 @@ export function HomeView({ kind, travel, appearance, homeTown, homeCountry, hud,
                   <p className="border border-line bg-panel p-4 text-sm">{t('oal.office.hint')}</p>
                 )
               ) : kind === 'health' ? (
-                place === 'counter' || place === 'collect' ? (
-                  <BirthOffice travel={travel} window={place} />
-                ) : (
-                  <p className="border border-line bg-panel p-4 text-sm">{t('oal.health.hint')}</p>
-                )
+                <MinistryOfHealth
+                  travel={travel}
+                  place={place === 'gate' || place === 'reception' || place === 'writing' || place === 'counter' || place === 'cashier' || place === 'collect' ? place : null}
+                  visit={{ admitted, ticket, form }}
+                  onVisit={(v) => {
+                    setAdmitted(v.admitted)
+                    setTicket(v.ticket)
+                    setForm(v.form)
+                  }}
+                  onGesture={act}
+                  onStaff={(index) => setStaffAct((old) => ({ index, seq: (old?.seq ?? 0) + 1 }))}
+                  onClose={() => setOpen(null)}
+                />
               ) : (
                 <>
                   <BodyPanel travel={travel} homeTown={homeTown} homeCountry={homeCountry} />
