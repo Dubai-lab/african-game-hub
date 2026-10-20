@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/core/auth/AuthContext'
 import { supabase } from '@/core/lib/supabase'
 import { Skeleton } from '@/core/ui/Skeleton'
-import { PhoneSection, PhoneUse, RoomSection, useHome } from './Home'
+import { PhoneUse, RoomSection, SimStatus, useHome } from './Home'
 import { Travel, type TravelState, useGameNow } from './Journey'
 import { JobsAbroad, VisaOffice, Work } from './Work'
 
@@ -63,6 +63,9 @@ export function PhoneDevice({ travel, homeCountry, onMap, onClose }: { travel: T
   const network = sim ? home.data!.networks.find((n) => n.id === sim.network)?.name : null
   const time = new Intl.DateTimeFormat(i18n.language, { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }).format(now())
   const apps = phone?.kind === 'smart' ? SMART : BASIC
+  // A new phone works once out of its box and charged (at home).
+  const ready = Boolean(phone && phone.unboxed && (phone.charge === 'charged' || (phone.charge === 'charging' && phone.charged_at && new Date(`${phone.charged_at}Z`).getTime() <= now().getTime())))
+  const hhmm = (at: string) => new Intl.DateTimeFormat(i18n.language, { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }).format(new Date(`${at}Z`))
   const open = (a: App) => (a === 'map' ? onMap() : setApp(a))
   const found = query.trim()
     ? SMART.filter((a) => a !== 'search' && (t(`oal.phone.apps.${a}`).toLowerCase().includes(query.toLowerCase()) || WORDS[a].some((w) => w.includes(query.toLowerCase()) || query.toLowerCase().includes(w))))
@@ -73,6 +76,10 @@ export function PhoneDevice({ travel, homeCountry, onMap, onClose }: { travel: T
   ) : !phone ? (
     <p className="p-4 text-sm" data-testid="oal-no-phone">
       {t('oal.world.noPhone')}
+    </p>
+  ) : !ready ? (
+    <p className="p-4 text-sm" data-testid="oal-phone-not-ready">
+      {!phone.unboxed ? t('oal.phone.inBox') : phone.charge === 'flat' ? t('oal.phone.flat') : t('oal.phone.stillCharging', { time: phone.charged_at ? hhmm(phone.charged_at) : '' })}
     </p>
   ) : app === null ? (
     <div className={`grid gap-4 p-4 ${phone.kind === 'smart' ? 'grid-cols-3' : 'grid-cols-1'}`} data-testid="oal-phone-home">
@@ -105,7 +112,7 @@ export function PhoneDevice({ travel, homeCountry, onMap, onClose }: { travel: T
         </>
       )}
       {app === 'messages' && (sim ? <PhoneUse travel={travel} /> : <p className="text-sm">{t('oal.phone.noSim')}</p>)}
-      {app === 'sim' && <PhoneSection travel={travel} homeCountry={homeCountry} />}
+      {app === 'sim' && <SimStatus travel={travel} />}
       {app === 'jobs' && (
         <>
           <Work travel={travel} />

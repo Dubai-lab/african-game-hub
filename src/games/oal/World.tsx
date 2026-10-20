@@ -29,6 +29,7 @@ import { PhoneDevice } from './Phone'
 import { OnTheRoad, Station } from './Road'
 import { PlacePanel, StreetView } from './Street'
 import type { Place, TownId } from './StreetScene'
+import type { HomeKind } from './HomeScene'
 import { AtWork, JobsAbroad, VisaOffice, Work } from './Work'
 
 export type Life = { game_name: string; sex: Sex; born_on: string; home_country: HomeCountry; home_town: string; appearance: Appearance }
@@ -37,8 +38,8 @@ type Balance = { currency: string; amount: number }
 /** Where in town the player is: a 3D street (walking, maybe come to one of its places), or one
  * of the town's places shown on a picture. */
 type Spot = { area: Area; place?: Place | Other; walking?: boolean }
-type Other = 'home' | 'airport' | 'visa' | 'jobs' | 'station'
-type Area = TownId | 'town' | 'home' | 'airport' | 'visa' | 'jobs' | 'station'
+type Other = 'home' | 'airport' | 'visa' | 'jobs' | 'station' | 'health'
+type Area = TownId | 'town' | 'home' | 'airport' | 'visa' | 'jobs' | 'station' | 'health'
 
 /** Each town's areas and their places (3D where a street has been built). */
 type AreaInfo = { area: Area; places: (Place | Other)[]; walk?: TownId }
@@ -47,7 +48,7 @@ function areasOf(town: string, country: 'LR' | 'GH'): AreaInfo[] {
   const streets: AreaInfo[] =
     town === 'Monrovia'
       ? [
-          { area: 'sinkor', places: ['cookshop', 'phone', 'changer', 'kekeh', 'clinic'], walk: 'sinkor' },
+          { area: 'sinkor', places: ['cookshop', 'phone', 'starline', 'citrus', 'changer', 'kekeh', 'clinic'], walk: 'sinkor' },
           { area: 'waterside', places: ['stall', 'changer', 'cookshop'], walk: 'waterside' },
           { area: 'skd', places: ['tickets', 'stand', 'pitch'], walk: 'skd' },
         ]
@@ -57,6 +58,7 @@ function areasOf(town: string, country: 'LR' | 'GH'): AreaInfo[] {
   const areas: AreaInfo[] = [{ area: 'home', places: ['home'] }, ...streets, { area: 'jobs', places: ['jobs'] }]
   if (capital) areas.push({ area: 'visa', places: ['visa'] }, { area: 'airport', places: ['airport'] })
   if (town === 'Monrovia' || town === 'Voinjama') areas.push({ area: 'station', places: ['station'] })
+  if (town === 'Monrovia') areas.push({ area: 'health', places: ['health'] })
   return areas.filter((a) => country === 'LR' || a.area !== 'waterside')
 }
 
@@ -64,10 +66,12 @@ function areasOf(town: string, country: 'LR' | 'GH'): AreaInfo[] {
  * (Roberts International is at Harbel, 48 km), a taxi. */
 function districtOf(town: string, area: Area): string {
   if (area === 'airport') return 'airport'
-  if (town === 'Monrovia') return ({ home: 'sinkor', sinkor: 'sinkor', waterside: 'downtown', jobs: 'downtown', visa: 'downtown', station: 'paynesville', skd: 'paynesville' } as Record<string, string>)[area] ?? 'sinkor'
+  if (town === 'Monrovia') return ({ home: 'sinkor', sinkor: 'sinkor', waterside: 'downtown', jobs: 'downtown', visa: 'downtown', station: 'paynesville', skd: 'paynesville', health: 'congotown' } as Record<string, string>)[area] ?? 'sinkor'
   return 'town'
 }
 type Ride = 'walk' | 'kekeh' | 'taxi' | 'airport'
+/** The places on Tubman Boulevard with an inside to walk into, and which. */
+const INSIDE: Record<string, HomeKind> = { phone: 'phoneshop', starline: 'starline', citrus: 'citrus' }
 
 const BACKDROP: Partial<Record<Area, string>> = { sinkor: '/oal/backdrops/sinkor.webp', waterside: '/oal/backdrops/waterside.webp', home: '/oal/backdrops/home.webp', town: '/oal/backdrops/home.webp' }
 function backdropFor(area: Area, town: string) {
@@ -229,8 +233,8 @@ export function World({ life }: { life: Life }) {
           onMove={(x, y, facing) => (walked.current = { area: valid.area, x, y, facing })}
           onEnter={(p) => {
             // A shop with an inside: in through its door.
-            if (area.walk !== 'sinkor' || p !== 'phone') return false
-            arrive({ area: 'sinkor', place: 'phone' })
+            if (area.walk !== 'sinkor' || !(p in INSIDE)) return false
+            arrive({ area: 'sinkor', place: p })
             return true
           }}
           hud={<Hud life={life} travel={here} onMap={() => setSheet('map')} onPhone={() => setSheet('phone')} walking />}
@@ -239,11 +243,21 @@ export function World({ life }: { life: Life }) {
       </>
     )
 
-  // Inside the phone shop on Tubman Boulevard.
-  if (valid.area === 'sinkor' && valid.place === 'phone')
+  // Inside the Ministry of Health: out of its door, where next (on the map, walked or ridden).
+  if (valid.area === 'health')
     return (
       <>
-        <HomeView kind="phoneshop" travel={here} appearance={life.appearance} homeTown={life.home_town} homeCountry={life.home_country} hud={hud} onDoor={() => arrive({ area: 'sinkor', place: 'phone', walking: true })} />
+        <HomeView key="health" kind="health" travel={here} appearance={life.appearance} homeTown={life.home_town} homeCountry={life.home_country} hud={hud} onDoor={() => setSheet('map')} />
+        {sheets}
+      </>
+    )
+
+  // Inside a shop on Tubman Boulevard: the phone shop, the networks' customer care.
+  const inside = valid.area === 'sinkor' && valid.place ? INSIDE[valid.place] : undefined
+  if (inside)
+    return (
+      <>
+        <HomeView key={inside} kind={inside} travel={here} appearance={life.appearance} homeTown={life.home_town} homeCountry={life.home_country} hud={hud} onDoor={() => arrive({ area: 'sinkor', place: valid.place!, walking: true })} />
         {sheets}
       </>
     )
@@ -273,6 +287,7 @@ function placeName(area: Area, place: Place | Other, town: string, life: Life, t
   if (place === 'home') return town === life.home_town ? t('oal.world.places.familyHome') : t('oal.world.places.room')
   if (place === 'airport') return t(town === 'Accra' ? 'oal.world.places.airportACC' : 'oal.world.places.airportROB')
   if (place === 'visa') return t('oal.world.places.visa')
+  if (place === 'health') return t('oal.world.places.health')
   if (place === 'jobs') return t('oal.world.places.jobs')
   if (place === 'station') return t(town === 'Monrovia' ? 'oal.world.places.stationMonrovia' : 'oal.world.places.station', { town })
   if (area === 'town') return t(`oal.world.places.${place}`, { town })
@@ -297,6 +312,7 @@ function OtherPanel({ place, travel, life }: { place: Place | Other; travel: Tra
         <JobsAbroad homeCountry={life.home_country} />
       </>
     )
+  if (place === 'health') return null
   return <PlacePanel place={place} travel={travel} homeCountry={life.home_country} />
 }
 

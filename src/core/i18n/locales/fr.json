@@ -137,7 +137,7 @@
       "NO_WORK_PERMIT": "Il faut un visa de travail pour travailler dans ce pays.",
       "UNWELL": "Vous êtes malade : guérissez d’abord, ou allez à la clinique.",
       "TOO_TIRED": "Vous êtes trop fatigué : dormez d’abord.",
-      "NOT_AT_HOME": "Votre famille est dans votre ville natale.",
+      "NOT_AT_HOME": "À faire chez vous.",
       "ALREADY_ATE_WITH_FAMILY": "Vous avez déjà mangé en famille aujourd’hui.",
       "NO_KITCHEN": "Pas de cuisine ici : louez une chambre, ou mangez à la gargote.",
       "OVERSTAY_FINE_UNPAID": "Vous avez dépassé votre séjour : payez l’amende (10 US$ par jour) avant d’embarquer. Vous n’avez pas assez.",
@@ -149,7 +149,14 @@
       "BAD_TEXT": "Un SMS fait de 1 à 160 caractères.",
       "NO_CARS_NOW": "Aucun taxi-brousse ne part maintenant : ils partent de 06:00 à 15:00.",
       "BUS_NOT_BOARDING": "L’embarquement n’est pas encore ouvert : le bus part à 07:00, et l’on embarque une heure et demie avant.",
-      "NOT_HERE": "Cela ne part pas d’où vous êtes."
+      "NOT_HERE": "Cela ne part pas d’où vous êtes.",
+      "NOT_APPLIED": "Vous n'avez pas encore fait la demande.",
+      "ALREADY_COLLECTED": "Vous l’avez déjà retiré.",
+      "NOT_READY": "Ce n'est pas encore prêt.",
+      "ALREADY_UNBOXED": "Il est déjà sorti de sa boîte.",
+      "STILL_BOXED": "Déballez-le d'abord.",
+      "ALREADY_CHARGED": "Il est déjà en charge ou chargé.",
+      "PHONE_NOT_READY": "Votre téléphone n'est pas prêt : déballez-le et chargez-le chez vous."
     },
     "samePassword": "C’est votre mot de passe actuel. Choisissez-en un autre.",
     "captchaFailed": "La vérification de sécurité a échoué. Rechargez la page et réessayez."
@@ -2542,8 +2549,8 @@
         "smart": "Smartphone ({{price}})"
       },
       "law": {
-        "LR": "La loi veut qu’une carte SIM ne marche qu’une fois enregistrée à la boutique de son réseau, avec une pièce d’identité (un passeport).",
-        "GH": "La loi veut qu’une carte SIM ne marche qu’une fois enregistrée à la boutique de son réseau : un Ghanéen avec la Ghana Card, un étranger avec un passeport."
+        "LR": "La loi veut qu'une SIM ne fonctionne qu'une fois enregistrée au service client de son opérateur, avec une pièce d'identité (un passeport), une photo et vos empreintes digitales.",
+        "GH": "La loi veut qu'une SIM ne fonctionne qu'une fois enregistrée au service client de son opérateur : un Ghanéen avec la Ghana Card, un étranger avec un passeport ; une photo et les empreintes sont prises."
       },
       "card": "Votre Ghana Card : {{number}}",
       "buySim": "Acheter une carte SIM ({{price}})",
@@ -2602,9 +2609,12 @@
       },
       "searchHint": "De quoi avez-vous besoin ? (une chambre, un emploi, un vol…)",
       "nothing": "Rien trouvé sur ce téléphone.",
-      "noSim": "Aucune SIM enregistrée dans ce pays : enregistrez-en une dans une boutique.",
+      "noSim": "Aucune SIM enregistrée dans ce pays : achetez-en une et faites-la enregistrer au service client d'un opérateur.",
       "noService": "Pas de réseau",
-      "home": "Écran d’accueil"
+      "home": "Écran d’accueil",
+      "inBox": "Votre nouveau téléphone est encore dans sa boîte. Rapportez-le chez vous et déballez-le à table.",
+      "flat": "La batterie est vide. Mettez-le en charge chez vous.",
+      "stillCharging": "En charge… plein à {{time}}."
     },
     "room": {
       "title": "Où vous vivez",
@@ -2668,10 +2678,12 @@
           "where": "Tubman Boulevard, Sinkor",
           "places": {
             "cookshop": "Gargote Ma Hawa",
-            "phone": "Boutique Blessed Hands (téléphones, cartes SIM)",
+            "phone": "Blessed Hands, boutique de téléphones (téléphones, crédit)",
             "changer": "Changeur",
             "kekeh": "Station de kekeh",
-            "clinic": "Clinique communautaire de Sinkor"
+            "clinic": "Clinique communautaire de Sinkor",
+            "starline": "Service client Starline Mobile (cartes SIM)",
+            "citrus": "Service client Citrus Mobile (cartes SIM)"
           }
         },
         "waterside": {
@@ -2760,7 +2772,8 @@
         "clinic": "Clinique, {{town}}",
         "townCentre": "Centre-ville, {{town}}",
         "station": "Gare routière, {{town}}",
-        "stationMonrovia": "Gare routière de Red Light, Paynesville"
+        "stationMonrovia": "Gare routière de Red Light, Paynesville",
+        "health": "Ministère de la Santé (actes de naissance)"
       },
       "goHere": "Y aller",
       "walkHere": "Y marcher",
@@ -2802,9 +2815,103 @@
         "table": "À table",
         "door": "À la porte",
         "bath": "Dans la salle de bain",
-        "counter": "Au comptoir"
+        "counter": "Au comptoir",
+        "desk": "Au guichet",
+        "ticket": "Au distributeur de tickets",
+        "collect": "Au guichet de retrait"
       },
-      "leaveShop": "Sortir dans la rue"
+      "leaveShop": "Sortir dans la rue",
+      "phone": {
+        "unbox": "Déballer votre nouveau téléphone",
+        "charge": "Le mettre en charge",
+        "unboxed": "Sorti de sa boîte. La batterie est vide : mettez-le en charge.",
+        "charging": "Téléphone en charge : plein à {{time}}",
+        "charged": "En charge. Il sera plein dans une heure."
+      }
+    },
+    "shop": {
+      "look": "Regarder le {{name}}",
+      "pickUp": "Le prendre",
+      "putBack": "Le reposer",
+      "carrying": "En main : {{name}}",
+      "buyModel": "{{name}} ({{price}})",
+      "kind": {
+        "basic": "Téléphone à touches : appels, SMS, mobile money",
+        "smart": "Smartphone : internet et les applis"
+      },
+      "screen": "Écran {{inches}} pouces",
+      "storage": "{{gb}} Go de stockage",
+      "camera": "Appareil photo {{mp}} Mpx",
+      "battery": "Batterie {{mah}} mAh",
+      "yours": "Vous avez ce téléphone.",
+      "attendant": "« Celui-là ? Bon choix. »",
+      "pay": "Payer {{price}}",
+      "bought": "Le {{name}} est à vous.",
+      "counterHint": "Les téléphones sont sur les présentoirs des deux côtés : allez voir, prenez celui que vous voulez et apportez-le ici pour payer.",
+      "hint": "Approchez-vous d’un présentoir pour regarder son téléphone. Prenez celui que vous voulez et apportez-le au comptoir du fond pour payer.",
+      "leftBehind": "Vous avez reposé le {{name}} sur son présentoir.",
+      "scratchCards": "Crédit (cartes à gratter)",
+      "whereSim": {
+        "LR": "Les cartes SIM se vendent et s’enregistrent au service client des opérateurs sur Tubman Boulevard (Starline Mobile, Citrus Mobile).",
+        "GH": "Les cartes SIM se vendent et s’enregistrent aux services client des opérateurs."
+      },
+      "handsFull": "Reposez d'abord l'autre téléphone",
+      "yoursNow": "À vous : {{name}}",
+      "putDown": "Le poser sur le comptoir",
+      "boxed": "« Voici votre téléphone, dans sa boîte. Merci ! »",
+      "takeBox": "Prendre votre téléphone"
+    },
+    "office": {
+      "officer": "Agent du service client {{network}}",
+      "hint": "Allez au guichet du fond, l’agent va vous servir.",
+      "steps": {
+        "form": "L'agent saisit votre formulaire",
+        "document": "L'agent vérifie votre {{document}}",
+        "photo": "Regardez l’appareil : votre photo est prise",
+        "fingers": "Vos doigts sur le lecteur : main droite, puis gauche",
+        "number": "Votre SIM est activée et votre numéro attribué"
+      },
+      "yourNumber": "Votre numéro :",
+      "ticketFirst": "« Bonjour. Prenez un ticket au distributeur près de la porte et attendez que votre numéro soit appelé. »",
+      "notYet": "« Votre ticket est le {{mine}}. Nous servons le {{serving}} : asseyez-vous, on vous appellera. »",
+      "takeTicket": "Prendre un ticket",
+      "ticket": "Votre ticket : {{mine}}. On sert le {{serving}}.",
+      "called": "Ticket {{mine}}, guichet 2, s’il vous plaît.",
+      "board": "Votre ticket {{mine}} · On sert le {{serving}}",
+      "form": "Formulaire d'enregistrement de la SIM",
+      "name": "Nom complet",
+      "born": "Date de naissance",
+      "address": "Adresse",
+      "addressHint": "Quartier, rue, repère",
+      "handOver": "Signer et remettre votre {{document}}"
+    },
+    "health": {
+      "hint": "Les guichets sont au fond : Enregistrement des naissances pour la demande, Retrait pour récupérer votre acte.",
+      "windows": {
+        "counter": "Guichet 1 · Enregistrement des naissances",
+        "collect": "Guichet 2 · Retrait"
+      },
+      "clerk": "« Bonjour. Pour un acte de naissance, remplissez le formulaire : le nom de vos parents. Les frais se paient ici. »",
+      "father": "Nom complet du père",
+      "mother": "Nom complet de la mère",
+      "sex": "Sexe",
+      "sexes": {
+        "male": "Masculin",
+        "female": "Féminin"
+      },
+      "bornIn": "Lieu de naissance",
+      "apply": "Déposer le formulaire et payer {{fee}}",
+      "applied": "Demande reçue. Revenez à partir de demain : nous vous enverrons un SMS quand ce sera prêt.",
+      "processing": "Votre acte est en cours de traitement : prêt à partir de {{time}}.",
+      "goCollect": "Votre acte est prêt : retirez-le au guichet 2.",
+      "haveIt": "Votre acte de naissance a été délivré.",
+      "applyFirst": "« Faites d’abord la demande au guichet 1. »",
+      "collect": "Retirer votre acte de naissance",
+      "collected": "Voici votre acte de naissance.",
+      "onlyLiberians": "Ce bureau enregistre les naissances des Libériens, au Liberia.",
+      "republic": "RÉPUBLIQUE DU LIBERIA",
+      "ministry": "Ministère de la Santé · Division des statistiques vitales",
+      "certificate": "Acte de naissance"
     }
   }
 }

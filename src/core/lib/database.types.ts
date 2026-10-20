@@ -1335,6 +1335,65 @@ export type Database = {
           },
         ]
       }
+      oal_birth_certificates: {
+        Row: {
+          applied_at: string
+          born_in: string
+          born_on: string
+          collected_on: string | null
+          country: string
+          father: string
+          fee: number
+          full_name: string
+          mother: string
+          notified: boolean
+          number: string
+          ready_at: string
+          sex: string
+          user_id: string
+        }
+        Insert: {
+          applied_at: string
+          born_in: string
+          born_on: string
+          collected_on?: string | null
+          country: string
+          father: string
+          fee: number
+          full_name: string
+          mother: string
+          notified?: boolean
+          number: string
+          ready_at: string
+          sex: string
+          user_id: string
+        }
+        Update: {
+          applied_at?: string
+          born_in?: string
+          born_on?: string
+          collected_on?: string | null
+          country?: string
+          father?: string
+          fee?: number
+          full_name?: string
+          mother?: string
+          notified?: boolean
+          number?: string
+          ready_at?: string
+          sex?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oal_birth_certificates_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "oal_lives"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       oal_bookings: {
         Row: {
           created_at: string
@@ -1536,22 +1595,43 @@ export type Database = {
       }
       oal_handsets: {
         Row: {
+          battery: number
+          brand: string
+          camera: number
+          colour: string
           country: string
           id: string
           kind: string
+          model: string
           price: number
+          screen: number
+          storage: number
         }
         Insert: {
+          battery: number
+          brand: string
+          camera: number
+          colour: string
           country: string
           id: string
           kind: string
+          model: string
           price: number
+          screen: number
+          storage: number
         }
         Update: {
+          battery?: number
+          brand?: string
+          camera?: number
+          colour?: string
           country?: string
           id?: string
           kind?: string
+          model?: string
           price?: number
+          screen?: number
+          storage?: number
         }
         Relationships: []
       }
@@ -1972,20 +2052,39 @@ export type Database = {
       oal_phones: {
         Row: {
           bought_on: string
+          charge: string
+          charged_at: string | null
+          handset: string | null
           kind: string
+          unboxed: boolean
           user_id: string
         }
         Insert: {
           bought_on: string
+          charge?: string
+          charged_at?: string | null
+          handset?: string | null
           kind: string
+          unboxed?: boolean
           user_id: string
         }
         Update: {
           bought_on?: string
+          charge?: string
+          charged_at?: string | null
+          handset?: string | null
           kind?: string
+          unboxed?: boolean
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "oal_phones_handset_fkey"
+            columns: ["handset"]
+            isOneToOne: false
+            referencedRelation: "oal_handsets"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "oal_phones_user_id_fkey"
             columns: ["user_id"]
@@ -2267,7 +2366,7 @@ export type Database = {
           body: string
           created_at: string
           from_number: string
-          from_user: string
+          from_user: string | null
           game_at: string
           id: number
           read_at: string | null
@@ -2278,7 +2377,7 @@ export type Database = {
           body: string
           created_at?: string
           from_number: string
-          from_user: string
+          from_user?: string | null
           game_at: string
           id?: never
           read_at?: string | null
@@ -2289,7 +2388,7 @@ export type Database = {
           body?: string
           created_at?: string
           from_number?: string
-          from_user?: string
+          from_user?: string | null
           game_at?: string
           id?: never
           read_at?: string | null
@@ -4155,6 +4254,10 @@ export type Database = {
         Args: { p_action: string; p_hours: number; p_user_id: string }
         Returns: Json
       }
+      oal_office_action: {
+        Args: { p_action: string; p_data: Json; p_user_id: string }
+        Returns: Json
+      }
       oal_phone_action: {
         Args: {
           p_action: string
@@ -4163,6 +4266,10 @@ export type Database = {
           p_number: string
           p_user_id: string
         }
+        Returns: Json
+      }
+      oal_phone_box_action: {
+        Args: { p_action: string; p_user_id: string }
         Returns: Json
       }
       oal_road_action: {

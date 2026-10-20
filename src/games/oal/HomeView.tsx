@@ -2,16 +2,22 @@
 // another town, the room rented there; else none. The home in 3D (./HomeScene.tsx), walked with
 // the thumb stick, its places (the bed: sleep; the kitchen and the table: cook, eat with family;
 // the door: out, by the map) and, always to hand, what can be done at home. Asleep, the
-// character lies in bed until morning, the time it wakes over it.
-import { lazy, type ReactNode, Suspense, useRef, useState } from 'react'
+// character lies in bed until morning, the time it wakes over it. The shops on Tubman Boulevard
+// are walked the same way: in the phone shop, at a stand, the phone there is looked at and
+// picked up, carried to the counter and paid for; at a network's customer care, a SIM is bought
+// and registered at the desk.
+import { lazy, type ReactNode, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/core/ui/Button'
 import { Skeleton } from '@/core/ui/Skeleton'
 import type { Appearance } from '../../../supabase/functions/_shared/oal'
 import type { Stick } from './ArrivalsScene'
 import { BodyPanel, Resting } from './Body'
-import { PhoneSection, RoomSection, useHome } from './Home'
-import type { HomeKind, HomePlace } from './HomeScene'
+import { toast } from '@/core/ui/toast'
+import { PhoneCard, RoomSection, ShopCounter, useHome, useHomeStep } from './Home'
+import { useGameNow } from './Journey'
+import type { Gesture, Hold, HomeKind, HomePlace, Laid, ShownPhone } from './HomeScene'
+import { BirthOffice, NetworkDesk, type Ticket } from './Offices'
 import type { TravelState } from './Journey'
 
 const HomeScene = lazy(() => import('./HomeScene'))
@@ -31,8 +37,106 @@ export function HomeView({ kind, travel, appearance, homeTown, homeCountry, hud,
   const stick = useRef<Stick>({ x: 0, y: 0 })
   const base = useRef<{ x: number; y: number } | null>(null)
   const [place, setPlace] = useState<HomePlace | null>(null)
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState<'menu' | 'display' | null>(null)
   const asleep = travel.state === 'sleeping'
+  // The phone shop: its phones on show (this country's, cheapest first), the stand the character
+  // is at, the phone picked up.
+  const home = useHome()
+  const shopHandsets = useMemo(() => (kind === 'phoneshop' ? (home.data?.handsets ?? []).filter((h) => h.country === travel.country) : []), [kind, home.data, travel.country])
+  const shelf = useMemo<ShownPhone[]>(() => shopHandsets.map((h) => ({ id: h.id, colour: h.colour, kind: h.kind })), [shopHandsets])
+  const [display, setDisplay] = useState<number | null>(null)
+  const [carrying, setCarrying] = useState<string | null>(null)
+  const shown = display !== null ? shopHandsets[display] : undefined
+  const carried = shopHandsets.find((h) => h.id === carrying) ?? null
+  const network = kind === 'starline' || kind === 'citrus' ? `${travel.country === 'LR' ? 'lr' : 'gh'}_${kind}` : null
+  const title =
+    kind === 'phoneshop' || network ? t(`oal.street.towns.sinkor.places.${kind === 'phoneshop' ? 'phone' : kind}`) : kind === 'health' ? t('oal.world.places.health') : kind === 'house' ? t('oal.world.places.familyHome') : t('oal.world.places.room')
+  // What the character does: reaching for a phone on its stand, a finger on the reader, turning
+  // to the camera. Taking (or putting back) a phone: it changes hands as the hand reaches it.
+  const [gesture, setGesture] = useState<Gesture | null>(null)
+  const act = (g: Omit<Gesture, 'seq'>) => setGesture((old) => ({ ...g, seq: (old?.seq ?? 0) + 1 }))
+  const [handling, setHandling] = useState(false)
+  const handle = (to: string | null) => {
+    if (display === null || handling) return
+    setOpen(null)
+    setHandling(true)
+    act({ reach: true, to: `display:${display}` })
+    setTimeout(() => setCarrying(to), 1000)
+    setTimeout(() => setHandling(false), 3400)
+  }
+  // The phone chosen, from the hand to the counter; paid for, boxed by the seller, the box taken.
+  const [stage, setStage] = useState<'hand' | 'counter' | 'boxing' | 'boxed' | 'taken'>('hand')
+  const paid = stage === 'boxing' || stage === 'boxed' || stage === 'taken'
+  const [staffSeq, setStaffSeq] = useState(0)
+  const later = (ms: number, then: () => void) => setTimeout(then, ms)
+  const putDown = () => {
+    setHandling(true)
+    act({ reach: true, to: 'counter' })
+    later(1000, () => setStage('counter'))
+    later(3400, () => setHandling(false))
+  }
+  const boxIt = () => {
+    setStage('boxing')
+    setOpen(null)
+    setStaffSeq((k) => k + 1)
+    later(1200, () => {
+      setStage('boxed')
+      toast.info(t('oal.shop.boxed'))
+    })
+  }
+  const takeBox = () => {
+    setHandling(true)
+    act({ reach: true, to: 'counter' })
+    later(1000, () => setStage('taken'))
+    later(3400, () => setHandling(false))
+  }
+  // At home: the new phone in its box, unboxed at the table and put on charge there.
+  const { run } = useHomeStep()
+  const now = useGameNow()
+  const mine = home.data?.phone
+  const mineModel = home.data?.handsets.find((h) => h.id === mine?.handset)
+  const minePhone: ShownPhone | null = mineModel ? { id: mineModel.id, colour: mineModel.colour, kind: mineModel.kind } : null
+  const atHome = kind === 'house' || kind === 'room'
+  const charging = mine?.charge === 'charging' && mine.charged_at !== null && new Date(`${mine.charged_at}Z`).getTime() > now().getTime()
+  const homeStep = (action: 'unbox' | 'charge') => {
+    setHandling(true)
+    act({ reach: true, to: 'table' })
+    later(1000, () => void run({ action }).then((r) => r && toast.success(t(action === 'unbox' ? 'oal.home.phone.unboxed' : 'oal.home.phone.charged'))))
+    later(3400, () => setHandling(false))
+  }
+  const chosen: ShownPhone | null = carried ? { id: carried.id, colour: carried.colour, kind: carried.kind } : null
+  const hold: Hold | null =
+    kind === 'phoneshop' && chosen ? (stage === 'hand' ? { what: 'phone', phone: chosen } : stage === 'taken' ? { what: 'box', phone: chosen } : null) : atHome && minePhone && mine && !mine.unboxed ? { what: 'box', phone: minePhone } : null
+  const laid: Laid | null =
+    kind === 'phoneshop' && chosen
+      ? stage === 'counter' || stage === 'boxing'
+        ? { what: 'phone', phone: chosen, on: 'counter' }
+        : stage === 'boxed'
+          ? { what: 'box', phone: chosen, on: 'counter' }
+          : null
+      : atHome && minePhone && mine?.unboxed && mine.charge === 'flat'
+        ? { what: 'open', phone: minePhone, on: 'table' }
+        : atHome && minePhone && charging
+          ? { what: 'charging', phone: minePhone, on: 'table' }
+          : null
+  // A network's queue: the ticket taken by the door, the number served moving on until it is
+  // called; the camera's flash.
+  const [ticket, setTicket] = useState<Ticket | null>(null)
+  useEffect(() => {
+    if (!ticket || ticket.serving >= ticket.mine) return
+    const id = setTimeout(() => {
+      const next = { ...ticket, serving: ticket.serving + 1 }
+      setTicket(next)
+      if (next.serving === next.mine) toast.info(t('oal.office.called', { mine: `A${next.mine}` }))
+    }, 3500)
+    return () => clearTimeout(id)
+  }, [ticket, t])
+  const [flash, setFlash] = useState(false)
+  const leave = () => {
+    // Not out of the shop with a phone not paid for: it goes back on its stand.
+    if (carried && !paid) toast.info(t('oal.shop.leftBehind', { name: `${carried.brand} ${carried.model}` }))
+    onDoor()
+  }
   // Dragged, the camera turns round the character (sideways) and tilts (up and down).
   const view = useRef({ yaw: 0, pitch: 0.35 })
   const drag = useRef<{ x: number; y: number; yaw: number; pitch: number } | null>(null)
@@ -56,9 +160,10 @@ export function HomeView({ kind, travel, appearance, homeTown, homeCountry, hud,
       onPointerCancel={() => (drag.current = null)}
     >
       <Suspense fallback={<Skeleton className="h-full rounded-none" />}>
-        <HomeScene kind={kind} appearance={appearance} asleep={asleep} stick={stick} view={view} onPlace={setPlace} />
+        <HomeScene kind={kind} appearance={appearance} asleep={asleep} stick={stick} view={view} onPlace={setPlace} shelf={shelf} carrying={carrying} onDisplay={setDisplay} gesture={gesture} hold={hold} laid={laid} staffSeq={staffSeq} />
       </Suspense>
       {hud}
+      {flash && <div className="pointer-events-none absolute inset-0 z-20 bg-white/80" aria-hidden />}
       {asleep ? (
         <div className="glass absolute inset-x-3 bottom-24 mx-auto max-w-lg rounded-2xl border border-line p-1">
           <Resting travel={travel} />
@@ -90,12 +195,58 @@ export function HomeView({ kind, travel, appearance, homeTown, homeCountry, hud,
             }}
           />
           <div className="absolute bottom-24 right-6 flex flex-col items-end gap-2">
+            {ticket && (
+              <p className="glass rounded-full border border-line px-3 py-1 text-xs font-semibold tabular-nums" data-testid="oal-ticket">
+                {t('oal.office.board', { mine: `A${ticket.mine}`, serving: `A${ticket.serving}` })}
+              </p>
+            )}
+            {carried && (
+              <p className="glass rounded-full border border-line px-3 py-1 text-xs font-semibold" data-testid="oal-carrying">
+                {t(paid ? 'oal.shop.yoursNow' : 'oal.shop.carrying', { name: `${carried.brand} ${carried.model}` })}
+              </p>
+            )}
+            {atHome && charging && mine?.charged_at && (
+              <p className="glass rounded-full border border-line px-3 py-1 text-xs font-semibold" data-testid="oal-charging">
+                {t('oal.home.phone.charging', { time: new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }).format(new Date(`${mine.charged_at}Z`)) })}
+              </p>
+            )}
             {place === 'door' ? (
-              <Button onClick={onDoor} data-testid="oal-home-door">
-                {kind === 'phoneshop' ? t('oal.home.leaveShop') : t('oal.home.goOut')}
+              <Button onClick={leave} data-testid="oal-home-door">
+                {kind === 'house' || kind === 'room' ? t('oal.home.goOut') : t('oal.home.leaveShop')}
+              </Button>
+            ) : place === 'ticket' && network && !ticket ? (
+              <Button
+                onClick={() => {
+                  const mine = 40 + Math.floor(Math.random() * 50)
+                  setTicket({ mine, serving: mine - 3 })
+                  toast.info(t('oal.office.ticket', { mine: `A${mine}`, serving: `A${mine - 3}` }))
+                }}
+                data-testid="oal-take-ticket"
+              >
+                {t('oal.office.takeTicket')}
+              </Button>
+            ) : handling ? null : kind === 'phoneshop' && place === 'counter' && carried && stage === 'hand' ? (
+              <Button onClick={putDown} data-testid="oal-put-down">
+                {t('oal.shop.putDown')}
+              </Button>
+            ) : kind === 'phoneshop' && place === 'counter' && stage === 'boxed' ? (
+              <Button onClick={takeBox} data-testid="oal-take-box">
+                {t('oal.shop.takeBox')}
+              </Button>
+            ) : atHome && place === 'table' && mine && !mine.unboxed ? (
+              <Button onClick={() => homeStep('unbox')} data-testid="oal-unbox">
+                {t('oal.home.phone.unbox')}
+              </Button>
+            ) : atHome && place === 'table' && mine?.unboxed && mine.charge === 'flat' ? (
+              <Button onClick={() => homeStep('charge')} data-testid="oal-charge">
+                {t('oal.home.phone.charge')}
+              </Button>
+            ) : shown && (!carried || stage === 'hand') ? (
+              <Button onClick={() => setOpen('display')} data-testid="oal-look-phone">
+                {t('oal.shop.look', { name: `${shown.brand} ${shown.model}` })}
               </Button>
             ) : (
-              <Button onClick={() => setOpen(true)} data-testid="oal-home-menu">
+              <Button onClick={() => setOpen('menu')} data-testid="oal-home-menu">
                 {place ? t(`oal.home.at.${place}`) : t('oal.home.things')}
               </Button>
             )}
@@ -103,13 +254,47 @@ export function HomeView({ kind, travel, appearance, homeTown, homeCountry, hud,
           {open && (
             <div data-panel className="glass absolute inset-x-0 bottom-20 z-10 mx-auto flex max-h-[68vh] max-w-lg flex-col gap-2 overflow-y-auto rounded-t-3xl border border-line p-3" data-testid="oal-home-panel">
               <div className="flex items-center justify-between">
-                <p className="font-semibold">{kind === 'phoneshop' ? t('oal.street.towns.sinkor.places.phone') : kind === 'house' ? t('oal.world.places.familyHome') : t('oal.world.places.room')}</p>
-                <Button variant="ghost" onClick={() => setOpen(false)}>
+                <p className="font-semibold">{title}</p>
+                <Button variant="ghost" onClick={() => setOpen(null)}>
                   {t('oal.street.done')}
                 </Button>
               </div>
-              {kind === 'phoneshop' ? (
-                <PhoneSection travel={travel} homeCountry={homeCountry} />
+              {open === 'display' && shown ? (
+                <PhoneCard
+                  handset={shown}
+                  carrying={carrying === shown.id}
+                  handsFull={carrying !== null && carrying !== shown.id}
+                  onTake={() => handle(shown.id)}
+                  onPutBack={() => handle(null)}
+                />
+              ) : kind === 'phoneshop' ? (
+                place === 'counter' ? (
+                  <ShopCounter travel={travel} carrying={stage === 'counter' ? carried : null} onPaid={boxIt} />
+                ) : (
+                  <p className="border border-line bg-panel p-4 text-sm">{t('oal.shop.hint')}</p>
+                )
+              ) : network ? (
+                place === 'desk' ? (
+                  <NetworkDesk
+                    travel={travel}
+                    homeCountry={homeCountry}
+                    network={network}
+                    ticket={ticket}
+                    onGesture={act}
+                    onFlash={() => {
+                      setFlash(true)
+                      setTimeout(() => setFlash(false), 180)
+                    }}
+                  />
+                ) : (
+                  <p className="border border-line bg-panel p-4 text-sm">{t('oal.office.hint')}</p>
+                )
+              ) : kind === 'health' ? (
+                place === 'counter' || place === 'collect' ? (
+                  <BirthOffice travel={travel} window={place} />
+                ) : (
+                  <p className="border border-line bg-panel p-4 text-sm">{t('oal.health.hint')}</p>
+                )
               ) : (
                 <>
                   <BodyPanel travel={travel} homeTown={homeTown} homeCountry={homeCountry} />

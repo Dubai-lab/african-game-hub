@@ -294,13 +294,17 @@ for img in list(bpy.data.images):
 # 8. The movements, from Mixamo, each a track of its own: standing and breathing (the creator,
 # and anyone waiting); walking, on the spot (the game moves the character); talking (officers,
 # shopkeepers, anyone spoken to); sitting (a seat in a car or bus, a bench); lying asleep (a
-# bed, a hospital bed).
+# bed, a hospital bed); picking something up; texting.
 CLIPS = {
     'idle': 'Breathing Idle.fbx' if SEX == 'male' else 'Standing Idle.fbx',
     'walk': 'Walking.fbx' if SEX == 'male' else 'Female Walk.fbx',
     'talk': 'Talking.fbx',
     'sit': 'Sitting Idle.fbx',
     'sleep': 'Sleeping Idle.fbx',
+    # Reaching out to a counter or a shelf and taking something (a phone on its stand), and
+    # standing looking at a phone, texting.
+    'pick': 'Picking Up Object.fbx',
+    'text': 'Texting While Standing.fbx',
 }
 for clip, file in CLIPS.items():
     path = os.path.join(ANIMATIONS, file)

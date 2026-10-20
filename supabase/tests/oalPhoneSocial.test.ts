@@ -34,6 +34,10 @@ async function withPhone(country = 'LR', town = 'Monrovia') {
   const local = country === 'LR' ? 'LRD' : 'GHS'
   await give(user, local, 1000000)
   await home(user, 'buy_phone', country === 'LR' ? 'lr_basic' : 'gh_basic')
+  // Home with it: out of its box, charged.
+  expect(await one(`select public.oal_phone_box_action($1, 'unbox') as r`, [user])).toEqual({ ok: true })
+  expect((await one(`select public.oal_phone_box_action($1, 'charge') as r`, [user])).ok).toBe(true)
+  await db.rows(`update public.oal_phones set charged_at = charged_at - interval '2 hours' where user_id = $1`, [user])
   const net = country === 'LR' ? 'lr_citrus' : 'gh_sika'
   await home(user, 'buy_sim', net)
   const number: string = (await home(user, 'register_sim', net)).number
@@ -46,11 +50,13 @@ describe('texts', () => {
     const a = await withPhone()
     const b = await withPhone()
     expect(await phone(a.user, 'text', '0' + b.number.slice(4), 'Kollie, it is Musu. Call me.', null)).toEqual({ ok: true, airtime: 10000 - 500 })
-    const inbox = await db.as('authenticated', b.user, () => db.rows<{ body: string; from_number: string }>(`select body, from_number from public.oal_texts`))
-    expect(inbox).toEqual([{ body: 'Kollie, it is Musu. Call me.', from_number: a.number }])
+    const inbox = await db.as('authenticated', b.user, () => db.rows<{ body: string; from_number: string }>(`select body, from_number from public.oal_texts order by id`))
+    // The network's welcome when the SIM was registered, then Musu's.
+    expect(inbox[0]!.from_number).toBe('CITRUS')
+    expect(inbox.slice(1)).toEqual([{ body: 'Kollie, it is Musu. Call me.', from_number: a.number }])
     // Read by nobody else.
     const c = await withPhone()
-    expect(await db.as('authenticated', c.user, () => db.rows(`select id from public.oal_texts`))).toEqual([])
+    expect(await db.as('authenticated', c.user, () => db.rows(`select id from public.oal_texts where from_user is not null`))).toEqual([])
   })
 
   it('no number, no phone, no airtime, too long: not sent and not charged', async () => {

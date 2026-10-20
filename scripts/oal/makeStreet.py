@@ -500,7 +500,8 @@ def shoulder_spots(w, offset, every):
 
 
 kiosks = 0
-SPECIAL = {'MA HAWA COOKSHOP': 'cookshop', 'BLESSED HANDS\nPHONES & SIM CARDS': 'phone', 'MOBILE MONEY\nHERE': 'changer'}
+SPECIAL = {'MA HAWA COOKSHOP': 'cookshop', 'BLESSED HANDS\nPHONES & SIM CARDS': 'phone', 'MOBILE MONEY\nHERE': 'changer',
+           'STARLINE MOBILE\nCUSTOMER CARE': 'starline', 'CITRUS MOBILE\nCUSTOMER CARE': 'citrus'}
 used_specials = set()
 others = [x for x in signs if x not in SPECIAL]
 for w in tubman:

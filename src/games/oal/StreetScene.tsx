@@ -24,7 +24,7 @@ import skd from './skdStadium.json'
 import voinjama from './voinjamaTown.json'
 import waterside from './watersideMarket.json'
 
-export type Place = 'cookshop' | 'phone' | 'changer' | 'kekeh' | 'clinic' | 'stall' | 'tickets' | 'stand' | 'pitch'
+export type Place = 'cookshop' | 'phone' | 'starline' | 'citrus' | 'changer' | 'kekeh' | 'clinic' | 'stall' | 'tickets' | 'stand' | 'pitch'
 export type TownId = 'sinkor' | 'waterside' | 'voinjama' | 'skd'
 const WALK_SPEED = 1.45
 const RADIUS = 0.3
@@ -52,7 +52,7 @@ function town(url: string, plan: Plan, locals: (sex: 'male' | 'female') => Local
 }
 
 export const TOWNS = {
-  sinkor: town('/oal/sinkor-street.v4.glb', sinkor as Plan, (sex) => [
+  sinkor: town('/oal/sinkor-street.v5.glb', sinkor as Plan, (sex) => [
     ['cookshop', { skin: 0.85, build: { weight: 0.5, muscle: 0, height: -0.2 }, outfit: sex === 'male' ? 'tee_jeans' : 'blouse_skirt' }, 'talk'],
     ['phone', { skin: 0.7, build: { weight: -0.1, muscle: 0.2, height: 0.2 }, outfit: sex === 'male' ? 'shirt_jeans' : 'tee_jeans' }, 'idle'],
     ['changer', { skin: 0.9, build: { weight: 0.2, muscle: 0.3, height: 0.1 }, outfit: sex === 'male' ? 'jacket_jeans' : 'sport' }, 'talk'],

@@ -112,6 +112,7 @@ export async function resetTestAccounts() {
     delete from public.oal_overstays where user_id in ${theirIds};
     delete from public.oal_applications where user_id in ${theirIds};
     delete from public.oal_licences where user_id in ${theirIds};
+    delete from public.oal_birth_certificates where user_id in ${theirIds};
     delete from public.oal_texts where from_user in ${theirIds} or to_user in ${theirIds};
     delete from public.oal_sims where user_id in ${theirIds};
     delete from public.oal_phones where user_id in ${theirIds};

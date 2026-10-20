@@ -137,7 +137,7 @@
       "NO_WORK_PERMIT": "You need a work visa to work in this country.",
       "UNWELL": "You are unwell: recover first, or go to the clinic.",
       "TOO_TIRED": "You are too tired: sleep first.",
-      "NOT_AT_HOME": "Your family is in your home town.",
+      "NOT_AT_HOME": "Do this at home.",
       "ALREADY_ATE_WITH_FAMILY": "You have already eaten with family today.",
       "NO_KITCHEN": "You have no kitchen here: rent a room, or eat at a cookshop.",
       "OVERSTAY_FINE_UNPAID": "You overstayed: pay the fine (US$10 a day) before you can board. You do not have enough.",
@@ -149,7 +149,14 @@
       "BAD_TEXT": "A text is 1 to 160 characters.",
       "NO_CARS_NOW": "No shared cars leave now: they go from 06:00 to 15:00.",
       "BUS_NOT_BOARDING": "The bus is not boarding yet: it leaves at 07:00, and boarding opens an hour and a half before.",
-      "NOT_HERE": "That does not leave from where you are."
+      "NOT_HERE": "That does not leave from where you are.",
+      "NOT_APPLIED": "You have not applied yet.",
+      "ALREADY_COLLECTED": "You have already collected it.",
+      "NOT_READY": "It is not ready yet.",
+      "ALREADY_UNBOXED": "It is already out of its box.",
+      "STILL_BOXED": "Unbox it first.",
+      "ALREADY_CHARGED": "It is already charging or charged.",
+      "PHONE_NOT_READY": "Your phone is not ready: unbox it and charge it at home."
     },
     "samePassword": "That is your current password. Choose a different one.",
     "captchaFailed": "The security check did not pass. Reload the page and try again."
@@ -2542,8 +2549,8 @@
         "smart": "Smartphone ({{price}})"
       },
       "law": {
-        "LR": "By law a SIM works only once it is registered at its network's shop, with an identity document (a passport).",
-        "GH": "By law a SIM works only once it is registered at its network's shop: a Ghanaian with the Ghana Card, a foreigner with a passport."
+        "LR": "By law a SIM works only once it is registered at its network's customer care, with an identity document (a passport), a photograph and your fingerprints.",
+        "GH": "By law a SIM works only once it is registered at its network's customer care: a Ghanaian with the Ghana Card, a foreigner with a passport; a photograph and fingerprints are taken."
       },
       "card": "Your Ghana Card: {{number}}",
       "buySim": "Buy a SIM ({{price}})",
@@ -2602,9 +2609,12 @@
       },
       "searchHint": "What do you need? (a room, a job, a flight…)",
       "nothing": "Nothing found on this phone for that.",
-      "noSim": "No SIM registered in this country: register one at a phone shop.",
+      "noSim": "No SIM registered in this country: buy and register one at a network's customer care.",
       "noService": "No service",
-      "home": "Home screen"
+      "home": "Home screen",
+      "inBox": "Your new phone is still in its box. Take it home and unbox it at the table.",
+      "flat": "The battery is flat. Put it on charge at home.",
+      "stillCharging": "Charging… full at {{time}}."
     },
     "room": {
       "title": "Where you live",
@@ -2668,10 +2678,12 @@
           "where": "Tubman Boulevard, Sinkor",
           "places": {
             "cookshop": "Ma Hawa Cookshop",
-            "phone": "Blessed Hands Phone Shop (phones, SIM cards)",
+            "phone": "Blessed Hands Phone Shop (phones, airtime)",
             "changer": "Money changer",
             "kekeh": "Kekeh stop",
-            "clinic": "Sinkor Community Clinic"
+            "clinic": "Sinkor Community Clinic",
+            "starline": "Starline Mobile customer care (SIM cards)",
+            "citrus": "Citrus Mobile customer care (SIM cards)"
           }
         },
         "waterside": {
@@ -2760,7 +2772,8 @@
         "clinic": "Clinic, {{town}}",
         "townCentre": "Town centre, {{town}}",
         "station": "Parking station, {{town}}",
-        "stationMonrovia": "Red Light parking station, Paynesville"
+        "stationMonrovia": "Red Light parking station, Paynesville",
+        "health": "Ministry of Health (birth certificates)"
       },
       "goHere": "Go here",
       "walkHere": "Walk here",
@@ -2802,9 +2815,103 @@
         "table": "At the table",
         "door": "At the door",
         "bath": "In the bathroom",
-        "counter": "At the counter"
+        "counter": "At the counter",
+        "desk": "At the desk",
+        "ticket": "At the ticket machine",
+        "collect": "At the collection window"
       },
-      "leaveShop": "Out to the street"
+      "leaveShop": "Out to the street",
+      "phone": {
+        "unbox": "Unbox your new phone",
+        "charge": "Put it on charge",
+        "unboxed": "Out of the box. The battery is flat: put it on charge.",
+        "charging": "Phone charging: full at {{time}}",
+        "charged": "On charge. It will be full in an hour."
+      }
+    },
+    "shop": {
+      "look": "Look at the {{name}}",
+      "pickUp": "Pick it up",
+      "putBack": "Put it back",
+      "carrying": "In your hand: {{name}}",
+      "buyModel": "{{name}} ({{price}})",
+      "kind": {
+        "basic": "Keypad phone: calls, texts, mobile money",
+        "smart": "Smartphone: the internet and the apps"
+      },
+      "screen": "{{inches}}-inch screen",
+      "storage": "{{gb}} GB storage",
+      "camera": "{{mp}} MP camera",
+      "battery": "{{mah}} mAh battery",
+      "yours": "You have this phone.",
+      "attendant": "\"That one? Good choice.\"",
+      "pay": "Pay {{price}}",
+      "bought": "The {{name}} is yours.",
+      "counterHint": "The phones are on the stands along both sides: go and look, pick up the one you want and bring it here to pay.",
+      "hint": "Walk up to a stand to look at its phone. Pick up the one you want and take it to the counter at the back to pay.",
+      "leftBehind": "You put the {{name}} back on its stand.",
+      "scratchCards": "Airtime (scratch cards)",
+      "whereSim": {
+        "LR": "SIM cards are sold and registered at the networks' customer care on Tubman Boulevard (Starline Mobile, Citrus Mobile).",
+        "GH": "SIM cards are sold and registered at the networks' customer care offices."
+      },
+      "handsFull": "Put the other phone back first",
+      "yoursNow": "Yours: {{name}}",
+      "putDown": "Put it on the counter",
+      "boxed": "\"Here is your phone, in its box. Thank you!\"",
+      "takeBox": "Take your phone"
+    },
+    "office": {
+      "officer": "{{network}} customer care officer",
+      "hint": "Walk to the desk at the back, where the officer will serve you.",
+      "steps": {
+        "form": "The officer enters your form",
+        "document": "The officer checks your {{document}}",
+        "photo": "Look at the camera: your photograph is taken",
+        "fingers": "Your fingers on the reader: right hand, then left",
+        "number": "Your SIM is activated and your number issued"
+      },
+      "yourNumber": "Your number:",
+      "ticketFirst": "\"Good day. Please take a ticket from the machine by the door and wait for your number to be called.\"",
+      "notYet": "\"Your ticket is {{mine}}. We are serving {{serving}} now: please have a seat, you will be called.\"",
+      "takeTicket": "Take a ticket",
+      "ticket": "Your ticket: {{mine}}. Now serving {{serving}}.",
+      "called": "Ticket {{mine}}, desk 2, please.",
+      "board": "Your ticket {{mine}} · Serving {{serving}}",
+      "form": "SIM registration form",
+      "name": "Full name",
+      "born": "Date of birth",
+      "address": "Home address",
+      "addressHint": "Community, street, landmark",
+      "handOver": "Sign and hand over your {{document}}"
+    },
+    "health": {
+      "hint": "The windows are at the back: Birth Registration to apply, Collection to collect your certificate.",
+      "windows": {
+        "counter": "Window 1 · Birth Registration",
+        "collect": "Window 2 · Collection"
+      },
+      "clerk": "\"Good day. For a birth certificate, fill in the form: your parents' names. The fee is paid here.\"",
+      "father": "Father's full name",
+      "mother": "Mother's full name",
+      "sex": "Sex",
+      "sexes": {
+        "male": "Male",
+        "female": "Female"
+      },
+      "bornIn": "Place of birth",
+      "apply": "Submit the form and pay {{fee}}",
+      "applied": "Application received. Come back from tomorrow: we will text you when it is ready.",
+      "processing": "Your certificate is being processed: ready from {{time}}.",
+      "goCollect": "Your certificate is ready: collect it at Window 2.",
+      "haveIt": "Your birth certificate has been issued.",
+      "applyFirst": "\"Apply first at Window 1, Birth Registration.\"",
+      "collect": "Collect your birth certificate",
+      "collected": "Here is your birth certificate.",
+      "onlyLiberians": "This office registers the births of Liberians, in Liberia.",
+      "republic": "REPUBLIC OF LIBERIA",
+      "ministry": "Ministry of Health · Vital Statistics Division",
+      "certificate": "Certificate of Birth"
     }
   }
 }

@@ -39,7 +39,7 @@ function useTownMap(town: string) {
     queryKey: ['oal-map', town],
     staleTime: Infinity,
     queryFn: async () => {
-      const res = await fetch(`/oal/maps/${mapOf(town)}.v1.json`)
+      const res = await fetch(`/oal/maps/${mapOf(town)}.v2.json`)
       if (!res.ok) throw new Error(String(res.status))
       return (await res.json()) as TownMap
     },
@@ -304,6 +304,9 @@ function Icon({ kind }: { kind: string }) {
     stall: <path d="M4 9 6 4h12l2 5M4 9h16M5 9v10M19 9v10M5 14h14" {...p} />,
     jobs: <path d="M4 8h16v11H4zM9 8V5h6v3M4 13h16" {...p} />,
     visa: <path d="M6 3h12v18H6zM12 8a3 3 0 1 0 0 6 3 3 0 0 0 0-6M9 17h6" {...p} />,
+    health: <path d="M3 20h18M5 20V9h14v11M3 9l9-5 9 5M11 11h2v2h2v2h-2v2h-2v-2H9v-2h2z" {...p} />,
+    starline: <path d="M7 3h10v18H7zM10 7h4v5h-4zM12 12v3" {...p} />,
+    citrus: <path d="M7 3h10v18H7zM10 7h4v5h-4zM12 12v3" {...p} />,
     airport: <path d="M12 3v7l8 4v2l-8-2v4l3 2v1l-3-1-3 1v-1l3-2v-4l-8 2v-2l8-4V3" {...p} />,
     town: <path d="M4 20V9l5-3v14M9 20V4l7 3v13M16 20v-9l4 2v7M3 20h18" {...p} />,
   }

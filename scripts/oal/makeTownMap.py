@@ -8,7 +8,7 @@
 #
 # In: art-src/one-africa-life/osm/map_<town>.json (Overpass: roads) and map_<town>_water.json
 # (water, coastline, airfields, with their tags).
-# Out: public/oal/maps/<town>.v1.json.
+# Out: public/oal/maps/<town>.v2.json.
 import json
 import math
 import os
@@ -33,6 +33,7 @@ TOWNS = {
             'jobs': (6.3127, -10.8018),     # the job board on Broad Street
             'visa': (6.3169, -10.8102),     # the embassies' quarter, Mamba Point
             'station': (6.2905, -10.7206),  # Red Light parking station, Paynesville
+            'health': (6.2795, -10.7590),   # the Ministry of Health, Oldest Congo Town
         },
         # Off the map, with the way to it: Roberts International, at Harbel.
         'far': {'airport': ((6.2338, -10.3623), 'Roberts International Airport')},
@@ -199,7 +200,7 @@ def build(name, cfg):
         'airfields': airfields, 'buildings': buildings, 'places': places, 'far': far,
     }
     os.makedirs(OUT, exist_ok=True)
-    path = os.path.join(OUT, f'{name}.v1.json')
+    path = os.path.join(OUT, f'{name}.v2.json')
     with open(path, 'w') as f:
         json.dump(out, f, separators=(',', ':'))
     print('MAP', name, round(os.path.getsize(path) / 1024), 'KB', {k: len(v) for k, v in roads.items()}, 'water', len(water), 'sea', len(sea) // 2)

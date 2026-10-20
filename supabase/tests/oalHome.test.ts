@@ -47,7 +47,7 @@ describe('a phone and a SIM', () => {
   it('a SIM does nothing until registered: in Ghana, a Ghanaian with the Ghana Card, numbers in the network\'s prefixes', async () => {
     const ama = await live('GH', 'Accra')
     await give(ama, 'GHS', 50000)
-    expect(await act(ama, 'buy_phone', 'gh_basic')).toEqual({ ok: true, kind: 'basic' })
+    expect(await act(ama, 'buy_phone', 'gh_basic')).toEqual({ ok: true, kind: 'basic', handset: 'gh_basic' })
     expect(await act(ama, 'buy_sim', 'gh_sika')).toEqual({ ok: true })
     expect(await act(ama, 'buy_sim', 'gh_sika')).toEqual({ ok: false, code: 'ALREADY_HAVE_SIM' })
     expect(await act(ama, 'top_up', 'gh_sika', 1000)).toEqual({ ok: false, code: 'NOT_REGISTERED' })

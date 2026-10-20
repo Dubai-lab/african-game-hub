@@ -1,6 +1,7 @@
 // One Africa Life: home and body. A phone, its SIM (registered with the document the law asks
 // for: the database checks which), airtime, a room (public.oal_home_action); eating, sleeping,
-// the clinic (public.oal_needs_action); texts and mobile money (public.oal_phone_action). Each
+// the clinic (public.oal_needs_action); texts and mobile money (public.oal_phone_action); the
+// government offices' counters: the birth certificate (public.oal_office_action). Each
 // step is the database's, under the life's row lock, after time's changes.
 import { z } from 'npm:zod@4'
 import { admin, json, refuse, serve } from '../_shared/http.ts'
@@ -19,12 +20,20 @@ const body = z.discriminatedUnion('action', [
   z.object({ action: z.literal('send_money'), number: z.string().max(20), amount: z.int().min(100).max(10_000_000_000) }),
   z.object({ action: z.enum(['cash_in', 'cash_out']), amount: z.int().min(100).max(10_000_000_000) }),
   z.object({ action: z.literal('read_texts') }),
+  z.object({ action: z.literal('birth_apply'), father: z.string().min(2).max(60), mother: z.string().min(2).max(60) }),
+  z.object({ action: z.literal('birth_collect') }),
+  // The new phone at home: out of its box, on charge (public.oal_phone_box_action).
+  z.object({ action: z.enum(['unbox', 'charge']) }),
 ])
 
 const PHONE: Record<string, string> = { text: 'text', send_money: 'send', cash_in: 'cash_in', cash_out: 'cash_out', read_texts: 'read' }
 
 serve(body, async ({ userId, body }) => {
-  const result = PHONE[body.action]
+  const result = body.action === 'unbox' || body.action === 'charge'
+    ? await admin.rpc('oal_phone_box_action', { p_user_id: userId, p_action: body.action })
+    : body.action === 'birth_apply' || body.action === 'birth_collect'
+    ? await admin.rpc('oal_office_action', { p_user_id: userId, p_action: body.action, p_data: body.action === 'birth_apply' ? { father: body.father, mother: body.mother } : {} })
+    : PHONE[body.action]
     ? await admin.rpc('oal_phone_action', {
         p_user_id: userId,
         p_action: PHONE[body.action],

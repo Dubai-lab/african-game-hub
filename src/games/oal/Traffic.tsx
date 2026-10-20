@@ -34,7 +34,8 @@ const PAINTS: Record<Kind, string[]> = {
 
 // Where the driver sits, in the vehicle's own frame (x ahead, y up, z to its right): on the
 // left, as cars are driven on the right; a kekeh's rider in the middle, in front.
-const SEAT: Record<Kind, [number, number, number]> = { taxi: [0.1, 0.08, -0.4], car: [0.1, 0.08, -0.4], police: [0.15, 0.06, -0.4], bus: [2.9, 0.8, -0.85], kekeh: [0.25, 0.3, 0] }
+// (The sitting movement's seat is chair high: in a car the driver sits lower, below the roof.)
+const SEAT: Record<Kind, [number, number, number]> = { taxi: [0.05, -0.24, -0.4], car: [0.05, -0.24, -0.4], police: [0.1, -0.26, -0.4], bus: [2.9, 0.6, -0.85], kekeh: [0.25, 0.12, 0] }
 
 type Lane = { pts: [number, number][]; at: number[]; length: number }
 type Car = { kind: Kind; lane: number; s: number; v: number; want: number; root: Object3D }
@@ -112,6 +113,7 @@ export function Traffic({ lanes, reach, player, moving, spacing = 35 }: { lanes:
         const [sx, sy, sz] = SEAT[kind]
         driver.root.position.set(sx, sy, sz)
         driver.root.rotation.y = Math.PI / 2
+        driver.root.scale.setScalar(0.94)
         root.add(driver.root)
         cars.push({ kind, lane: li, s: ((k + rand() * 0.5) / count) * lane.length, v: SPEED[kind], want: SPEED[kind] * (0.85 + rand() * 0.3), root })
       }

@@ -549,13 +549,16 @@ room.place('door', -1.05, -2.6, (0, 1))
 
 shop = Home('phoneshop')
 shop.doors, shop.lights = [], []
+DISPLAY_YS = (-2.1, -1.2, -0.3, 0.6)
+shop_displays = []
+m_tag = flat('price_card', (0.96, 0.96, 0.94), 0.6)
 m_shop_wall = photo('shop_wall', 'white_stucco', scale=2.0, tint=srgb('#f4f2ee'), tint_amount=0.9, streaks=0)
-m_band = [flat('band_starline', srgb('#e86a1c'), 0.5), flat('band_citrus', srgb('#2f8a4a'), 0.5)]
+m_band = [flat('band_starline', srgb('#f2c200'), 0.5), flat('band_citrus', srgb('#ff7900'), 0.5)]
 m_case = flat('display_glass', (0.7, 0.82, 0.9), 0.05, alpha=0.3)
 m_phone = flat('display_phone', (0.03, 0.03, 0.04), 0.2)
 m_screen_on = flat('display_screen', (0.3, 0.5, 0.9), 0.2, emission=1.5)
 m_boxes = [flat(f'phone_box{i}', srgb(c), 0.6) for i, c in enumerate(['#f2ece0', '#1f4fa8', '#141414', '#e86a1c'])]
-m_poster = [flat('poster_starline', srgb('#e86a1c'), 0.6, emission=0.3), flat('poster_citrus', srgb('#2f8a4a'), 0.6, emission=0.3)]
+m_poster = [flat('poster_starline', srgb('#f2c200'), 0.6, emission=0.3), flat('poster_citrus', srgb('#ff7900'), 0.6, emission=0.3)]
 slab('shop_floor', -4.5, -3.5, 4.5, 3.5, 0.015, m_floor_tile, home=shop)
 slab('shop_pavement', -12, -9, 12, -3.5, 0.01, m_path, home=shop)
 slab('shop_street', -30, -20, 30, -9, 0.0, m_street, home=shop)
@@ -583,10 +586,13 @@ for side in (-1, 1):
     box(bm, uv, (x, -0.6, 0), (0.9, 4.0, 0.85), mat=0)
     box(bm, uv, (x, -0.6, 0.85), (0.9, 4.0, 0.25), mat=1)
     shop.solid(x - 0.45, -2.6, x + 0.45, 1.4)
-    for k in range(8):
-        y = -2.3 + k * 0.48
-        box(bm, uv, (x + side * -0.1, y, 0.9), (0.09, 0.18, 0.012), mat=2)
-        box(bm, uv, (x + side * -0.1, y, 0.912), (0.08, 0.16, 0.004), mat=3)
+    # The stands the phones on show stand in (the phones are the game's: HomeScene draws the
+    # shop's models there, at the plan's "displays"), each with its price card.
+    for y in DISPLAY_YS:
+        box(bm, uv, (x - side * 0.25, y, 1.1), (0.2, 0.16, 0.03), mat=2)
+        box(bm, uv, (x - side * 0.3, y, 1.13), (0.03, 0.12, 0.05), mat=2)
+        box(bm, uv, (x - side * 0.42, y, 1.1), (0.01, 0.14, 0.07), mat=11)
+        shop_displays.append({'x': round(x - side * 0.25, 2), 'y': round(y, 2), 'z': 1.13, 'face': [-side, 0], 'stand': [round(x - side * 0.85, 2), round(y, 2)]})
     for row in range(3):
         for k in range(10):
             y = -2.6 + k * 0.5
@@ -601,16 +607,193 @@ shop.solid(-2.05, 1.9, 2.05, 2.7)
 # Posters of the two networks on the back wall.
 box(bm, uv, (-2.6, 3.37, 1.3), (1.4, 0.03, 1.0), mat=9)
 box(bm, uv, (2.6, 3.37, 1.3), (1.4, 0.03, 1.0), mat=10)
-shop.add(kit.new_object('shop_fittings', bm, [m_cabinet, m_case, m_phone, m_screen_on] + m_boxes + [m_counter] + m_poster))
+shop.add(kit.new_object('shop_fittings', bm, [m_cabinet, m_case, m_phone, m_screen_on] + m_boxes + [m_counter] + m_poster + [m_tag]))
 ceiling('shop', -4.5, -3.5, 4.5, 3.5, home=shop)
 shop.places['door'] = {'x': 0.0, 'y': -2.7, 'face': [0, 1]}
 shop.places['counter'] = {'x': 0.0, 'y': 1.4, 'face': [0, 1]}
 shop.places['bed'] = {'x': 0.0, 'y': 1.4, 'face': [0, 1]}
-PLAN_EXTRA['phoneshop'] = {'doors': [], 'lights': shop.lights, 'inside': [[-4.5, -3.5, 4.5, 3.5]], 'ceiling': HH, 'attendant': {'x': 0.0, 'y': 3.0, 'face': [0, -1]}}
+PLAN_EXTRA['phoneshop'] = {'doors': [], 'lights': shop.lights, 'inside': [[-4.5, -3.5, 4.5, 3.5]], 'ceiling': HH, 'attendants': [{'x': 0.0, 'y': 3.0, 'face': [0, -1]}],
+                           'displays': shop_displays}
+
+# ---- The networks' customer care: Starline Mobile and Citrus Mobile, Tubman Boulevard ---------------
+#
+# Where a SIM card is bought and registered, as the law asks: the passport (or national ID) shown,
+# a photograph taken and the fingerprints read at the desk. 12 by 9 m behind a glass front
+# (y = -4.5): the network's colour on the walls, the queue's ticket machine by the door, rows of
+# waiting chairs, three service desks at the back with their officers, a camera on a stalk and a
+# fingerprint reader at each, a sign board, a POP ceiling with its lamps. One office per network.
+
+
+def net_office(name, title, colour):
+    o = Home(name)
+    o.doors, o.lights = [], []
+    m_brand = flat(f'{name}_brand', srgb(colour), 0.5)
+    m_brand_glow = flat(f'{name}_sign', srgb(colour), 0.5, emission=0.6)
+    m_desk = flat(f'{name}_desk', (0.93, 0.93, 0.92), 0.4)
+    m_seat = flat(f'{name}_seat', srgb('#2a2e3a'), 0.6)
+    slab(f'{name}_floor', -6, -4.5, 6, 4.5, 0.015, m_floor_tile, home=o)
+    slab(f'{name}_pavement', -14, -10, 14, -4.5, 0.01, m_path, home=o)
+    slab(f'{name}_street', -30, -22, 30, -10, 0.0, m_street, home=o)
+    bm = bmesh.new()
+    uv = bm.loops.layers.uv.new()
+    for (cx, cy, sx, sy) in ((0, 4.5, 12.2, 0.2), (-6, 0, 0.2, 9.2), (6, 0, 0.2, 9.2)):
+        box(bm, uv, (cx, cy, 0), (sx, sy, HH), mat=0)
+        o.solid(cx - sx / 2, cy - sy / 2, cx + sx / 2, cy + sy / 2)
+    for x0, x1 in ((-6, -0.7), (0.7, 6)):
+        box(bm, uv, ((x0 + x1) / 2, -4.5, 0), (x1 - x0, 0.06, HH), mat=1)
+        o.solid(x0, -4.6, x1, -4.4)
+    box(bm, uv, (0, -4.5, 2.3), (1.4, 0.08, HH - 2.3), mat=0)
+    # The network's colour: the back wall's lower half, a band round the side walls, the sign.
+    box(bm, uv, (0, 4.38, 0), (12.0, 0.04, 1.2), mat=2)
+    for side in (-1, 1):
+        box(bm, uv, (side * 5.88, 0, 2.2), (0.04, 9.0, 0.35), mat=2)
+    box(bm, uv, (0, -4.62, HH - 0.65), (7.0, 0.08, 0.75), mat=3)
+    box(bm, uv, (0, 4.36, 2.0), (5.0, 0.04, 0.6), mat=3)
+    o.add(kit.new_object(f'{name}_walls', bm, [m_shop_wall, m_case, m_brand, m_brand_glow]))
+    o.add(kit.text(title, (0, -4.68), math.pi, 0.4, '#141414' if name == 'starline' else '#ffffff', HH - 0.55))
+    o.add(kit.text('CUSTOMER CARE  ·  SIM REGISTRATION', (0, 4.3), 0, 0.22, '#141414' if name == 'starline' else '#ffffff', 2.08))
+    bm = bmesh.new()
+    uv = bm.loops.layers.uv.new()
+    # The service desks: three, side by side, glass between them; on each a screen, the
+    # camera on its stalk, the fingerprint reader; a chair for the customer in front.
+    for k, x in enumerate((-3.2, 0.0, 3.2)):
+        box(bm, uv, (x, 2.6, 0), (2.4, 0.8, 1.05), mat=0)
+        box(bm, uv, (x, 2.6, 1.05), (2.5, 0.85, 0.04), mat=1)
+        box(bm, uv, (x, 2.95, 1.09), (0.5, 0.05, 0.35), mat=2)
+        box(bm, uv, (x - 0.6, 2.4, 1.09), (0.03, 0.03, 0.35), mat=2)
+        box(bm, uv, (x - 0.6, 2.38, 1.44), (0.1, 0.06, 0.06), mat=2)
+        box(bm, uv, (x + 0.5, 2.3, 1.09), (0.12, 0.16, 0.05), mat=4)
+        box(bm, uv, (x + 0.5, 2.3, 1.14), (0.06, 0.06, 0.005), mat=5)
+        box(bm, uv, (x, 2.0, 0), (0.04, 0.04, 0.05), mat=2)
+        plastic_chair(bm, uv, x, 1.6, math.pi / 2, 6)
+        o.solid(x - 1.25, 2.15, x + 1.25, 3.05)
+        if k < 2:
+            box(bm, uv, (x + 1.6, 2.6, 1.09), (0.03, 0.8, 0.6), mat=7)
+        box(bm, uv, (x, 3.05, 0.0), (2.4, 0.05, 0.02), mat=1)
+    # Rows of waiting chairs, steel frames, facing the desks.
+    for row, y in enumerate((-1.6, -0.4)):
+        for x0 in (-4.6, 1.4):
+            box(bm, uv, (x0 + 1.6, y, 0.42), (3.2, 0.48, 0.05), mat=8)
+            box(bm, uv, (x0 + 1.6, y - 0.22, 0.47), (3.2, 0.05, 0.45), mat=8)
+            for k in range(4):
+                box(bm, uv, (x0 + 0.4 + k * 0.8, y, 0), (0.05, 0.4, 0.42), mat=2)
+            o.solid(x0, y - 0.3, x0 + 3.2, y + 0.25)
+    # The ticket machine by the door, and the queue's number board over the desks.
+    box(bm, uv, (-4.4, -3.6, 0), (0.5, 0.4, 1.4), mat=9)
+    box(bm, uv, (-4.4, -3.39, 1.0), (0.3, 0.02, 0.25), mat=5)
+    o.solid(-4.65, -3.8, -4.15, -3.4)
+    box(bm, uv, (0, 4.3, 2.55), (1.4, 0.1, 0.35), mat=2)
+    box(bm, uv, (0, 4.24, 2.6), (1.2, 0.02, 0.25), mat=5)
+    # A plant by the wall, and a water dispenser.
+    box(bm, uv, (5.3, -3.7, 0), (0.4, 0.4, 0.5), mat=2)
+    box(bm, uv, (5.3, -3.7, 0.5), (0.6, 0.6, 0.9), mat=10)
+    box(bm, uv, (-5.4, 1.0, 0), (0.35, 0.35, 1.1), mat=0)
+    box(bm, uv, (-5.4, 1.0, 1.1), (0.28, 0.28, 0.4), mat=1)
+    o.solid(5.0, -4.0, 5.6, -3.4)
+    o.solid(-5.6, 0.8, -5.2, 1.2)
+    m_plant = flat(f'{name}_plant', srgb('#3a7a3a'), 0.8)
+    o.add(kit.new_object(f'{name}_fittings', bm, [m_desk, m_case, m_black, m_counter, m_steel, m_screen_on, m_plastic, m_case, m_seat, m_brand, m_plant]))
+    ceiling(f'{name}_front', -6, -4.5, 0, 0, home=o)
+    ceiling(f'{name}_front2', 0, -4.5, 6, 0, home=o)
+    ceiling(f'{name}_back', -6, 0, 6, 4.5, home=o)
+    o.places['door'] = {'x': 0.0, 'y': -3.7, 'face': [0, 1]}
+    o.places['desk'] = {'x': 0.0, 'y': 1.4, 'face': [0, 1]}
+    o.places['ticket'] = {'x': -4.0, 'y': -2.9, 'face': [-0.5, -0.8]}
+    o.places['bed'] = {'x': 0.0, 'y': 1.4, 'face': [0, 1]}
+    PLAN_EXTRA[name] = {'doors': [], 'lights': o.lights, 'inside': [[-6, -4.5, 6, 4.5]], 'ceiling': HH,
+                        'attendants': [{'x': x, 'y': 3.4, 'face': [0, -1]} for x in (-3.2, 0.0, 3.2)],
+                        'waiting': [{'x': x, 'y': y, 'face': [0, 1]} for (x, y) in ((-3.8, -1.6), (-2.2, -1.6), (2.2, -1.6), (-3.0, -0.4), (3.8, -0.4))]}
+    return o
+
+
+offices = [net_office('starline', 'STARLINE MOBILE', '#f2c200'), net_office('citrus', 'CITRUS MOBILE', '#ff7900')]
+
+# ---- The Ministry of Health, Monrovia: its Vital Statistics office -------------------------------
+#
+# Where births are registered and birth certificates issued. A government hall, 14 by 10 m,
+# behind its glass front (y = -5): cream walls with a green dado, a terrazzo floor, wooden
+# benches for those waiting, a long counter at the back behind glass with its windows (birth
+# registration, collection, the cashier), clerks behind them, the national flag on its pole, the
+# notice board, ceiling fans under a POP ceiling.
+
+m_gov_wall = photo('gov_wall', 'painted_plaster_wall', scale=2.0, tint=srgb('#efe4c8'), tint_amount=0.85, streaks=0)
+m_gov_dado = flat('gov_dado', srgb('#2f6a4a'), 0.6)
+m_bench = flat('gov_bench', srgb('#6b4a2e'), 0.7)
+m_flag_red = flat('flag_red', srgb('#bf0a30'), 0.7)
+m_flag_white = flat('flag_white', (0.95, 0.95, 0.95), 0.7)
+m_flag_blue = flat('flag_blue', srgb('#002868'), 0.7)
+m_board = flat('notice_board', srgb('#8a6a3a'), 0.9)
+m_paper = flat('notice_paper', (0.95, 0.94, 0.9), 0.9)
+m_sign_green = flat('gov_sign', srgb('#1f5a3a'), 0.5, emission=0.2)
+health = Home('health')
+health.doors, health.lights = [], []
+slab('health_floor', -7, -5, 7, 5, 0.015, m_tiles, home=health)
+slab('health_pavement', -16, -11, 16, -5, 0.01, m_path, home=health)
+slab('health_street', -40, -24, 40, -11, 0.0, m_street, home=health)
+bm = bmesh.new()
+uv = bm.loops.layers.uv.new()
+for (cx, cy, sx, sy) in ((0, 5, 14.2, 0.2), (-7, 0, 0.2, 10.2), (7, 0, 0.2, 10.2)):
+    box(bm, uv, (cx, cy, 0), (sx, sy, HH), mat=0)
+    health.solid(cx - sx / 2, cy - sy / 2, cx + sx / 2, cy + sy / 2)
+for x0, x1 in ((-7, -0.8), (0.8, 7)):
+    box(bm, uv, ((x0 + x1) / 2, -5, 0), (x1 - x0, 0.06, HH), mat=1)
+    health.solid(x0, -5.1, x1, -4.9)
+box(bm, uv, (0, -5, 2.3), (1.6, 0.08, HH - 2.3), mat=0)
+for (cx, cy, sx, sy) in ((0, 4.88, 14.0, 0.04), (-6.88, 0, 0.04, 10.0), (6.88, 0, 0.04, 10.0)):
+    box(bm, uv, (cx, cy, 0), (sx, sy, 1.1), mat=2)
+box(bm, uv, (0, -5.12, HH - 0.7), (9.0, 0.08, 0.8), mat=3)
+box(bm, uv, (0, 4.85, 2.25), (6.5, 0.04, 0.5), mat=3)
+health.add(kit.new_object('health_walls', bm, [m_gov_wall, m_case, m_gov_dado, m_sign_green]))
+health.add(kit.text('MINISTRY OF HEALTH\nREPUBLIC OF LIBERIA', (0, -5.18), math.pi, 0.3, '#f4efe2', HH - 0.45))
+health.add(kit.text('VITAL STATISTICS  ·  BIRTH & DEATH REGISTRATION', (0, 4.8), 0, 0.2, '#f4efe2', 2.33))
+bm = bmesh.new()
+uv = bm.loops.layers.uv.new()
+# The counter at the back, glass above it to the ceiling's height of a man, its windows.
+box(bm, uv, (0, 3.0, 0), (12.0, 0.7, 1.05), mat=0)
+box(bm, uv, (0, 3.0, 1.05), (12.1, 0.75, 0.04), mat=1)
+box(bm, uv, (0, 2.68, 1.09), (12.0, 0.03, 1.1), mat=2)
+health.solid(-6.05, 2.6, 6.05, 3.4)
+WINDOWS = ((-3.5, 'BIRTH REGISTRATION'), (0.0, 'COLLECTION'), (3.5, 'CASHIER'))
+for x, label in WINDOWS:
+    box(bm, uv, (x, 2.66, 1.09), (0.5, 0.05, 0.06), mat=3)
+    box(bm, uv, (x, 2.66, 2.25), (1.6, 0.05, 0.3), mat=4)
+    box(bm, uv, (x, 3.2, 1.09), (0.45, 0.35, 0.3), mat=5)
+    for k in range(3):
+        box(bm, uv, (x + 0.4, 3.0 + k * 0.02, 1.09 + k * 0.01), (0.3, 0.22, 0.01), mat=6)
+# Wooden benches in rows, facing the counter.
+for y in (-2.6, -1.0, 0.6):
+    for x0 in (-5.6, 0.9):
+        box(bm, uv, (x0 + 2.35, y, 0.42), (4.7, 0.42, 0.05), mat=7)
+        box(bm, uv, (x0 + 2.35, y - 0.2, 0.47), (4.7, 0.05, 0.4), mat=7)
+        for k in range(4):
+            box(bm, uv, (x0 + 0.3 + k * 1.37, y, 0), (0.06, 0.38, 0.42), mat=7)
+        health.solid(x0, y - 0.28, x0 + 4.7, y + 0.24)
+# The flag on its pole (eleven stripes and the star's blue canton), the notice board.
+box(bm, uv, (-6.3, -4.2, 0), (0.05, 0.05, 2.6), mat=5)
+for k in range(11):
+    box(bm, uv, (-6.0, -4.2, 2.55 - k * 0.07), (0.6, 0.02, 0.07), mat=8 if k % 2 == 0 else 9)
+box(bm, uv, (-5.9, -4.2, 2.2), (0.27, 0.025, 0.42), mat=10)
+health.solid(-6.4, -4.3, -6.2, -4.1)
+box(bm, uv, (6.85, -1.5, 1.0), (0.04, 2.2, 1.2), mat=11)
+for k in range(6):
+    box(bm, uv, (6.82, -2.3 + (k % 3) * 0.55, 1.15 + (k // 3) * 0.55), (0.02, 0.4, 0.45), mat=12)
+health.add(kit.new_object('health_fittings', bm, [m_cabinet, m_counter, m_case, m_black, m_sign_green, m_steel, m_paper, m_bench, m_flag_red, m_flag_white, m_flag_blue, m_board, m_paper]))
+for x, label in WINDOWS:
+    health.add(kit.text(label, (x, 2.62), 0, 0.11, '#f4efe2', 2.35))
+ceiling('health_l', -7, -5, 0, 5, home=health)
+ceiling('health_r', 0, -5, 7, 5, home=health)
+health.places['door'] = {'x': 0.0, 'y': -4.2, 'face': [0, 1]}
+health.places['counter'] = {'x': -3.5, 'y': 2.0, 'face': [0, 1]}
+health.places['collect'] = {'x': 0.0, 'y': 2.0, 'face': [0, 1]}
+health.places['bed'] = {'x': 0.0, 'y': 2.0, 'face': [0, 1]}
+PLAN_EXTRA['health'] = {'doors': [], 'lights': health.lights, 'inside': [[-7, -5, 7, 5]], 'ceiling': HH,
+                        'attendants': [{'x': x, 'y': 3.8, 'face': [0, -1]} for x, _ in WINDOWS],
+                        'waiting': [{'x': x, 'y': y, 'face': [0, 1]} for (x, y) in ((-4.9, -2.6), (-3.5, -2.6), (2.0, -2.6), (4.8, -1.0), (-2.2, -1.0), (1.6, 0.6), (-5.2, 0.6))]}
+offices.append(health)
 
 # ---- Out -----------------------------------------------------------------------------------------
 
-for h in (house, room, shop):
+for h in (house, room, shop, *offices):
     PLAN[h.name] = {'solids': h.solids, 'places': h.places, **PLAN_EXTRA.get(h.name, {})}
 for img in bpy.data.images:
     if img.size[0] > 512:

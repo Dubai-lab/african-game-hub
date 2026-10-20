@@ -1,7 +1,9 @@
-// One Africa Life: a phone and its SIMs, and a room, on the life's page. A phone from the phone
-// shop; a SIM from a network, registered at its shop with the document the law asks for (in
-// Ghana a Ghanaian's Ghana Card, otherwise the passport), then airtime; a room rented with the
-// landlord's advance (six months in Monrovia, twelve in Ghana), or life with family until then.
+// One Africa Life: a phone and its SIMs, and a room. A phone from the phone shop (a model picked
+// up from its stand and paid for at the counter); a SIM from a network, bought and registered at
+// its customer care with the document the law asks for (in Ghana a Ghanaian's Ghana Card,
+// otherwise the passport), a photograph and the fingerprints, then airtime; a room rented with
+// the landlord's advance (six months in Monrovia, twelve in Ghana), or life with family until
+// then.
 //
 // Every step is the server's (the oal-home Edge Function, public.oal_home_action).
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -16,15 +18,15 @@ import { toast } from '@/core/ui/toast'
 import { type TravelState, useGameNow } from './Journey'
 import { cash } from './Work'
 
-type Currency = 'LRD' | 'USD' | 'GHS'
+export type Currency = 'LRD' | 'USD' | 'GHS'
 type Network = { id: string; country: 'LR' | 'GH'; name: string; colour: string; prefixes: string[]; sim_price: number }
-type Handset = { id: string; country: 'LR' | 'GH'; kind: 'basic' | 'smart'; price: number }
+export type Handset = { id: string; country: 'LR' | 'GH'; kind: 'basic' | 'smart'; price: number; brand: string; model: string; colour: string; screen: number; storage: number; camera: number; battery: number }
 type Sim = { network: string; number: string | null; id_kind: string | null; airtime: number }
 type Room = { id: string; country: 'LR' | 'GH'; town: string; area: string; kind: string; currency: Currency; rent: number; advance: number }
 type Lease = { room_id: string; starts_on: string; ends_on: string }
 
-/** A number as people write it at home: +231771234567 → 077 123 4567. */
-export const localNumber = (e164: string) => `0${e164.slice(4, 6)} ${e164.slice(6, 9)} ${e164.slice(9)}`
+/** A number as people write it at home: +231771234567 → 077 123 4567 (an office's name as it is). */
+export const localNumber = (e164: string) => (e164.startsWith('+') ? `0${e164.slice(4, 6)} ${e164.slice(6, 9)} ${e164.slice(9)}` : e164)
 
 export function useHome() {
   const { user } = useAuth()
@@ -35,7 +37,7 @@ export function useHome() {
       const [networks, handsets, phone, sims, rooms, leases, card] = await Promise.all([
         supabase.from('oal_networks').select('*'),
         supabase.from('oal_handsets').select('*').order('price'),
-        supabase.from('oal_phones').select('kind').eq('user_id', user!.id).maybeSingle(),
+        supabase.from('oal_phones').select('kind, handset, unboxed, charge, charged_at').eq('user_id', user!.id).maybeSingle(),
         supabase.from('oal_sims').select('network, number, id_kind, airtime').eq('user_id', user!.id),
         supabase.from('oal_rooms').select('*').order('rent'),
         supabase.from('oal_leases').select('room_id, starts_on, ends_on').eq('user_id', user!.id).order('ends_on', { ascending: false }),
@@ -45,7 +47,7 @@ export function useHome() {
       return {
         networks: networks.data as Network[],
         handsets: handsets.data as Handset[],
-        phone: phone.data as { kind: 'basic' | 'smart' } | null,
+        phone: phone.data as { kind: 'basic' | 'smart'; handset: string | null; unboxed: boolean; charge: 'flat' | 'charging' | 'charged'; charged_at: string | null } | null,
         sims: sims.data as Sim[],
         rooms: rooms.data as Room[],
         leases: leases.data as Lease[],
@@ -55,7 +57,7 @@ export function useHome() {
   })
 }
 
-function useHomeStep() {
+export function useHomeStep() {
   const queryClient = useQueryClient()
   const { t } = useTranslation()
   const [busy, setBusy] = useState(false)
@@ -102,7 +104,7 @@ export function PhoneSection({ travel, homeCountry }: { travel: TravelState; hom
               .filter((h) => h.country === travel.country)
               .map((h) => (
                 <Button key={h.id} variant="ghost" disabled={busy} onClick={() => void run({ action: 'buy_phone', target: h.id })} data-testid={`oal-buy-${h.id}`}>
-                  {t(`oal.phone.buy.${h.kind}`, { price: cash(h.price, local, i18n.language) })}
+                  {t('oal.shop.buyModel', { name: `${h.brand} ${h.model}`, price: cash(h.price, local, i18n.language) })}
                 </Button>
               ))}
           </div>
@@ -321,5 +323,149 @@ export function PhoneUse({ travel }: { travel: TravelState }) {
       </div>
       <p className="mt-1 text-xs text-muted">{t('oal.phone.momo.fees', { least: travel.country === 'LR' ? 'L$5' : 'GH¢0.50' })}</p>
     </section>
+  )
+}
+
+/** A phone as it is seen in the hand: its body in its colour, its screen. */
+function PhoneDrawing({ handset }: { handset: Handset }) {
+  const smart = handset.kind === 'smart'
+  return (
+    <div className={`flex shrink-0 flex-col items-center rounded-[1.1rem] p-1.5 shadow-lg ${smart ? 'h-36 w-[4.25rem]' : 'h-28 w-12'}`} style={{ background: handset.colour }} aria-hidden>
+      <div className={`w-full rounded-[0.8rem] ${smart ? 'h-full bg-gradient-to-b from-[#3a6ad8] to-[#1a2a6a]' : 'h-[40%] bg-[#8ab83a]'}`} />
+      {!smart && <div className="mt-1.5 grid w-full flex-1 grid-cols-3 gap-0.5">{Array.from({ length: 12 }, (_, i) => <span key={i} className="rounded-sm bg-[#d8d8d8]" />)}</div>}
+    </div>
+  )
+}
+
+/** A phone on its stand, looked at: what it is, what it does, its price; picked up, or put back. */
+export function PhoneCard({ handset, carrying, handsFull, onTake, onPutBack }: { handset: Handset; carrying: boolean; handsFull: boolean; onTake: () => void; onPutBack: () => void }) {
+  const { t, i18n } = useTranslation()
+  const home = useHome()
+  const local: Currency = handset.country === 'LR' ? 'LRD' : 'GHS'
+  const mine = home.data?.phone?.handset === handset.id
+  return (
+    <section className="flex gap-4 border border-line bg-panel p-4" data-testid="oal-phone-card" data-handset={handset.id}>
+      <PhoneDrawing handset={handset} />
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <p className="font-display text-xl font-extrabold">
+          {handset.brand} {handset.model}
+        </p>
+        <p className="text-sm text-muted">{t(`oal.shop.kind.${handset.kind}`)}</p>
+        <ul className="text-sm">
+          <li>{t('oal.shop.screen', { inches: (handset.screen / 10).toLocaleString(i18n.language) })}</li>
+          {handset.storage > 0 && <li>{t('oal.shop.storage', { gb: handset.storage })}</li>}
+          {handset.camera > 0 && <li>{t('oal.shop.camera', { mp: handset.camera })}</li>}
+          <li>{t('oal.shop.battery', { mah: handset.battery.toLocaleString(i18n.language) })}</li>
+        </ul>
+        <p className="font-display text-lg font-extrabold tabular-nums">{cash(handset.price, local, i18n.language)}</p>
+        {mine && <p className="text-xs text-muted">{t('oal.shop.yours')}</p>}
+        {carrying ? (
+          <Button variant="ghost" onClick={onPutBack} data-testid="oal-put-back">
+            {t('oal.shop.putBack')}
+          </Button>
+        ) : (
+          <Button onClick={onTake} disabled={handsFull} data-testid="oal-pick-up">
+            {handsFull ? t('oal.shop.handsFull') : t('oal.shop.pickUp')}
+          </Button>
+        )}
+      </div>
+    </section>
+  )
+}
+
+/** The phone shop's counter: the phone carried here paid for; airtime for a registered SIM. */
+export function ShopCounter({ travel, carrying, onPaid }: { travel: TravelState; carrying: Handset | null; onPaid: () => void }) {
+  const { t, i18n } = useTranslation()
+  const { run, busy } = useHomeStep()
+  const local: Currency = travel.country === 'LR' ? 'LRD' : 'GHS'
+  return (
+    <div className="flex flex-col gap-3">
+      {carrying ? (
+        <section className="flex gap-4 border border-line bg-panel p-4" data-testid="oal-counter-pay">
+          <PhoneDrawing handset={carrying} />
+          <div className="flex flex-1 flex-col gap-2">
+            <p className="text-sm text-muted">{t('oal.shop.attendant')}</p>
+            <p className="font-display text-xl font-extrabold">
+              {carrying.brand} {carrying.model}
+            </p>
+            <Button
+              disabled={busy}
+              onClick={() =>
+                void run({ action: 'buy_phone', target: carrying.id }).then((r) => {
+                  if (!r) return
+                  toast.success(t('oal.shop.bought', { name: `${carrying.brand} ${carrying.model}` }))
+                  onPaid()
+                })
+              }
+              data-testid="oal-pay-phone"
+            >
+              {t('oal.shop.pay', { price: cash(carrying.price, local, i18n.language) })}
+            </Button>
+          </div>
+        </section>
+      ) : (
+        <p className="border border-line bg-panel p-4 text-sm" data-testid="oal-counter-hint">
+          {t('oal.shop.counterHint')}
+        </p>
+      )}
+      <Airtime travel={travel} />
+    </div>
+  )
+}
+
+/** The SIMs registered in this country, their numbers and airtime, topped up. */
+export function Airtime({ travel }: { travel: TravelState }) {
+  const { t, i18n } = useTranslation()
+  const home = useHome()
+  const { run, busy } = useHomeStep()
+  const [topUp, setTopUp] = useState<Record<string, string>>({})
+  if (!home.data) return null
+  const local: Currency = travel.country === 'LR' ? 'LRD' : 'GHS'
+  const mine = home.data.sims.filter((x) => x.number && home.data!.networks.find((n) => n.id === x.network)?.country === travel.country)
+  if (mine.length === 0) return null
+  return (
+    <section className="flex flex-col gap-2 border border-line bg-panel p-4" data-testid="oal-airtime">
+      <h2 className="text-sm font-semibold text-muted">{t('oal.shop.scratchCards')}</h2>
+      {mine.map((sim) => {
+        const n = home.data!.networks.find((x) => x.id === sim.network)!
+        return (
+          <div key={sim.network} className="flex flex-wrap items-center gap-2 border-t border-line pt-2" data-testid={`oal-network-${n.id}`}>
+            <span className="inline-block h-3 w-3 rounded-full" style={{ background: n.colour }} aria-hidden />
+            <span className="font-bold">{n.name}</span>
+            <span className="font-display text-lg font-extrabold tabular-nums" data-testid={`oal-number-${n.id}`}>
+              {localNumber(sim.number!)}
+            </span>
+            <span className="text-sm text-muted">{t('oal.phone.airtime', { amount: cash(sim.airtime, local, i18n.language) })}</span>
+            <input
+              value={topUp[n.id] ?? ''}
+              onChange={(e) => setTopUp({ ...topUp, [n.id]: e.target.value.replace(/[^0-9]/g, '') })}
+              inputMode="numeric"
+              className="min-h-11 w-24 rounded-xl border border-line bg-panel px-2"
+              aria-label={t('oal.phone.topUpAmount')}
+            />
+            <Button variant="ghost" disabled={busy || !Number(topUp[n.id])} onClick={() => void run({ action: 'top_up', target: n.id, amount: Number(topUp[n.id]) * 100 }).then(() => setTopUp({ ...topUp, [n.id]: '' }))}>
+              {t('oal.phone.topUp')}
+            </Button>
+          </div>
+        )
+      })}
+    </section>
+  )
+}
+
+/** On the phone itself: the phone, its SIMs and airtime; where to get and register a SIM. */
+export function SimStatus({ travel }: { travel: TravelState }) {
+  const { t } = useTranslation()
+  const home = useHome()
+  if (home.isPending) return <Skeleton className="h-32" />
+  if (home.isError) return <p className="text-alert">{refusalMessage('SERVER_ERROR')}</p>
+  const { phone, handsets } = home.data
+  const model = handsets.find((h) => h.id === phone?.handset)
+  return (
+    <div className="flex flex-col gap-3" data-testid="oal-sim-status">
+      {phone && <p>{model ? `${model.brand} ${model.model}` : t(`oal.phone.have.${phone.kind}`)}</p>}
+      <Airtime travel={travel} />
+      <p className="text-sm text-muted">{t(`oal.shop.whereSim.${travel.country}`)}</p>
+    </div>
   )
 }
