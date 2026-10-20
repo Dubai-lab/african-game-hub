@@ -36,7 +36,7 @@ import { TOWNS } from '../StreetScene'
 import { keepOutOf, type Moving, Traffic } from '../Traffic'
 import { CityTraffic, CityWalkers } from './CityTraffic'
 import { type Destination, newRide, PASSENGER, type RidePhase, type RideState } from './ride'
-import { buildChunk, buildCity, CHUNK, type City, type ChunkParts, type Keep, nearestRoad, segsNear, type Solid, toSeg, type TownMapData, waterGeometry } from './cityGen'
+import { buildChunk, buildCity, CHUNK, type City, type ChunkParts, type Keep, nearestRoad, segsNear, type Solid, type Tile, toSeg, type TownMapData, waterGeometry } from './cityGen'
 
 const WALK_SPEED = 1.45
 const RADIUS = 0.3
@@ -166,7 +166,28 @@ function useTextures() {
         g.fillRect(r() * s, r() * s, 4 + r() * 10, 20 + r() * 50)
       }
     })
-    return { ground, dirt, asphalt, pavement, facade, zinc }
+    // A shopfront 4 m wide, a storey high: the painted sign board along the top, the steel
+    // shutter rolled half up over the dark shop, its frame.
+    const shopfront = canvasTexture(256, (g, s) => {
+      noise(g, s, '#f2f2f2', [['#dcdcdc', 200, 6]])
+      g.fillStyle = '#ffffff'
+      g.fillRect(0, 0, s, s * 0.22)
+      g.fillStyle = 'rgba(0,0,0,0.25)'
+      g.fillRect(0, s * 0.22, s, 4)
+      g.fillStyle = '#26221e'
+      g.fillRect(s * 0.08, s * 0.3, s * 0.84, s * 0.7)
+      // The shutter's slats, rolled down to half the opening.
+      for (let y = s * 0.3; y < s * 0.62; y += 6) {
+        g.fillStyle = y % 12 < 6 ? '#8e9092' : '#a6a8aa'
+        g.fillRect(s * 0.08, y, s * 0.84, 6)
+      }
+      g.fillStyle = '#5a4a3a'
+      g.fillRect(s * 0.15, s * 0.7, s * 0.7, s * 0.06)
+      g.strokeStyle = '#4a4a4a'
+      g.lineWidth = 6
+      g.strokeRect(s * 0.08, s * 0.3, s * 0.84, s * 0.7)
+    })
+    return { ground, dirt, asphalt, pavement, facade, zinc, shopfront }
   }, [])
 }
 
@@ -180,6 +201,8 @@ function useMaterials() {
       pavement: new MeshStandardMaterial({ map: tex.pavement, roughness: 0.95, vertexColors: true, side: DoubleSide }),
       marks: new MeshStandardMaterial({ color: '#f2f0e6', roughness: 0.8, vertexColors: true, side: DoubleSide }),
       walls: new MeshStandardMaterial({ map: tex.facade, roughness: 0.9, vertexColors: true, side: DoubleSide }),
+      shops: new MeshStandardMaterial({ map: tex.shopfront, roughness: 0.85, vertexColors: true, side: DoubleSide }),
+      land: new MeshStandardMaterial({ roughness: 1, vertexColors: true, side: DoubleSide }),
       roofs: new MeshStandardMaterial({ map: tex.zinc, roughness: 0.6, metalness: 0.3, vertexColors: true, side: DoubleSide }),
       plain: new MeshStandardMaterial({ roughness: 0.85, vertexColors: true, side: DoubleSide }),
       leaves: new MeshStandardMaterial({ roughness: 0.8, vertexColors: true, side: DoubleSide }),
@@ -197,14 +220,29 @@ type Materials = ReturnType<typeof useMaterials>
 type Built = { group: Group; parts: ChunkParts }
 
 /** The chunks round the player, built as they come near and let go behind. */
-function Chunks({ city, keep, player, solids }: { city: City; keep: Keep[]; player: RefObject<{ x: number; y: number }>; solids: RefObject<Map<string, Solid[]>> }) {
+/** Disposes a chunk's meshes (its places and solids are only data). */
+function disposeParts(parts: ChunkParts) {
+  for (const k of Object.keys(parts) as (keyof ChunkParts)[]) {
+    const v = parts[k] as { dispose?: () => void } | null
+    if (v && !Array.isArray(v)) v.dispose?.()
+  }
+}
+
+/** A town's real buildings, land and places, tile by tile (scripts/oal/makeCityData.py), where
+ * there are tiles for it. */
+const TILES: Record<string, string> = { Monrovia: '/oal/city/monrovia/t' }
+
+function Chunks({ city, keep, player, solids, town }: { city: City; keep: Keep[]; player: RefObject<{ x: number; y: number }>; solids: RefObject<Map<string, Solid[]>>; town: string }) {
   const mats = useMaterials()
   const built = useRef(new Map<string, Built>())
+  // The tiles fetched (null: none there) and being fetched.
+  const tiles = useRef(new Map<string, Tile | null>())
+  const asked = useRef(new Set<string>())
   const root = useRef<Group>(null)
   useEffect(() => {
     const map = built.current
     return () => {
-      for (const b of map.values()) for (const k of Object.keys(b.parts) as (keyof ChunkParts)[]) if (k !== 'solids') b.parts[k]?.dispose()
+      for (const b of map.values()) disposeParts(b.parts)
       map.clear()
     }
   }, [])
@@ -227,9 +265,52 @@ function Chunks({ city, keep, player, solids }: { city: City; keep: Keep[]; play
           want = [pcx + dx, pcy + dy]
         }
       }
+    // A town with tiles: its tile fetched first (the chunk built once it is here).
+    const source = TILES[town]
+    if (want && source) {
+      const k = `${want[0]},${want[1]}`
+      if (!tiles.current.has(k)) {
+        if (!asked.current.has(k)) {
+          asked.current.add(k)
+          fetch(`${source}/${want[0]}_${want[1]}.v1.json`)
+            .then((r) => (r.ok ? (r.json() as Promise<Tile>) : null))
+            .catch(() => null)
+            .then((t) => {
+              tiles.current.set(k, t)
+              asked.current.delete(k)
+            })
+        }
+        // Meanwhile, the next nearest chunk whose tile is here.
+        want = null
+        let near = Infinity
+        for (let dx = -AROUND; dx <= AROUND; dx++)
+          for (let dy = -AROUND; dy <= AROUND; dy++) {
+            const kk = `${pcx + dx},${pcy + dy}`
+            if (built.current.has(kk)) continue
+            if (!tiles.current.has(kk)) {
+              if (!asked.current.has(kk)) {
+                asked.current.add(kk)
+                fetch(`${source}/${pcx + dx}_${pcy + dy}.v1.json`)
+                  .then((r) => (r.ok ? (r.json() as Promise<Tile>) : null))
+                  .catch(() => null)
+                  .then((t) => {
+                    tiles.current.set(kk, t)
+                    asked.current.delete(kk)
+                  })
+              }
+              continue
+            }
+            const d = dx * dx + dy * dy
+            if (d < near) {
+              near = d
+              want = [pcx + dx, pcy + dy]
+            }
+          }
+      }
+    }
     if (want) {
       const [cx, cy] = want
-      const parts = buildChunk(city, cx, cy, keep)
+      const parts = buildChunk(city, cx, cy, keep, source ? tiles.current.get(`${cx},${cy}`) : null)
       const g = new (group.constructor as new () => Group)()
       const add = (geo: ChunkParts[keyof ChunkParts], mat: keyof Materials) => {
         if (!geo || Array.isArray(geo)) return
@@ -237,11 +318,13 @@ function Chunks({ city, keep, player, solids }: { city: City; keep: Keep[]; play
         m.matrixAutoUpdate = false
         g.add(m)
       }
+      add(parts.land, 'land')
       add(parts.dirt, 'dirt')
       add(parts.pavement, 'pavement')
       add(parts.asphalt, 'asphalt')
       add(parts.marks, 'marks')
       add(parts.walls, 'walls')
+      add(parts.shops, 'shops')
       add(parts.roofs, 'roofs')
       add(parts.plain, 'plain')
       add(parts.leaves, 'leaves')
@@ -255,7 +338,7 @@ function Chunks({ city, keep, player, solids }: { city: City; keep: Keep[]; play
       const [cx, cy] = k.split(',').map(Number) as [number, number]
       if (Math.abs(cx - pcx) > AROUND + 1 || Math.abs(cy - pcy) > AROUND + 1) {
         group.remove(b.group)
-        for (const part of Object.keys(b.parts) as (keyof ChunkParts)[]) if (part !== 'solids') (b.parts[part] as { dispose?: () => void } | null)?.dispose?.()
+        disposeParts(b.parts)
         built.current.delete(k)
         solids.current?.delete(k)
       }
@@ -522,8 +605,8 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
     for (let dx = -1; dx <= 1; dx++)
       for (let dy = -1; dy <= 1; dy++)
         for (const poly of solids.current?.get(`${cx + dx},${cy + dy}`) ?? []) {
-          const [ax, ay] = poly[0] as [number, number]
-          if (Math.abs(ax - s.x) > 20 || Math.abs(ay - s.y) > 20) continue
+          const bb = poly.bb
+          if (bb ? s.x < bb[0] - 1 || s.x > bb[2] + 1 || s.y < bb[1] - 1 || s.y > bb[3] + 1 : Math.abs(poly[0]![0]! - s.x) > 20 || Math.abs(poly[0]![1]! - s.y) > 20) continue
           pushOut(s, poly)
         }
     for (const c of compounds) for (const poly of compoundSolids(c)) pushOut(s, poly)
@@ -660,8 +743,8 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
     for (let ddx = -1; ddx <= 1; ddx++)
       for (let ddy = -1; ddy <= 1; ddy++)
         for (const poly of solids.current?.get(`${ccx + ddx},${ccy + ddy}`) ?? []) {
-          const [ax, ay] = poly[0] as [number, number]
-          if (Math.abs(ax - s.x) > 16 || Math.abs(ay - s.y) > 16) continue
+          const bb = poly.bb
+          if (bb ? Math.max(s.x, ex) < bb[0] || Math.min(s.x, ex) > bb[2] || Math.max(s.y, ey) < bb[1] || Math.min(s.y, ey) > bb[3] : Math.abs(poly[0]![0]! - s.x) > 16 || Math.abs(poly[0]![1]! - s.y) > 16) continue
           pull = Math.min(pull, segmentHit(s.x, s.y, ex, ey, poly))
         }
     if (pull < 1) {
@@ -897,7 +980,7 @@ export default function CityScene(props: Props) {
         <>
           <Ground player={player} />
           <Water city={city} />
-          <Chunks city={city} keep={keep} player={player} solids={solids} />
+          <Chunks city={city} keep={keep} player={player} solids={solids} town={props.town} />
           {compounds.map((c) => (
             <CompoundModel key={c.name} c={c} />
           ))}

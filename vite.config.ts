@@ -95,11 +95,18 @@ export default defineConfig({
             handler: 'CacheFirst',
             options: { cacheName: 'sounds', expiration: { maxEntries: 40 } },
           },
-          // One Africa Life's characters: fetched the first time someone opens the creator, then kept.
+          // One Africa Life's town tiles (each small, fetched as the player comes near): kept,
+          // the ones walked most, apart from the big files.
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/oal/city/'),
+            handler: 'CacheFirst',
+            options: { cacheName: 'oal-city', expiration: { maxEntries: 800 } },
+          },
+          // One Africa Life's characters, streets and homes: fetched the first time, then kept.
           {
             urlPattern: ({ url }) => url.pathname.startsWith('/oal/'),
             handler: 'CacheFirst',
-            options: { cacheName: 'oal', expiration: { maxEntries: 8 } },
+            options: { cacheName: 'oal', expiration: { maxEntries: 30 } },
           },
           // Street basketball's characters: fetched the first time someone plays, then kept.
           {

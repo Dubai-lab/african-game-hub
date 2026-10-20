@@ -9,10 +9,11 @@
 // (a "hub": Tubman Boulevard at Sinkor, Waterside Market), the chunk leaves its circle to it.
 import { BufferAttribute, BufferGeometry, Color, ShapeUtils, Vector2 } from 'three'
 
-export type RoadKind = 'major' | 'middle' | 'minor'
+export type RoadKind = 'major' | 'middle' | 'minor' | 'path'
 /** The town's map, as the map screen has it (metres east and north of its centre). */
 export type TownMapData = {
-  roads: Record<RoadKind, { p: number[]; n?: string; o?: 1 }[]>
+  /** Each road: its points, its name, one way, its width (metres, when the map says), a bridge. */
+  roads: Partial<Record<RoadKind, { p: number[]; n?: string; o?: 1; w?: number; b?: 1 }[]>>
   water: number[][]
   wetland: number[][]
   rivers: { p: number[] }[]
@@ -20,9 +21,9 @@ export type TownMapData = {
   places: Record<string, { x: number; y: number; places?: Record<string, number[]> }>
 }
 
-export const ROAD_WIDTH: Record<RoadKind, number> = { major: 12, middle: 8, minor: 5.5 }
+export const ROAD_WIDTH: Record<RoadKind, number> = { major: 12, middle: 8, minor: 5.5, path: 1.8 }
 /** The kerb and pavement either side of a tarred road. */
-const PAVEMENT: Record<RoadKind, number> = { major: 3, middle: 2, minor: 0 }
+const PAVEMENT: Record<RoadKind, number> = { major: 3, middle: 2, minor: 0, path: 0 }
 export const CHUNK = 200
 
 export type Seg = { ax: number; ay: number; bx: number; by: number; kind: RoadKind; w: number; len: number; ux: number; uy: number; road: number; name?: string }
@@ -93,9 +94,11 @@ export function buildCity(map: TownMapData): City {
     return id
   }
   let road = 0
-  for (const kind of ['major', 'middle', 'minor'] as RoadKind[]) {
+  for (const kind of ['major', 'middle', 'minor', 'path'] as RoadKind[]) {
     for (const r of map.roads[kind] ?? []) {
       const p = r.p
+      // The map's own width where it gives one (within reason for its kind).
+      const width = r.w && kind !== 'path' ? Math.max(kind === 'minor' ? 4 : 6, Math.min(30, r.w)) : ROAD_WIDTH[kind]
       road++
       for (let i = 0; i + 3 < p.length; i += 2) {
         const ax = p[i]!
@@ -107,7 +110,7 @@ export function buildCity(map: TownMapData): City {
         const a = node(ax, ay)
         const b = node(bx, by)
         if (a !== b) {
-          edges.push({ a, b, len, kind, w: ROAD_WIDTH[kind], one: r.o === 1 })
+          edges.push({ a, b, len, kind, w: width, one: r.o === 1 })
           nodes[a]!.edges.push(edges.length - 1)
           nodes[b]!.edges.push(edges.length - 1)
         }
@@ -119,7 +122,7 @@ export function buildCity(map: TownMapData): City {
             bx: ax + ((bx - ax) * (k + 1)) / pieces,
             by: ay + ((by - ay) * (k + 1)) / pieces,
             kind,
-            w: ROAD_WIDTH[kind],
+            w: width,
             len: len / pieces,
             ux: (bx - ax) / len,
             uy: (by - ay) / len,
@@ -375,10 +378,37 @@ class Mesher {
   }
 }
 
-/** A solid on the ground, to walk against: a turned rectangle's corners. */
-export type Solid = number[][]
+/** A solid on the ground, to walk against: its outline (a turned rectangle's corners, a real
+ * building's footprint), with its box (minX, minY, maxX, maxY) for finding it quickly. */
+export type Solid = number[][] & { bb?: [number, number, number, number] }
+
+export function solidOf(pts: number[][]): Solid {
+  const out = pts as Solid
+  let a = Infinity
+  let b = Infinity
+  let c = -Infinity
+  let d = -Infinity
+  for (const [x, y] of pts) {
+    a = Math.min(a, x!)
+    b = Math.min(b, y!)
+    c = Math.max(c, x!)
+    d = Math.max(d, y!)
+  }
+  out.bb = [a, b, c, d]
+  return out
+}
+
+/** A tile of the town's real data (scripts/oal/makeCityData.py), 200 m square. */
+export type Tile = { b: number[][]; l: (string | number)[][]; p: (string | number)[][]; n: string[] }
+/** What a building is (the tile's first number). */
+export const BUILDING_KINDS = ['house', 'block', 'shop', 'church', 'mosque', 'school', 'clinic', 'office', 'hotel', 'industrial', 'shed', 'other'] as const
+/** A named place in a tile: what kind of place, its name, where (town metres). */
+export type TilePlace = { cat: string; name: string; x: number; y: number }
 
 export type ChunkParts = {
+  land: BufferGeometry | null
+  shops: BufferGeometry | null
+  places: TilePlace[]
   asphalt: BufferGeometry | null
   dirt: BufferGeometry | null
   pavement: BufferGeometry | null
@@ -399,8 +429,70 @@ const KIOSK = ['#2f6fb8', '#c8281e', '#2f8a4a', '#e2b62a', '#e86a1c', '#6a3a8a']
 const WALL = ['#d8d0c0', '#cfc6b4', '#e4ddcc', '#bdb3a0']
 const GATE = ['#1f3a5a', '#2a2a2a', '#3a5a2a', '#5a2a1c']
 
-export function buildChunk(city: City, cx: number, cy: number, keep: Keep[]): ChunkParts {
+const LAND_COLOUR: Record<string, string> = {
+  industrial: '#8a8478', cemetery: '#6f8a4a', grass: '#7a9a48', pitch: '#4f9a3a', forest: '#3f6a2e', scrub: '#6f7a3e', wetland: '#4f5f34', sand: '#d8c49a', farm: '#8aa04e', bare: '#9a7a5a',
+}
+// The colours a kind of building is painted (Monrovia's: pale plasters, a bright school, a white church).
+const PAINT: Record<string, string[]> = {
+  house: PLASTER_HOUSE(),
+  block: ['#efe6d2', '#e8d6a6', '#d9e6ea', '#f4f0e6', '#e2c9a0', '#cfd8e0'],
+  shop: ['#f0e0a8', '#e8d6a6', '#f2d9c4', '#cfe0d0', '#f4f0e6', '#e6c8c8', '#c8dcef'],
+  church: ['#f4f2ec', '#efe9dc', '#e9e0c6'],
+  mosque: ['#f4f2ec', '#e2efe0'],
+  school: ['#f0d870', '#c8dcef', '#f4f0e6', '#e8b8a0'],
+  clinic: ['#f4f4f0', '#e2efe8'],
+  office: ['#e9e0c6', '#d8d0c0', '#cfd8e0', '#f4f0e6'],
+  hotel: ['#f4f0e6', '#e8d6a6', '#d9e6ea'],
+  industrial: ['#bdb6a8', '#a8a49a', '#c8c0b0'],
+  shed: ['#8a8a86', '#7a6a5a', '#9a8a7a'],
+  other: ['#e8e0d0', '#d8d0c0'],
+}
+function PLASTER_HOUSE() {
+  return ['#efe6d2', '#e8d6a6', '#d9e6ea', '#f2d9c4', '#e6efd8', '#f4f0e6', '#e2c9a0', '#cfe0d0', '#f0e0a8', '#d8d0e8']
+}
+
+/** The smallest turned rectangle round a footprint: centre, sides, the turn of the first side. */
+function boxAround(pts: number[][]) {
+  let best = { area: Infinity, x: 0, y: 0, w: 0, d: 0, yaw: 0 }
+  for (let i = 0; i < pts.length; i++) {
+    const [ax, ay] = pts[i]!
+    const [bx, by] = pts[(i + 1) % pts.length]!
+    const yaw = Math.atan2(by! - ay!, bx! - ax!)
+    const c = Math.cos(yaw)
+    const sn = Math.sin(yaw)
+    let u0 = Infinity
+    let u1 = -Infinity
+    let v0 = Infinity
+    let v1 = -Infinity
+    for (const [x, y] of pts) {
+      const u = x! * c + y! * sn
+      const v = -x! * sn + y! * c
+      u0 = Math.min(u0, u)
+      u1 = Math.max(u1, u)
+      v0 = Math.min(v0, v)
+      v1 = Math.max(v1, v)
+    }
+    const area = (u1 - u0) * (v1 - v0)
+    if (area < best.area) {
+      const mu = (u0 + u1) / 2
+      const mv = (v0 + v1) / 2
+      best = { area, x: mu * c - mv * sn, y: mu * sn + mv * c, w: u1 - u0, d: v1 - v0, yaw }
+    }
+  }
+  return best
+}
+
+function areaOf(pts: number[][]) {
+  let a = 0
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) a += (pts[j]![0]! - pts[i]![0]!) * (pts[j]![1]! + pts[i]![1]!)
+  return a / 2
+}
+
+export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], tile?: Tile | null): ChunkParts {
   const rand = seeded(cx * 73856093 ^ cy * 19349663)
+  const land = new Mesher()
+  const shops = new Mesher()
+  const places: TilePlace[] = []
   const asphalt = new Mesher()
   const dirt = new Mesher()
   const pavement = new Mesher()
@@ -437,13 +529,148 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[]): Ch
     return !onWater(city, x, y)
   }
 
+  if (tile) {
+    // The land: beaches, fields, cemeteries, swamps, forest, flat on the ground.
+    for (const l of tile.l) {
+      const colour = LAND_COLOUR[l[0] as string]
+      if (!colour) continue
+      const pts: Vector2[] = []
+      for (let i = 1; i + 1 < l.length; i += 2) pts.push(new Vector2(x0 + (l[i] as number) / 10, y0 + (l[i + 1] as number) / 10))
+      if (pts.length > 2 && pts[0]!.equals(pts[pts.length - 1]!)) pts.pop()
+      if (pts.length < 3) continue
+      for (const [a, b, c] of ShapeUtils.triangulateShape(pts, [])) land.tri([pts[a!]!.x, 0.012, -pts[a!]!.y], [pts[b!]!.x, 0.012, -pts[b!]!.y], [pts[c!]!.x, 0.012, -pts[c!]!.y], 0, 1, 0, colour)
+    }
+    // Every building as it stands: its footprint, raised to its storeys, roofed as Monrovia roofs.
+    tile.b.forEach((b, i) => {
+      const kind = BUILDING_KINDS[b[0]!] ?? 'other'
+      let pts: number[][] = []
+      for (let k = 3; k + 1 < b.length; k += 2) pts.push([x0 + b[k]! / 10, y0 + b[k + 1]! / 10])
+      if (pts.length < 3) return
+      if (areaOf(pts) < 0) pts = pts.reverse()
+      const area = Math.abs(areaOf(pts))
+      if (area < 4) return
+      const box = boxAround(pts)
+      if (kept(box.x, box.y, 0) || onWater(city, box.x, box.y)) return
+      const r = seeded(cx * 92821 + cy * 68917 + i * 15485863)
+      // Storeys: the map's, else what such a building has (most houses one, some two; the big
+      // ones on the main roads more).
+      const road = nearestRoad(city, box.x, box.y, 40)
+      const onMain = road && (road.seg.kind === 'major' || road.seg.kind === 'middle') && road.d < 30
+      let storeys = b[1]!
+      if (!storeys) {
+        const roll = r()
+        storeys =
+          kind === 'block' || kind === 'hotel' || kind === 'office'
+            ? 2 + Math.floor(roll * 3)
+            : kind === 'shop'
+              ? onMain && roll < 0.6 ? 2 + Math.floor(r() * 2) : 1
+              : kind === 'house'
+                ? area > 300 && roll < 0.5 ? 2 : onMain && roll < 0.35 ? 2 : roll < 0.08 ? 2 : 1
+                : 1
+      }
+      const h = kind === 'church' || kind === 'mosque' ? Math.max(7, storeys * 3.2) : kind === 'industrial' ? 6 : kind === 'shed' ? 2.4 : storeys * 3.1
+      const paints = PAINT[kind] ?? PAINT.other!
+      const tint = paints[Math.floor(r() * paints.length)]!
+      // The walls: windows and burglar bars for homes and offices; shopfronts on the ground floor.
+      const mesh = kind === 'shop' || (onMain && kind !== 'church' && kind !== 'mosque' && kind !== 'shed' && r() < 0.5) ? shops : kind === 'shed' || kind === 'industrial' ? plain : walls
+      for (let k = 0; k < pts.length; k++) {
+        const [ax, ay] = pts[k]!
+        const [bx, by] = pts[(k + 1) % pts.length]!
+        const len = Math.hypot(bx! - ax!, by! - ay!)
+        if (len < 0.05) continue
+        const nx = (by! - ay!) / len
+        const ny = -(bx! - ax!) / len
+        // A shop: its shopfront the ground floor's height; above it, the storeys' windows.
+        const ground = mesh === shops ? Math.min(h, 3.1) : 0
+        if (ground > 0)
+          shops.quad(
+            [
+              [ax!, 0, -ay!],
+              [bx!, 0, -by!],
+              [bx!, ground, -by!],
+              [ax!, ground, -ay!],
+            ],
+            nx,
+            0,
+            -ny,
+            [
+              [0, 0],
+              [len / 4, 0],
+              [len / 4, 1],
+              [0, 1],
+            ],
+            tint,
+          )
+        if (h > ground)
+          (mesh === shops ? walls : mesh).quad(
+            [
+              [ax!, ground, -ay!],
+              [bx!, ground, -by!],
+              [bx!, h, -by!],
+              [ax!, h, -ay!],
+            ],
+            nx,
+            0,
+            -ny,
+            [
+              [0, ground / 3.1],
+              [len / 4, ground / 3.1],
+              [len / 4, h / 3.1],
+              [0, h / 3.1],
+            ],
+            tint,
+          )
+      }
+      // The roof: hipped zinc over a house's rectangle, else flat with its parapet (a water
+      // tank on many).
+      const rect = area / (box.w * box.d)
+      const zinc = ZINC[Math.floor(r() * ZINC.length)]!
+      if ((kind === 'house' || kind === 'shed' || (kind === 'shop' && storeys === 1) || kind === 'church' || kind === 'school' || kind === 'clinic') && rect > 0.78 && Math.max(box.w, box.d) < 40) {
+        roofs.hip(box.x, box.y, box.yaw, box.w, box.d, h, Math.min(2.5, 0.8 + Math.min(box.w, box.d) * 0.12), kind === 'church' ? '#7a3a2a' : zinc)
+      } else {
+        const flat = pts.map(([x, y]) => new Vector2(x!, y!))
+        for (const [a, bb, c] of ShapeUtils.triangulateShape(flat, [])) plain.tri([flat[a!]!.x, h, -flat[a!]!.y], [flat[bb!]!.x, h, -flat[bb!]!.y], [flat[c!]!.x, h, -flat[c!]!.y], 0, 1, 0, '#a8a296')
+        for (let k = 0; k < pts.length; k++) {
+          const [ax, ay] = pts[k]!
+          const [bx, by] = pts[(k + 1) % pts.length]!
+          plain.quad(
+            [
+              [ax!, h, -ay!],
+              [bx!, h, -by!],
+              [bx!, h + 0.6, -by!],
+              [ax!, h + 0.6, -ay!],
+            ],
+            0,
+            0,
+            1,
+            [
+              [0, 0],
+              [1, 0],
+              [1, 1],
+              [0, 1],
+            ],
+            tint,
+          )
+        }
+        if (kind !== 'industrial' && r() < 0.55) plain.post(box.x + (r() - 0.5) * box.w * 0.5, box.y + (r() - 0.5) * box.d * 0.5, 0.75, 0.75, h, h + 1.5, '#1c1c20', 8)
+      }
+      solids.push(solidOf(pts))
+      take(box.x, box.y, Math.min(box.w, box.d) / 2)
+      for (const [x, y] of pts) take(x!, y!, 0.5)
+    })
+    for (const p of tile.p) places.push({ cat: p[0] as string, name: tile.n[p[1] as number] ?? '', x: x0 + (p[2] as number) / 10, y: y0 + (p[3] as number) / 10 })
+  }
+
   for (const id of mine) {
     const s = city.segs[id]!
     const mx = (s.ax + s.bx) / 2
     const my = (s.ay + s.by) / 2
     if (kept(mx, my, 0, true)) continue
     // The road: tarred (the big ones, with pavements and a dashed line) or laterite.
-    if (s.kind === 'minor') {
+    if (s.kind === 'path') {
+      // A footpath: a trodden strip of laterite.
+      dirt.ground(s.ax, s.ay, s.bx, s.by, s.w, 0.025, '#e0c8b8')
+    } else if (s.kind === 'minor') {
       dirt.ground(s.ax, s.ay, s.bx, s.by, s.w, 0.03, '#ffffff')
       dirt.disc(s.bx, s.by, s.w / 2, 0.03, '#ffffff')
       dirt.disc(s.ax, s.ay, s.w / 2, 0.03, '#ffffff')
@@ -462,7 +689,7 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[]): Ch
       }
     }
     // Wooden poles and wires along the big roads.
-    if (s.kind !== 'minor' && rand() < 0.75) {
+    if ((s.kind === 'major' || s.kind === 'middle') && rand() < 0.75) {
       const side = rand() < 0.5 ? 1 : -1
       const off = s.w / 2 + PAVEMENT[s.kind] - 0.4
       const px = mx - s.uy * off * side
@@ -472,11 +699,11 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[]): Ch
         plain.box(px, py, Math.atan2(s.uy, s.ux) + Math.PI / 2, 1.6, 0.12, 8.2, 0.12, '#4a3a2a')
       }
     }
-    // Along both sides: lots.
-    for (const side of [1, -1]) {
+    // Along both sides: lots (where the town's real buildings are not known).
+    for (const side of tile ? [] : [1, -1]) {
       const nx = -s.uy * side
       const ny = s.ux * side
-      const big = s.kind !== 'minor'
+      const big = s.kind === 'major' || s.kind === 'middle'
       let t = rand() * 6
       while (t < s.len) {
         const w = big ? 8 + rand() * 6 : 7 + rand() * 5
@@ -544,9 +771,9 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[]): Ch
       }
     }
   }
-  // Between the roads: the town's own houses, close together as a community builds them, each
-  // turned to the nearest road, with paths between.
-  for (let gx = x0 + 5; gx < x0 + CHUNK; gx += 11)
+  // Between the roads (where the town's real buildings are not known): houses, close together
+  // as a community builds them, each turned to the nearest road, with paths between.
+  for (let gx = tile ? Infinity : x0 + 5; gx < x0 + CHUNK; gx += 11)
     for (let gy = y0 + 5; gy < y0 + CHUNK; gy += 11) {
       if (rand() > 0.88) continue
       const bx = gx + (rand() - 0.5) * 5
@@ -573,6 +800,9 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[]): Ch
       }
     }
   return {
+    land: land.geometry(),
+    shops: shops.geometry(),
+    places,
     asphalt: asphalt.geometry(),
     dirt: dirt.geometry(),
     pavement: pavement.geometry(),

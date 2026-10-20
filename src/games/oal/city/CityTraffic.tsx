@@ -133,9 +133,10 @@ export function CityTraffic({
     hire.kekeh.visible = false
     return { cars, rand, hire }
   }, [gltf, people])
-  const allowed = (kind: Kind) => (e: Edge) => (kind === 'bus' ? e.kind !== 'minor' : true)
+  const allowed = (kind: Kind) => (e: Edge) => e.kind !== 'path' && (kind === 'bus' ? e.kind !== 'minor' : true)
 
-  const drives = (e: Edge) => e.w > 0
+  // Vehicles keep to the roads (not the footpaths).
+  const drives = (e: Edge) => e.kind !== 'path'
   const say = (r: RideState, phase: RidePhase) => {
     r.phase = phase
     onRide(phase)

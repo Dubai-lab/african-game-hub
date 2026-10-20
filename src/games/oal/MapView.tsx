@@ -39,7 +39,8 @@ export function useTownMap(town: string) {
     queryKey: ['oal-map', town],
     staleTime: Infinity,
     queryFn: async () => {
-      const res = await fetch(`/oal/maps/${mapOf(town)}.v3.json`)
+      // Monrovia's map has every road and lane (scripts/oal/makeCityData.py); the others, the main ones.
+      const res = await fetch(`/oal/maps/${mapOf(town)}.${town === 'Monrovia' ? 'v4' : 'v3'}.json`)
       if (!res.ok) throw new Error(String(res.status))
       return (await res.json()) as TownMap
     },
