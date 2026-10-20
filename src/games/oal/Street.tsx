@@ -16,7 +16,7 @@ import { toast } from '@/core/ui/toast'
 import type { Appearance } from '../../../supabase/functions/_shared/oal'
 import type { Stick } from './ArrivalsScene'
 import { PhoneSection } from './Home'
-import type { TravelState } from './Journey'
+import { type TravelState, useGameNow } from './Journey'
 import { newRide, type Destination, type RideKind, type RidePhase, type RideState } from './city/ride'
 import type { OtherPlayer, Place, TownId } from './StreetScene'
 import { MoneyChanger, Work } from './Work'
@@ -206,6 +206,7 @@ export function StreetView({
   }, [phase])
   const queryClient = useQueryClient()
   const kind = ride.current.kind
+  const gameNow = useGameNow()
   const goTo = async (d: Destination) => {
     setPaying(true)
     try {
@@ -277,6 +278,7 @@ export function StreetView({
               onRide={setPhase}
               onRoadside={setRoadside}
               onDestinations={setDestinations}
+              clock={gameNow}
               onPosition={(x, y, facing, moving) => {
                 view.current?.setAttribute('data-x', x.toFixed(2))
                 view.current?.setAttribute('data-y', y.toFixed(2))

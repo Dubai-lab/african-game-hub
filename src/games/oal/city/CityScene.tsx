@@ -7,9 +7,14 @@
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
 import { type RefObject, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  AdditiveBlending,
   BackSide,
+  type DirectionalLight,
+  type HemisphereLight,
+  PointLight,
   BoxGeometry,
   BufferAttribute,
+  type BufferGeometry,
   CanvasTexture,
   Color,
   DoubleSide,
@@ -36,6 +41,7 @@ import { TOWNS } from '../StreetScene'
 import { keepOutOf, type Moving, Traffic } from '../Traffic'
 import { CityTraffic, CityWalkers } from './CityTraffic'
 import { type Destination, newRide, PASSENGER, type RidePhase, type RideState } from './ride'
+import { SIGNAL_LAMPS, type Signal, type SignalLamp, signalState } from './cityGen'
 import { buildChunk, buildCity, CHUNK, type City, type ChunkParts, type Keep, nearestRoad, segsNear, type Solid, type Tile, toSeg, type TownMapData, waterGeometry } from './cityGen'
 
 const WALK_SPEED = 1.45
@@ -106,8 +112,12 @@ function blobs(g: CanvasRenderingContext2D, s: number, base: string, spots: [str
   }
 }
 
+let sharedTextures: ReturnType<typeof makeTextures> | null = null
 function useTextures() {
-  return useMemo(() => {
+  return useMemo(() => (sharedTextures ??= makeTextures()), [])
+}
+function makeTextures() {
+  return (() => {
     const ground = canvasTexture(512, (g, s) => blobs(g, s, '#94684a', [['#6f8a3a', 90, 60], ['#5f7f34', 50, 90], ['#a8774f', 260, 24], ['#7a5236', 300, 10], ['#86a04a', 120, 30]]))
     const dirt = canvasTexture(256, (g, s) => noise(g, s, '#9a5a38', [['#b06a42', 500, 5], ['#7a4428', 300, 4], ['#c08058', 200, 3]]))
     const asphalt = canvasTexture(256, (g, s) => noise(g, s, '#4a4a4c', [['#3a3a3c', 800, 3], ['#5a5a5c', 600, 2], ['#2e2e30', 60, 18]]))
@@ -187,21 +197,44 @@ function useTextures() {
       g.lineWidth = 6
       g.strokeRect(s * 0.08, s * 0.3, s * 0.84, s * 0.7)
     })
-    return { ground, dirt, asphalt, pavement, facade, zinc, shopfront }
-  }, [])
+    // At night: the windows lit (where the facade's window is), and a shop's inside.
+    const windowsLit = canvasTexture(256, (g, s) => {
+      g.fillStyle = '#000000'
+      g.fillRect(0, 0, s, s)
+      g.fillStyle = '#ffd890'
+      g.fillRect(s * 0.3 + 4, s * 0.3 + 4, s * 0.4 - 8, s * 0.32 - 8)
+    })
+    const shopLit = canvasTexture(256, (g, s) => {
+      g.fillStyle = '#000000'
+      g.fillRect(0, 0, s, s)
+      g.fillStyle = '#ffe0a0'
+      g.fillRect(s * 0.1, s * 0.62, s * 0.8, s * 0.36)
+      g.fillStyle = '#806040'
+      g.fillRect(0, 0, s, s * 0.22)
+    })
+    return { ground, dirt, asphalt, pavement, facade, zinc, shopfront, windowsLit, shopLit }
+  })()
 }
 
+let sharedMaterials: ReturnType<typeof makeMaterials> | null = null
 function useMaterials() {
   const tex = useTextures()
-  return useMemo(
-    () => ({
+  return useMemo(() => (sharedMaterials ??= makeMaterials(tex)), [tex])
+}
+function makeMaterials(tex: ReturnType<typeof useTextures>) {
+  return {
       ground: new MeshStandardMaterial({ map: tex.ground, roughness: 1 }),
       dirt: new MeshStandardMaterial({ map: tex.dirt, roughness: 1, vertexColors: true, side: DoubleSide }),
       asphalt: new MeshStandardMaterial({ map: tex.asphalt, roughness: 0.9, vertexColors: true, side: DoubleSide }),
       pavement: new MeshStandardMaterial({ map: tex.pavement, roughness: 0.95, vertexColors: true, side: DoubleSide }),
       marks: new MeshStandardMaterial({ color: '#f2f0e6', roughness: 0.8, vertexColors: true, side: DoubleSide }),
-      walls: new MeshStandardMaterial({ map: tex.facade, roughness: 0.9, vertexColors: true, side: DoubleSide }),
-      shops: new MeshStandardMaterial({ map: tex.shopfront, roughness: 0.85, vertexColors: true, side: DoubleSide }),
+      walls: new MeshStandardMaterial({ map: tex.facade, roughness: 0.9, vertexColors: true, side: DoubleSide, emissiveMap: tex.windowsLit, emissive: new Color('#ffcf80'), emissiveIntensity: 0 }),
+      shops: new MeshStandardMaterial({ map: tex.shopfront, roughness: 0.85, vertexColors: true, side: DoubleSide, emissiveMap: tex.shopLit, emissive: new Color('#ffd9a0'), emissiveIntensity: 0 }),
+      // The lamps' glass (grey by day, lit at night) and the pools of light under them.
+      glow: new MeshBasicMaterial({ color: '#b8b8b0', toneMapped: false }),
+      pools: new MeshBasicMaterial({ color: '#ffd59a', transparent: true, opacity: 0, depthWrite: false, blending: AdditiveBlending, toneMapped: false }),
+      // The traffic lights' lamps: each way's red, amber, green (lit or dark by the cycle).
+      ...Object.fromEntries(SIGNAL_LAMPS.map((k) => [`sig${k}`, new MeshBasicMaterial({ color: '#202020', toneMapped: false })])) as Record<`sig${SignalLamp}`, MeshBasicMaterial>,
       land: new MeshStandardMaterial({ roughness: 1, vertexColors: true, side: DoubleSide }),
       roofs: new MeshStandardMaterial({ map: tex.zinc, roughness: 0.6, metalness: 0.3, vertexColors: true, side: DoubleSide }),
       plain: new MeshStandardMaterial({ roughness: 0.85, vertexColors: true, side: DoubleSide }),
@@ -209,9 +242,7 @@ function useMaterials() {
       sea: new MeshStandardMaterial({ color: '#2f6a8a', roughness: 0.25, metalness: 0.1, side: DoubleSide }),
       water: new MeshStandardMaterial({ color: '#3a6a6a', roughness: 0.3, side: DoubleSide }),
       wet: new MeshStandardMaterial({ color: '#4a6a3a', roughness: 1, side: DoubleSide }),
-    }),
-    [tex],
-  )
+  }
 }
 type Materials = ReturnType<typeof useMaterials>
 
@@ -220,12 +251,30 @@ type Materials = ReturnType<typeof useMaterials>
 type Built = { group: Group; parts: ChunkParts }
 
 /** The chunks round the player, built as they come near and let go behind. */
+/** The working street lamps of the chunks built (town metres and height), by chunk. */
+const lampsByChunk = new Map<string, number[][]>()
+/** The signalled junctions of the chunks built, by chunk (for the traffic to obey). */
+export const signalsByChunk = new Map<string, Signal[]>()
+
+/** The traffic lights' lamps lit by the town's one cycle (the game's real seconds). */
+function Signals() {
+  const mats = useMaterials()
+  const lit: Record<string, string> = { r: '#ff2a1a', y: '#ffb000', g: '#20e050' }
+  useFrame(() => {
+    const state = signalState(Date.now() / 1000)
+    for (const way of ['A', 'B'] as const)
+      for (const c of ['r', 'y', 'g'] as const) mats[`sig${way}${c}` as `sig${SignalLamp}`].color.set(state[way] === c ? lit[c]! : '#2a2a28')
+  })
+  return null
+}
+
 /** Disposes a chunk's meshes (its places and solids are only data). */
 function disposeParts(parts: ChunkParts) {
   for (const k of Object.keys(parts) as (keyof ChunkParts)[]) {
     const v = parts[k] as { dispose?: () => void } | null
     if (v && !Array.isArray(v)) v.dispose?.()
   }
+  for (const g of Object.values(parts.signalLamps)) g?.dispose()
 }
 
 /** A town's real buildings, land and places, tile by tile (scripts/oal/makeCityData.py), where
@@ -312,8 +361,8 @@ function Chunks({ city, keep, player, solids, town }: { city: City; keep: Keep[]
       const [cx, cy] = want
       const parts = buildChunk(city, cx, cy, keep, source ? tiles.current.get(`${cx},${cy}`) : null)
       const g = new (group.constructor as new () => Group)()
-      const add = (geo: ChunkParts[keyof ChunkParts], mat: keyof Materials) => {
-        if (!geo || Array.isArray(geo)) return
+      const add = (geo: BufferGeometry | null | undefined, mat: keyof Materials) => {
+        if (!geo) return
         const m = new Mesh(geo, mats[mat])
         m.matrixAutoUpdate = false
         g.add(m)
@@ -328,6 +377,11 @@ function Chunks({ city, keep, player, solids, town }: { city: City; keep: Keep[]
       add(parts.roofs, 'roofs')
       add(parts.plain, 'plain')
       add(parts.leaves, 'leaves')
+      add(parts.glow, 'glow')
+      for (const k of SIGNAL_LAMPS) add(parts.signalLamps[k] ?? null, `sig${k}`)
+      signalsByChunk.set(`${cx},${cy}`, parts.signals)
+      add(parts.pools, 'pools')
+      lampsByChunk.set(`${cx},${cy}`, parts.lamps)
       group.add(g)
       const k = `${cx},${cy}`
       built.current.set(k, { group: g, parts })
@@ -339,6 +393,8 @@ function Chunks({ city, keep, player, solids, town }: { city: City; keep: Keep[]
       if (Math.abs(cx - pcx) > AROUND + 1 || Math.abs(cy - pcy) > AROUND + 1) {
         group.remove(b.group)
         disposeParts(b.parts)
+        lampsByChunk.delete(k)
+        signalsByChunk.delete(k)
         built.current.delete(k)
         solids.current?.delete(k)
       }
@@ -392,24 +448,114 @@ function Water({ city }: { city: City }) {
 }
 
 /** The sky: a dome, haze at the horizon (the fog's own colour) to blue overhead. */
-function SkyDome() {
-  const { camera } = useThree()
+// ---- Day and night ---------------------------------------------------------------------------
+
+/** How light it is (1 by day, 0 at night) and how much of a dawn or a dusk is in the sky, at an
+ * hour of the game's day (Monrovia: light from about 6:00, dark from about 19:00). */
+export function daylight(hour: number) {
+  const smooth = (a: number, b: number, x: number) => {
+    const t = Math.max(0, Math.min(1, (x - a) / (b - a)))
+    return t * t * (3 - 2 * t)
+  }
+  const day = smooth(5.6, 6.6, hour) * (1 - smooth(18.2, 19.1, hour))
+  const glowAt = (h: number) => Math.max(0, 1 - Math.abs(hour - h) / 0.9)
+  return { day, dusk: Math.max(glowAt(6.1), glowAt(18.6)) }
+}
+
+const SKY = {
+  dayTop: new Color('#5f93cf'),
+  dayHorizon: new Color('#c9d9e6'),
+  nightTop: new Color('#070c1c'),
+  nightHorizon: new Color('#18213a'),
+  duskHorizon: new Color('#f0a060'),
+  duskTop: new Color('#5a5a8a'),
+}
+
+/** The hour of the game's day (a test may set it). */
+function hourNow(clock?: () => Date) {
+  try {
+    const forced = localStorage.getItem('oal-city-hour')
+    if (forced) return Number(forced)
+  } catch {
+    // No storage: the game's clock.
+  }
+  const d = clock ? clock() : new Date()
+  return d.getUTCHours() + d.getUTCMinutes() / 60
+}
+
+/** The sky, the sun, the haze and the lamps through the day: the street lamps on at dusk, off
+ * at dawn; at night the nearest lamps light the street (the others their pools), windows lit. */
+function DayNight({ clock, player }: { clock?: () => Date; player: RefObject<{ x: number; y: number }> }) {
+  const { scene, camera } = useThree()
+  const mats = useMaterials()
+  const sun = useRef<DirectionalLight>(null)
+  const sky = useRef<HemisphereLight>(null)
   const dome = useMemo(() => {
     const g = new SphereGeometry(900, 24, 12)
-    const top = new Color('#5f93cf')
-    const horizon = new Color('#c9d9e6')
-    const colours: number[] = []
-    const pos = g.attributes.position!
-    for (let i = 0; i < pos.count; i++) {
-      const t = Math.max(0, pos.getY(i) / 900)
-      const c = horizon.clone().lerp(top, Math.pow(t, 0.6))
-      colours.push(c.r, c.g, c.b)
-    }
-    g.setAttribute('color', new BufferAttribute(new Float32Array(colours), 3))
+    g.setAttribute('color', new BufferAttribute(new Float32Array(g.attributes.position!.count * 3), 3))
     return new Mesh(g, new MeshBasicMaterial({ vertexColors: true, side: BackSide, fog: false, depthWrite: false }))
   }, [])
-  useFrame(() => dome.position.copy(camera.position))
-  return <primitive object={dome} renderOrder={-1} />
+  const lights = useMemo(() => Array.from({ length: 6 }, () => new PointLight('#ffd59a', 0, 24, 1.6)), [])
+  const last = useRef({ at: -1, key: '' })
+  const top = useMemo(() => new Color(), [])
+  const horizon = useMemo(() => new Color(), [])
+  useFrame(({ clock: t }) => {
+    dome.position.copy(camera.position)
+    if (t.elapsedTime - last.current.at < 0.4) return
+    last.current.at = t.elapsedTime
+    const { day, dusk } = daylight(hourNow(clock))
+    const night = 1 - day
+    // The sky's colours, and the haze the same as the horizon.
+    top.copy(SKY.nightTop).lerp(SKY.dayTop, day).lerp(SKY.duskTop, dusk * 0.5)
+    horizon.copy(SKY.nightHorizon).lerp(SKY.dayHorizon, day).lerp(SKY.duskHorizon, dusk * 0.7)
+    const key = `${day.toFixed(2)}:${dusk.toFixed(2)}`
+    if (key !== last.current.key) {
+      last.current.key = key
+      const pos = dome.geometry.attributes.position!
+      const col = dome.geometry.attributes.color! as BufferAttribute
+      const c = new Color()
+      for (let i = 0; i < pos.count; i++) {
+        c.copy(horizon).lerp(top, Math.pow(Math.max(0, pos.getY(i) / 900), 0.6))
+        col.setXYZ(i, c.r, c.g, c.b)
+      }
+      col.needsUpdate = true
+      if (scene.fog) (scene.fog as { color: Color }).color.copy(horizon)
+      ;(scene.background as Color | null)?.copy?.(horizon)
+      if (sun.current) {
+        sun.current.intensity = 0.05 + 2.2 * day
+        sun.current.color.set(dusk > 0.2 ? '#ffc890' : '#fff1dc')
+      }
+      if (sky.current) sky.current.intensity = 0.18 + 0.85 * day
+      scene.environmentIntensity = 0.06 + 0.36 * day
+      mats.walls.emissiveIntensity = night * 0.9
+      mats.shops.emissiveIntensity = night * 0.8
+      mats.glow.color.set(night > 0.4 ? '#ffe2a8' : '#b8b8b0')
+      mats.pools.opacity = night * 0.32
+      mats.pools.visible = night > 0.05
+    }
+    // The nearest working lamps really light the street.
+    const p = player.current
+    const near: number[][] = []
+    if (p && night > 0.05) {
+      for (const list of lampsByChunk.values()) for (const l of list) if (Math.abs(l[0]! - p.x) < 60 && Math.abs(l[1]! - p.y) < 60) near.push(l)
+      near.sort((a, b) => Math.hypot(a[0]! - p.x, a[1]! - p.y) - Math.hypot(b[0]! - p.x, b[1]! - p.y))
+    }
+    lights.forEach((light, i) => {
+      const l = near[i]
+      light.intensity = l ? night * 40 : 0
+      if (l) light.position.set(l[0]!, l[2]!, -l[1]!)
+    })
+  })
+  return (
+    <>
+      <primitive object={dome} renderOrder={-1} />
+      <hemisphereLight ref={sky} args={['#eaf2ff', '#7a5a3c', 1.0]} />
+      <directionalLight ref={sun} position={[-60, 90, 40]} intensity={2.2} color="#fff1dc" />
+      {lights.map((l, i) => (
+        <primitive key={i} object={l} />
+      ))}
+    </>
+  )
 }
 
 function Light() {
@@ -549,6 +695,8 @@ type Props = {
   onRoadside?: (by: boolean) => void
   /** Where a ride can take one in this town (once the town is ready). */
   onDestinations?: (list: Destination[]) => void
+  /** The game's time (its day and night). */
+  clock?: () => Date
 }
 
 function Walker({ props, city, start, compounds, hubs, places, solids, player }: { props: Props; city: City; start: { x: number; y: number; f: number }; compounds: Compound[]; hubs: Hub[]; places: CityPlace[]; solids: RefObject<Map<string, Solid[]>>; player: RefObject<{ x: number; y: number }> }) {
@@ -973,9 +1121,8 @@ export default function CityScene(props: Props) {
       <color attach="background" args={['#c9d9e6']} />
       <fog attach="fog" args={['#c9d9e6', 110, 480]} />
       <Light />
-      <SkyDome />
-      <hemisphereLight args={['#eaf2ff', '#7a5a3c', 1.0]} />
-      <directionalLight position={[-60, 90, 40]} intensity={2.2} color="#fff1dc" />
+      <DayNight clock={props.clock} player={player} />
+      <Signals />
       {city && (
         <>
           <Ground player={player} />

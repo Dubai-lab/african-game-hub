@@ -405,7 +405,43 @@ export const BUILDING_KINDS = ['house', 'block', 'shop', 'church', 'mosque', 'sc
 /** A named place in a tile: what kind of place, its name, where (town metres). */
 export type TilePlace = { cat: string; name: string; x: number; y: number }
 
+/** The traffic lights' lamps, by which way they face (A: the first road's line, B: across it)
+ * and colour: each lit in turn by the town's one cycle (signalState). */
+export const SIGNAL_LAMPS = ['Ar', 'Ay', 'Ag', 'Br', 'By', 'Bg'] as const
+export type SignalLamp = (typeof SIGNAL_LAMPS)[number]
+/** A signalled junction: where, and which way each road into it goes (A or B), by edge. */
+export type Signal = { node: number; x: number; y: number; groups: Record<number, 'A' | 'B'> }
+
+/** The town's traffic lights all keep one cycle (seconds): A green, A amber, all red, B green,
+ * B amber, all red. Which colour each way shows at a moment. */
+export const SIGNAL_CYCLE = [22, 3, 2, 22, 3, 2]
+export function signalState(seconds: number): { A: 'r' | 'y' | 'g'; B: 'r' | 'y' | 'g' } {
+  const total = SIGNAL_CYCLE.reduce((a, b) => a + b, 0)
+  let t = ((seconds % total) + total) % total
+  const phases: { A: 'r' | 'y' | 'g'; B: 'r' | 'y' | 'g' }[] = [
+    { A: 'g', B: 'r' },
+    { A: 'y', B: 'r' },
+    { A: 'r', B: 'r' },
+    { A: 'r', B: 'g' },
+    { A: 'r', B: 'y' },
+    { A: 'r', B: 'r' },
+  ]
+  for (let i = 0; i < SIGNAL_CYCLE.length; i++) {
+    if (t < SIGNAL_CYCLE[i]!) return phases[i]!
+    t -= SIGNAL_CYCLE[i]!
+  }
+  return phases[0]!
+}
+
 export type ChunkParts = {
+  /** The traffic lights' lamps (one mesh each way and colour) and the junctions they keep. */
+  signalLamps: Partial<Record<SignalLamp, BufferGeometry | null>>
+  signals: Signal[]
+  /** The street lamps: their posts (in plain), their glass (lit at night), the pools of light
+   * they throw on the road, and where each working lamp's light is (town metres, its height). */
+  glow: BufferGeometry | null
+  pools: BufferGeometry | null
+  lamps: number[][]
   land: BufferGeometry | null
   shops: BufferGeometry | null
   places: TilePlace[]
@@ -492,7 +528,31 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
   const rand = seeded(cx * 73856093 ^ cy * 19349663)
   const land = new Mesher()
   const shops = new Mesher()
+  const glow = new Mesher()
+  const pools = new Mesher()
+  const signalMesh = Object.fromEntries(SIGNAL_LAMPS.map((k) => [k, new Mesher()])) as Record<SignalLamp, Mesher>
+  const signals: Signal[] = []
+  const lamps: number[][] = []
   const places: TilePlace[] = []
+  /** A street lamp at the kerb, its arm over the road (toward rx, ry): a galvanised steel post on
+   * its concrete base, the arm, the lamp head and its glass; most work (a few are broken, as in
+   * town), each throwing its pool of light at night. */
+  const lamp = (x: number, y: number, rx: number, ry: number, working: boolean) => {
+    if (kept(x, y) || !free(x, y, 0.3)) return
+    const yaw = Math.atan2(ry, rx)
+    plain.post(x, y, 0.2, 0.2, 0, 0.45, '#9a968c', 8)
+    plain.post(x, y, 0.11, 0.07, 0.45, 8.4, '#8c9092', 8)
+    plain.post(x + rx * 0.35, y + ry * 0.35, 0.05, 0.05, 8.2, 8.55, '#8c9092', 6, [rx * 0.4, ry * 0.4])
+    plain.box(x + rx * 1.05, y + ry * 1.05, yaw, 1.5, 0.07, 8.48, 0.07, '#8c9092', [1, 1])
+    const hx = x + rx * 1.9
+    const hy = y + ry * 1.9
+    plain.box(hx, hy, yaw, 0.75, 0.32, 8.32, 0.2, '#6c7072', [1, 1])
+    glow.box(hx, hy, yaw, 0.6, 0.24, 8.29, 0.04, working ? '#ffffff' : '#3a3a38', [1, 1])
+    if (working) {
+      pools.disc(hx, hy, 7.5, 0.09, '#ffffff')
+      lamps.push([hx, hy, 8.1])
+    }
+  }
   const asphalt = new Mesher()
   const dirt = new Mesher()
   const pavement = new Mesher()
@@ -661,6 +721,63 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
     for (const p of tile.p) places.push({ cat: p[0] as string, name: tile.n[p[1] as number] ?? '', x: x0 + (p[2] as number) / 10, y: y0 + (p[3] as number) / 10 })
   }
 
+  // Traffic lights where big roads meet (three big roads' arms or more): for each
+  // road coming in, a post at its right-hand kerb before the junction, its lamps toward the
+  // traffic coming.
+  const nodesHere = new Set<number>()
+  for (const id of mine) {
+    const sg = city.segs[id]!
+    for (const [x, y] of [
+      [sg.ax, sg.ay],
+      [sg.bx, sg.by],
+    ] as const) {
+      const n = city.nodeAt?.get(`${Math.round(x / 4)},${Math.round(y / 4)}`)
+      if (n !== undefined && inChunk(city.nodes[n]!.x, city.nodes[n]!.y)) nodesHere.add(n)
+    }
+  }
+  for (const n of nodesHere) {
+    const node = city.nodes[n]!
+    const roads = node.edges.filter((e) => city.edges[e]!.kind !== 'path')
+    const big = roads.filter((e) => city.edges[e]!.kind === 'major' || city.edges[e]!.kind === 'middle')
+    if (big.length < 3 || kept(node.x, node.y, 10)) continue
+    const groups: Record<number, 'A' | 'B'> = {}
+    let ref: number | null = null
+    for (const e of roads) {
+      const ed = city.edges[e]!
+      const other = city.nodes[ed.a === n ? ed.b : ed.a]!
+      // Which way the road leaves the junction.
+      const dx = other.x - node.x
+      const dy = other.y - node.y
+      const len = Math.hypot(dx, dy) || 1
+      const ux = dx / len
+      const uy = dy / len
+      const ang = Math.atan2(uy, ux)
+      ref ??= ang
+      let diff = Math.abs(((ang - ref) % Math.PI) + Math.PI) % Math.PI
+      if (diff > Math.PI / 2) diff = Math.PI - diff
+      const group = diff < Math.PI / 4 ? 'A' : 'B'
+      groups[e] = group
+      // Traffic comes in along -u; its right is (-uy, ux) turned: for travel (-ux, -uy), right is (-uy, ux).
+      const back = ed.w / 2 + 3
+      const px = node.x + ux * back + -uy * (ed.w / 2 + 1.2)
+      const py = node.y + uy * back + ux * (ed.w / 2 + 1.2)
+      if (!free(px, py, 0.3)) continue
+      plain.post(px, py, 0.09, 0.08, 0, 3.4, '#2a2c2e', 8)
+      // The lamp housing facing the traffic (toward +u), its three lamps stacked.
+      const yaw = Math.atan2(uy, ux)
+      plain.box(px, py, yaw, 0.28, 0.36, 2.6, 1.05, '#1a1a1c', [1, 1])
+      plain.box(px + ux * 0.16, py + uy * 0.16, yaw, 0.04, 0.42, 2.58, 1.09, '#e8c020', [1, 1])
+      for (const [k, z] of [
+        ['r', 3.38],
+        ['y', 3.06],
+        ['g', 2.74],
+      ] as const) {
+        signalMesh[`${group}${k}` as SignalLamp].box(px + ux * 0.19, py + uy * 0.19, yaw, 0.03, 0.22, z, 0.22, '#ffffff', [1, 1])
+      }
+    }
+    signals.push({ node: n, x: node.x, y: node.y, groups })
+  }
+
   for (const id of mine) {
     const s = city.segs[id]!
     const mx = (s.ax + s.bx) / 2
@@ -687,6 +804,15 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
         const ay = s.ay + s.uy * t
         marks.ground(ax, ay, ax + s.ux * 3, ay + s.uy * 3, 0.15, 0.075, '#f2f0e6')
       }
+    }
+    // Street lamps: every 30 m or so along the big roads, sides by turns; now and then on a lane.
+    if (s.kind === 'major' || s.kind === 'middle' || (s.kind === 'minor' && rand() < 0.3)) {
+      const side = id % 2 === 0 ? 1 : -1
+      const off = s.w / 2 + PAVEMENT[s.kind] - 0.5
+      // The kerb point, and the way across the road (toward its middle).
+      const lx = mx - s.uy * (off + (s.kind === 'minor' ? 1 : 0)) * side
+      const ly = my + s.ux * (off + (s.kind === 'minor' ? 1 : 0)) * side
+      lamp(lx, ly, s.uy * side, -s.ux * side, rand() > 0.12)
     }
     // Wooden poles and wires along the big roads.
     if ((s.kind === 'major' || s.kind === 'middle') && rand() < 0.75) {
@@ -800,6 +926,11 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
       }
     }
   return {
+    signalLamps: Object.fromEntries(SIGNAL_LAMPS.map((k) => [k, signalMesh[k].geometry()])) as Partial<Record<SignalLamp, BufferGeometry | null>>,
+    signals,
+    glow: glow.geometry(),
+    pools: pools.geometry(),
+    lamps,
     land: land.geometry(),
     shops: shops.geometry(),
     places,
