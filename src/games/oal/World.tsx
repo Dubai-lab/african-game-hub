@@ -21,10 +21,11 @@ import { toast } from '@/core/ui/toast'
 import { useQueryClient } from '@tanstack/react-query'
 import type { Appearance, HomeCountry, Sex } from '../../../supabase/functions/_shared/oal'
 import { BodyPanel, OverstayWarning, Resting } from './Body'
-import { PhoneSection, RoomSection, useHome } from './Home'
+import { RoomSection } from './Home'
 import { OnTheWay, Travel, type TravelState, useGameNow, useTravel } from './Journey'
 import { type MapPoint, MapView, type Mark } from './MapView'
 import { HomeView, useHomeKind } from './HomeView'
+import { PhoneDevice } from './Phone'
 import { OnTheRoad, Station } from './Road'
 import { PlacePanel, StreetView } from './Street'
 import type { Place, TownId } from './StreetScene'
@@ -158,7 +159,7 @@ export function World({ life }: { life: Life }) {
           list={<MapList areas={areas} here={here} life={life} spot={valid} onGo={go} />}
         />
       )}
-      {sheet === 'phone' && <PhoneSheet travel={here} life={life} onClose={() => setSheet(null)} />}
+      {sheet === 'phone' && <PhoneDevice travel={here} homeCountry={life.home_country} onMap={() => setSheet('map')} onClose={() => setSheet(null)} />}
       {riding && <RideChoice country={here.country} rides={riding.rides} onRide={(how) => void ride(how)} onClose={() => setRiding(null)} />}
     </>
   )
@@ -466,43 +467,6 @@ function MapList({ areas, here, life, spot, onGo }: { areas: AreaInfo[]; here: T
 function mapPoint(spot: Spot, walked: { area: string; x: number; y: number; facing: number } | null): MapPoint {
   if (spot.walking && walked && walked.area === spot.area) return { area: spot.area, local: { x: walked.x, y: walked.y, facing: walked.facing } }
   return { area: spot.area, place: spot.place }
-}
-
-function PhoneSheet({ travel, life, onClose }: { travel: TravelState; life: Life; onClose: () => void }) {
-  const { t } = useTranslation()
-  const home = useHome()
-  const [app, setApp] = useState<'messages' | 'jobs' | 'flights' | 'rooms'>('messages')
-  const phone = home.data?.phone
-  return (
-    <Sheet title={t('oal.world.phone')} onClose={onClose} testId="oal-phone-sheet">
-      {home.isPending ? (
-        <Skeleton className="h-32" />
-      ) : !phone ? (
-        <p className="text-sm" data-testid="oal-no-phone">
-          {t('oal.world.noPhone')}
-        </p>
-      ) : (
-        <>
-          <div className="flex gap-1 overflow-x-auto" role="tablist">
-            {(['messages', 'jobs', 'flights', 'rooms'] as const).map((a) => (
-              <button key={a} type="button" role="tab" aria-selected={app === a} onClick={() => setApp(a)} className={`min-h-11 rounded-full border px-4 text-sm font-semibold ${app === a ? 'border-edge bg-brand text-brand-ink' : 'border-line bg-panel'}`} data-testid={`oal-app-${a}`}>
-                {t(`oal.world.apps.${a}`)}
-              </button>
-            ))}
-          </div>
-          {app === 'messages' && <PhoneSection travel={travel} homeCountry={life.home_country} />}
-          {app === 'jobs' && (
-            <>
-              <Work travel={travel} />
-              <JobsAbroad homeCountry={life.home_country} />
-            </>
-          )}
-          {app === 'flights' && <Travel travel={travel} />}
-          {app === 'rooms' && <RoomSection travel={travel} />}
-        </>
-      )}
-    </Sheet>
-  )
 }
 
 const FARES: Record<'LR' | 'GH', Record<Ride, string>> = {

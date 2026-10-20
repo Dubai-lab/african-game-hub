@@ -2577,7 +2577,34 @@
           "cash_out": "Cashed out.",
           "send_money": "Money sent."
         }
-      }
+      },
+      "apps": {
+        "messages": "Messages & MoMo",
+        "sim": "SIM & airtime",
+        "jobs": "Jobs",
+        "housing": "Housing",
+        "flights": "Flights & hotels",
+        "visa": "Visa",
+        "wallet": "Wallet",
+        "map": "Map",
+        "search": "Search"
+      },
+      "about": {
+        "messages": "Texts, and mobile money: cash in, cash out, send",
+        "sim": "Your SIM cards, airtime, top up",
+        "jobs": "Apply for work here and abroad",
+        "housing": "Rooms and houses to rent",
+        "flights": "Book flights and hotels",
+        "visa": "Apply for a visa online",
+        "wallet": "All your money",
+        "map": "Where things are",
+        "search": ""
+      },
+      "searchHint": "What do you need? (a room, a job, a flight…)",
+      "nothing": "Nothing found on this phone for that.",
+      "noSim": "No SIM registered in this country: register one at a phone shop.",
+      "noService": "No service",
+      "home": "Home screen"
     },
     "room": {
       "title": "Where you live",
@@ -2641,7 +2668,7 @@
           "where": "Tubman Boulevard, Sinkor",
           "places": {
             "cookshop": "Ma Hawa Cookshop",
-            "phone": "Blessed Hands Phone Repair",
+            "phone": "Blessed Hands Phone Shop (phones, SIM cards)",
             "changer": "Money changer",
             "kekeh": "Kekeh stop",
             "clinic": "Sinkor Community Clinic"
@@ -2678,7 +2705,7 @@
       },
       "open": {
         "cookshop": "Eat here",
-        "phone": "Phones and SIMs",
+        "phone": "Buy a phone or SIM",
         "changer": "Change money",
         "kekeh": "Ride a kekeh",
         "clinic": "See a nurse",

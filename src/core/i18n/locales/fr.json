@@ -2577,7 +2577,34 @@
           "cash_out": "Retiré.",
           "send_money": "Argent envoyé."
         }
-      }
+      },
+      "apps": {
+        "messages": "Messages et MoMo",
+        "sim": "SIM et crédit",
+        "jobs": "Emplois",
+        "housing": "Logement",
+        "flights": "Vols et hôtels",
+        "visa": "Visa",
+        "wallet": "Portefeuille",
+        "map": "Carte",
+        "search": "Recherche"
+      },
+      "about": {
+        "messages": "Textos et argent mobile : dépôt, retrait, envoi",
+        "sim": "Vos cartes SIM, le crédit, recharger",
+        "jobs": "Postuler ici et à l’étranger",
+        "housing": "Chambres et maisons à louer",
+        "flights": "Réserver vols et hôtels",
+        "visa": "Demander un visa en ligne",
+        "wallet": "Tout votre argent",
+        "map": "Où sont les choses",
+        "search": ""
+      },
+      "searchHint": "De quoi avez-vous besoin ? (une chambre, un emploi, un vol…)",
+      "nothing": "Rien trouvé sur ce téléphone.",
+      "noSim": "Aucune SIM enregistrée dans ce pays : enregistrez-en une dans une boutique.",
+      "noService": "Pas de réseau",
+      "home": "Écran d’accueil"
     },
     "room": {
       "title": "Où vous vivez",
@@ -2641,7 +2668,7 @@
           "where": "Tubman Boulevard, Sinkor",
           "places": {
             "cookshop": "Gargote Ma Hawa",
-            "phone": "Blessed Hands, réparation de téléphones",
+            "phone": "Boutique Blessed Hands (téléphones, cartes SIM)",
             "changer": "Changeur",
             "kekeh": "Station de kekeh",
             "clinic": "Clinique communautaire de Sinkor"
@@ -2678,7 +2705,7 @@
       },
       "open": {
         "cookshop": "Manger ici",
-        "phone": "Téléphones et cartes SIM",
+        "phone": "Acheter un téléphone ou une SIM",
         "changer": "Changer de l’argent",
         "kekeh": "Conduire un kekeh",
         "clinic": "Voir une infirmière",

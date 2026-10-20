@@ -44,6 +44,7 @@ async function open(browser: Browser, account: { email: string }): Promise<Page>
   await expect(page).toHaveURL(/\/lobby$/, { timeout: 30_000 })
   await page.goto('/life')
   await page.getByTestId('oal-phone-button').click({ timeout: 30_000 })
+  await page.getByTestId('oal-app-messages').click({ timeout: 30_000 })
   await expect(page.getByTestId('oal-phone-use')).toBeVisible({ timeout: 30_000 })
   return page
 }
@@ -72,6 +73,7 @@ test('a text and mobile money between two players, and each seen on Tubman Boule
   // Musu sees the text (within the inbox's refresh) and the money.
   await b.reload()
   await b.getByTestId('oal-phone-button').click({ timeout: 30_000 })
+  await b.getByTestId('oal-app-messages').click({ timeout: 30_000 })
   await expect(b.getByTestId('oal-inbox')).toContainText('Musu, it is Kollie. I am on Tubman.', { timeout: 30_000 })
   await expect(b.getByTestId('oal-wallet')).toHaveText('L$500', { timeout: 30_000 })
 

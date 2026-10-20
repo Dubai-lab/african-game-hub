@@ -475,7 +475,7 @@ print('WALLS', walls_made)
 # ---- Life on the boulevard -----------------------------------------------------------------
 
 # Kiosk names, invented, in the way Monrovia names its small businesses.
-SIGNS = ['MA HAWA COOKSHOP', 'BLESSED HANDS\nPHONE REPAIR', 'GOD IS ABLE\nENTERPRISE', 'PEACE & LOVE\nPROVISION SHOP', 'FAITH BARBING SALOON',
+SIGNS = ['MA HAWA COOKSHOP', 'BLESSED HANDS\nPHONES & SIM CARDS', 'GOD IS ABLE\nENTERPRISE', 'PEACE & LOVE\nPROVISION SHOP', 'FAITH BARBING SALOON',
          'JAH GUIDE\nSPARE PARTS', 'DAILY BREAD', 'MOBILE MONEY\nHERE', 'SWEET MOTHER\nCOOKSHOP', 'NO CONDITION\nIS PERMANENT', 'TOP UP\nSCRATCH CARD',
          'ONE LOVE\nTAILORING', 'GOOD LUCK\nPHARMACY', 'COLD WATER\nSOLD HERE']
 STANDING = ['man_phone', 'man_idle', 'man_talk', 'man_argue', 'woman_idle', 'woman_phone', 'woman_looking']
@@ -500,7 +500,7 @@ def shoulder_spots(w, offset, every):
 
 
 kiosks = 0
-SPECIAL = {'MA HAWA COOKSHOP': 'cookshop', 'BLESSED HANDS\nPHONE REPAIR': 'phone', 'MOBILE MONEY\nHERE': 'changer'}
+SPECIAL = {'MA HAWA COOKSHOP': 'cookshop', 'BLESSED HANDS\nPHONES & SIM CARDS': 'phone', 'MOBILE MONEY\nHERE': 'changer'}
 used_specials = set()
 others = [x for x in signs if x not in SPECIAL]
 for w in tubman:
