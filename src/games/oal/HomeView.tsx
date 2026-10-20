@@ -34,7 +34,7 @@ export function HomeView({ kind, travel, appearance, homeTown, homeCountry, hud,
   const [open, setOpen] = useState(false)
   const asleep = travel.state === 'sleeping'
   // Dragged, the camera turns round the character (sideways) and tilts (up and down).
-  const view = useRef({ yaw: 0, pitch: 0.95 })
+  const view = useRef({ yaw: 0, pitch: 0.35 })
   const drag = useRef<{ x: number; y: number; yaw: number; pitch: number } | null>(null)
   return (
     <div
@@ -49,7 +49,7 @@ export function HomeView({ kind, travel, appearance, homeTown, homeCountry, hud,
         if (!drag.current) return
         view.current = {
           yaw: drag.current.yaw - (e.clientX - drag.current.x) * 0.008,
-          pitch: Math.max(0.25, Math.min(1.45, drag.current.pitch + (e.clientY - drag.current.y) * 0.006)),
+          pitch: Math.max(-0.15, Math.min(1.3, drag.current.pitch + (e.clientY - drag.current.y) * 0.006)),
         }
       }}
       onPointerUp={() => (drag.current = null)}

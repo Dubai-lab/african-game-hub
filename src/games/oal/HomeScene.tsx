@@ -1,10 +1,12 @@
-// One Africa Life: home, inside, in 3D (made by scripts/oal/makeHome.py: public/oal/home.v1.glb
-// and ./homePlan.json): a family's house or a rented room, seen from above as a house is in a
-// game, walked by the player's own character. Its places: the bed, the kitchen, the table, the
-// door. Asleep, the character lies on the bed; awake, it walks. Loaded only here.
+// One Africa Life: home in 3D (made by scripts/oal/makeHome.py: public/oal/home.v2.glb and
+// ./homePlan.json): a family's house on its plot (the yard, the compound wall and gate, the
+// street) or a rented room, walked by the player's own character with the camera behind, as in
+// a game, kept off the walls and under the ceilings; the rooms lit by their lamps, the doors
+// swinging open as the character comes to them. Its places: the bed, the kitchen, the table,
+// the bathroom, the gate (out). Asleep, the character lies on the bed. Loaded only here.
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
 import { type RefObject, Suspense, useEffect, useMemo, useRef } from 'react'
-import { PMREMGenerator, Vector3 } from 'three'
+import { type Object3D, PMREMGenerator, Raycaster, Vector3 } from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
@@ -13,11 +15,12 @@ import { person, type Stick } from './ArrivalsScene'
 import { CHARACTER_URL } from './character'
 import plans from './homePlan.json'
 
-export const HOME_URL = '/oal/home.v1.glb'
+export const HOME_URL = '/oal/home.v2.glb'
 export type HomeKind = 'house' | 'room'
-export type HomePlace = 'bed' | 'kitchen' | 'table' | 'door'
+export type HomePlace = 'bed' | 'kitchen' | 'table' | 'door' | 'bath'
 type At = { x: number; y: number; face: number[]; z?: number; side?: number[] }
-type HomePlan = { solids: number[][]; places: Record<HomePlace, At> }
+type Door = { name: string; x: number; y: number; yaw: number; swing: number; cx: number; cy: number }
+type HomePlan = { solids: number[][]; places: Partial<Record<HomePlace, At>> & { door: At; bed: At }; doors?: Door[]; lights?: { x: number; y: number; z: number }[]; inside?: number[][]; ceiling?: number }
 const PLANS = plans as unknown as Record<HomeKind, HomePlan>
 const WALK_SPEED = 1.2
 const RADIUS = 0.25
@@ -39,14 +42,44 @@ function collide(p: { x: number; y: number }, plan: HomePlan) {
   }
 }
 
+/** The home's scene, shared with the camera (for keeping it off the walls). */
+const built: { current: Object3D | null } = { current: null }
+/** Where the walker is, for the doors to open to. */
+const walker = { current: { x: 0, y: 0 } }
+
 function Home({ kind }: { kind: HomeKind }) {
   const gltf = useLoader(GLTFLoader, HOME_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
-  const home = useMemo(() => {
-    const root = gltf.scene.getObjectByName(kind)!.clone(true)
-    root.position.set(0, 0, 0)
-    return root
-  }, [gltf, kind])
-  return <primitive object={home} />
+  const plan = PLANS[kind]
+  const { home, doors } = useMemo(() => {
+    const home = gltf.scene.getObjectByName(kind)!.clone(true)
+    home.position.set(0, 0, 0)
+    const doors = (plan.doors ?? []).map((d) => ({ ...d, obj: home.getObjectByName(d.name) ?? null, open: 0 }))
+    return { home, doors }
+  }, [gltf, kind, plan])
+  useEffect(() => {
+    built.current = home
+    return () => {
+      built.current = null
+    }
+  }, [home])
+  // A door swings open as the walker comes within a step and a half of it, and shuts after.
+  useFrame((_, raw) => {
+    const dt = Math.min(raw, 0.1)
+    for (const d of doors) {
+      if (!d.obj) continue
+      const near = Math.hypot(walker.current.x - d.cx, walker.current.y - d.cy) < 1.6
+      d.open += ((near ? 1 : 0) - d.open) * Math.min(1, dt * 4)
+      d.obj.rotation.y = d.yaw + d.swing * d.open
+    }
+  })
+  return (
+    <>
+      <primitive object={home} />
+      {(plan.lights ?? []).map((l, i) => (
+        <pointLight key={i} position={[l.x, l.z, -l.y]} intensity={6} distance={7} decay={1.6} color="#ffe9c8" />
+      ))}
+    </>
+  )
 }
 
 type Props = {
@@ -67,7 +100,7 @@ function Body({ kind, appearance, asleep, stick, view, onPlace }: Props) {
   const keys = useRef(new Set<string>())
   // In by the door, or out of bed.
   const start = plan.places.door
-  const state = useRef({ x: start.x, y: start.y + 1.2, facing: Math.atan2(start.face[0]!, -start.face[1]!), speed: 0, place: null as HomePlace | null })
+  const state = useRef({ x: start.x + start.face[0]! * 0.8, y: start.y + start.face[1]! * 0.8, facing: Math.atan2(start.face[0]!, -start.face[1]!), speed: 0, place: null as HomePlace | null })
   const me = useMemo(() => {
     const p = person(gltf.scene, gltf.animations, appearance)
     p.actions.idle?.play()
@@ -86,10 +119,11 @@ function Body({ kind, appearance, asleep, stick, view, onPlace }: Props) {
       me.actions.idle?.play()
       me.actions.walk?.play()
       if (me.actions.walk) me.actions.walk.weight = 0
-      // Up, beside the bed.
+      // Woken (not when the home first opens): up, beside the bed.
       const bed = plan.places.bed
-      if (bed.side) state.current = { ...state.current, x: bed.side[0]!, y: bed.side[1]! }
+      if (wasAsleep.current && bed.side) state.current = { ...state.current, x: bed.side[0]!, y: bed.side[1]! }
     }
+    wasAsleep.current = asleep
   }, [asleep, me, plan])
   useEffect(() => {
     const down = (e: KeyboardEvent) => keys.current.add(e.key.toLowerCase())
@@ -101,7 +135,10 @@ function Body({ kind, appearance, asleep, stick, view, onPlace }: Props) {
       window.removeEventListener('keyup', up)
     }
   }, [])
+  const wasAsleep = useRef(asleep)
   const target = useMemo(() => new Vector3(), [])
+  const want = useMemo(() => new Vector3(), [])
+  const ray = useMemo(() => new Raycaster(), [])
   useFrame((_, raw) => {
     const dt = Math.min(raw, 0.25)
     const s = state.current
@@ -140,6 +177,7 @@ function Body({ kind, appearance, asleep, stick, view, onPlace }: Props) {
       s.speed += (amount - s.speed) * Math.min(1, dt * 8)
       me.root.position.set(s.x, 0.02, -s.y)
       me.root.rotation.y = s.facing
+      walker.current = { x: s.x, y: s.y }
       if (me.actions.walk && me.actions.idle) {
         me.actions.walk.weight = s.speed
         me.actions.idle.weight = 1 - s.speed
@@ -158,13 +196,32 @@ function Body({ kind, appearance, asleep, stick, view, onPlace }: Props) {
     // From above and to the south, as a house is seen in a game.
     const fx = asleep ? plan.places.bed.x : s.x
     const fy = asleep ? plan.places.bed.y : s.y
-    // Round the character at a turn and a tilt (from above, to the south, at first).
+    // Behind the character at a turn and a tilt, as in a game: in the house a few steps back and
+    // under the ceiling, outside farther; never through a wall (pulled in to what is between).
     const turnBy = view?.current?.yaw ?? 0
-    const tilt = view?.current?.pitch ?? 0.95
-    const dist = 8.8
+    const tilt = view?.current?.pitch ?? 0.35
+    const indoors = (plan.inside ?? []).some(([x0, y0, x1, y1]) => fx > x0! && fx < x1! && fy > y0! && fy < y1!)
+    const dist = asleep ? 3.2 : indoors ? 2.7 : 4.2
     const flatDist = Math.cos(tilt) * dist
-    target.set(fx, 0.9, -fy)
-    camera.position.lerp(new Vector3(fx + Math.sin(turnBy) * flatDist, 0.9 + Math.sin(tilt) * dist, -(fy - Math.cos(turnBy) * flatDist)), Math.min(1, dt * 4))
+    target.set(fx, asleep ? 0.6 : 1.45, -fy)
+    want.set(fx + Math.sin(turnBy) * flatDist, target.y + Math.sin(tilt) * dist, -(fy - Math.cos(turnBy) * flatDist))
+    if (indoors && plan.ceiling) want.y = Math.min(want.y, plan.ceiling - 0.25)
+    if (built.current) {
+      ray.set(target, want.clone().sub(target).normalize())
+      ray.far = target.distanceTo(want)
+      // What is solid between (not glass, not the mosquito net: whatever can be seen through).
+      const hit = ray.intersectObject(built.current, true).find((h) => {
+        const m = (h.object as unknown as { material?: { transparent?: boolean } }).material
+        return h.distance > 0.2 && !(m && !Array.isArray(m) && m.transparent)
+      })
+      if (hit) {
+        const back = Math.max(0.3, hit.distance - 0.25)
+        want.copy(target).add(want.clone().sub(target).normalize().multiplyScalar(back))
+        // Too close behind to see past the character: up over its shoulder instead.
+        if (back < 1.2) want.y = Math.min(target.y + 0.9, (indoors && plan.ceiling ? plan.ceiling - 0.25 : target.y + 0.9))
+      }
+    }
+    camera.position.lerp(want, Math.min(1, dt * 6))
     camera.lookAt(target)
   })
   return <primitive object={me.root} />
@@ -183,11 +240,12 @@ function Sky() {
 
 export default function HomeScene(props: Props) {
   return (
-    <Canvas dpr={[1, 1.5]} camera={{ fov: 50, near: 0.1, far: 80, position: [0, 8, 5] }} gl={{ antialias: true }} style={{ touchAction: 'none' }}>
-      <color attach="background" args={['#2a3050']} />
+    <Canvas dpr={[1, 1.5]} camera={{ fov: 60, near: 0.05, far: 160, position: [0, 3, 14] }} gl={{ antialias: true }} style={{ touchAction: 'none' }}>
+      <color attach="background" args={['#a9c9ea']} />
+      <fog attach="fog" args={['#c4d6e6', 40, 120]} />
       <Sky />
-      <hemisphereLight args={['#fff4e2', '#5a4a3c', 1.2]} />
-      <directionalLight position={[-6, 12, 4]} intensity={1.8} color="#fff1dc" />
+      <hemisphereLight args={['#eaf2ff', '#7a5a3c', 0.9]} />
+      <directionalLight position={[-30, 50, 20]} intensity={2.0} color="#fff1dc" />
       <Suspense fallback={null}>
         <Home kind={props.kind} />
         <Body {...props} />

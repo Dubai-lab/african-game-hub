@@ -2767,13 +2767,14 @@
       "arrives": "Sur la route : {{km}} km sur {{total}}. Arrivée à {{time}}."
     },
     "home": {
-      "goOut": "Sortir",
+      "goOut": "Sortir vers la route",
       "things": "Que faire",
       "at": {
         "bed": "Près de votre lit",
         "kitchen": "À la cuisine",
         "table": "À table",
-        "door": "À la porte"
+        "door": "À la porte",
+        "bath": "Dans la salle de bain"
       }
     }
   }
