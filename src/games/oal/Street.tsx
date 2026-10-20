@@ -169,6 +169,8 @@ export function StreetView({
   hud,
   start,
   city,
+  target,
+  onArrived,
   onMove,
   onEnter,
 }: {
@@ -181,6 +183,9 @@ export function StreetView({
   start?: Place | null
   /** The whole town instead of one street. */
   city?: CityOpen
+  /** The GPS's target in the town, and what to do on getting there. */
+  target?: { x: number; y: number; name: string } | null
+  onArrived?: () => void
   onMove?: (x: number, y: number, facing: number) => void
   onEnter?: (place: Place) => boolean
 }) {
@@ -214,6 +219,9 @@ export function StreetView({
   const kind = ride.current.kind
   const gameNow = useGameNow()
   const [ready, setReady] = useState(!city)
+  // The GPS: how far, and which way on the screen (the camera's forward up).
+  const [guide, setGuide] = useState<{ m: number; turn: number } | null>(null)
+  const at = useRef({ x: 0, y: 0 })
   const goTo = async (d: Destination) => {
     setPaying(true)
     try {
@@ -292,7 +300,25 @@ export function StreetView({
                 view.current?.setAttribute('data-y', y.toFixed(2))
                 company.share(x, y, facing, moving)
                 onMove?.(x, y, facing)
+                at.current = { x, y }
+                if (target) {
+                  const dx = target.x - x
+                  const dy = target.y - y
+                  const m = Math.hypot(dx, dy)
+                  if (m < 14) {
+                    setGuide(null)
+                    toast.success(t('oal.map.arrived', { place: target.name }))
+                    onArrived?.()
+                    return
+                  }
+                  // The camera's forward on the map is (sin, -cos) of its yaw; its right (-cos, -sin).
+                  const yaw = look.current ?? 0
+                  const ahead = dx * Math.sin(yaw) - dy * Math.cos(yaw)
+                  const right = -dx * Math.cos(yaw) - dy * Math.sin(yaw)
+                  setGuide({ m, turn: Math.atan2(right, ahead) })
+                } else setGuide(null)
               }}
+              target={target}
             />
           ) : (
             <StreetScene
@@ -320,6 +346,16 @@ export function StreetView({
         </Suspense>
       </div>
       {!ready && <Loading what={t('oal.loading.town', { town: city?.town ?? '' })} />}
+      {city && target && guide && (
+        <div className="pointer-events-none absolute inset-x-0 top-56 flex justify-center px-3">
+          <p className="glass flex items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-semibold" data-testid="oal-gps">
+            <span className="inline-block text-lg text-accent" style={{ transform: `rotate(${guide.turn}rad)` }} aria-hidden>
+              ↑
+            </span>
+            {target.name} · {guide.m < 1000 ? `${Math.round(guide.m)} m` : `${(guide.m / 1000).toFixed(1)} km`}
+          </p>
+        </div>
+      )}
       {hud}
       <div className="pointer-events-none absolute inset-x-0 top-44 flex justify-center px-3">
         <p className="glass rounded-full border border-line px-4 py-2 text-sm font-semibold" data-testid="oal-street-chip">

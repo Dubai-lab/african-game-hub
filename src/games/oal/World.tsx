@@ -107,6 +107,8 @@ export function World({ life }: { life: Life }) {
   const walked = useRef<{ area: string; x: number; y: number; facing: number } | null>(null)
   const queryClient = useQueryClient()
   const [riding, setRiding] = useState<{ to: Spot; rides: Ride[] } | null>(null)
+  // The GPS's target in the town (set on the map), until got there.
+  const [target, setTarget] = useState<{ x: number; y: number; name: string } | null>(null)
   const arrive = (next: Spot) => {
     setSpot(next)
     setSheet(null)
@@ -166,6 +168,7 @@ export function World({ life }: { life: Life }) {
           onGo={(mark, walk) => go({ area: mark.area as Area, place: mark.place as Place | Other, walking: walk })}
           onClose={() => setSheet(null)}
           list={<MapList areas={areas} here={here} life={life} spot={valid} onGo={go} />}
+          onTarget={here.place === 'Monrovia' ? (tg) => setTarget(tg) : undefined}
         />
       )}
       {sheet === 'phone' && <PhoneDevice travel={here} homeCountry={life.home_country} onMap={() => setSheet('map')} onClose={() => setSheet(null)} />}
@@ -231,6 +234,8 @@ export function World({ life }: { life: Life }) {
           key={`city:${valid.place ?? ''}:${valid.at ? 'at' : ''}`}
           town="sinkor"
           city={{ town: 'Monrovia', start: valid.at ?? { place: valid.area === 'sinkor' ? 'enter:sinkor' : (valid.place ?? 'home') } }}
+          target={target}
+          onArrived={() => setTarget(null)}
           travel={here}
           appearance={life.appearance}
           name={life.game_name}

@@ -3038,6 +3038,27 @@
       "inside": "On entre…",
       "town": "Chargement de {{town}}…",
       "slow": "Avec les données mobiles, la première fois peut prendre un moment."
+    },
+    "map": {
+      "search": "Chercher dans Monrovia (une école, une clinique, une boutique…)",
+      "gps": "Mettre le GPS",
+      "away": "à {{km}} km",
+      "arrived": "Vous êtes à {{place}}.",
+      "filters": {
+        "health": "Santé",
+        "school": "Écoles",
+        "worship": "Églises et mosquées",
+        "government": "Administration",
+        "market": "Marchés et boutiques",
+        "food": "Restauration",
+        "fun": "Bars et boîtes",
+        "hotel": "Hôtels",
+        "money": "Banques et MoMo",
+        "fuel": "Carburant et auto",
+        "beauty": "Salons et tailleurs",
+        "phones": "Téléphones",
+        "materials": "Matériaux"
+      }
     }
   }
 }

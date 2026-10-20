@@ -62,9 +62,66 @@ export function markAt(map: TownMap, mark: Pick<Mark, 'area' | 'place'>): [numbe
   return own ? [own.x, own.y] : null
 }
 
-export function MapView({ town, marks, areaNames, me, onGo, onClose, list }: { town: string; marks: Mark[]; areaNames: Record<string, string>; me: MapPoint | null; onGo: (mark: Mark, walk: boolean) => void; onClose: () => void; list: ReactNode }) {
+/** A town's places (scripts/oal/makeCityData.py): what each is, its name, where; its own (1)
+ * or the map's. */
+type TownPlace = [string, string, number, number, number?]
+function useTownPlaces(town: string) {
+  return useQuery({
+    queryKey: ['oal-places', town],
+    staleTime: Infinity,
+    enabled: town === 'Monrovia',
+    queryFn: async () => {
+      const res = await fetch(`/oal/city/${mapOf(town)}/places.v1.json`)
+      if (!res.ok) throw new Error(String(res.status))
+      return (await res.json()) as TownPlace[]
+    },
+  })
+}
+
+/** The map's kinds of place, as its filters group them. */
+const FILTERS: { id: string; cats: string[]; colour: string }[] = [
+  { id: 'health', cats: ['health', 'pharmacy'], colour: '#e0453a' },
+  { id: 'school', cats: ['school'], colour: '#3a7ae0' },
+  { id: 'worship', cats: ['church', 'mosque'], colour: '#a07ae0' },
+  { id: 'government', cats: ['government', 'embassy'], colour: '#3aa06a' },
+  { id: 'market', cats: ['market', 'provisions', 'shop'], colour: '#e8901c' },
+  { id: 'food', cats: ['food'], colour: '#e86a4a' },
+  { id: 'fun', cats: ['fun', 'video'], colour: '#e04fa0' },
+  { id: 'hotel', cats: ['hotel'], colour: '#c8a030' },
+  { id: 'money', cats: ['bank', 'momo'], colour: '#2fc0a0' },
+  { id: 'fuel', cats: ['fuel', 'parts', 'transport'], colour: '#e8c020' },
+  { id: 'beauty', cats: ['salon', 'barber', 'tailor', 'boutique'], colour: '#c060d0' },
+  { id: 'phones', cats: ['phones'], colour: '#ff8a20' },
+  { id: 'materials', cats: ['materials'], colour: '#d8b020' },
+]
+const FILTER_OF = Object.fromEntries(FILTERS.flatMap((f) => f.cats.map((c) => [c, f]))) as Record<string, (typeof FILTERS)[number]>
+
+export function MapView({
+  town,
+  marks,
+  areaNames,
+  me,
+  onGo,
+  onClose,
+  list,
+  onTarget,
+}: {
+  town: string
+  marks: Mark[]
+  areaNames: Record<string, string>
+  me: MapPoint | null
+  onGo: (mark: Mark, walk: boolean) => void
+  onClose: () => void
+  list: ReactNode
+  /** A town place chosen to go to (its point on the map): the GPS's target. */
+  onTarget?: (target: { x: number; y: number; name: string }) => void
+}) {
   const { t } = useTranslation()
   const map = useTownMap(town)
+  const townPlaces = useTownPlaces(town)
+  const [filter, setFilter] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const [picked, setPicked] = useState<TownPlace | null>(null)
   const box = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: 400, h: 700 })
   // The view: the map point at the screen's centre, and metres per screen pixel.
@@ -229,6 +286,28 @@ export function MapView({ town, marks, areaNames, me, onGo, onClose, list }: { t
                   </button>
                 )
               })}
+              {townPlaces.data &&
+                (filter || v.mpp < 0.8) &&
+                townPlaces.data
+                  .filter((pl) => (filter ? FILTER_OF[pl[0]]?.id === filter : true))
+                  .map((pl, i) => {
+                    const pos = toScreen(pl[2], pl[3])
+                    if (pos.left < -10 || pos.top < -10 || pos.left > size.w + 10 || pos.top > size.h + 10) return null
+                    const f = FILTER_OF[pl[0]]
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        aria-label={pl[1]}
+                        className="absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#141a3a] shadow"
+                        style={{ ...pos, background: f?.colour ?? '#c8c8c8' }}
+                        onClick={() => setPicked(pl)}
+                        data-testid="oal-map-place"
+                      />
+                    )
+                  })
+                  .filter(Boolean)
+                  .slice(0, 400)}
               {meAt && (
                 <div className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2" style={toScreen(meAt.x, meAt.y)} data-testid="oal-map-me">
                   {/* The arrow points up unturned; the street's forward (sin, -cos) is (sin, cos) on screen. */}
@@ -248,6 +327,84 @@ export function MapView({ town, marks, areaNames, me, onGo, onClose, list }: { t
               </div>
               <p className="pointer-events-none absolute bottom-1 left-2 text-[0.6rem] text-muted">© OpenStreetMap contributors</p>
             </>
+          )}
+          {townPlaces.data && v && (
+            <div className="absolute inset-x-2 top-2 flex flex-col gap-2">
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t('oal.map.search')}
+                aria-label={t('oal.map.search')}
+                className="glass min-h-11 rounded-full border border-line px-4"
+                data-testid="oal-map-search"
+              />
+              {query.trim().length > 1 ? (
+                <div className="glass flex max-h-64 flex-col overflow-y-auto rounded-2xl border border-line p-1">
+                  {townPlaces.data
+                    .filter((pl) => pl[1].toLowerCase().includes(query.trim().toLowerCase()))
+                    .slice(0, 25)
+                    .map((pl, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        className="flex items-center gap-2 rounded-xl px-3 py-2 text-left text-sm"
+                        onClick={() => {
+                          setPicked(pl)
+                          setQuery('')
+                          setView((cur) => (cur ? { x: pl[2], y: pl[3], mpp: 0.5 } : cur))
+                        }}
+                        data-testid="oal-map-found"
+                      >
+                        <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: FILTER_OF[pl[0]]?.colour ?? '#c8c8c8' }} aria-hidden />
+                        <span className="font-semibold">{pl[1]}</span>
+                        <span className="ml-auto text-xs text-muted">{t(`oal.city.cats.${pl[0]}`, { defaultValue: '' })}</span>
+                      </button>
+                    ))}
+                </div>
+              ) : (
+                <div className="flex gap-1 overflow-x-auto pb-1">
+                  {FILTERS.map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      aria-pressed={filter === f.id}
+                      className={`flex shrink-0 items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold ${filter === f.id ? 'border-edge bg-brand text-brand-ink' : 'glass border-line'}`}
+                      onClick={() => setFilter(filter === f.id ? null : f.id)}
+                      data-testid={`oal-map-filter-${f.id}`}
+                    >
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ background: f.colour }} aria-hidden />
+                      {t(`oal.map.filters.${f.id}`)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {picked && (
+            <div className="glass absolute inset-x-3 bottom-16 flex flex-col gap-2 rounded-2xl border border-line p-3" data-testid="oal-map-place-card">
+              <p className="font-semibold">{picked[1]}</p>
+              <p className="text-sm text-muted">
+                {t(`oal.city.cats.${picked[0]}`, { defaultValue: '' })}
+                {meAt && ` · ${t('oal.map.away', { km: (Math.hypot(picked[2] - meAt.x, picked[3] - meAt.y) / 1000).toFixed(1) })}`}
+              </p>
+              <div className="flex gap-2">
+                {onTarget && (
+                  <Button
+                    onClick={() => {
+                      onTarget({ x: picked[2], y: picked[3], name: picked[1] })
+                      setPicked(null)
+                      onClose()
+                    }}
+                    data-testid="oal-map-gps"
+                  >
+                    {t('oal.map.gps')}
+                  </Button>
+                )}
+                <Button variant="ghost" onClick={() => setPicked(null)}>
+                  {t('oal.street.done')}
+                </Button>
+              </div>
+            </div>
           )}
           {chosen && (
             <div className="glass absolute inset-x-3 bottom-16 flex flex-col gap-2 rounded-2xl border border-line p-3" data-testid="oal-map-card">

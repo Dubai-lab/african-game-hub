@@ -16,6 +16,7 @@ import {
   BufferAttribute,
   type BufferGeometry,
   BufferGeometry as BufferGeometryClass,
+  CylinderGeometry,
   CanvasTexture,
   Color,
   DoubleSide,
@@ -834,6 +835,23 @@ type Props = {
   clock?: () => Date
   /** The town is drawn round the player (the first streets built, the character there). */
   onDrawn?: () => void
+  /** Where the GPS is taking the player: a beam of light over it, seen from afar. */
+  target?: { x: number; y: number } | null
+}
+
+/** The GPS's mark: a tall beam of light over the place, seen over the roofs and through the haze. */
+function Beam({ at }: { at: { x: number; y: number } }) {
+  const mesh = useMemo(() => {
+    const g = new CylinderGeometry(1.4, 1.4, 160, 12, 1, true)
+    g.translate(0, 80, 0)
+    return new Mesh(g, new MeshBasicMaterial({ color: '#ffd23a', transparent: true, opacity: 0.35, depthWrite: false, fog: false, side: DoubleSide }))
+  }, [])
+  useEffect(() => () => {
+    mesh.geometry.dispose()
+    ;(mesh.material as MeshBasicMaterial).dispose()
+  }, [mesh])
+  mesh.position.set(at.x, 0, -at.y)
+  return <primitive object={mesh} />
 }
 
 function Walker({ props, city, start, compounds, hubs, places, solids, player }: { props: Props; city: City; start: { x: number; y: number; f: number }; compounds: Compound[]; hubs: Hub[]; places: CityPlace[]; solids: RefObject<Map<string, Solid[]>>; player: RefObject<{ x: number; y: number }> }) {
@@ -1270,6 +1288,7 @@ export default function CityScene(props: Props) {
       <fog attach="fog" args={['#c9d9e6', 110, 480]} />
       <Light />
       <DayNight clock={props.clock} player={player} />
+      {props.target && <Beam at={props.target} />}
       <Signals />
       {city && (
         <>
