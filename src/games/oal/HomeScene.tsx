@@ -15,12 +15,12 @@ import { person, type Stick } from './ArrivalsScene'
 import { CHARACTER_URL } from './character'
 import plans from './homePlan.json'
 
-export const HOME_URL = '/oal/home.v2.glb'
-export type HomeKind = 'house' | 'room'
-export type HomePlace = 'bed' | 'kitchen' | 'table' | 'door' | 'bath'
+export const HOME_URL = '/oal/home.v3.glb'
+export type HomeKind = 'house' | 'room' | 'phoneshop'
+export type HomePlace = 'bed' | 'kitchen' | 'table' | 'door' | 'bath' | 'counter'
 type At = { x: number; y: number; face: number[]; z?: number; side?: number[] }
 type Door = { name: string; x: number; y: number; yaw: number; swing: number; cx: number; cy: number }
-type HomePlan = { solids: number[][]; places: Partial<Record<HomePlace, At>> & { door: At; bed: At }; doors?: Door[]; lights?: { x: number; y: number; z: number }[]; inside?: number[][]; ceiling?: number }
+type HomePlan = { solids: number[][]; places: Partial<Record<HomePlace, At>> & { door: At; bed: At }; doors?: Door[]; lights?: { x: number; y: number; z: number }[]; inside?: number[][]; ceiling?: number; attendant?: At }
 const PLANS = plans as unknown as Record<HomeKind, HomePlan>
 const WALK_SPEED = 1.2
 const RADIUS = 0.25
@@ -108,6 +108,16 @@ function Body({ kind, appearance, asleep, stick, view, onPlace }: Props) {
     if (p.actions.walk) p.actions.walk.weight = 0
     return p
   }, [gltf, appearance])
+  // Someone at their work there (the shop's attendant behind the counter), facing the room.
+  const staff = useMemo(() => {
+    const at = plan.attendant
+    if (!at) return null
+    const p = person(gltf.scene, gltf.animations, { ...appearance, skin: 0.85, outfit: appearance.sex === 'male' ? 'shirt_jeans' : 'blouse_skirt' })
+    ;(p.actions.talk ?? p.actions.idle)?.play()
+    p.root.position.set(at.x, 0.02, -at.y)
+    p.root.rotation.y = Math.atan2(at.face[0]!, -at.face[1]!)
+    return p
+  }, [gltf, appearance, plan])
   // Asleep: on the bed, lying the way it lies, the sleeping movement only.
   useEffect(() => {
     const sleep = me.actions.sleep
@@ -193,6 +203,7 @@ function Body({ kind, appearance, asleep, stick, view, onPlace }: Props) {
       }
     }
     me.mixer.update(dt)
+    staff?.mixer.update(dt)
     // From above and to the south, as a house is seen in a game.
     const fx = asleep ? plan.places.bed.x : s.x
     const fy = asleep ? plan.places.bed.y : s.y
@@ -224,7 +235,12 @@ function Body({ kind, appearance, asleep, stick, view, onPlace }: Props) {
     camera.position.lerp(want, Math.min(1, dt * 6))
     camera.lookAt(target)
   })
-  return <primitive object={me.root} />
+  return (
+    <>
+      <primitive object={me.root} />
+      {staff && <primitive object={staff.root} />}
+    </>
+  )
 }
 
 function Sky() {

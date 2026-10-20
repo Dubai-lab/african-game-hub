@@ -120,7 +120,7 @@ export function PlacePanel({ place, travel, homeCountry }: { place: Place; trave
   )
 }
 
-export function StreetView({ town, travel, appearance, name, homeCountry, hud, start, onMove }: { town: TownId; travel: TravelState; appearance: Appearance; name: string; homeCountry: 'LR' | 'GH'; hud?: ReactNode; start?: Place | null; onMove?: (x: number, y: number, facing: number) => void }) {
+export function StreetView({ town, travel, appearance, name, homeCountry, hud, start, onMove, onEnter }: { town: TownId; travel: TravelState; appearance: Appearance; name: string; homeCountry: 'LR' | 'GH'; hud?: ReactNode; start?: Place | null; onMove?: (x: number, y: number, facing: number) => void; onEnter?: (place: Place) => boolean }) {
   const { t } = useTranslation()
   const company = useStreetCompany(town, name, appearance)
   const stick = useRef<Stick>({ x: 0, y: 0 })
@@ -207,7 +207,7 @@ export function StreetView({ town, travel, appearance, name, homeCountry, hud, s
       />
       {place && !open && (
         <div className="absolute bottom-6 right-6">
-          <Button className="min-h-14 px-6 text-lg" onClick={() => setOpen(true)} data-testid="oal-place-open">
+          <Button className="min-h-14 px-6 text-lg" onClick={() => (onEnter?.(place) ? undefined : setOpen(true))} data-testid="oal-place-open">
             {t(`oal.street.open.${place}`)}
           </Button>
         </div>

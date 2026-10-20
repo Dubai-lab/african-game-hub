@@ -291,10 +291,11 @@ def door(name, hx, hy, along, swing):
                         'cx': round(hx + math.cos(yaw) * 0.45, 2), 'cy': round(hy + math.sin(yaw) * 0.45, 2)})
 
 
-def ceiling(name, x0, y0, x1, y1):
+def ceiling(name, x0, y0, x1, y1, home=None):
     """A POP ceiling: the flat ceiling, a border dropped 15 cm with a light cove along its inner
     edge, a moulded ring and a lamp in the middle; a light for the game there."""
-    slab(f'{name}_ceiling', x0, y0, x1, y1, HH, m_pop, down=True)
+    home = home or house
+    slab(f'{name}_ceiling', x0, y0, x1, y1, HH, m_pop, home=home, down=True)
     bm = bmesh.new()
     uv = bm.loops.layers.uv.new()
     b = min(0.55, (x1 - x0) / 5, (y1 - y0) / 5)
@@ -307,9 +308,10 @@ def ceiling(name, x0, y0, x1, y1):
     r = min(0.7, (x1 - x0) / 4, (y1 - y0) / 4)
     cylinder(bm, (cx, cy, HH - 0.05), r, 0.05, segments=24, mat=1)
     cylinder(bm, (cx, cy, HH - 0.12), r * 0.35, 0.07, segments=16, mat=3)
-    house.add(kit.new_object(f'{name}_pop', bm, [m_pop_trim, m_pop, m_cove, m_lamp]))
-    house.lights.append({'x': round(cx, 2), 'y': round(cy, 2), 'z': HH - 0.3})
-    inside_rects.append([x0, y0, x1, y1])
+    home.add(kit.new_object(f'{name}_pop', bm, [m_pop_trim, m_pop, m_cove, m_lamp]))
+    home.lights.append({'x': round(cx, 2), 'y': round(cy, 2), 'z': HH - 0.3})
+    if home is house:
+        inside_rects.append([x0, y0, x1, y1])
 
 
 # The plot and the street.
@@ -538,9 +540,77 @@ room.place('table', -1.4, 0.3, (0, 1))
 coal_pot_kitchen(room, 1.0, -3.2, zinc=False)
 room.place('door', -1.05, -2.6, (0, 1))
 
+# ---- The phone shop: Blessed Hands, Tubman Boulevard ------------------------------------------------
+#
+# 9 by 7 m behind a glass front (y = -3.5) to the street: tiled, white walls with a band of the
+# networks' colours, glass counters with phones in them, shelves of boxed phones on the walls,
+# the networks' posters, the counter at the back where the attendant sells phones, SIM cards and
+# airtime and registers SIMs, a POP ceiling with its lamps.
+
+shop = Home('phoneshop')
+shop.doors, shop.lights = [], []
+m_shop_wall = photo('shop_wall', 'white_stucco', scale=2.0, tint=srgb('#f4f2ee'), tint_amount=0.9, streaks=0)
+m_band = [flat('band_starline', srgb('#e86a1c'), 0.5), flat('band_citrus', srgb('#2f8a4a'), 0.5)]
+m_case = flat('display_glass', (0.7, 0.82, 0.9), 0.05, alpha=0.3)
+m_phone = flat('display_phone', (0.03, 0.03, 0.04), 0.2)
+m_screen_on = flat('display_screen', (0.3, 0.5, 0.9), 0.2, emission=1.5)
+m_boxes = [flat(f'phone_box{i}', srgb(c), 0.6) for i, c in enumerate(['#f2ece0', '#1f4fa8', '#141414', '#e86a1c'])]
+m_poster = [flat('poster_starline', srgb('#e86a1c'), 0.6, emission=0.3), flat('poster_citrus', srgb('#2f8a4a'), 0.6, emission=0.3)]
+slab('shop_floor', -4.5, -3.5, 4.5, 3.5, 0.015, m_floor_tile, home=shop)
+slab('shop_pavement', -12, -9, 12, -3.5, 0.01, m_path, home=shop)
+slab('shop_street', -30, -20, 30, -9, 0.0, m_street, home=shop)
+bm = bmesh.new()
+uv = bm.loops.layers.uv.new()
+for (cx, cy, sx, sy) in ((0, 3.5, 9.2, 0.2), (-4.5, 0, 0.2, 7.2), (4.5, 0, 0.2, 7.2)):
+    box(bm, uv, (cx, cy, 0), (sx, sy, HH), mat=0)
+    shop.solid(cx - sx / 2, cy - sy / 2, cx + sx / 2, cy + sy / 2)
+# The glass front, its door in the middle (open, the doorway to the street).
+for x0, x1 in ((-4.5, -0.6), (0.6, 4.5)):
+    box(bm, uv, ((x0 + x1) / 2, -3.5, 0), (x1 - x0, 0.06, HH), mat=1)
+    shop.solid(x0, -3.6, x1, -3.4)
+box(bm, uv, (0, -3.5, 2.3), (1.2, 0.08, HH - 2.3), mat=0)
+# The networks' colours in a band round the walls; the sign over the front.
+for (cx, cy, sx, sy, k) in ((0, 3.38, 9.0, 0.04, 0), (-4.38, 0, 0.04, 7.0, 1), (4.38, 0, 0.04, 7.0, 0)):
+    box(bm, uv, (cx, cy, 2.2), (sx, sy, 0.35), mat=2 + k)
+box(bm, uv, (0, -3.62, HH - 0.6), (6.0, 0.08, 0.7), mat=2)
+shop.add(kit.new_object('shop_walls', bm, [m_shop_wall, m_case] + m_band))
+shop.add(kit.text('BLESSED HANDS PHONES & SIM CARDS', (0, -3.68), math.pi, 0.32, '#f4efe2', HH - 0.5))
+# Glass counters down both sides with phones on show; shelves of boxed phones above.
+bm = bmesh.new()
+uv = bm.loops.layers.uv.new()
+for side in (-1, 1):
+    x = side * 3.6
+    box(bm, uv, (x, -0.6, 0), (0.9, 4.0, 0.85), mat=0)
+    box(bm, uv, (x, -0.6, 0.85), (0.9, 4.0, 0.25), mat=1)
+    shop.solid(x - 0.45, -2.6, x + 0.45, 1.4)
+    for k in range(8):
+        y = -2.3 + k * 0.48
+        box(bm, uv, (x + side * -0.1, y, 0.9), (0.09, 0.18, 0.012), mat=2)
+        box(bm, uv, (x + side * -0.1, y, 0.912), (0.08, 0.16, 0.004), mat=3)
+    for row in range(3):
+        for k in range(10):
+            y = -2.6 + k * 0.5
+            box(bm, uv, (side * 4.25, y, 1.25 + row * 0.42), (0.25, 0.32, 0.32), mat=4 + (k + row) % 4)
+    box(bm, uv, (side * 4.3, -0.6, 1.2), (0.3, 5.4, 0.04), mat=0)
+# The counter at the back, a till and a fingerprint reader on it.
+box(bm, uv, (0, 2.3, 0), (4.0, 0.7, 1.05), mat=0)
+box(bm, uv, (0, 2.3, 1.05), (4.1, 0.75, 0.04), mat=8)
+box(bm, uv, (-1.0, 2.3, 1.09), (0.4, 0.3, 0.25), mat=2)
+box(bm, uv, (0.6, 2.2, 1.09), (0.14, 0.18, 0.06), mat=3)
+shop.solid(-2.05, 1.9, 2.05, 2.7)
+# Posters of the two networks on the back wall.
+box(bm, uv, (-2.6, 3.37, 1.3), (1.4, 0.03, 1.0), mat=9)
+box(bm, uv, (2.6, 3.37, 1.3), (1.4, 0.03, 1.0), mat=10)
+shop.add(kit.new_object('shop_fittings', bm, [m_cabinet, m_case, m_phone, m_screen_on] + m_boxes + [m_counter] + m_poster))
+ceiling('shop', -4.5, -3.5, 4.5, 3.5, home=shop)
+shop.places['door'] = {'x': 0.0, 'y': -2.7, 'face': [0, 1]}
+shop.places['counter'] = {'x': 0.0, 'y': 1.4, 'face': [0, 1]}
+shop.places['bed'] = {'x': 0.0, 'y': 1.4, 'face': [0, 1]}
+PLAN_EXTRA['phoneshop'] = {'doors': [], 'lights': shop.lights, 'inside': [[-4.5, -3.5, 4.5, 3.5]], 'ceiling': HH, 'attendant': {'x': 0.0, 'y': 3.0, 'face': [0, -1]}}
+
 # ---- Out -----------------------------------------------------------------------------------------
 
-for h in (house, room):
+for h in (house, room, shop):
     PLAN[h.name] = {'solids': h.solids, 'places': h.places, **PLAN_EXTRA.get(h.name, {})}
 for img in bpy.data.images:
     if img.size[0] > 512:

@@ -2705,7 +2705,7 @@
       },
       "open": {
         "cookshop": "Eat here",
-        "phone": "Buy a phone or SIM",
+        "phone": "Enter the shop",
         "changer": "Change money",
         "kekeh": "Ride a kekeh",
         "clinic": "See a nurse",
@@ -2801,8 +2801,10 @@
         "kitchen": "In the kitchen",
         "table": "At the table",
         "door": "At the door",
-        "bath": "In the bathroom"
-      }
+        "bath": "In the bathroom",
+        "counter": "At the counter"
+      },
+      "leaveShop": "Out to the street"
     }
   }
 }

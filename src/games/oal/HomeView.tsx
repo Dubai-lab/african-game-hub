@@ -10,7 +10,7 @@ import { Skeleton } from '@/core/ui/Skeleton'
 import type { Appearance } from '../../../supabase/functions/_shared/oal'
 import type { Stick } from './ArrivalsScene'
 import { BodyPanel, Resting } from './Body'
-import { RoomSection, useHome } from './Home'
+import { PhoneSection, RoomSection, useHome } from './Home'
 import type { HomeKind, HomePlace } from './HomeScene'
 import type { TravelState } from './Journey'
 
@@ -92,7 +92,7 @@ export function HomeView({ kind, travel, appearance, homeTown, homeCountry, hud,
           <div className="absolute bottom-24 right-6 flex flex-col items-end gap-2">
             {place === 'door' ? (
               <Button onClick={onDoor} data-testid="oal-home-door">
-                {t('oal.home.goOut')}
+                {kind === 'phoneshop' ? t('oal.home.leaveShop') : t('oal.home.goOut')}
               </Button>
             ) : (
               <Button onClick={() => setOpen(true)} data-testid="oal-home-menu">
@@ -101,15 +101,21 @@ export function HomeView({ kind, travel, appearance, homeTown, homeCountry, hud,
             )}
           </div>
           {open && (
-            <div data-panel className="glass absolute inset-x-0 bottom-0 z-10 mx-auto flex max-h-[75vh] max-w-lg flex-col gap-2 overflow-y-auto rounded-t-3xl border border-line p-3" data-testid="oal-home-panel">
+            <div data-panel className="glass absolute inset-x-0 bottom-20 z-10 mx-auto flex max-h-[68vh] max-w-lg flex-col gap-2 overflow-y-auto rounded-t-3xl border border-line p-3" data-testid="oal-home-panel">
               <div className="flex items-center justify-between">
-                <p className="font-semibold">{kind === 'house' ? t('oal.world.places.familyHome') : t('oal.world.places.room')}</p>
+                <p className="font-semibold">{kind === 'phoneshop' ? t('oal.street.towns.sinkor.places.phone') : kind === 'house' ? t('oal.world.places.familyHome') : t('oal.world.places.room')}</p>
                 <Button variant="ghost" onClick={() => setOpen(false)}>
                   {t('oal.street.done')}
                 </Button>
               </div>
-              <BodyPanel travel={travel} homeTown={homeTown} homeCountry={homeCountry} />
-              <RoomSection travel={travel} />
+              {kind === 'phoneshop' ? (
+                <PhoneSection travel={travel} homeCountry={homeCountry} />
+              ) : (
+                <>
+                  <BodyPanel travel={travel} homeTown={homeTown} homeCountry={homeCountry} />
+                  <RoomSection travel={travel} />
+                </>
+              )}
             </div>
           )}
         </>

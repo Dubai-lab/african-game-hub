@@ -2,13 +2,17 @@
 // bus and police car (the owner's models, made light by scripts/oal/makeVehicles.py:
 // public/oal/vehicles.v1.glb) drive the street's lanes (its plan's "lanes", on the right), at
 // town speeds, slowing behind whoever is ahead and stopping for the player in front of them;
-// at a lane's end, back to its start (out of sight, in the haze). Where each vehicle is, as a
-// box, is kept for the player to walk against (./StreetScene.tsx).
+// at a lane's end, back to its start (out of sight, in the haze). Each has its driver at the
+// wheel (a kekeh its rider), seated, of every look. Where each vehicle is, as a box, is kept for
+// the player to walk against (./StreetScene.tsx).
 import { useFrame, useLoader } from '@react-three/fiber'
 import { useMemo } from 'react'
 import { Color, type Material, type Mesh, type Object3D } from 'three'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { CATALOGUE, defaultAppearance } from '../../../supabase/functions/_shared/oal'
+import { person } from './ArrivalsScene'
+import { CHARACTER_URL } from './character'
 
 export const VEHICLES_URL = '/oal/vehicles.v1.glb'
 
@@ -27,6 +31,10 @@ const PAINTS: Record<Kind, string[]> = {
   bus: [''],
   police: [''],
 }
+
+// Where the driver sits, in the vehicle's own frame (x ahead, y up, z to its right): on the
+// left, as cars are driven on the right; a kekeh's rider in the middle, in front.
+const SEAT: Record<Kind, [number, number, number]> = { taxi: [0.1, 0.08, -0.4], car: [0.1, 0.08, -0.4], police: [0.15, 0.06, -0.4], bus: [2.9, 0.8, -0.85], kekeh: [0.25, 0.3, 0] }
 
 type Lane = { pts: [number, number][]; at: number[]; length: number }
 type Car = { kind: Kind; lane: number; s: number; v: number; want: number; root: Object3D }
@@ -59,6 +67,7 @@ function pick<T>(list: T[], r: number) {
 
 export function Traffic({ lanes, reach, player, moving, spacing = 35 }: { lanes: number[][][]; reach: number; player: { current: { x: number; y: number } }; moving: { current: Moving[] }; spacing?: number }) {
   const gltf = useLoader(GLTFLoader, VEHICLES_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const people = useLoader(GLTFLoader, CHARACTER_URL('male'), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const { cars, roads, group } = useMemo(() => {
     const roads = lanes.map((l) => laneOf(l, reach)).filter((l) => l.length > 40)
     const models = Object.fromEntries(['sedan', 'kekeh', 'bus', 'police_car'].map((n) => [n, gltf.scene.getObjectByName(n)!]))
@@ -89,12 +98,27 @@ export function Traffic({ lanes, reach, player, moving, spacing = 35 }: { lanes:
             mesh.material = Array.isArray(mesh.material) ? mats : mats[0]!
           })
         }
+        // The driver: seated at the wheel, posed once (a still figure costs a phone little).
+        const base = defaultAppearance('male')
+        const driver = person(people.scene, people.animations, {
+          ...base,
+          skin: 0.6 + rand() * 0.35,
+          outfit: kind === 'police' ? 'shirt_jeans' : pick([...CATALOGUE.outfit.male], rand()),
+          hair: pick([...CATALOGUE.hair.male], rand()),
+        })
+        const sit = driver.actions.sit ?? driver.actions.idle
+        sit?.play()
+        driver.mixer.update(0.4 + rand())
+        const [sx, sy, sz] = SEAT[kind]
+        driver.root.position.set(sx, sy, sz)
+        driver.root.rotation.y = Math.PI / 2
+        root.add(driver.root)
         cars.push({ kind, lane: li, s: ((k + rand() * 0.5) / count) * lane.length, v: SPEED[kind], want: SPEED[kind] * (0.85 + rand() * 0.3), root })
       }
     })
     const group = cars.map((c) => c.root)
     return { cars, roads, group }
-  }, [gltf, lanes, reach, spacing])
+  }, [gltf, people, lanes, reach, spacing])
 
   useFrame((_, raw) => {
     const dt = Math.min(raw, 0.1)

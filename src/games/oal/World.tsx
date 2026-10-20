@@ -227,8 +227,23 @@ export function World({ life }: { life: Life }) {
           name={life.game_name}
           homeCountry={life.home_country}
           onMove={(x, y, facing) => (walked.current = { area: valid.area, x, y, facing })}
+          onEnter={(p) => {
+            // A shop with an inside: in through its door.
+            if (area.walk !== 'sinkor' || p !== 'phone') return false
+            arrive({ area: 'sinkor', place: 'phone' })
+            return true
+          }}
           hud={<Hud life={life} travel={here} onMap={() => setSheet('map')} onPhone={() => setSheet('phone')} walking />}
         />
+        {sheets}
+      </>
+    )
+
+  // Inside the phone shop on Tubman Boulevard.
+  if (valid.area === 'sinkor' && valid.place === 'phone')
+    return (
+      <>
+        <HomeView kind="phoneshop" travel={here} appearance={life.appearance} homeTown={life.home_town} homeCountry={life.home_country} hud={hud} onDoor={() => arrive({ area: 'sinkor', place: 'phone', walking: true })} />
         {sheets}
       </>
     )
