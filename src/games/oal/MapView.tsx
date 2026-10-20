@@ -12,7 +12,7 @@ import { Button } from '@/core/ui/Button'
 import { Skeleton } from '@/core/ui/Skeleton'
 
 type Line = { p: number[]; n?: string }
-type TownMap = {
+export type TownMap = {
   bounds: [number, number, number, number]
   roads: { major: Line[]; middle: Line[]; minor: Line[] }
   water: number[][]
@@ -34,7 +34,7 @@ export type MapPoint = { area: string; place?: string; local?: { x: number; y: n
 /** The town's map file for a game town (Monrovia, Accra, Kumasi, Voinjama). */
 export const mapOf = (town: string) => town.toLowerCase()
 
-function useTownMap(town: string) {
+export function useTownMap(town: string) {
   return useQuery({
     queryKey: ['oal-map', town],
     staleTime: Infinity,
@@ -84,6 +84,8 @@ export function MapView({ town, marks, areaNames, me, onGo, onClose, list }: { t
   }, [])
   const meAt = useMemo(() => {
     if (!map.data || !me) return null
+    // Walking the whole town: its own metres are the map's.
+    if (me.area === 'city' && me.local) return { x: me.local.x, y: me.local.y, facing: me.local.facing }
     const area = map.data.places[me.area]
     if (me.local && area) return { x: area.x + me.local.x, y: area.y + me.local.y, facing: me.local.facing }
     const at = markAt(map.data, { area: me.area, place: me.place ?? me.area })

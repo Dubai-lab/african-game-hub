@@ -2967,6 +2967,17 @@
         "done": "« Vous avez déjà payé. Gardez votre reçu. »",
         "nothing": "« Passez d’abord au guichet 1. »"
       }
+    },
+    "city": {
+      "where": "{{town}}",
+      "places": {
+        "home": "La maison de votre famille",
+        "health": "Ministère de la Santé"
+      },
+      "enter": {
+        "home": "Entrer par le portail",
+        "health": "Aller au portail"
+      }
     }
   }
 }

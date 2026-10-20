@@ -37,9 +37,9 @@ type Balance = { currency: string; amount: number }
 
 /** Where in town the player is: a 3D street (walking, maybe come to one of its places), or one
  * of the town's places shown on a picture. */
-type Spot = { area: Area; place?: Place | Other; walking?: boolean }
+type Spot = { area: Area; place?: Place | Other; walking?: boolean; at?: { x: number; y: number; f: number } }
 type Other = 'home' | 'airport' | 'visa' | 'jobs' | 'station' | 'health'
-type Area = TownId | 'town' | 'home' | 'airport' | 'visa' | 'jobs' | 'station' | 'health'
+type Area = TownId | 'town' | 'home' | 'airport' | 'visa' | 'jobs' | 'station' | 'health' | 'city'
 
 /** Each town's areas and their places (3D where a street has been built). */
 type AreaInfo = { area: Area; places: (Place | Other)[]; walk?: TownId }
@@ -66,7 +66,7 @@ function areasOf(town: string, country: 'LR' | 'GH'): AreaInfo[] {
  * (Roberts International is at Harbel, 48 km), a taxi. */
 function districtOf(town: string, area: Area): string {
   if (area === 'airport') return 'airport'
-  if (town === 'Monrovia') return ({ home: 'sinkor', sinkor: 'sinkor', waterside: 'downtown', jobs: 'downtown', visa: 'downtown', station: 'paynesville', skd: 'paynesville', health: 'congotown' } as Record<string, string>)[area] ?? 'sinkor'
+  if (town === 'Monrovia') return ({ city: 'sinkor', home: 'sinkor', sinkor: 'sinkor', waterside: 'downtown', jobs: 'downtown', visa: 'downtown', station: 'paynesville', skd: 'paynesville', health: 'congotown' } as Record<string, string>)[area] ?? 'sinkor'
   return 'town'
 }
 type Ride = 'walk' | 'kekeh' | 'taxi' | 'airport'
@@ -148,7 +148,12 @@ export function World({ life }: { life: Life }) {
   const areas = areasOf(here.place, here.country)
   // A spot from another town (or none yet): home in the home town, else the town itself.
   const atHomeTown = here.place === life.home_town && here.country === life.home_country
-  const valid = spot && areas.some((a) => a.area === spot.area) ? spot : { area: (atHomeTown ? 'home' : (areas.find((a) => a.walk)?.area ?? 'town')) as Area }
+  // Monrovia is one town to walk (./city/CityScene.tsx): its streets, the family's compound, the
+  // Ministry of Health's, the shops on Tubman Boulevard, all in it.
+  const whole = here.place === 'Monrovia' && here.country === 'LR'
+  const valid = spot && (areas.some((a) => a.area === spot.area) || (whole && spot.area === 'city')) ? spot : { area: (atHomeTown ? 'home' : (areas.find((a) => a.walk)?.area ?? 'town')) as Area }
+  /** Out into the town: at a place's door, or where it was left. */
+  const outTo = (place: string) => arrive({ area: 'city', place: place as Place })
   const hud = <Hud life={life} travel={here} onMap={() => setSheet('map')} onPhone={() => setSheet('phone')} />
   const sheets = (
     <>
@@ -197,7 +202,7 @@ export function World({ life }: { life: Life }) {
           travel={here}
           life={life}
           hud={hud}
-          onDoor={() => setSheet('map')}
+          onDoor={() => (whole && atHomeTown ? outTo('home') : setSheet('map'))}
           fallback={
             <Backdrop src={backdropFor(here.state === 'sleeping' ? 'home' : valid.area, here.place)}>
               {hud}
@@ -215,6 +220,37 @@ export function World({ life }: { life: Life }) {
         <Middle>{here.state === 'working' ? <AtWork /> : <Resting travel={here} />}</Middle>
         {sheets}
       </Backdrop>
+    )
+
+  // Walking the town (Monrovia): from where it was left, or out of a place's door, or where a
+  // street is entered.
+  if (whole && (valid.area === 'city' || (valid.area === 'sinkor' && (valid.walking || !valid.place))))
+    return (
+      <>
+        <StreetView
+          key={`city:${valid.place ?? ''}:${valid.at ? 'at' : ''}`}
+          town="sinkor"
+          city={{ town: 'Monrovia', start: valid.at ?? { place: valid.area === 'sinkor' ? 'enter:sinkor' : (valid.place ?? 'home') } }}
+          travel={here}
+          appearance={life.appearance}
+          name={life.game_name}
+          homeCountry={life.home_country}
+          onMove={(x, y, facing) => {
+            walked.current = { area: 'city', x, y, facing }
+            if (user) saveSpot(user.id, { area: 'city', at: { x, y, f: facing } })
+          }}
+          onEnter={(p) => {
+            // In through a gate or a door.
+            if (p === ('home' as Place)) arrive({ area: 'home' })
+            else if (p === ('health' as Place)) arrive({ area: 'health', place: 'health' })
+            else if (!(p in INSIDE)) return false
+            else arrive({ area: 'sinkor', place: p })
+            return true
+          }}
+          hud={<Hud life={life} travel={here} onMap={() => setSheet('map')} onPhone={() => setSheet('phone')} walking />}
+        />
+        {sheets}
+      </>
     )
 
   // Walking a 3D street.
@@ -247,7 +283,7 @@ export function World({ life }: { life: Life }) {
   if (valid.area === 'health')
     return (
       <>
-        <HomeView key="health" kind="health" travel={here} appearance={life.appearance} homeTown={life.home_town} homeCountry={life.home_country} hud={hud} onDoor={() => setSheet('map')} />
+        <HomeView key="health" kind="health" travel={here} appearance={life.appearance} homeTown={life.home_town} homeCountry={life.home_country} hud={hud} onDoor={() => (whole ? outTo('health') : setSheet('map'))} />
         {sheets}
       </>
     )
@@ -257,7 +293,7 @@ export function World({ life }: { life: Life }) {
   if (inside)
     return (
       <>
-        <HomeView key={inside} kind={inside} travel={here} appearance={life.appearance} homeTown={life.home_town} homeCountry={life.home_country} hud={hud} onDoor={() => arrive({ area: 'sinkor', place: valid.place!, walking: true })} />
+        <HomeView key={inside} kind={inside} travel={here} appearance={life.appearance} homeTown={life.home_town} homeCountry={life.home_country} hud={hud} onDoor={() => (whole ? outTo(valid.place!) : arrive({ area: 'sinkor', place: valid.place!, walking: true }))} />
         {sheets}
       </>
     )
@@ -496,6 +532,7 @@ function MapList({ areas, here, life, spot, onGo }: { areas: AreaInfo[]; here: T
 
 /** Where the player is on the town's map: on a 3D street, where they stood; else at the place. */
 function mapPoint(spot: Spot, walked: { area: string; x: number; y: number; facing: number } | null): MapPoint {
+  if (spot.area === 'city' && walked?.area === 'city') return { area: 'city', local: { x: walked.x, y: walked.y, facing: walked.facing } }
   if (spot.walking && walked && walked.area === spot.area) return { area: spot.area, local: { x: walked.x, y: walked.y, facing: walked.facing } }
   return { area: spot.area, place: spot.place }
 }

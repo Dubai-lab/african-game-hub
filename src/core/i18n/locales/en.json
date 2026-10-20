@@ -2967,6 +2967,17 @@
         "done": "\"You have paid already. Keep your receipt.\"",
         "nothing": "\"Get assessed at Window 1 first.\""
       }
+    },
+    "city": {
+      "where": "{{town}}",
+      "places": {
+        "home": "Your family's house",
+        "health": "Ministry of Health"
+      },
+      "enter": {
+        "home": "Go in at the gate",
+        "health": "Go to the gate"
+      }
     }
   }
 }
