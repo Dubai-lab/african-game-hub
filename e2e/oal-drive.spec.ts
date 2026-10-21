@@ -51,6 +51,7 @@ test('the family car: in, driven, out', async ({ page }) => {
   await page.getByTestId('oal-car-in').click()
   await expect(page.getByTestId('oal-car-out')).toBeVisible({ timeout: 10_000 })
   await shot(page, 'drive-2-in')
+  await page.getByTestId('oal-car-horn').click()
   // Away down the street, steering a little.
   await page.keyboard.down('ArrowUp')
   await page.waitForTimeout(2500)
@@ -72,5 +73,11 @@ test('the family car: in, driven, out', async ({ page }) => {
   await expect(page.getByTestId('oal-car-in')).toBeVisible({ timeout: 10_000 })
   await page.waitForTimeout(1500)
   await shot(page, 'drive-5-out')
+  // The sounds loaded and playing (the audio woken by the taps).
+  const audio = await page.evaluate(async () => {
+    const r = await Promise.all(['engine-idle.wav', 'engine-drive.wav', 'horn.mp3', 'door-open.mp3'].map((f) => fetch(`/oal/sounds/${f}`).then((x) => x.status)))
+    return r
+  })
+  expect(audio).toEqual([200, 200, 200, 200])
   expect(errors).toEqual([])
 })

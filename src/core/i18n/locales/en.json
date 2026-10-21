@@ -3042,7 +3042,8 @@
         "out": "Get out",
         "inside": "Inside view",
         "outside": "Outside view",
-        "yours": "Your family's car"
+        "yours": "Your family's car",
+        "horn": "Horn"
       }
     },
     "loading": {

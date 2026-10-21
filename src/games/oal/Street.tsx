@@ -424,6 +424,11 @@ export function StreetView({
             </Button>
           )}
           {carPhase === 'driving' && (
+            <Button variant="ghost" className="min-h-12 px-5" onClick={() => (ownCar.request = 'horn')} data-testid="oal-car-horn">
+              {t('oal.city.car.horn')}
+            </Button>
+          )}
+          {carPhase === 'driving' && (
             <Button className="min-h-12 px-5" onClick={() => (ownCar.request = 'out')} data-testid="oal-car-out">
               {t('oal.city.car.out')}
             </Button>

@@ -7,7 +7,7 @@
 // there: what falls far behind comes back ahead, out of sight. Where each vehicle is, as a box,
 // is kept for the player to walk against.
 import { useFrame, useLoader, useThree } from '@react-three/fiber'
-import { type RefObject, useMemo } from 'react'
+import { type RefObject, useEffect, useMemo } from 'react'
 import type { Object3D } from 'three'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
@@ -18,6 +18,7 @@ import { buildVehicle, type Kind, type Moving, SIZE, SPEED, vehicleModels, VEHIC
 import { CARS_URL, type CarModel, type CarModelName, buildCar, buildKekeh, KEKEH_URL, poseCar, randomPaint } from './cars'
 import { cityNight } from './night'
 import { ownCar } from './ownCar'
+import { type Engine, engine, playOnce } from './sound'
 import { type City, groundHeight, type Keep, type Leg, nearestNode, route, toSeg } from './cityGen'
 import { type Around, type Box, boxOf, type Drive, drive, overlaps, startDrive } from './driving'
 import type { RidePhase, RideState } from './ride'
@@ -177,6 +178,19 @@ export function CityTraffic({
     return { cars, rand, hire }
   }, [gltf, carsFile, kekehFile, people])
   const allowed = (kind: Kind) => (e: Edge) => e.kind !== 'path' && (kind === 'bus' ? e.kind !== 'minor' : true)
+  // The engines heard (the nearest few), which police drive with their sirens on, the horns' and
+  // tyres' rests, the last speeds (to hear a hard stop).
+  const engines = useMemo(() => new Map<Car, Engine>(), [])
+  const sirens = useMemo(() => new Set(cars.filter((c) => c.kind === 'police' && rand() < 0.4)), [cars, rand])
+  const cooldown = useMemo(() => new Map<Car, number>(), [])
+  const lastV = useMemo(() => new Map<Car, number>(), [])
+  useEffect(
+    () => () => {
+      for (const e of engines.values()) e.stop()
+      engines.clear()
+    },
+    [engines],
+  )
   // Vehicles keep to the roads (not the footpaths).
   const drives = (e: Edge) => e.kind !== 'path'
   const say = (r: RideState, phase: RidePhase) => {
@@ -247,9 +261,11 @@ export function CityTraffic({
       car.d.legs = [...car.d.legs.slice(0, car.d.leg + 1), ...way]
       r.stop = Infinity
       r.to = req.to
+      playOnce('doorClose', [car.d.x, 0.8, -car.d.y], 0.8)
       say(r, 'riding')
     }
     if (req?.type === 'out' && r.phase === 'arrived') {
+      if (car.d) playOnce('doorOpen', [car.d.x, 0.8, -car.d.y], 0.8)
       say(r, 'none')
       // It drives off (gone, a little later).
       setTimeout(() => {
@@ -352,6 +368,37 @@ export function CityTraffic({
       boxes.push({ x: d.x, y: d.y, yaw: d.yaw, hl: car.size.len / 2, hw: car.size.wide / 2 })
     }
     if (moving.current) moving.current.splice(0, moving.current.length, ...boxes)
+    // Heard: the nearest vehicles' engines (a few: the rest are the town's hum), their horns when
+    // held up, their tyres when they stop hard.
+    const heard = [...cars, hire.taxi, hire.kekeh].filter((c) => c.d && c.root.visible).sort((a, b) => Math.hypot(a.d!.x - camera.position.x, -a.d!.y - camera.position.z) - Math.hypot(b.d!.x - camera.position.x, -b.d!.y - camera.position.z)).slice(0, 6)
+    for (const [c, eng] of engines) if (!heard.includes(c)) {
+      eng.stop()
+      engines.delete(c)
+    }
+    for (const c of heard) {
+      const d = c.d!
+      let eng = engines.get(c)
+      if (!eng) {
+        const made = engine()
+        if (!made) continue
+        engines.set(c, made)
+        eng = made
+      }
+      const at: [number, number, number] = [d.x, 0.7, -d.y]
+      eng.set(at, d.v, d.braking ? 0 : d.v < d.top - 0.5 ? 0.6 : 0.2, c.kind === 'kekeh' ? 'kekeh' : 'car', c.kind === 'police' && sirens.has(c))
+      const last = lastV.get(c) ?? d.v
+      // Hard on the brakes from speed: the tyres.
+      if (last - d.v > 7.5 * dt && last > 7 && (cooldown.get(c) ?? 0) < seconds) {
+        playOnce('screech', at, 0.7)
+        cooldown.set(c, seconds + 4)
+      }
+      // Held up a while (by a vehicle, by someone in the road): the horn, now and then.
+      if (d.held > 2.5 && (cooldown.get(c) ?? 0) < seconds && rand() < 0.02) {
+        playOnce('horn', at, 0.8, c.kind === 'kekeh' ? 1.5 : 0.95 + rand() * 0.15)
+        cooldown.set(c, seconds + 7)
+      }
+      lastV.set(c, d.v)
+    }
     // (For tests: how the traffic is going.)
     if (stats) {
       const out = cars.filter((c) => c.d && c.root.visible).map((c) => c.d!)

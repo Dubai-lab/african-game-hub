@@ -56,6 +56,7 @@ import { groundHeight } from './cityGen'
 import { type ChunkRequest } from './chunk.worker'
 import { type PackedParts, unpackParts } from './chunkPack'
 import { cityNight } from './night'
+import { type Engine, engine, hearFrom, playOnce, townHum } from './sound'
 import { CAR_PLANS, type CarModelName, CARS_URL, buildCar, poseCar } from './cars'
 import { driveOwn, outline, ownCar, type OwnCarPhase } from './ownCar'
 import { overlaps } from './driving'
@@ -1100,6 +1101,22 @@ function NearHubs({ hubs, player }: { hubs: Hub[]; player: RefObject<{ x: number
   )
 }
 
+/** The ears (the camera), the town's traffic far off (quieter indoors, in a car). */
+const forward = new Vector3()
+function Sounds({ player }: { player: RefObject<{ x: number; y: number }> }) {
+  const { camera } = useThree()
+  useFrame(() => {
+    camera.getWorldDirection(forward)
+    hearFrom(camera.position.x, camera.position.y, camera.position.z, forward.x, forward.y, forward.z)
+    const p = player.current
+    const indoors = p ? roomAt(p.x, p.y) !== null : false
+    const inCar = ownCar.phase === 'driving'
+    townHum(indoors ? 0.06 : inCar ? 0.12 : 0.28)
+  })
+  useEffect(() => () => townHum(0), [])
+  return null
+}
+
 /** What the town has besides its streets (its traffic, its people, the hubs' streets, the
  * landmarks): if one cannot be fetched (a dropped connection), the town goes on without it. */
 class Optional extends Component<{ children: ReactNode }, { failed: boolean }> {
@@ -1688,6 +1705,8 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
     return cityMoving.current.some((m) => overlaps(box, m, 0.05))
   }
   const seatOwn = useRef(false)
+  const ownEngine = useRef<Engine | null>(null)
+  useEffect(() => () => ownEngine.current?.stop(), [])
   /** The player's own car, a frame of it (true while in it: getting in, driving, getting out). */
   const ownDriving = (dt: number) => {
     const oc = ownCar
@@ -1703,10 +1722,21 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
       oc.onPhase?.(phase)
     }
     if (req === 'in' && oc.phase === 'parked') say('entering')
-    if (req === 'out' && oc.phase === 'driving' && Math.abs(d.v) < 1.2) say('leaving')
+    if (req === 'out' && oc.phase === 'driving' && Math.abs(d.v) < 1.2) {
+      ownEngine.current?.stop()
+      ownEngine.current = null
+      say('leaving')
+    }
     if (req === 'view') oc.view = oc.view === 'outside' ? 'inside' : 'outside'
+    if (req === 'horn') playOnce('horn', undefined, 0.9)
     if (oc.phase === 'parked') return false
+    const before = oc.t
     oc.t += dt
+    // Its doors heard opening and shutting; its engine started once in.
+    const crossed = (at: number) => before < at && oc.t >= at
+    if ((oc.phase === 'entering' || oc.phase === 'leaving') && crossed(0.02)) playOnce('doorOpen', undefined, 0.8)
+    if ((oc.phase === 'entering' || oc.phase === 'leaving') && crossed(1.0)) playOnce('doorClose', undefined, 0.85)
+    if (oc.phase === 'entering' && crossed(1.2)) playOnce('start', undefined, 0.8)
     const plan = CAR_PLANS[car.model as CarModelName]
     const door = car.doors.find((q) => q.side === 'left' && q.front)
     const c = Math.cos(d.yaw)
@@ -1748,8 +1778,14 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
       const step = driveOwn(d, dt, paused ? 0 : y, paused ? 0 : x)
       const nx = d.x + Math.cos(step.yaw) * step.dist
       const ny = d.y + Math.sin(step.yaw) * step.dist
-      // Never through anything: what it meets stops it (a little bounce back).
-      if (carHits(nx, ny, step.yaw, d.len, d.wide)) d.v = -d.v * 0.2
+      // Its engine, as the throttle has it (started after the starter: three seconds in).
+      if (!ownEngine.current && oc.t > 3) ownEngine.current = engine(true)
+      ownEngine.current?.set([d.x, 0.7, -d.y], d.v, paused ? 0 : y, 'car', false)
+      // Never through anything: what it meets stops it (a little bounce back, a crash if hard).
+      if (carHits(nx, ny, step.yaw, d.len, d.wide)) {
+        if (Math.abs(d.v) > 3) playOnce('crash', undefined, Math.min(1, Math.abs(d.v) / 12))
+        d.v = -d.v * 0.2
+      }
       else {
         d.x = nx
         d.y = ny
@@ -2288,6 +2324,9 @@ function compoundsOf(town: string, map: TownMap, city: City): Compound[] {
 }
 
 export default function CityScene(props: Props) {
+  useEffect(() => {
+    if (props.hidden) townHum(0)
+  }, [props.hidden])
   const map = useTownMap(props.town)
   const city = useMemo(() => (map.data ? buildCity(map.data as unknown as TownMapData) : null), [map.data])
   const hubs = useMemo(() => (map.data ? hubsOf(props.town, map.data) : []), [map.data, props.town])
@@ -2382,6 +2421,7 @@ export default function CityScene(props: Props) {
       {props.target && <Beam at={props.target} />}
       <Signals />
       <Stats />
+      <Sounds player={player} />
       {city && (
         <>
           <Ground player={player} />

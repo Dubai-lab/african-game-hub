@@ -18,7 +18,7 @@ export type OwnCar = {
   /** The door's swing (seconds into getting in or out). */
   t: number
   /** What the page asks (read and cleared by the walker each frame). */
-  request: 'in' | 'out' | 'view' | null
+  request: 'in' | 'out' | 'view' | 'horn' | null
   /** Told the page when its phase changes. */
   onPhase?: (phase: OwnCarPhase) => void
 }

@@ -3042,7 +3042,8 @@
         "out": "Descendre",
         "inside": "Vue de l'intérieur",
         "outside": "Vue de l'extérieur",
-        "yours": "La voiture de votre famille"
+        "yours": "La voiture de votre famille",
+        "horn": "Klaxon"
       }
     },
     "loading": {
