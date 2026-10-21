@@ -18,9 +18,10 @@ import { person, type Stick } from './ArrivalsScene'
 import { CHARACTER_URL } from './character'
 import plans from './homePlan.json'
 import interiorPlans from './interiorsPlan.json'
+import { HOME_URL, OUTSIDE } from './homeModel'
 import { BUSINESS_KINDS, type BusinessKind } from './city/business'
 
-export const HOME_URL = '/oal/home.v5.glb'
+export { HOME_URL } from './homeModel'
 /** The insides of the town's places, one for each kind (scripts/oal/makeInteriors.py). */
 export const INTERIORS_URL = '/oal/interiors.v1.glb'
 export type HomeKind = 'house' | 'room' | 'phoneshop' | 'starline' | 'citrus' | 'health' | BusinessKind
@@ -78,6 +79,16 @@ function tableAt(plan: HomePlan): [number, number] | null {
 }
 const PLANS = { ...(plans as unknown as Record<string, HomePlan>), ...(interiorPlans as unknown as Record<string, HomePlan>) } as Record<HomeKind, HomePlan>
 const WALK_SPEED = 1.2
+
+/** A place's front (the inside's nearest edge to the street) and its door's middle there: where
+ * one comes in from the town, and past which one is out in it again. */
+export function frontOf(kind: HomeKind): { x: number; y: number } {
+  const plan = PLANS[kind]
+  const y = Math.min(...(plan.inside ?? [[0, plan.places.door.y, 0, 0]]).map((r) => r[1]!))
+  // The house's front door (its gate is out in the town now); elsewhere the door in the middle.
+  const x = kind === 'house' ? (plan.doors?.find((d) => d.name === 'door_front')?.cx ?? 0) : plan.places.door.x
+  return { x, y }
+}
 const RADIUS = 0.25
 const NEAR = 1.3
 const LOOK = 0.6
@@ -203,6 +214,10 @@ function Home({ kind, gateOpen }: { kind: HomeKind; gateOpen: boolean }) {
   const { home, doors, gate } = useMemo(() => {
     const home = gltf.scene.getObjectByName(kind)!.clone(true)
     home.position.set(0, 0, 0)
+    // Its own street and neighbours (made when each place stood alone): left out, the town is outside.
+    home.traverse((o) => {
+      if (OUTSIDE.test(o.name)) o.visible = false
+    })
     const doors = (plan.doors ?? []).map((d) => ({ ...d, obj: home.getObjectByName(d.name) ?? null, open: 0 }))
     const leaf = plan.gate ? home.getObjectByName(plan.gate.name) : undefined
     return { home, doors, gate: leaf ? { obj: leaf, x: leaf.position.x, open: 0 } : null }
@@ -231,6 +246,11 @@ function Home({ kind, gateOpen }: { kind: HomeKind; gateOpen: boolean }) {
   return (
     <>
       <primitive object={home} />
+      {/* The ground beyond, seen through a window or a glass front (the town itself is out of the door). */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
+        <planeGeometry args={[600, 600]} />
+        <meshStandardMaterial color="#7a6a4e" roughness={1} />
+      </mesh>
       {(plan.lights ?? []).map((l, i) => (
         <pointLight key={i} position={[l.x, l.z, -l.y]} intensity={6} distance={7} decay={1.6} color="#ffe9c8" />
       ))}
@@ -268,6 +288,10 @@ type Props = {
   gateOpen?: boolean
   /** The place is drawn (its files fetched, the character in it). */
   onReady?: () => void
+  /** Out through the front door (into the town). */
+  onOut?: () => void
+  /** Come in from the town: just inside the front door (else as the place begins: by the door, or in bed). */
+  fromTown?: boolean
   /** Seated on this seat (by its place in the plan's seats), or standing; the seat the character
    * is by (to sit on). */
   seat?: number | null
@@ -281,8 +305,10 @@ function Body(props: Props) {
   const { camera } = useThree()
   const keys = useRef(new Set<string>())
   // In by the door, or out of bed.
-  const start = plan.places.door
+  const front = frontOf(kind)
+  const start = props.fromTown ? { x: front.x, y: front.y + 0.2, face: [0, 1] } : plan.places.door
   const state = useRef({ x: start.x + start.face[0]! * 0.8, y: start.y + start.face[1]! * 0.8, facing: Math.atan2(start.face[0]!, -start.face[1]!), speed: 0, place: null as HomePlace | null })
+  const out = useRef(false)
   const me = useMemo(() => {
     const p = person(gltf.scene, gltf.animations, appearance)
     p.actions.idle?.play()
@@ -541,6 +567,11 @@ function Body(props: Props) {
         onSeat?.(by)
       }
       walker.current = { x: s.x, y: s.y }
+      // Out past the front: back in the town, at this place's door.
+      if (props.fromTown && !out.current && s.y < front.y - 0.45) {
+        out.current = true
+        props.onOut?.()
+      }
       if (me.actions.walk && me.actions.idle) {
         const reaching = doing.current?.reach || sitting.current ? 1 : 0
         me.actions.walk.weight = s.speed * (1 - reaching)

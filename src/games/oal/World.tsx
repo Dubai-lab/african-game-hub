@@ -18,12 +18,13 @@ import { supabase } from '@/core/lib/supabase'
 import { Button, buttonClass } from '@/core/ui/Button'
 import { Skeleton } from '@/core/ui/Skeleton'
 import { toast } from '@/core/ui/toast'
+import { gates } from './homeModel'
 import { useQueryClient } from '@tanstack/react-query'
 import type { Appearance, HomeCountry, Sex } from '../../../supabase/functions/_shared/oal'
 import { BodyPanel, OverstayWarning, Resting } from './Body'
 import { RoomSection } from './Home'
 import { OnTheWay, Travel, type TravelState, useGameNow, useTravel } from './Journey'
-import { type MapPoint, MapView, type Mark } from './MapView'
+import { type MapPoint, MapView, type Mark, markAt, useTownMap } from './MapView'
 import { HomeView, useHomeKind } from './HomeView'
 import { PhoneDevice } from './Phone'
 import { OnTheRoad, Station } from './Road'
@@ -110,6 +111,7 @@ export function World({ life }: { life: Life }) {
   const [riding, setRiding] = useState<{ to: Spot; rides: Ride[] } | null>(null)
   // The GPS's target in the town (set on the map), until got there.
   const [target, setTarget] = useState<{ x: number; y: number; name: string } | null>(null)
+  const townMap = useTownMap(travel.data?.place ?? '')
   const arrive = (next: Spot) => {
     setSpot(next)
     setSheet(null)
@@ -157,6 +159,14 @@ export function World({ life }: { life: Life }) {
   const valid = spot && (areas.some((a) => a.area === spot.area) || (whole && (spot.area === 'city' || (spot.area === 'biz' && spot.biz)))) ? spot : { area: (atHomeTown ? 'home' : (areas.find((a) => a.walk)?.area ?? 'town')) as Area }
   /** Out into the town: at a place's door, or where it was left. */
   const outTo = (place: string) => arrive({ area: 'city', place: place as Place })
+  // In Monrovia, chosen from the map's list: the GPS set to it (never there at once), but the
+  // airport (48 km out of town: a taxi there).
+  const guide = (next: Spot) => {
+    const at = whole && next.area !== 'airport' && townMap.data ? markAt(townMap.data, { area: next.area, place: next.place ?? next.area }) : null
+    if (!at) return go(next)
+    setTarget({ x: at[0], y: at[1], name: placeName(next.area, (next.place ?? next.area) as Place | Other, here.place, life, t) })
+    setSheet(null)
+  }
   const hud = <Hud life={life} travel={here} onMap={() => setSheet('map')} onPhone={() => setSheet('phone')} />
   const sheets = (
     <>
@@ -168,7 +178,7 @@ export function World({ life }: { life: Life }) {
           me={mapPoint(valid, walked.current)}
           onGo={(mark, walk) => go({ area: mark.area as Area, place: mark.place as Place | Other, walking: walk })}
           onClose={() => setSheet(null)}
-          list={<MapList areas={areas} here={here} life={life} spot={valid} onGo={go} />}
+          list={<MapList areas={areas} here={here} life={life} spot={valid} onGo={guide} />}
           onTarget={here.place === 'Monrovia' ? (tg) => setTarget(tg) : undefined}
         />
       )}
@@ -207,6 +217,7 @@ export function World({ life }: { life: Life }) {
           life={life}
           hud={hud}
           onDoor={() => (whole && atHomeTown ? outTo('home') : setSheet('map'))}
+          fromTown={whole && atHomeTown}
           fallback={
             <Backdrop src={backdropFor(here.state === 'sleeping' ? 'home' : valid.area, here.place)}>
               {hud}
@@ -254,13 +265,21 @@ export function World({ life }: { life: Life }) {
               return true
             }
             if (p === ('home' as Place)) arrive({ area: 'home' })
-            else if (['jobs', 'visa', 'station'].includes(p)) arrive({ area: p as Area, place: p as Other })
-            else if (p === ('health' as Place)) arrive({ area: 'health', place: 'health' })
+            else if (['jobs', 'visa'].includes(p)) arrive({ area: p as Area, place: p as Other })
+            // The parking station: its tickets sold at the booth, out in the town.
+            else if ((p as string) === 'station') return false
+            else if (p === ('health-gate' as Place)) {
+              // The police at the gate: asked one's business, let in (the gate slides open).
+              if (!gates.health) toast.info(`${t('oal.health.gate.ask')} ${t('oal.health.gate.business')}`)
+              gates.health = true
+              setTimeout(() => toast.info(t('oal.health.gate.goIn')), 1200)
+            } else if (p === ('health' as Place)) arrive({ area: 'health', place: 'health' })
             else if (!(p in INSIDE)) return false
             else arrive({ area: 'sinkor', place: p })
             return true
           }}
           hud={<Hud life={life} travel={here} onMap={() => setSheet('map')} onPhone={() => setSheet('phone')} walking />}
+          panelOf={(p) => (p === 'station' ? <Station travel={here} /> : null)}
         />
         {sheets}
       </>
@@ -310,6 +329,7 @@ export function World({ life }: { life: Life }) {
           homeCountry={life.home_country}
           hud={hud}
           onDoor={() => arrive({ area: 'city', at: { x: b.door[0], y: b.door[1], f: Math.atan2(-b.face[0], b.face[1]) } })}
+          fromTown
         />
         {sheets}
       </>
@@ -320,7 +340,7 @@ export function World({ life }: { life: Life }) {
   if (valid.area === 'health')
     return (
       <>
-        <HomeView key="health" kind="health" travel={here} appearance={life.appearance} homeTown={life.home_town} homeCountry={life.home_country} hud={hud} onDoor={() => (whole ? outTo('health') : setSheet('map'))} />
+        <HomeView key="health" kind="health" travel={here} appearance={life.appearance} homeTown={life.home_town} homeCountry={life.home_country} hud={hud} onDoor={() => (whole ? outTo('health') : setSheet('map'))} fromTown={whole} />
         {sheets}
       </>
     )
@@ -330,7 +350,29 @@ export function World({ life }: { life: Life }) {
   if (inside)
     return (
       <>
-        <HomeView key={inside} kind={inside} travel={here} appearance={life.appearance} homeTown={life.home_town} homeCountry={life.home_country} hud={hud} onDoor={() => (whole ? outTo(valid.place!) : arrive({ area: 'sinkor', place: valid.place!, walking: true }))} />
+        <HomeView key={inside} kind={inside} travel={here} appearance={life.appearance} homeTown={life.home_town} homeCountry={life.home_country} hud={hud} onDoor={() => (whole ? outTo(valid.place!) : arrive({ area: 'sinkor', place: valid.place!, walking: true }))} fromTown={whole} />
+        {sheets}
+      </>
+    )
+
+  // In Monrovia, the visa office and the job centre: their buildings in the town, walked into
+  // (an office inside), out of their doors onto the street again.
+  if (whole && (valid.area === 'visa' || valid.area === 'jobs'))
+    return (
+      <>
+        <HomeView
+          key={valid.area}
+          kind="office"
+          title={placeName(valid.area, valid.area, here.place, life, t)}
+          travel={here}
+          appearance={life.appearance}
+          homeTown={life.home_town}
+          homeCountry={life.home_country}
+          hud={hud}
+          onDoor={() => outTo(valid.area)}
+          fromTown
+          panel={<OtherPanel place={valid.area} travel={here} life={life} />}
+        />
         {sheets}
       </>
     )
@@ -596,9 +638,9 @@ function RideChoice({ country, rides, onRide, onClose }: { country: 'LR' | 'GH';
 }
 
 /** Home in 3D where the life has one here (the family's house, a rented room); else the picture. */
-function AtHome({ travel, life, hud, onDoor, fallback }: { travel: TravelState; life: Life; hud: ReactNode; onDoor: () => void; fallback: ReactNode }) {
+function AtHome({ travel, life, hud, onDoor, fallback, fromTown }: { travel: TravelState; life: Life; hud: ReactNode; onDoor: () => void; fallback: ReactNode; fromTown?: boolean }) {
   const kind = useHomeKind(travel, life.home_town, life.home_country)
   if (kind === undefined) return <Skeleton className="fixed inset-0 rounded-none" />
   if (kind === null) return <>{fallback}</>
-  return <HomeView kind={kind} travel={travel} appearance={life.appearance} homeTown={life.home_town} homeCountry={life.home_country} hud={hud} onDoor={onDoor} />
+  return <HomeView kind={kind} travel={travel} appearance={life.appearance} homeTown={life.home_town} homeCountry={life.home_country} hud={hud} onDoor={onDoor} fromTown={fromTown && kind === 'house'} />
 }

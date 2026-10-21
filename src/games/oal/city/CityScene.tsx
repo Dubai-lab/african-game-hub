@@ -21,6 +21,7 @@ import {
   Color,
   DoubleSide,
   type Group,
+  Group as ThreeGroup,
   Mesh,
   MeshBasicMaterial,
   InstancedMesh,
@@ -42,7 +43,7 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import type { Appearance } from '../../../../supabase/functions/_shared/oal'
 import { person, type Stick } from '../ArrivalsScene'
-import { CHARACTER_URL } from '../character'
+import { CHARACTER_URL, CROWD_URL } from '../character'
 import { type TownMap, useTownMap } from '../MapView'
 import { TOWNS } from '../StreetScene'
 import { keepOutOf, type Moving, Traffic } from '../Traffic'
@@ -54,7 +55,10 @@ import { groundHeight } from './cityGen'
 import { type ChunkRequest } from './chunk.worker'
 import { type PackedParts, unpackParts } from './chunkPack'
 import { type Landmark, LANDMARKS, landmarkPoint, landmarkSolids } from './landmarks'
-import { buildChunk, buildCity, CHUNK, type City, type ChunkParts, type Keep, nearestRoad, segsNear, type Solid, type Tile, toSeg, type TownMapData, waterGeometry } from './cityGen'
+import { COMPOUNDS_BUILT, gates, HOME_URL, OUTSIDE } from '../homeModel'
+import { stillFigure, VEHICLES_URL, vehicleModels } from '../Traffic'
+import { defaultAppearance } from '../../../../supabase/functions/_shared/oal'
+import { buildChunk, buildCity, CHUNK, solidOf, type City, type ChunkParts, type Keep, nearestRoad, segsNear, type Solid, type Tile, toSeg, type TownMapData, waterGeometry } from './cityGen'
 
 const WALK_SPEED = 1.45
 const RADIUS = 0.3
@@ -63,7 +67,7 @@ const NEAR = 2.6
 const AROUND = 2
 
 /** A place in the town: what, where, which way one faces it. */
-export type CityPlace = { name: string; x: number; y: number; face: number[] }
+export type CityPlace = { name: string; x: number; y: number; face: number[]; out?: number; exit?: [number, number] }
 
 // ---- Textures, drawn in code (nothing to download) --------------------------------------------
 
@@ -1560,6 +1564,7 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
           if (bb ? Math.max(s.x, ex) < bb[0] || Math.min(s.x, ex) > bb[2] || Math.max(s.y, ey) < bb[1] || Math.min(s.y, ey) > bb[3] : Math.abs(poly[0]![0]! - s.x) > 16 || Math.abs(poly[0]![1]! - s.y) > 16) continue
           pull = Math.min(pull, segmentHit(s.x, s.y, ex, ey, poly))
         }
+    for (const c of compounds) if (Math.hypot(c.x - s.x, c.y - s.y) < 40) for (const poly of compoundSolids(c)) pull = Math.min(pull, segmentHit(s.x, s.y, ex, ey, poly))
     if (pull < 1) {
       // A wall between: in front of it if that is not too close; else up over the character's
       // head, looking down on them (never in on them).
@@ -1618,61 +1623,210 @@ function namedRoad(city: City, x: number, y: number): string | null {
 /** The town's own traffic (town metres). */
 const cityMoving: { current: Moving[] } = { current: [] }
 
-/** A compound's walls (with the gate's gap), as solids. */
-function compoundSolids(c: Compound): Solid[] {
+/** A point of a compound's model (x across, y from its gate at the front to its back) in the town. */
+function compoundPoint(c: Compound, u: number, v: number): [number, number] {
   const cs = Math.cos(c.yaw)
   const sn = Math.sin(c.yaw)
-  const at = (u: number, v: number) => [c.x + cs * u - sn * v, c.y + sn * u + cs * v]
-  const rect = (u0: number, v0: number, u1: number, v1: number) => [at(u0, v0), at(u1, v0), at(u1, v1), at(u0, v1)]
-  const W = c.w / 2
-  const D = c.d / 2
-  const B = c.building
-  return [
-    rect(-W, D - 0.15, W, D + 0.15),
-    rect(-W - 0.15, -D, -W + 0.15, D),
-    rect(W - 0.15, -D, W + 0.15, D),
-    // The front, either side of the gate (2 m either side of the middle).
-    rect(-W, -D - 0.15, -2, -D + 0.15),
-    rect(2, -D - 0.15, W, -D + 0.15),
-    rect(-B.w / 2, -B.d / 2 + 1, B.w / 2, B.d / 2 + 1),
-  ]
+  const w = v - COMPOUNDS_BUILT[c.name as keyof typeof COMPOUNDS_BUILT].cy
+  return [c.x + cs * u - sn * w, c.y + sn * u + cs * w]
 }
 
+/** A compound's walls, its house's or its building's, its yard's things (its plan's), as solids;
+ * the Ministry's gate while it is shut. */
+const builtSolids = new Map<string, Solid[]>()
+function compoundSolids(c: Compound): Solid[] {
+  const built = COMPOUNDS_BUILT[c.name as keyof typeof COMPOUNDS_BUILT]
+  const rect = (r: number[]) => solidOf([compoundPoint(c, r[0]!, r[1]!), compoundPoint(c, r[2]!, r[1]!), compoundPoint(c, r[2]!, r[3]!), compoundPoint(c, r[0]!, r[3]!)])
+  const k = `${c.name}:${c.x}:${c.y}`
+  let walls = builtSolids.get(k)
+  if (!walls) builtSolids.set(k, (walls = built.plan.solids.map(rect)))
+  const gate = 'gate' in built.plan ? built.plan.gate : undefined
+  return gate && c.name === 'health' && !gates.health ? [...walls, rect(gate.solid)] : walls
+}
+
+/** A compound as it is built (the house on its plot, the Ministry in its compound: the same model
+ * as their insides, without the street each once had of its own), its gate's leaf sliding open
+ * when the guards let one in, the guards at the gate. */
 function CompoundModel({ c }: { c: Compound }) {
+  const built = COMPOUNDS_BUILT[c.name as keyof typeof COMPOUNDS_BUILT]
+  const gltf = useLoader(GLTFLoader, HOME_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const crowd = useLoader(GLTFLoader, CROWD_URL('male'), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const { root, gate, guards } = useMemo(() => {
+    const root = gltf.scene.getObjectByName(built.kind)!.clone(true)
+    root.traverse((o) => {
+      if (OUTSIDE.test(o.name)) o.visible = false
+    })
+    const [x, y] = compoundPoint(c, 0, 0)
+    root.position.set(x, 0, -y)
+    root.rotation.set(0, c.yaw, 0)
+    const plan = built.plan
+    const leaf = 'gate' in plan && plan.gate ? root.getObjectByName(plan.gate.name) : undefined
+    // The police at the Ministry's gate, in navy, standing.
+    const guards = ('guards' in plan ? (plan.guards ?? []) : []).map((g, i) => {
+      const base = defaultAppearance('male')
+      const p = person(crowd.scene, crowd.animations, { ...base, skin: [0.8, 0.65][i % 2]!, outfit: 'suit', hair: 'lowcut' }, '#1f2f5a')
+      ;(p.actions.idle ?? p.actions.walk)?.play()
+      p.mixer.update(0.3)
+      const fig = stillFigure(p.root, 'guard')
+      fig.position.set(g.x, 0.02, -g.y)
+      fig.rotation.y = Math.atan2(g.face[0]!, -g.face[1]!)
+      root.add(fig)
+      return fig
+    })
+    return { root, gate: leaf ? { obj: leaf, x: leaf.position.x, open: 0 } : null, guards }
+  }, [gltf, crowd, c, built])
+  useFrame((_, raw) => {
+    if (!gate || !('gate' in built.plan) || !built.plan.gate) return
+    const want = c.name === 'health' && gates.health ? 1 : 0
+    gate.open += (want - gate.open) * Math.min(1, Math.min(raw, 0.1) * 1.5)
+    gate.obj.position.x = gate.x + built.plan.gate.slide * gate.open
+  })
+  void guards
+  return <primitive object={root} />
+}
+
+// ---- The game's own offices and the parking station ------------------------------------------------
+
+/** The visa office, the job centre (an office building each, its name over the door) and the
+ * parking station (a lot of parked buses, taxis and kekehs, its shelter and ticket booth), where
+ * they are on the town's map, each facing its road. */
+type Site = { name: 'visa' | 'jobs' | 'station'; title: string; x: number; y: number; yaw: number; w: number; d: number }
+const SITE_SIZE: Record<Site['name'], [number, number]> = { visa: [16, 12], jobs: [16, 12], station: [40, 28] }
+const SITE_TITLE: Record<Site['name'], string> = { visa: 'VISA OFFICE', jobs: 'JOB CENTRE', station: 'RED LIGHT PARKING STATION' }
+
+function sitesOf(town: string, map: TownMap, city: City): Site[] {
+  if (town !== 'Monrovia') return []
+  const out: Site[] = []
+  for (const name of ['visa', 'jobs', 'station'] as const) {
+    const at = map.places[name]
+    if (!at) continue
+    const [w, d] = SITE_SIZE[name]
+    const c = compoundAt(city, name, at.x, at.y, w, d, { w, d, h: 6, colour: '#e9e0c6', roof: 'flat' })
+    out.push({ name, title: SITE_TITLE[name], x: c.x, y: c.y, yaw: c.yaw, w, d })
+  }
+  return out
+}
+
+/** A point of a site (u across, v from its front, -v, to its back) in the town. */
+function sitePoint(s: { x: number; y: number; yaw: number }, u: number, v: number): [number, number] {
+  const cs = Math.cos(s.yaw)
+  const sn = Math.sin(s.yaw)
+  return [s.x + cs * u - sn * v, s.y + sn * u + cs * v]
+}
+
+/** Where one goes in (the office's door; the station's ticket booth), facing in. */
+function siteDoor(s: Site): { x: number; y: number; face: number[] } {
+  const [x, y] = s.name === 'station' ? sitePoint(s, s.w / 2 - 6, -s.d / 2 + 4.2) : sitePoint(s, 0, -s.d / 2 - 1.0)
+  return { x, y, face: [-Math.sin(s.yaw), Math.cos(s.yaw)] }
+}
+
+function siteSolids(s: Site): Solid[] {
+  const rect = (u0: number, v0: number, u1: number, v1: number) => solidOf([sitePoint(s, u0, v0), sitePoint(s, u1, v0), sitePoint(s, u1, v1), sitePoint(s, u0, v1)])
+  if (s.name !== 'station') return [rect(-s.w / 2, -s.d / 2, s.w / 2, s.d / 2)]
+  // The ticket booth; the parked vehicles' rows.
+  return [rect(s.w / 2 - 7.5, -s.d / 2 + 4.5, s.w / 2 - 4.5, -s.d / 2 + 7), rect(-s.w / 2 + 2, 2, s.w / 2 - 2, 12)]
+}
+
+function SiteModel({ s }: { s: Site }) {
   const mats = useMaterials()
-  const meshes = useMemo(() => {
-    // Boxes, the colours of the town's own houses: the walls round, the gate's pillars, the house.
-    const parts: Mesh[] = []
-    const cs = Math.cos(c.yaw)
-    const sn = Math.sin(c.yaw)
-    const box = (u: number, v: number, w: number, d: number, z: number, h: number, mat: MeshStandardMaterial, colour: string) => {
+  const vehicles = useLoader(GLTFLoader, VEHICLES_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const { group, boards } = useMemo(() => {
+    const group = new ThreeGroup()
+    const [ox, oy] = sitePoint(s, 0, 0)
+    group.position.set(ox, 0, -oy)
+    group.rotation.y = s.yaw
+    // In the group: x across (u), y up, z = -v (the front, -v, toward +z).
+    const box = (u: number, v: number, w: number, d: number, z: number, h: number, colour: string, mat: MeshStandardMaterial = mats.plain) => {
       const m = new Mesh(new BoxGeometry(w, h, d), mat.clone())
-      ;(m.material as MeshStandardMaterial).color = new Color(colour)
-      ;(m.material as MeshStandardMaterial).vertexColors = false
-      m.position.set(c.x + cs * u - sn * v, z + h / 2, -(c.y + sn * u + cs * v))
-      m.rotation.y = c.yaw
-      parts.push(m)
+      const mm = m.material as MeshStandardMaterial
+      mm.vertexColors = false
+      mm.map = null
+      mm.color = new Color(colour)
+      m.position.set(u, z + h / 2, -v)
+      group.add(m)
+      return m
     }
-    const W = c.w / 2
-    const D = c.d / 2
-    box(0, D, c.w, 0.3, 0, 2.4, mats.plain, c.wall)
-    box(-W, 0, 0.3, c.d, 0, 2.4, mats.plain, c.wall)
-    box(W, 0, 0.3, c.d, 0, 2.4, mats.plain, c.wall)
-    box((-W - 2) / 2, -D, W - 2, 0.3, 0, 2.4, mats.plain, c.wall)
-    box((W + 2) / 2, -D, W - 2, 0.3, 0, 2.4, mats.plain, c.wall)
-    box(-2.1, -D, 0.5, 0.5, 0, 2.8, mats.plain, c.wall)
-    box(2.1, -D, 0.5, 0.5, 0, 2.8, mats.plain, c.wall)
-    const B = c.building
-    box(0, 1, B.w, B.d, 0, B.h, mats.walls, B.colour)
-    if (B.roof === 'hip') box(0, 1, B.w + 1, B.d + 1, B.h, 0.25, mats.roofs, '#8a3a24')
-    else box(0, 1, B.w + 0.3, B.d + 0.3, B.h, 0.6, mats.plain, B.colour)
-    return parts
-  }, [c, mats])
+    const signs: Sign[] = []
+    // A sign board facing the front, at (u, v), its middle z high.
+    const board = (text: string, u: number, v: number, z: number, w: number, h: number, cat: string) => {
+      const [x, y] = sitePoint(s, u, v)
+      signs.push({ text, cat, x, y, z, yaw: Math.atan2(-Math.cos(s.yaw), Math.sin(s.yaw)), w, h })
+    }
+    if (s.name !== 'station') {
+      const W = s.w
+      const D = s.d
+      box(0, 0, W, D, 0, 6.6, '#e9e0c6')
+      box(0, 0, W + 0.4, D + 0.4, 6.6, 0.7, '#d8ccb0')
+      box(0, -D / 2 - 0.05, W + 0.1, 0.12, 3.2, 0.25, '#b8ac90')
+      // The windows, two floors; the door in the middle, glass, and its steps.
+      for (const z of [1.0, 4.2])
+        for (let i = 0; i < 6; i++) {
+          const u = -W / 2 + 1.6 + i * ((W - 3.2) / 5)
+          if (z < 2 && Math.abs(u) < 2) continue
+          box(u, -D / 2 - 0.04, 1.5, 0.1, z, 1.5, '#2a3a44')
+        }
+      box(0, -D / 2 - 0.05, 2.2, 0.12, 0, 2.5, '#1a2a30')
+      box(0, -D / 2 - 0.9, 3.6, 1.6, 0, 0.16, '#bdb6a8')
+      box(0, -D / 2 - 0.9, 3.6, 0.1, 2.6, 0.12, '#8a8478')
+      board(s.title, 0, -D / 2 - 0.12, 3.05, Math.min(W - 2, 9), 0.85, 'government')
+    } else {
+      const W = s.w
+      const D = s.d
+      // The lot, worn bare; the shelter of zinc on its posts; the ticket booth by the road.
+      const lot = new Mesh(new PlaneGeometry(W, D), new MeshStandardMaterial({ color: '#9a6a44', roughness: 1 }))
+      lot.rotation.x = -Math.PI / 2
+      lot.position.set(0, 0.02, 0)
+      group.add(lot)
+      for (let i = 0; i < 6; i++) for (const v of [-4, 2]) box(-W / 2 + 4 + i * ((W - 8) / 5), v, 0.12, 0.12, 0, 3.2, '#5a5a58')
+      box(0, -1, W - 6, 7.5, 3.2, 0.08, '#9a9a96', mats.roofs)
+      for (let i = 0; i < 4; i++) box(-W / 2 + 6 + i * 3.2, -2, 2.6, 0.5, 0, 0.45, '#6b4a2e')
+      box(W / 2 - 6, -D / 2 + 5.75, 3, 2.5, 0, 2.6, '#2a5aa8')
+      box(W / 2 - 6, -D / 2 + 5.75, 3.6, 3.1, 2.6, 0.12, '#9a9a96', mats.roofs)
+      box(W / 2 - 6, -D / 2 + 4.48, 1.6, 0.06, 1.0, 0.9, '#1a2a30')
+      board('TICKETS', W / 2 - 6, -D / 2 + 4.42, 2.15, 2.6, 0.5, 'transport')
+      // Its name at the entrance, on two posts.
+      for (const u of [-4, 4]) box(u - W / 2 + 10, -D / 2 + 0.6, 0.15, 0.15, 0, 4.4, '#4a4a48')
+      board(s.title, -W / 2 + 10, -D / 2 + 0.5, 3.8, 8.6, 1.0, 'transport')
+      // The vehicles waiting for their passengers, in a row under and beyond the shelter.
+      const models = vehicleModels(vehicles.scene)
+      const parked: [string, number, number, string][] = [
+        ['bus', -12, 7, '#f0f0ee'],
+        ['bus', -4, 7, '#e8c020'],
+        ['sedan', 4, 7, '#e9b51c'],
+        ['sedan', 8.5, 7, '#e9b51c'],
+        ['kekeh', 12.5, 7, '#e8b41c'],
+        ['kekeh', 15, 7, '#2a6ab8'],
+        ['sedan', -14, 11, '#e9b51c'],
+        ['bus', 6, 11, '#f0f0ee'],
+      ]
+      for (const [name, u, v, paint] of parked) {
+        const m = models[name]
+        if (!m) continue
+        const car = m.clone(true)
+        car.traverse((o: Object3D) => {
+          const mesh = o as Mesh
+          if (!mesh.isMesh) return
+          const mat = mesh.material as MeshStandardMaterial
+          if (mat.name.startsWith('paint')) {
+            mesh.material = mat.clone()
+            ;(mesh.material as MeshStandardMaterial).color = new Color(paint)
+          }
+        })
+        // Nose toward the road (the models face +x).
+        car.position.set(u, 0.03, -v)
+        car.rotation.y = -Math.PI / 2
+        group.add(car)
+      }
+    }
+    // (The boards are in the town's frame: drawn beside the turned group, not in it.)
+    const boards = signMesh(signs)
+    return { group, boards }
+  }, [s, mats, vehicles])
+  useEffect(() => () => boards?.dispose(), [boards])
   return (
     <>
-      {meshes.map((m, i) => (
-        <primitive key={i} object={m} />
-      ))}
+      <primitive object={group} />
+      {boards && <primitive object={boards.mesh} />}
     </>
   )
 }
@@ -1696,9 +1850,9 @@ function compoundsOf(town: string, map: TownMap, city: City): Compound[] {
   if (town !== 'Monrovia') return []
   const out: Compound[] = []
   const home = map.places.home
-  if (home) out.push(compoundAt(city, 'home', home.x, home.y, 22, 20, { w: 12, d: 10, h: 3.2, colour: '#e8d6a6', roof: 'hip' }, '#d8d0c0'))
+  if (home) out.push(compoundAt(city, 'home', home.x, home.y, COMPOUNDS_BUILT.home.w, COMPOUNDS_BUILT.home.d, { w: 12, d: 10, h: 3.2, colour: '#e8d6a6', roof: 'hip' }, '#d8d0c0'))
   const health = map.places.health
-  if (health) out.push(compoundAt(city, 'health', health.x, health.y, 30, 28, { w: 15, d: 11, h: 6.9, colour: '#e9e0c6', roof: 'flat' }, '#d8d0c0'))
+  if (health) out.push(compoundAt(city, 'health', health.x, health.y, COMPOUNDS_BUILT.health.w, COMPOUNDS_BUILT.health.d, { w: 15, d: 11, h: 6.9, colour: '#e9e0c6', roof: 'flat' }, '#d8d0c0'))
   return out
 }
 
@@ -1707,44 +1861,43 @@ export default function CityScene(props: Props) {
   const city = useMemo(() => (map.data ? buildCity(map.data as unknown as TownMapData) : null), [map.data])
   const hubs = useMemo(() => (map.data ? hubsOf(props.town, map.data) : []), [map.data, props.town])
   const compounds = useMemo(() => (map.data && city ? compoundsOf(props.town, map.data, city) : []), [map.data, city, props.town])
+  const sites = useMemo(() => (map.data && city ? sitesOf(props.town, map.data, city) : []), [map.data, city, props.town])
   const keep = useMemo<Keep[]>(
     () => [
       ...hubs.map((h) => ({ x: h.x, y: h.y, r: TOWNS[h.town].plan.reach + 4 })),
       ...compounds.map((c) => ({ x: c.x, y: c.y, r: Math.max(c.w, c.d) / 2 + 3, roads: false })),
+      ...sites.map((x) => ({ x: x.x, y: x.y, r: Math.max(x.w, x.d) / 2 + 3, roads: false, solids: siteSolids(x).map((p) => [...p]) })),
       ...(props.town === 'Monrovia' ? LANDMARKS : []).map((l) => ({ x: l.x, y: l.y, r: l.clear, roads: false, solids: landmarkSolids(l) })),
     ],
-    [hubs, compounds, props.town],
+    [hubs, compounds, sites, props.town],
   )
   // The places: the hubs' own (in town metres), the compounds' gates.
   const places = useMemo<CityPlace[]>(() => {
     const out: CityPlace[] = []
     // A hub's own places (Sinkor's by their names; any other hub's as "hub:place").
     for (const h of hubs) for (const [name, at] of Object.entries(TOWNS[h.town].places)) out.push({ name: h.town === 'sinkor' ? name : `${h.town}:${name}`, x: at!.x + h.x, y: at!.y + h.y, face: at!.face })
-    // The places the game has no building for yet (the job board, the embassies, the motor park):
-    // by the road nearest them.
-    for (const name of ['jobs', 'visa', 'station']) {
-      const at = map.data?.places[name]
-      if (!at || !city) continue
-      const road = nearestRoad(city, at.x, at.y, 200)
-      if (!road) continue
-      let nx = at.x - road.px
-      let ny = at.y - road.py
-      const n = Math.hypot(nx, ny) || 1
-      nx /= n
-      ny /= n
-      const off = road.seg.w / 2 + 2.5
-      out.push({ name, x: road.px + nx * off, y: road.py + ny * off, face: [nx, ny] })
-    }
+    // The visa office's and the job centre's doors; the parking station's ticket booth.
+    for (const x of sites) out.push({ name: x.name, ...siteDoor(x), out: 2.5 })
     for (const c of compounds) {
-      const cs = Math.cos(c.yaw)
-      const sn = Math.sin(c.yaw)
-      // Just outside the gate.
-      const u = 0
-      const v = -c.d / 2 - 1.2
-      out.push({ name: c.name, x: c.x + cs * u - sn * v, y: c.y + sn * u + cs * v, face: [-sn, cs] })
+      // Facing in (from the gate toward the back).
+      const face = [-Math.sin(c.yaw), Math.cos(c.yaw)]
+      const at = (name: string, u: number, v: number) => {
+        const [x, y] = compoundPoint(c, u, v)
+        // Out of the door: on the path down the middle of the yard, facing the gate.
+        out.push({ name, x, y, face, exit: compoundPoint(c, 0, -11.5) })
+      }
+      if (c.name === 'home') {
+        // On the porch before the front door (the house's inside is in through it).
+        const front = COMPOUNDS_BUILT.home.plan.doors?.find((d) => d.name === 'door_front')
+        at('home', front?.cx ?? 0, -5.9)
+      } else if (c.name === 'health') {
+        // At the gate, where the guards are; at the hall's door, past the forecourt.
+        at('health-gate', 0, -17.6)
+        at('health', 0, -5.9)
+      }
     }
     return out
-  }, [hubs, compounds, map.data, city])
+  }, [hubs, compounds, sites, map.data, city])
   useEffect(() => props.onReady?.(places), [places]) // eslint-disable-line react-hooks/exhaustive-deps
   // Where a ride can take one: the family's gate, the hubs where they are entered, the Ministry,
   // the job board, the embassies, the motor park.
@@ -1752,7 +1905,7 @@ export default function CityScene(props: Props) {
     if (!city) return
     const list: Destination[] = []
     const of = (name: string) => places.find((p) => p.name === name)
-    for (const name of ['home', 'sinkor', 'health', 'waterside', 'skd', 'jobs', 'visa', 'station']) {
+    for (const name of ['home', 'phone', 'starline', 'citrus', 'sinkor', 'health', 'waterside', 'skd', 'jobs', 'visa', 'station']) {
       const hub = hubs.find((h) => h.town === name)
       if (hub) {
         const sp = TOWNS[hub.town].plan.spawn
@@ -1778,7 +1931,10 @@ export default function CityScene(props: Props) {
     }
     const at = places.find((p) => p.name === given.place)
     if (!at) return null
-    return { x: at.x - at.face[0]! * 1.0, y: at.y - at.face[1]! * 1.0, f: Math.atan2(-at.face[0]!, at.face[1]!) }
+    // A few steps out of the door (more where a porch or a step is: room for the camera behind).
+    const out = at.out ?? 1.0
+    if (at.exit) return { x: at.exit[0], y: at.exit[1], f: Math.atan2(-at.face[0]!, at.face[1]!) }
+    return { x: at.x - at.face[0]! * out, y: at.y - at.face[1]! * out, f: Math.atan2(-at.face[0]!, at.face[1]!) }
   }, [props.start, places, hubs])
   const player = useRef({ x: 0, y: 0 })
   if (start && player.current.x === 0 && player.current.y === 0) player.current = { x: start.x, y: start.y }
@@ -1799,9 +1955,18 @@ export default function CityScene(props: Props) {
           <Ground player={player} />
           <Water city={city} />
           <Chunks city={city} map={map.data as unknown as TownMapData} keep={keep} player={player} solids={solids} town={props.town} />
-          {compounds.map((c) => (
-            <CompoundModel key={c.name} c={c} />
-          ))}
+          <Suspense fallback={null}>
+            {compounds.map((c) => (
+              <Optional key={c.name}>
+                <CompoundModel c={c} />
+              </Optional>
+            ))}
+            {sites.map((x) => (
+              <Optional key={x.name}>
+                <SiteModel s={x} />
+              </Optional>
+            ))}
+          </Suspense>
           <Suspense fallback={null}>
             <Optional>
               <NearHubs hubs={hubs} player={player} />

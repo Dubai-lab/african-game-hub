@@ -2972,15 +2972,17 @@
       "where": "{{town}}",
       "places": {
         "home": "Your family's house",
-        "health": "Ministry of Health"
+        "health": "Ministry of Health",
+        "healthGate": "Ministry of Health, the gate"
       },
       "enter": {
-        "home": "Go in at the gate",
-        "health": "Go to the gate",
+        "home": "Go in",
+        "health": "Go in",
         "jobs": "Go in",
         "visa": "Go in",
-        "station": "Go in",
-        "business": "Go in"
+        "station": "Buy a ticket",
+        "business": "Go in",
+        "health-gate": "Speak to the guards"
       },
       "ride": {
         "hail": {

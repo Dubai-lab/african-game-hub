@@ -414,10 +414,25 @@ export function MapView({
             <div className="glass absolute inset-x-3 bottom-16 flex flex-col gap-2 rounded-2xl border border-line p-3" data-testid="oal-map-card">
               <p className="font-semibold">{chosen.name}</p>
               <div className="flex gap-2">
-                <Button onClick={() => onGo(chosen, false)} data-testid="oal-map-go">
-                  {t('oal.world.goHere')}
-                </Button>
-                {chosen.walk && (
+                {onTarget && chosen.area !== 'airport' && map.data && markAt(map.data, chosen) ? (
+                  // In the town (Monrovia): never there at once; the way there shown, to walk or ride.
+                  <Button
+                    onClick={() => {
+                      const at = markAt(map.data!, chosen)!
+                      onTarget({ x: at[0], y: at[1], name: chosen.name })
+                      setChosen(null)
+                      onClose()
+                    }}
+                    data-testid="oal-map-gps"
+                  >
+                    {t('oal.map.gps')}
+                  </Button>
+                ) : (
+                  <Button onClick={() => onGo(chosen, false)} data-testid="oal-map-go">
+                    {t('oal.world.goHere')}
+                  </Button>
+                )}
+                {chosen.walk && !onTarget && (
                   <Button variant="ghost" onClick={() => onGo(chosen, true)} data-testid="oal-map-walk-here">
                     {t('oal.world.walkHere')}
                   </Button>

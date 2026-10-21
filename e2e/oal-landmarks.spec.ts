@@ -20,6 +20,7 @@ import { LANDMARKS } from '../src/games/oal/city/landmarks.ts'
 const AWAY: Record<string, number> = { capitol: 85, mansion: 62, ducor: 55, providence: 34, jfk: 34 }
 const SPOTS: [string, number, number, number, number][] = LANDMARKS.map((l) => [l.name, l.x + Math.sin(l.yaw) * AWAY[l.name]!, l.y - Math.cos(l.yaw) * AWAY[l.name]!, l.yaw + Math.PI, 13])
 SPOTS.push(['walls-day', 1679.5, -1781, -0.356, 13], ['walls-night', 1679.5, -1781, -0.356, 21])
+SPOTS.push(['site-visa', -2253.4, 1387.3, 1.19, 13], ['site-jobs', -1302.3, 923.5, -0.337, 13])
 SPOTS.push(['around-redlight', 10984.1, -1362.1, -2.967, 13], ['around-general', -1462.4, 411.5, 1.075, 13], ['around-street', 1679.5, -1781, 2.786, 13], ['around-beach', -198, -1320, 2.2, 13])
 
 test('the landmarks, the walls', async ({ page }) => {

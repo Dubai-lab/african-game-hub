@@ -32,8 +32,8 @@ export type CityOpen = {
   start: { x: number; y: number; f: number } | { place: string }
 }
 /** The town's places that are not a hub street's own, and what they are called. */
-const COMPOUND_NAME: Record<string, string> = { home: 'oal.city.places.home', health: 'oal.city.places.health', jobs: 'oal.world.places.jobs', visa: 'oal.world.places.visa', station: 'oal.world.places.stationMonrovia', sinkor: 'oal.street.towns.sinkor.where', waterside: 'oal.street.towns.waterside.where', skd: 'oal.street.towns.skd.where' }
-const COMPOUNDS = ['home', 'health', 'jobs', 'visa', 'station']
+const COMPOUND_NAME: Record<string, string> = { home: 'oal.city.places.home', health: 'oal.city.places.health', 'health-gate': 'oal.city.places.healthGate', jobs: 'oal.world.places.jobs', visa: 'oal.world.places.visa', station: 'oal.world.places.stationMonrovia', sinkor: 'oal.street.towns.sinkor.where', waterside: 'oal.street.towns.waterside.where', skd: 'oal.street.towns.skd.where' }
+const COMPOUNDS = ['home', 'health', 'health-gate', 'jobs', 'visa', 'station']
 /** A ride's fare in town (the server's: public.oal_road_action 'town'). */
 const FARE: Record<'LR' | 'GH', Record<RideKind, string>> = { LR: { taxi: 'L$150', kekeh: 'L$100' }, GH: { taxi: 'GH¢15', kekeh: 'GH¢10' } }
 
@@ -174,6 +174,7 @@ export function StreetView({
   onArrived,
   onMove,
   onEnter,
+  panelOf,
 }: {
   town: TownId
   travel: TravelState
@@ -189,6 +190,8 @@ export function StreetView({
   onArrived?: () => void
   onMove?: (x: number, y: number, facing: number) => void
   onEnter?: (place: Place) => boolean
+  /** A place's own panel (the parking station's tickets), in place of the street's. */
+  panelOf?: (place: string) => ReactNode | null
 }) {
   const { t } = useTranslation()
   const company = useStreetCompany(city ? (`city-${city.town.toLowerCase()}` as TownId) : town, name, appearance)
@@ -465,7 +468,7 @@ export function StreetView({
               {t('oal.street.done')}
             </Button>
           </div>
-          <PlacePanel place={place.split(':').pop() as Place} travel={travel} homeCountry={homeCountry} />
+          {panelOf?.(place) ?? <PlacePanel place={place.split(':').pop() as Place} travel={travel} homeCountry={homeCountry} />}
         </div>
       )}
     </div>

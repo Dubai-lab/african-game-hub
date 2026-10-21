@@ -45,6 +45,8 @@ export function HomeView({
   onDoor,
   title: ownTitle,
   cat,
+  fromTown,
+  panel,
 }: {
   kind: HomeKind
   travel: TravelState
@@ -56,6 +58,11 @@ export function HomeView({
   /** One of the town's businesses: its own name, what it is. */
   title?: string
   cat?: string
+  /** Come in from the town (Monrovia): in at the front door, and out of it into the town again
+   * (at the Ministry, past its guards already, at the gate out in the town). */
+  fromTown?: boolean
+  /** What is done here (the visa office's, the job centre's), in place of the kind's own. */
+  panel?: ReactNode
 }) {
   const { t } = useTranslation()
   const stick = useRef<Stick>({ x: 0, y: 0 })
@@ -161,7 +168,7 @@ export function HomeView({
   }, [ticket, t, kind, letter])
   const [flash, setFlash] = useState(false)
   // The Ministry of Health: let in at the gate, the form taken and filled in; the clerks reaching.
-  const [admitted, setAdmitted] = useState(false)
+  const [admitted, setAdmitted] = useState(!!fromTown && kind === 'health')
   const [form, setForm] = useState<null | 'blank' | BirthForm>(null)
   const [staffAct, setStaffAct] = useState<{ index: number; seq: number } | null>(null)
   // Sitting: the seat the character is by, the seat it sits on.
@@ -196,7 +203,7 @@ export function HomeView({
       onPointerCancel={() => (drag.current = null)}
     >
       <Suspense fallback={<Skeleton className="h-full rounded-none" />}>
-        <HomeScene kind={kind} appearance={appearance} asleep={asleep} stick={stick} view={view} onPlace={setPlace} shelf={shelf} carrying={carrying} onDisplay={setDisplay} gesture={gesture} hold={hold} laid={laid} staffSeq={staffSeq} staffAct={staffAct} gateOpen={admitted} seat={seated} onSeat={setBySeat} onReady={() => setReady(true)} />
+        <HomeScene kind={kind} appearance={appearance} asleep={asleep} stick={stick} view={view} onPlace={setPlace} shelf={shelf} carrying={carrying} onDisplay={setDisplay} gesture={gesture} hold={hold} laid={laid} staffSeq={staffSeq} staffAct={staffAct} gateOpen={admitted} seat={seated} onSeat={setBySeat} onReady={() => setReady(true)} fromTown={fromTown} onOut={onDoor} />
       </Suspense>
       {!ready && <Loading what={t('oal.loading.inside')} />}
       {hud}
@@ -338,6 +345,8 @@ export function HomeView({
                 ) : (
                   <p className="border border-line bg-panel p-4 text-sm">{t('oal.office.hint')}</p>
                 )
+              ) : panel ? (
+                panel
               ) : business ? (
                 <BusinessPanel kind={business} name={title} cat={cat} travel={travel} homeCountry={homeCountry} />
               ) : kind === 'health' ? (
