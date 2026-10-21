@@ -3043,7 +3043,27 @@
         "inside": "Vue de l'intérieur",
         "outside": "Vue de l'extérieur",
         "yours": "La voiture de votre famille",
-        "horn": "Klaxon"
+        "horn": "Klaxon",
+        "drive": {
+          "wheel": "Volant",
+          "gas": "Accélérateur",
+          "brake": "Frein",
+          "gear": "Vitesse",
+          "gears": {
+            "P": "Parking",
+            "R": "Marche arrière",
+            "N": "Point mort",
+            "D": "Marche avant"
+          },
+          "handbrake": "Frein à main",
+          "handbrakeShort": "Frein à main",
+          "left": "Clignotant gauche",
+          "right": "Clignotant droit",
+          "hazard": "Feux de détresse",
+          "lights": "Phares",
+          "lightsShort": "Phares",
+          "putInD": "Passez en D pour rouler (R pour reculer)"
+        }
       }
     },
     "loading": {

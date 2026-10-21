@@ -3043,7 +3043,27 @@
         "inside": "Inside view",
         "outside": "Outside view",
         "yours": "Your family's car",
-        "horn": "Horn"
+        "horn": "Horn",
+        "drive": {
+          "wheel": "Steering wheel",
+          "gas": "Accelerator",
+          "brake": "Brake",
+          "gear": "Gear",
+          "gears": {
+            "P": "Park",
+            "R": "Reverse",
+            "N": "Neutral",
+            "D": "Drive"
+          },
+          "handbrake": "Handbrake",
+          "handbrakeShort": "Handbrake",
+          "left": "Left indicator",
+          "right": "Right indicator",
+          "hazard": "Hazard lights",
+          "lights": "Headlights",
+          "lightsShort": "Lights",
+          "putInD": "Put it in D to drive (R to reverse)"
+        }
       }
     },
     "loading": {

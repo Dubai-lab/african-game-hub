@@ -56,9 +56,9 @@ import { groundHeight } from './cityGen'
 import { type ChunkRequest } from './chunk.worker'
 import { type PackedParts, unpackParts } from './chunkPack'
 import { cityNight } from './night'
-import { type Engine, engine, hearFrom, playOnce, townHum } from './sound'
-import { CAR_PLANS, type CarModelName, CARS_URL, buildCar, poseCar } from './cars'
-import { driveOwn, outline, ownCar, type OwnCarPhase } from './ownCar'
+import { type Engine, engine, hearFrom, playOnce, tick, townHum } from './sound'
+import { CAR_PLANS, type CarModelName, CARS_URL, buildCar, dashCar, poseCar } from './cars'
+import { driveCar, keyCommand, outline, ownCar, readInputs, type OwnCarPhase } from './ownCar'
 import { overlaps } from './driving'
 import { type Landmark, LANDMARKS, landmarkPoint, landmarkSolids } from './landmarks'
 import { COMPOUNDS_BUILT, gates, HOME_URL, INSIDES, INTERIORS_URL, OUTSIDE } from '../homeModel'
@@ -1490,6 +1490,13 @@ function OwnCarModel({ c }: { c: Compound }) {
     if (!d) return
     if (ownCar.phase === 'parked') for (const door of model.doors) door.t = Math.max(0, door.t - dt * 2)
     poseCar(model, d, 0.03, dt, { x: camera.position.x, z: camera.position.z }, cityNight.value)
+    const c = ownCar.controls
+    const blink = c.indicator !== 'off' && (performance.now() % 760) < 400
+    if (blink !== ownCar.blink) {
+      ownCar.blink = blink
+      if (ownCar.phase === 'driving' && blink) tick()
+    }
+    dashCar(model, { kmh: ownCar.kmh, rpm: ownCar.phase === 'driving' ? ownCar.rpm : 0, indicator: c.indicator, lights: c.lights, blink }, cityNight.value)
   })
   return <primitive object={model.root} />
 }
@@ -1648,7 +1655,12 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
     if (look.current === null) (look as { current: number | null }).current = state.current.facing
   }, [look])
   useEffect(() => {
-    const down = (e: KeyboardEvent) => keys.current.add(e.key.toLowerCase())
+    const down = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase()
+      // In the car: the gears, the lamps, the indicators by their keys.
+      if (ownCar.phase === 'driving' && !e.repeat) keyCommand(ownCar.controls, key)
+      keys.current.add(key)
+    }
     const up = (e: KeyboardEvent) => keys.current.delete(e.key.toLowerCase())
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
@@ -1721,8 +1733,16 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
       oc.t = 0
       oc.onPhase?.(phase)
     }
-    if (req === 'in' && oc.phase === 'parked') say('entering')
+    if (req === 'in' && oc.phase === 'parked') {
+      // Sat in it: in park, the wheel straight, the feet off the pedals.
+      Object.assign(oc.controls, { wheel: 0, gas: 0, brake: 0, gear: 'P', handbrake: false })
+      say('entering')
+    }
     if (req === 'out' && oc.phase === 'driving' && Math.abs(d.v) < 1.2) {
+      // Left in park, its indicators off.
+      Object.assign(oc.controls, { wheel: 0, gas: 0, brake: 0, gear: 'P', handbrake: false, indicator: 'off' })
+      d.v = 0
+      oc.kmh = 0
       ownEngine.current?.stop()
       ownEngine.current = null
       say('leaving')
@@ -1768,19 +1788,25 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
       }
     }
     if (oc.phase === 'driving') {
-      const k = keys.current
-      let x = stick.current?.x ?? 0
-      let y = stick.current?.y ?? 0
-      if (k.has('arrowup') || k.has('w')) y = 1
-      if (k.has('arrowdown') || k.has('s')) y = -1
-      if (k.has('arrowleft') || k.has('a')) x = -1
-      if (k.has('arrowright') || k.has('d')) x = 1
-      const step = driveOwn(d, dt, paused ? 0 : y, paused ? 0 : x)
+      const ctl = oc.controls
+      readInputs(ctl, keys.current, dt, d.v)
+      const still = { ...ctl, gas: 0, brake: 1 }
+      const step = driveCar(d, dt, paused ? still : ctl)
       const nx = d.x + Math.cos(step.yaw) * step.dist
       const ny = d.y + Math.sin(step.yaw) * step.dist
+      // Its dials: the speed, the engine's turning (an automatic's: up as it pulls, down a gear).
+      oc.kmh = Math.abs(d.v) * 3.6
+      const pull = ctl.gear === 'D' || ctl.gear === 'R' || ctl.gear === 'N' ? ctl.gas : 0
+      const inGear = (Math.abs(d.v) % 7) / 7
+      const rpmWant = ctl.gear === 'N' || ctl.gear === 'P' ? 0.12 + pull * 0.75 : 0.12 + (Math.abs(d.v) > 0.5 ? 0.2 + inGear * 0.45 : 0) + pull * 0.2
+      oc.rpm += (Math.min(1, rpmWant) - oc.rpm) * Math.min(1, dt * 5)
+      // The tyres heard as it slides (the handbrake at speed) or brakes hard.
+      const screech = step.sliding || (ctl.brake > 0.8 && Math.abs(d.v) > 9)
+      if (screech && !oc.sliding) playOnce('screech', undefined, 0.7)
+      oc.sliding = screech
       // Its engine, as the throttle has it (started after the starter: three seconds in).
       if (!ownEngine.current && oc.t > 3) ownEngine.current = engine(true)
-      ownEngine.current?.set([d.x, 0.7, -d.y], d.v, paused ? 0 : y, 'car', false)
+      ownEngine.current?.set([d.x, 0.7, -d.y], d.v, paused ? 0 : pull, 'car', false)
       // Never through anything: what it meets stops it (a little bounce back, a crash if hard).
       if (carHits(nx, ny, step.yaw, d.len, d.wide)) {
         if (Math.abs(d.v) > 3) playOnce('crash', undefined, Math.min(1, Math.abs(d.v) / 12))
@@ -1807,6 +1833,8 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
       me.root.rotation.y = d.yaw + Math.PI / 2
       me.mixer.update(dt)
     }
+    // (Drawn where it now is: else the seat's camera, moved with it, is ahead of it at speed.)
+    poseCar(car, d, 0.03, 0, { x: camera.position.x, z: camera.position.z }, cityNight.value)
     me.root.visible = !(oc.phase === 'driving' && oc.view === 'inside')
     s.x = d.x
     s.y = d.y

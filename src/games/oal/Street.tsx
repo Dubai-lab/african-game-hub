@@ -19,6 +19,7 @@ import { PhoneSection } from './Home'
 import { type TravelState, useGameNow } from './Journey'
 import { type BusinessKind, businessOf, INSIDE_OF } from './city/business'
 import { BusinessPanel } from './Business'
+import { DriveControls } from './city/DriveControls'
 import { ownCar, type OwnCarPhase, type OwnCarView } from './city/ownCar'
 import { Loading } from './Loading'
 import { newRide, type Destination, type RideKind, type RidePhase, type RideState } from './city/ride'
@@ -275,7 +276,7 @@ export function StreetView({
   const view = useRef<HTMLDivElement>(null)
 
   return (
-    <div ref={view} className={`fixed inset-0 z-40 bg-bg ${hidden ? 'hidden' : ''}`} data-testid="oal-street" aria-hidden={hidden || undefined}>
+    <div ref={view} className={`group/street fixed inset-0 z-40 bg-bg ${hidden ? 'hidden' : ''}`} data-testid="oal-street" data-driving={(city && carPhase === 'driving') || undefined} aria-hidden={hidden || undefined}>
       <div
         className="absolute inset-0"
         onPointerDown={(e) => {
@@ -391,9 +392,10 @@ export function StreetView({
           {company.present.length > 0 && <span className="ml-2 text-muted">· {t('oal.street.company', { count: company.present.length })}</span>}
         </p>
       </div>
+      {city && carPhase === 'driving' && <DriveControls />}
       <div
         data-stick
-        className="glass absolute bottom-6 left-6 h-32 w-32 touch-none rounded-full border border-line"
+        className={`glass absolute bottom-6 left-6 h-32 w-32 touch-none rounded-full border border-line ${city && carPhase === 'driving' ? 'hidden' : ''}`}
         onPointerDown={(e) => {
           e.currentTarget.setPointerCapture(e.pointerId)
           const r = e.currentTarget.getBoundingClientRect()
@@ -417,19 +419,19 @@ export function StreetView({
       />
       {city && carPhase !== 'parked' && (
         // In the player's own car: out of it (stopped), seen from inside it or from behind.
-        <div className="absolute bottom-6 right-6 flex flex-col items-end gap-2">
+        <div className="absolute right-4 top-56 flex flex-col items-end gap-2" data-hud>
           {carPhase === 'driving' && (
-            <Button variant="ghost" className="min-h-12 px-5" onClick={() => (ownCar.request = 'view')} data-testid="oal-car-view">
+            <Button variant="ghost" className="min-h-11 px-4 text-sm" onClick={() => (ownCar.request = 'view')} data-testid="oal-car-view">
               {t(carView === 'inside' ? 'oal.city.car.outside' : 'oal.city.car.inside')}
             </Button>
           )}
           {carPhase === 'driving' && (
-            <Button variant="ghost" className="min-h-12 px-5" onClick={() => (ownCar.request = 'horn')} data-testid="oal-car-horn">
+            <Button variant="ghost" className="min-h-11 px-4 text-sm" onClick={() => (ownCar.request = 'horn')} data-testid="oal-car-horn">
               {t('oal.city.car.horn')}
             </Button>
           )}
           {carPhase === 'driving' && (
-            <Button className="min-h-12 px-5" onClick={() => (ownCar.request = 'out')} data-testid="oal-car-out">
+            <Button className="min-h-11 px-4 text-sm" onClick={() => (ownCar.request = 'out')} data-testid="oal-car-out">
               {t('oal.city.car.out')}
             </Button>
           )}

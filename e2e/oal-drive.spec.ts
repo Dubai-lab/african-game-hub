@@ -52,27 +52,72 @@ test('the family car: in, driven, out', async ({ page }) => {
   await expect(page.getByTestId('oal-car-out')).toBeVisible({ timeout: 10_000 })
   await shot(page, 'drive-2-in')
   await page.getByTestId('oal-car-horn').click()
-  // Away down the street, steering a little.
-  await page.keyboard.down('ArrowUp')
-  await page.waitForTimeout(2500)
+  await expect(page.getByTestId('oal-drive')).toBeVisible()
+  const own = () => page.evaluate(() => {
+    const o = (window as unknown as { oalOwnCar: { kmh: number; controls: { gear: string; wheel: number; indicator: string } } }).oalOwnCar
+    return { kmh: o.kmh, gear: o.controls.gear, wheel: o.controls.wheel, indicator: o.controls.indicator }
+  })
+  const centre = async (id: string) => {
+    const r = (await page.getByTestId(id).boundingBox())!
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2, r }
+  }
+  // In park, the accelerator does nothing (and says to put it in D).
+  const gas = await centre('oal-drive-gas')
+  await page.mouse.move(gas.x, gas.y)
+  await page.mouse.down()
+  await expect(page.getByTestId('oal-drive-hint')).toBeVisible()
+  await page.mouse.up()
+  expect((await own()).kmh).toBeLessThan(1)
+  // Into D; the accelerator held: away down the street.
+  await page.getByTestId('oal-drive-gear-D').click()
+  await page.mouse.move(gas.x, gas.y)
+  await page.mouse.down()
+  await page.waitForTimeout(3000)
   await shot(page, 'drive-3-driving')
-  await page.keyboard.down('ArrowLeft')
-  await page.waitForTimeout(900)
-  await page.keyboard.up('ArrowLeft')
-  await page.waitForTimeout(1200)
+  // From the driver's seat at speed: the dials' needles up.
+  await page.keyboard.down('ArrowUp')
+  await page.mouse.up()
+  expect((await own()).kmh).toBeGreaterThan(15)
+  await page.getByTestId('oal-car-view').click()
+  await page.waitForTimeout(600)
+  await shot(page, 'drive-3b-dials')
+  await page.getByTestId('oal-car-view').click()
+  await page.keyboard.up('ArrowUp')
+  // The left indicator on; the wheel turned left by dragging round it (held, then let go: it
+  // springs back to the middle), the accelerator by its key meanwhile.
+  await page.getByTestId('oal-drive-left').click()
+  await page.keyboard.down('ArrowUp')
+  const wheel = await centre('oal-drive-wheel')
+  await page.mouse.move(wheel.x, wheel.r.y + 10)
+  await page.mouse.down()
+  await page.mouse.move(wheel.x - 40, wheel.r.y + 25, { steps: 5 })
+  await page.mouse.move(wheel.r.x + 10, wheel.y, { steps: 5 })
+  await page.waitForTimeout(700)
+  expect((await own()).wheel).toBeLessThan(-0.4)
+  await shot(page, 'drive-4-steering')
+  await page.mouse.up()
+  await page.waitForTimeout(800)
+  expect(Math.abs((await own()).wheel)).toBeLessThan(0.05)
+  expect((await own()).indicator).toBe('left')
   await page.getByTestId('oal-car-view').click()
   await page.waitForTimeout(1200)
-  await shot(page, 'drive-4-inside')
+  await shot(page, 'drive-5-inside')
   await page.keyboard.up('ArrowUp')
-  await page.keyboard.down('ArrowDown')
-  await page.waitForTimeout(2500)
-  await page.keyboard.up('ArrowDown')
+  // The brake pedal held: stopped; into park; the indicator off.
+  const brake = await centre('oal-drive-brake')
+  await page.mouse.move(brake.x, brake.y)
+  await page.mouse.down()
+  await page.waitForTimeout(3500)
+  await page.mouse.up()
+  expect((await own()).kmh).toBeLessThan(1)
+  await page.getByTestId('oal-drive-gear-P').click()
+  await page.getByTestId('oal-drive-left').click()
   await page.getByTestId('oal-car-view').click()
   await page.waitForTimeout(800)
   await page.getByTestId('oal-car-out').click()
   await expect(page.getByTestId('oal-car-in')).toBeVisible({ timeout: 10_000 })
   await page.waitForTimeout(1500)
-  await shot(page, 'drive-5-out')
+  await shot(page, 'drive-6-out')
   // The sounds loaded and playing (the audio woken by the taps).
   const audio = await page.evaluate(async () => {
     const r = await Promise.all(['engine-idle.wav', 'engine-drive.wav', 'horn.mp3', 'door-open.mp3'].map((f) => fetch(`/oal/sounds/${f}`).then((x) => x.status)))

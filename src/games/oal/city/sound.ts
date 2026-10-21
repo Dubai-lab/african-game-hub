@@ -202,3 +202,21 @@ export function townHum(level: number) {
   }
   hum.g.gain.setTargetAtTime(level, ctx.currentTime, 0.6)
 }
+
+/** The indicators' tick (made, not recorded: a relay's click). */
+export function tick() {
+  if (!ctx || !master || !on()) return
+  const t = ctx.currentTime
+  const o = ctx.createOscillator()
+  o.type = 'square'
+  o.frequency.value = 1800
+  const g = ctx.createGain()
+  g.gain.setValueAtTime(0.12, t)
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.03)
+  const f = ctx.createBiquadFilter()
+  f.type = 'bandpass'
+  f.frequency.value = 2400
+  o.connect(f).connect(g).connect(master)
+  o.start(t)
+  o.stop(t + 0.04)
+}

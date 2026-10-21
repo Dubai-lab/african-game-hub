@@ -5,7 +5,7 @@
 // off (nobody sees in from there); its wheels turning as it rolls and the front two steered, its
 // steering wheel turned with them, its body leaning a little in a bend and dipping as it brakes,
 // its rear lamps lit as it slows, its headlamps at night, its driver at the wheel.
-import { type AnimationClip, Color, Group, type Material, type Mesh, type MeshStandardMaterial, type Object3D } from 'three'
+import { type AnimationClip, BoxGeometry, Color, Group, type Material, Mesh, MeshBasicMaterial, type MeshStandardMaterial, type Object3D, Quaternion, SpotLight, Vector3 } from 'three'
 import { CATALOGUE, defaultAppearance } from '../../../../supabase/functions/_shared/oal'
 import { person } from '../ArrivalsScene'
 import plans from '../carsPlan.v2.json'
@@ -19,7 +19,7 @@ export const KEKEH_URL = '/oal/kekeh.v1.glb'
 export const KEKEH_PLAN = (kekehPlans as unknown as Record<string, { wheels: Record<string, { at: number[]; r: number; node: string }>; steer: string; handlebar: string; driver: number[]; passenger: number[]; size: number[]; wheelbase: number }>).kekeh!
 
 export type CarModelName = 'suv' | 'suv_taxi' | 'suv_police'
-type CarPlan = { wheels: Record<string, { at: number[]; r: number; node: string }>; doors: { name: string; side: string; front: boolean; open: number }[]; trunk: string | null; steer: string | null; driver: number[]; size: number[]; wheelbase: number }
+type CarPlan = { wheels: Record<string, { at: number[]; r: number; node: string }>; doors: { name: string; side: string; front: boolean; open: number }[]; trunk: string | null; steer: string | null; needles?: string[]; driver: number[]; size: number[]; wheelbase: number }
 export const CAR_PLANS = plans as unknown as Record<CarModelName | `${CarModelName}_far`, CarPlan>
 
 /** Near this (metres from the camera), a car is drawn with its inside; farther, without it. */
@@ -207,4 +207,52 @@ export function poseCar(car: CarModel, d: Drive, ground: number, dt: number, cam
   car.lamps.brake.value = d.braking || d.v < 0.2 ? 1 : 0.12
   car.lamps.head.value = night
   if (close) for (const door of car.doors) door.pivot.rotation.y = door.open * door.t * 1.15
+}
+
+/** What the driver's dashboard and lamps show (the player's own car). */
+export type Dash = { kmh: number; rpm: number; indicator: 'off' | 'left' | 'right' | 'hazard'; lights: boolean; blink: boolean }
+
+type DashParts = { needles: { pivot: Object3D; rest: Quaternion; full: number; of: 'kmh' | 'rpm' }[]; signals: { mesh: Mesh; side: 'left' | 'right' }[]; beam: SpotLight }
+const dashParts = new WeakMap<CarModel, DashParts>()
+const AMBER = new MeshBasicMaterial({ color: '#ffa31a', toneMapped: false })
+const UP = new Vector3(0, 1, 0)
+const turn = new Quaternion()
+
+/** Its dashboard's needles turned (the speed's, the engine's), its indicators flashing at its four
+ * corners, its headlamps lit and throwing their light down the road (the player's own car). */
+export function dashCar(car: CarModel, dash: Dash, night: number) {
+  let parts = dashParts.get(car)
+  if (!parts) {
+    const plan = CAR_PLANS[car.model as CarModelName]
+    // (A needle keeps the pack's frame: it lies along its x, turned about the dial's face, its y.)
+    const needles = (plan?.needles ?? []).flatMap((name) => {
+      const pivot = car.near.getObjectByName(name)
+      return pivot ? [{ pivot, rest: pivot.quaternion.clone(), full: name.endsWith('rpm') ? 4.2 : 4.4, of: (name.endsWith('rpm') ? 'rpm' : 'kmh') as 'kmh' | 'rpm' }] : []
+    })
+    const { len, wide } = car.size
+    const signals: DashParts['signals'] = []
+    for (const ahead of [1, -1])
+      for (const side of ['left', 'right'] as const) {
+        const m = new Mesh(new BoxGeometry(0.04, 0.05, 0.16), AMBER)
+        m.position.set(ahead * len * 0.47, ahead > 0 ? 0.8 : 1.02, (side === 'left' ? -1 : 1) * wide * 0.36)
+        m.visible = false
+        car.lean.add(m)
+        signals.push({ mesh: m, side })
+      }
+    const beam = new SpotLight('#fff4dc', 0, 38, 0.55, 0.5, 1.2)
+    beam.position.set(len * 0.5, 0.8, 0)
+    beam.target.position.set(len * 0.5 + 12, 0, 0)
+    car.lean.add(beam, beam.target)
+    parts = { needles, signals, beam }
+    dashParts.set(car, parts)
+  }
+  for (const n of parts.needles) {
+    const of = n.of === 'kmh' ? Math.min(1, dash.kmh / 200) : Math.min(1, dash.rpm)
+    // (Clockwise as the driver sees it.)
+    n.pivot.quaternion.copy(n.rest).multiply(turn.setFromAxisAngle(UP, -of * n.full))
+  }
+  for (const sg of parts.signals) sg.mesh.visible = dash.blink && (dash.indicator === 'hazard' || dash.indicator === sg.side)
+  const lit = dash.lights ? 1 : 0
+  car.lamps.head.value = Math.max(night, lit)
+  parts.beam.intensity = lit * (8 + night * 30)
 }
