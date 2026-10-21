@@ -1,0 +1,500 @@
+{
+ "suv": {
+  "wheels": {
+   "rl": {
+    "node": "suv_wheel_rl",
+    "at": [
+     -1.119,
+     0.337,
+     -0.73
+    ],
+    "r": 0.337
+   },
+   "fl": {
+    "node": "suv_wheel_fl",
+    "at": [
+     1.385,
+     0.337,
+     -0.73
+    ],
+    "r": 0.337
+   },
+   "rr": {
+    "node": "suv_wheel_rr",
+    "at": [
+     -1.119,
+     0.337,
+     0.73
+    ],
+    "r": 0.337
+   },
+   "fr": {
+    "node": "suv_wheel_fr",
+    "at": [
+     1.385,
+     0.337,
+     0.73
+    ],
+    "r": 0.337
+   }
+  },
+  "doors": [
+   {
+    "name": "suv_door_fl",
+    "side": "left",
+    "front": true,
+    "open": -1,
+    "at": [
+     0.92,
+     0.953,
+     -0.814
+    ]
+   },
+   {
+    "name": "suv_door_fr",
+    "side": "right",
+    "front": true,
+    "open": 1,
+    "at": [
+     0.92,
+     0.953,
+     0.814
+    ]
+   },
+   {
+    "name": "suv_door_rl",
+    "side": "left",
+    "front": false,
+    "open": -1,
+    "at": [
+     -0.104,
+     0.979,
+     -0.812
+    ]
+   },
+   {
+    "name": "suv_door_rr",
+    "side": "right",
+    "front": false,
+    "open": 1,
+    "at": [
+     -0.104,
+     0.979,
+     0.812
+    ]
+   }
+  ],
+  "trunk": "suv_trunk",
+  "steer": "suv_steer",
+  "needles": [
+   "suv_speedo",
+   "suv_rpm"
+  ],
+  "wipers": [
+   "suv_wiper_l",
+   "suv_wiper_r"
+  ],
+  "driver": [
+   -0.018,
+   0.388,
+   -0.362
+  ],
+  "size": [
+   4.5,
+   1.59,
+   2.19
+  ],
+  "wheelbase": 2.504
+ },
+ "suv_taxi": {
+  "wheels": {
+   "rl": {
+    "node": "suv_taxi_wheel_rl",
+    "at": [
+     -1.119,
+     0.337,
+     -0.73
+    ],
+    "r": 0.337
+   },
+   "fl": {
+    "node": "suv_taxi_wheel_fl",
+    "at": [
+     1.385,
+     0.337,
+     -0.73
+    ],
+    "r": 0.337
+   },
+   "rr": {
+    "node": "suv_taxi_wheel_rr",
+    "at": [
+     -1.119,
+     0.337,
+     0.73
+    ],
+    "r": 0.337
+   },
+   "fr": {
+    "node": "suv_taxi_wheel_fr",
+    "at": [
+     1.385,
+     0.337,
+     0.73
+    ],
+    "r": 0.337
+   }
+  },
+  "doors": [
+   {
+    "name": "suv_taxi_door_fl",
+    "side": "left",
+    "front": true,
+    "open": -1,
+    "at": [
+     0.92,
+     0.953,
+     -0.814
+    ]
+   },
+   {
+    "name": "suv_taxi_door_fr",
+    "side": "right",
+    "front": true,
+    "open": 1,
+    "at": [
+     0.92,
+     0.953,
+     0.814
+    ]
+   },
+   {
+    "name": "suv_taxi_door_rl",
+    "side": "left",
+    "front": false,
+    "open": -1,
+    "at": [
+     -0.104,
+     0.979,
+     -0.812
+    ]
+   },
+   {
+    "name": "suv_taxi_door_rr",
+    "side": "right",
+    "front": false,
+    "open": 1,
+    "at": [
+     -0.104,
+     0.979,
+     0.812
+    ]
+   }
+  ],
+  "trunk": "suv_taxi_trunk",
+  "steer": "suv_taxi_steer",
+  "needles": [
+   "suv_taxi_speedo",
+   "suv_taxi_rpm"
+  ],
+  "wipers": [
+   "suv_taxi_wiper_l",
+   "suv_taxi_wiper_r"
+  ],
+  "driver": [
+   -0.018,
+   0.388,
+   -0.362
+  ],
+  "size": [
+   4.5,
+   1.68,
+   2.19
+  ],
+  "wheelbase": 2.504
+ },
+ "suv_police": {
+  "wheels": {
+   "rl": {
+    "node": "suv_police_wheel_rl",
+    "at": [
+     -1.119,
+     0.337,
+     -0.73
+    ],
+    "r": 0.337
+   },
+   "fl": {
+    "node": "suv_police_wheel_fl",
+    "at": [
+     1.385,
+     0.337,
+     -0.73
+    ],
+    "r": 0.337
+   },
+   "rr": {
+    "node": "suv_police_wheel_rr",
+    "at": [
+     -1.119,
+     0.337,
+     0.73
+    ],
+    "r": 0.337
+   },
+   "fr": {
+    "node": "suv_police_wheel_fr",
+    "at": [
+     1.385,
+     0.337,
+     0.73
+    ],
+    "r": 0.337
+   }
+  },
+  "doors": [
+   {
+    "name": "suv_police_door_fl",
+    "side": "left",
+    "front": true,
+    "open": -1,
+    "at": [
+     0.92,
+     0.953,
+     -0.814
+    ]
+   },
+   {
+    "name": "suv_police_door_fr",
+    "side": "right",
+    "front": true,
+    "open": 1,
+    "at": [
+     0.92,
+     0.953,
+     0.814
+    ]
+   },
+   {
+    "name": "suv_police_door_rl",
+    "side": "left",
+    "front": false,
+    "open": -1,
+    "at": [
+     -0.104,
+     0.979,
+     -0.812
+    ]
+   },
+   {
+    "name": "suv_police_door_rr",
+    "side": "right",
+    "front": false,
+    "open": 1,
+    "at": [
+     -0.104,
+     0.979,
+     0.812
+    ]
+   }
+  ],
+  "trunk": "suv_police_trunk",
+  "steer": "suv_police_steer",
+  "needles": [
+   "suv_police_speedo",
+   "suv_police_rpm"
+  ],
+  "wipers": [
+   "suv_police_wiper_l",
+   "suv_police_wiper_r"
+  ],
+  "driver": [
+   -0.018,
+   0.388,
+   -0.362
+  ],
+  "size": [
+   4.5,
+   1.61,
+   2.19
+  ],
+  "wheelbase": 2.504
+ },
+ "suv_far": {
+  "wheels": {
+   "rl": {
+    "node": "suv_far_wheel_rl",
+    "at": [
+     -1.18,
+     0.337,
+     -0.73
+    ],
+    "r": 0.337
+   },
+   "fl": {
+    "node": "suv_far_wheel_fl",
+    "at": [
+     1.325,
+     0.337,
+     -0.73
+    ],
+    "r": 0.337
+   },
+   "rr": {
+    "node": "suv_far_wheel_rr",
+    "at": [
+     -1.18,
+     0.337,
+     0.73
+    ],
+    "r": 0.337
+   },
+   "fr": {
+    "node": "suv_far_wheel_fr",
+    "at": [
+     1.325,
+     0.337,
+     0.73
+    ],
+    "r": 0.337
+   }
+  },
+  "doors": [],
+  "trunk": null,
+  "steer": null,
+  "needles": [],
+  "wipers": [
+   "suv_far_wiper_l",
+   "suv_far_wiper_r"
+  ],
+  "driver": [
+   -0.08,
+   0.383,
+   -0.36
+  ],
+  "size": [
+   4.38,
+   1.58,
+   1.99
+  ],
+  "wheelbase": 2.505
+ },
+ "suv_taxi_far": {
+  "wheels": {
+   "rl": {
+    "node": "suv_taxi_far_wheel_rl",
+    "at": [
+     -1.18,
+     0.337,
+     -0.73
+    ],
+    "r": 0.337
+   },
+   "fl": {
+    "node": "suv_taxi_far_wheel_fl",
+    "at": [
+     1.325,
+     0.337,
+     -0.73
+    ],
+    "r": 0.337
+   },
+   "rr": {
+    "node": "suv_taxi_far_wheel_rr",
+    "at": [
+     -1.18,
+     0.337,
+     0.73
+    ],
+    "r": 0.337
+   },
+   "fr": {
+    "node": "suv_taxi_far_wheel_fr",
+    "at": [
+     1.325,
+     0.337,
+     0.73
+    ],
+    "r": 0.337
+   }
+  },
+  "doors": [],
+  "trunk": null,
+  "steer": null,
+  "needles": [],
+  "wipers": [
+   "suv_taxi_far_wiper_l",
+   "suv_taxi_far_wiper_r"
+  ],
+  "driver": [
+   -0.08,
+   0.383,
+   -0.36
+  ],
+  "size": [
+   4.38,
+   1.68,
+   1.99
+  ],
+  "wheelbase": 2.505
+ },
+ "suv_police_far": {
+  "wheels": {
+   "rl": {
+    "node": "suv_police_far_wheel_rl",
+    "at": [
+     -1.18,
+     0.337,
+     -0.73
+    ],
+    "r": 0.337
+   },
+   "fl": {
+    "node": "suv_police_far_wheel_fl",
+    "at": [
+     1.325,
+     0.337,
+     -0.73
+    ],
+    "r": 0.337
+   },
+   "rr": {
+    "node": "suv_police_far_wheel_rr",
+    "at": [
+     -1.18,
+     0.337,
+     0.73
+    ],
+    "r": 0.337
+   },
+   "fr": {
+    "node": "suv_police_far_wheel_fr",
+    "at": [
+     1.325,
+     0.337,
+     0.73
+    ],
+    "r": 0.337
+   }
+  },
+  "doors": [],
+  "trunk": null,
+  "steer": null,
+  "needles": [],
+  "wipers": [
+   "suv_police_far_wiper_l",
+   "suv_police_far_wiper_r"
+  ],
+  "driver": [
+   -0.08,
+   0.383,
+   -0.36
+  ],
+  "size": [
+   4.38,
+   1.61,
+   1.99
+  ],
+  "wheelbase": 2.505
+ }
+}

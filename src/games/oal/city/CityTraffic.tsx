@@ -6,7 +6,7 @@
 // of the laterite ones), of every look, turning at the corners. Only what is round the player is
 // there: what falls far behind comes back ahead, out of sight. Where each vehicle is, as a box,
 // is kept for the player to walk against.
-import { useFrame, useLoader } from '@react-three/fiber'
+import { useFrame, useLoader, useThree } from '@react-three/fiber'
 import { type RefObject, useMemo } from 'react'
 import type { Object3D } from 'three'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
@@ -16,6 +16,7 @@ import { person } from '../ArrivalsScene'
 import { CROWD_URL } from '../character'
 import { buildVehicle, type Kind, type Moving, SIZE, SPEED, vehicleModels, VEHICLES_URL } from '../Traffic'
 import { CARS_URL, type CarModel, type CarModelName, buildCar, poseCar, randomPaint } from './cars'
+import { cityNight } from './night'
 import { type City, groundHeight, type Keep, type Leg, nearestNode, route, toSeg } from './cityGen'
 import { type Around, type Box, boxOf, type Drive, drive, overlaps, startDrive } from './driving'
 import type { RidePhase, RideState } from './ride'
@@ -112,10 +113,10 @@ function sizeOf(kind: Kind, model: CarModel | null, rand: () => number) {
 }
 
 /** Which of the cars a kind is drawn as: the taxis, the sedan; the police, a pickup; others, any. */
-function modelFor(kind: Kind, rand: () => number): { model: CarModelName; paint: string } | null {
-  if (kind === 'taxi') return { model: 'sedan', paint: '#e9b51c' }
-  if (kind === 'police') return { model: 'pickup', paint: '#1f2f5a' }
-  if (kind === 'car') return { model: (['sedan', 'saloon', 'hatch', 'pickup'] as const)[Math.floor(rand() * 4)]!, paint: randomPaint(rand) }
+function modelFor(kind: Kind, rand: () => number): { model: CarModelName; paint: string | null } | null {
+  if (kind === 'taxi') return { model: 'suv_taxi', paint: null }
+  if (kind === 'police') return { model: 'suv_police', paint: null }
+  if (kind === 'car') return { model: 'suv', paint: randomPaint(rand) }
   return null
 }
 
@@ -178,10 +179,11 @@ export function CityTraffic({
     onRide(phase)
   }
   /** Draws a vehicle where its driving has it (a car: its wheels, its steering, its lean). */
+  const { camera } = useThree()
   const pose = (car: Car, dt: number) => {
     const d = car.d!
     const ground = 0.03 + groundHeight(city, d.x, d.y)
-    if (car.model) poseCar(car.model, d, ground, dt)
+    if (car.model) poseCar(car.model, d, ground, dt, { x: camera.position.x, z: camera.position.z }, cityNight.value)
     else {
       car.root.position.set(d.x, ground + 0.05, -d.y)
       car.root.rotation.y = d.yaw

@@ -43,7 +43,7 @@ test('the traffic at a junction', async ({ page }) => {
     // A taxi waved down: it comes along the road and pulls in beside the player (seen up close).
     await page.getByTestId('oal-hail-taxi').click()
     for (let i = 0; i < 8; i++) {
-      await page.waitForTimeout(2500)
+      await page.waitForTimeout(1000)
       await shot(page, `hail-${i}`)
     }
     return

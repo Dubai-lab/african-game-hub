@@ -55,6 +55,7 @@ import { type Sign, SIGNAL_LAMPS, TREE_KINDS, type Signal, type SignalLamp, sign
 import { groundHeight } from './cityGen'
 import { type ChunkRequest } from './chunk.worker'
 import { type PackedParts, unpackParts } from './chunkPack'
+import { cityNight } from './night'
 import { type Landmark, LANDMARKS, landmarkPoint, landmarkSolids } from './landmarks'
 import { COMPOUNDS_BUILT, gates, HOME_URL, INSIDES, INTERIORS_URL, OUTSIDE } from '../homeModel'
 import { stillFigure, VEHICLES_URL, vehicleModels } from '../Traffic'
@@ -964,6 +965,7 @@ function DayNight({ clock, player }: { clock?: () => Date; player: RefObject<{ x
     last.current.at = t.elapsedTime
     const { day, dusk } = daylight(hourNow(clock))
     const night = 1 - day
+    cityNight.value = night
     // The sky's colours, and the haze the same as the horizon.
     top.copy(SKY.nightTop).lerp(SKY.dayTop, day).lerp(SKY.duskTop, dusk * 0.5)
     horizon.copy(SKY.nightHorizon).lerp(SKY.dayHorizon, day).lerp(SKY.duskHorizon, dusk * 0.7)

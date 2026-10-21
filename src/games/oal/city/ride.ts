@@ -38,4 +38,4 @@ export type RideState = {
 export const newRide = (): RideState => ({ phase: 'none', kind: 'taxi', request: null, legs: [], leg: 0, s: 0, stop: 0, v: 0, pos: { x: 0, y: 0, yaw: 0 }, to: null, left: 0, fast: false, exit: null })
 
 /** Where the passenger sits, in the vehicle's own frame (x ahead, y up, z to its right). */
-export const PASSENGER: Record<RideKind, [number, number, number]> = { taxi: [-0.74, 0.04, 0.42], kekeh: [-0.55, 0.22, 0] }
+export const PASSENGER: Record<RideKind, [number, number, number]> = { taxi: [-0.69, -0.03, 0.38], kekeh: [-0.55, 0.22, 0] }

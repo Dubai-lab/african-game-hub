@@ -41,6 +41,8 @@ export type Drive = {
   /** Seconds behind a slow one (to pass it), seconds held up (to give up and go round). */
   slow: number
   held: number
+  /** Seconds out passing. */
+  passing: number
 }
 
 const MAX_STEER = 0.62
@@ -195,7 +197,9 @@ export function drive(city: City, d: Drive, dt: number, around: Around): boolean
   // Passing: held behind a slow one a while, on a road both ways with nobody coming, no junction near.
   d.slow = slowAhead && gap < 14 ? d.slow + dt : 0
   if (d.wantOffset > 0 && d.slow > 2.5 && !e.one && e.w >= 5.5 && turn.dist > 45 && clearToPass(d, around)) d.wantOffset = -lane(city, here.edge)
-  if (d.wantOffset < 0 && (gap > 12 || e.one) && sideClear(d, around, lane(city, here.edge))) d.wantOffset = lane(city, here.edge)
+  // Back in: past it, or out a while, or something coming the other way (in its own lane soon).
+  d.passing = d.wantOffset < 0 ? d.passing + dt : 0
+  if (d.wantOffset < 0 && (gap > 12 || e.one || d.passing > 8 || comingAt(d, around)) && sideClear(d, around, lane(city, here.edge))) d.wantOffset = lane(city, here.edge)
   d.braking = want < d.v - 0.3
   d.v += Math.max(-BRAKE * dt, Math.min(ACCEL * dt, want - d.v))
   d.v = Math.max(0, d.v)
@@ -243,6 +247,18 @@ function clearToPass(d: Drive, around: Around) {
   return true
 }
 
+/** Something coming the other way, ahead in the lane it is out in. */
+function comingAt(d: Drive, around: Around) {
+  const fx = Math.cos(d.yaw)
+  const fy = Math.sin(d.yaw)
+  return around.others.some((o) => {
+    const dx = o.box.x - d.x
+    const dy = o.box.y - d.y
+    const along = dx * fx + dy * fy
+    return along > 0 && along < 60 && Math.abs(-dx * fy + dy * fx) < 2.5 && Math.cos(o.box.yaw - d.yaw) < -0.5
+  })
+}
+
 /** Its own lane clear beside it (to pull back in). */
 function sideClear(d: Drive, around: Around, laneW: number) {
   const fx = Math.cos(d.yaw)
@@ -260,5 +276,5 @@ function sideClear(d: Drive, around: Around, laneW: number) {
 /** A vehicle set on its way: at a point of its first leg, facing along it, in its lane. */
 export function startDrive(city: City, legs: Leg[], s: number, size: { len: number; wide: number; L: number; r: number; top: number }, v = 0): Drive {
   const p = legPoint(city, legs[0]!, s, lane(city, legs[0]!.edge))
-  return { legs, leg: 0, s, x: p.x, y: p.y, yaw: Math.atan2(p.uy, p.ux), v, steer: 0, yawRate: 0, spin: 0, offset: lane(city, legs[0]!.edge), wantOffset: lane(city, legs[0]!.edge), ...size, braking: false, slow: 0, held: 0 }
+  return { legs, leg: 0, s, x: p.x, y: p.y, yaw: Math.atan2(p.uy, p.ux), v, steer: 0, yawRate: 0, spin: 0, offset: lane(city, legs[0]!.edge), wantOffset: lane(city, legs[0]!.edge), ...size, braking: false, slow: 0, held: 0, passing: 0 }
 }
