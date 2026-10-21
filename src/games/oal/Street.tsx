@@ -17,7 +17,8 @@ import type { Appearance } from '../../../supabase/functions/_shared/oal'
 import type { Stick } from './ArrivalsScene'
 import { PhoneSection } from './Home'
 import { type TravelState, useGameNow } from './Journey'
-import { businessOf, INSIDE_OF } from './city/business'
+import { type BusinessKind, businessOf, INSIDE_OF } from './city/business'
+import { BusinessPanel } from './Business'
 import { Loading } from './Loading'
 import { newRide, type Destination, type RideKind, type RidePhase, type RideState } from './city/ride'
 import type { OtherPlayer, Place, TownId } from './StreetScene'
@@ -34,6 +35,9 @@ export type CityOpen = {
 /** The town's places that are not a hub street's own, and what they are called. */
 const COMPOUND_NAME: Record<string, string> = { home: 'oal.city.places.home', health: 'oal.city.places.health', 'health-gate': 'oal.city.places.healthGate', jobs: 'oal.world.places.jobs', visa: 'oal.world.places.visa', station: 'oal.world.places.stationMonrovia', sinkor: 'oal.street.towns.sinkor.where', waterside: 'oal.street.towns.waterside.where', skd: 'oal.street.towns.skd.where' }
 const COMPOUNDS = ['home', 'health', 'health-gate', 'jobs', 'visa', 'station']
+// Walked into at their doors in the town (no button): the house, the Ministry's hall, the offices,
+// the shops on Tubman Boulevard, and every business with an inside.
+const WALKED_INTO = ['home', 'health', 'visa', 'jobs', 'phone', 'starline', 'citrus']
 /** A ride's fare in town (the server's: public.oal_road_action 'town'). */
 const FARE: Record<'LR' | 'GH', Record<RideKind, string>> = { LR: { taxi: 'L$150', kekeh: 'L$100' }, GH: { taxi: 'GH¢15', kekeh: 'GH¢10' } }
 
@@ -175,6 +179,7 @@ export function StreetView({
   onMove,
   onEnter,
   panelOf,
+  hidden,
 }: {
   town: TownId
   travel: TravelState
@@ -192,13 +197,15 @@ export function StreetView({
   onEnter?: (place: Place) => boolean
   /** A place's own panel (the parking station's tickets), in place of the street's. */
   panelOf?: (place: string) => ReactNode | null
+  /** Kept (the town not built again) while one is inside a place in it: not shown, not drawn. */
+  hidden?: boolean
 }) {
   const { t } = useTranslation()
   const company = useStreetCompany(city ? (`city-${city.town.toLowerCase()}` as TownId) : town, name, appearance)
   const [streetName, setStreetName] = useState<string | null>(null)
   const placeName = (p: string) => {
     // A business of the town: its name, and what it is.
-    const biz = businessOf(p)
+    const biz = businessOf(p.startsWith('in:') ? p.slice(3) : p)
     if (biz) return `${biz.name} · ${t(`oal.city.cats.${biz.cat}`, { defaultValue: '' })}`
     if (COMPOUND_NAME[p]) return t(COMPOUND_NAME[p]!)
     const [hub, own] = p.includes(':') ? p.split(':') : [town, p]
@@ -255,7 +262,7 @@ export function StreetView({
   const view = useRef<HTMLDivElement>(null)
 
   return (
-    <div ref={view} className="fixed inset-0 z-40 bg-bg" data-testid="oal-street">
+    <div ref={view} className={`fixed inset-0 z-40 bg-bg ${hidden ? 'hidden' : ''}`} data-testid="oal-street" aria-hidden={hidden || undefined}>
       <div
         className="absolute inset-0"
         onPointerDown={(e) => {
@@ -279,6 +286,12 @@ export function StreetView({
         <Suspense fallback={<Skeleton className="h-full rounded-none" />}>
           {city ? (
             <CityScene
+              hidden={hidden}
+              onWalkIn={(p) => {
+                // In at the door, as one walks: the place's inside (else its panel).
+                if (phase !== 'none' || open) return
+                if (!onEnter?.(p as Place)) setOpen(true)
+              }}
               town={city.town}
               start={city.start}
               appearance={appearance}
@@ -454,10 +467,10 @@ export function StreetView({
           </Button>
         </div>
       )}
-      {place && (!businessOf(place) || INSIDE_OF[businessOf(place)!.cat]) && !open && phase === 'none' && (
+      {place && !businessOf(place) && !(city && WALKED_INTO.includes(place)) && !open && phase === 'none' && (
         <div className="absolute bottom-6 right-6">
-          <Button className="min-h-14 px-6 text-lg" onClick={() => (onEnter?.(place) ? undefined : setOpen(true))} data-testid="oal-place-open">
-            {businessOf(place) ? t('oal.city.enter.business') : COMPOUNDS.includes(place) ? t(`oal.city.enter.${place}`) : t(`oal.street.open.${place.split(':').pop()}`)}
+          <Button className="min-h-14 px-6 text-lg" onClick={() => (!place.startsWith('in:') && onEnter?.(place) ? undefined : setOpen(true))} data-testid="oal-place-open">
+            {place.startsWith('in:') ? t('oal.home.at.counter') : businessOf(place) ? t('oal.city.enter.business') : COMPOUNDS.includes(place) ? t(`oal.city.enter.${place}`) : t(`oal.street.open.${place.split(':').pop()}`)}
           </Button>
         </div>
       )}
@@ -468,7 +481,12 @@ export function StreetView({
               {t('oal.street.done')}
             </Button>
           </div>
-          {panelOf?.(place) ?? <PlacePanel place={place.split(':').pop() as Place} travel={travel} homeCountry={homeCountry} />}
+          {place.startsWith('in:') && businessOf(place.slice(3)) ? (
+            // At the counter of a business, inside it in the town.
+            <BusinessPanel kind={INSIDE_OF[businessOf(place.slice(3))!.cat] as BusinessKind} name={businessOf(place.slice(3))!.name} cat={businessOf(place.slice(3))!.cat} travel={travel} homeCountry={homeCountry} />
+          ) : (
+            (panelOf?.(place) ?? <PlacePanel place={place.split(':').pop() as Place} travel={travel} homeCountry={homeCountry} />)
+          )}
         </div>
       )}
     </div>

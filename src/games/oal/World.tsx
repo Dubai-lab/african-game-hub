@@ -112,6 +112,9 @@ export function World({ life }: { life: Life }) {
   // The GPS's target in the town (set on the map), until got there.
   const [target, setTarget] = useState<{ x: number; y: number; name: string } | null>(null)
   const townMap = useTownMap(travel.data?.place ?? '')
+  // The town (Monrovia) once walked in: kept, hidden, while one is inside a place in it, so out of
+  // the door one is back in it at once (never built again); where it was last started from.
+  const cityStart = useRef<{ key: string; start: { x: number; y: number; f: number } | { place: string } } | null>(null)
   const arrive = (next: Spot) => {
     setSpot(next)
     setSheet(null)
@@ -188,64 +191,22 @@ export function World({ life }: { life: Life }) {
   )
 
   // On a journey: the airport's own screens (the arrivals hall is 3D, full screen).
-  if (['in_flight', 'arrivals', 'cleared', 'held'].includes(here.state))
-    return (
-      <Backdrop src={here.country === 'GH' ? '/oal/backdrops/accra.webp' : '/oal/backdrops/ria.webp'}>
-        {hud}
-        {/* Not on glass: the arrivals hall inside is a full-screen layer, which a blur would hold in. */}
-        <div className="absolute inset-x-0 bottom-20 top-44 overflow-y-auto px-3">
-          <div className="mx-auto flex max-w-lg flex-col gap-3">
-            <OnTheWay travel={here} appearance={life.appearance} homeCountry={life.home_country} />
-          </div>
-        </div>
-      </Backdrop>
-    )
-  if (here.state === 'on_road')
-    return (
-      <>
-        <OnTheRoad travel={here} appearance={life.appearance} />
-        <div className="pointer-events-none fixed inset-0 z-[45]">{hud}</div>
-        {sheets}
-      </>
-    )
-  // At home (or asleep at home): the home in 3D.
-  if ((valid.area === 'home' && here.state === 'settled') || here.state === 'sleeping')
-    return (
-      <>
-        <AtHome
-          travel={here}
-          life={life}
-          hud={hud}
-          onDoor={() => (whole && atHomeTown ? outTo('home') : setSheet('map'))}
-          fromTown={whole && atHomeTown}
-          fallback={
-            <Backdrop src={backdropFor(here.state === 'sleeping' ? 'home' : valid.area, here.place)}>
-              {hud}
-              <Middle>{here.state === 'sleeping' ? <Resting travel={here} /> : <OtherPanel place="home" travel={here} life={life} />}</Middle>
-            </Backdrop>
-          }
-        />
-        {sheets}
-      </>
-    )
-  if (here.state === 'working' || here.state === 'clinic')
-    return (
-      <Backdrop src={backdropFor(valid.area, here.place)}>
-        {hud}
-        <Middle>{here.state === 'working' ? <AtWork /> : <Resting travel={here} />}</Middle>
-        {sheets}
-      </Backdrop>
-    )
-
-  // Walking the town (Monrovia): from where it was left, or out of a place's door, or where a
-  // street is entered.
-  if (whole && (valid.area === 'city' || (valid.area === 'sinkor' && (valid.walking || !valid.place))))
-    return (
-      <>
-        <StreetView
-          key={`city:${valid.place ?? ''}:${valid.at ? 'at' : ''}`}
+  // Monrovia's town: walked in (the town itself), or inside one of its places (the town kept,
+  // hidden, behind).
+  const inCity = whole && (valid.area === 'city' || (valid.area === 'sinkor' && (valid.walking || !valid.place)))
+  const insideTown = whole && here.state === 'settled' && (valid.area === 'biz' || valid.area === 'health' || valid.area === 'visa' || valid.area === 'jobs' || (valid.area === 'sinkor' && !!valid.place && !!INSIDE[valid.place]) || (valid.area === 'home' && atHomeTown))
+  if (inCity) {
+    const start = valid.at ?? { place: valid.area === 'sinkor' ? 'enter:sinkor' : (valid.place ?? 'home') }
+    const key = JSON.stringify(start)
+    if (cityStart.current?.key !== key) cityStart.current = { key, start }
+  }
+  const cityView =
+    cityStart.current && (inCity || insideTown) ? (
+      <StreetView
+          key="city"
+          hidden={!inCity}
           town="sinkor"
-          city={{ town: 'Monrovia', start: valid.at ?? { place: valid.area === 'sinkor' ? 'enter:sinkor' : (valid.place ?? 'home') } }}
+          city={{ town: 'Monrovia', start: cityStart.current!.start }}
           target={target}
           onArrived={() => setTarget(null)}
           travel={here}
@@ -281,6 +242,64 @@ export function World({ life }: { life: Life }) {
           hud={<Hud life={life} travel={here} onMap={() => setSheet('map')} onPhone={() => setSheet('phone')} walking />}
           panelOf={(p) => (p === 'station' ? <Station travel={here} /> : null)}
         />
+    ) : null
+
+  if (['in_flight', 'arrivals', 'cleared', 'held'].includes(here.state))
+    return (
+      <Backdrop src={here.country === 'GH' ? '/oal/backdrops/accra.webp' : '/oal/backdrops/ria.webp'}>
+        {hud}
+        {/* Not on glass: the arrivals hall inside is a full-screen layer, which a blur would hold in. */}
+        <div className="absolute inset-x-0 bottom-20 top-44 overflow-y-auto px-3">
+          <div className="mx-auto flex max-w-lg flex-col gap-3">
+            <OnTheWay travel={here} appearance={life.appearance} homeCountry={life.home_country} />
+          </div>
+        </div>
+      </Backdrop>
+    )
+  if (here.state === 'on_road')
+    return (
+      <>
+        <OnTheRoad travel={here} appearance={life.appearance} />
+        <div className="pointer-events-none fixed inset-0 z-[45]">{hud}</div>
+        {sheets}
+      </>
+    )
+  // At home (or asleep at home): the home in 3D.
+  if ((valid.area === 'home' && here.state === 'settled') || here.state === 'sleeping')
+    return (
+      <>
+        {cityView}
+        <AtHome
+          travel={here}
+          life={life}
+          hud={hud}
+          onDoor={() => (whole && atHomeTown ? outTo('home') : setSheet('map'))}
+          fromTown={whole && atHomeTown}
+          fallback={
+            <Backdrop src={backdropFor(here.state === 'sleeping' ? 'home' : valid.area, here.place)}>
+              {hud}
+              <Middle>{here.state === 'sleeping' ? <Resting travel={here} /> : <OtherPanel place="home" travel={here} life={life} />}</Middle>
+            </Backdrop>
+          }
+        />
+        {sheets}
+      </>
+    )
+  if (here.state === 'working' || here.state === 'clinic')
+    return (
+      <Backdrop src={backdropFor(valid.area, here.place)}>
+        {hud}
+        <Middle>{here.state === 'working' ? <AtWork /> : <Resting travel={here} />}</Middle>
+        {sheets}
+      </Backdrop>
+    )
+
+  // Walking the town (Monrovia): from where it was left, or out of a place's door, or where a
+  // street is entered.
+  if (inCity)
+    return (
+      <>
+        {cityView}
         {sheets}
       </>
     )
@@ -318,6 +337,7 @@ export function World({ life }: { life: Life }) {
     const kind = INSIDE_OF[b.cat]!
     return (
       <>
+        {cityView}
         <HomeView
           key={businessKey(b)}
           kind={kind}
@@ -340,6 +360,7 @@ export function World({ life }: { life: Life }) {
   if (valid.area === 'health')
     return (
       <>
+        {cityView}
         <HomeView key="health" kind="health" travel={here} appearance={life.appearance} homeTown={life.home_town} homeCountry={life.home_country} hud={hud} onDoor={() => (whole ? outTo('health') : setSheet('map'))} fromTown={whole} />
         {sheets}
       </>
@@ -350,6 +371,7 @@ export function World({ life }: { life: Life }) {
   if (inside)
     return (
       <>
+        {cityView}
         <HomeView key={inside} kind={inside} travel={here} appearance={life.appearance} homeTown={life.home_town} homeCountry={life.home_country} hud={hud} onDoor={() => (whole ? outTo(valid.place!) : arrive({ area: 'sinkor', place: valid.place!, walking: true }))} fromTown={whole} />
         {sheets}
       </>
@@ -360,6 +382,7 @@ export function World({ life }: { life: Life }) {
   if (whole && (valid.area === 'visa' || valid.area === 'jobs'))
     return (
       <>
+        {cityView}
         <HomeView
           key={valid.area}
           kind="office"

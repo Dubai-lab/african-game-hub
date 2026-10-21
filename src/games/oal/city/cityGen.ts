@@ -7,6 +7,7 @@
 // and three storeys with flat roofs and water tanks on the big roads; zinc kiosks on the
 // shoulders; coconut palms; wooden poles with their wires. Where a street has been built by hand
 // (a "hub": Tubman Boulevard at Sinkor, Waterside Market), the chunk leaves its circle to it.
+import { INSIDE_OF } from './business'
 import { BufferAttribute, BufferGeometry, Color, ShapeUtils, Vector2 } from 'three'
 
 export type RoadKind = 'major' | 'middle' | 'minor' | 'path'
@@ -528,7 +529,18 @@ export type Tile = { b: number[][]; l: (string | number)[][]; p: (string | numbe
 export const BUILDING_KINDS = ['house', 'block', 'shop', 'church', 'mosque', 'school', 'clinic', 'office', 'hotel', 'industrial', 'shed', 'other'] as const
 /** A named place in a tile: what kind of place, its name, where (town metres); its door (on
  * the building's front, toward the road) and the way one faces it there. */
-export type TilePlace = { cat: string; name: string; x: number; y: number; door?: [number, number]; face?: [number, number]; everyday?: boolean }
+export type TilePlace = {
+  cat: string
+  name: string
+  x: number
+  y: number
+  door?: [number, number]
+  face?: [number, number]
+  everyday?: boolean
+  /** Its room, behind the opening in its front wall: the opening's middle, the wall's outward
+   * normal, the room's extent along the wall (u0 to u1) and in from it (d), its height. */
+  room?: { x: number; y: number; nx: number; ny: number; u0: number; u1: number; d: number; h: number }
+}
 /** A place's sign board on its building's front: what it says and is, where, which way it faces
  * (map radians), its width and height. */
 export type Sign = { text: string; cat: string; x: number; y: number; z: number; yaw: number; w: number; h: number }
@@ -663,6 +675,34 @@ function areaOf(pts: number[][]) {
   return a / 2
 }
 
+/** A building's front for a place in it: the wall (at least 2.2 m long) facing the road nearest
+ * the place, the longer the better; its middle, its outward normal, its length. */
+function frontWall(city: City, pts: number[][], px: number, py: number, blocked?: (x: number, y: number) => boolean) {
+  const road = nearestRoad(city, px, py, 60)
+  let best: { k: number; score: number; mx: number; my: number; nx: number; ny: number; len: number } | null = null
+  for (let k = 0; k < pts.length; k++) {
+    const [ax, ay] = pts[k]!
+    const [bx, by] = pts[(k + 1) % pts.length]!
+    const len = Math.hypot(bx! - ax!, by! - ay!)
+    if (len < 2.2) continue
+    const nx = (by! - ay!) / len
+    const ny = -(bx! - ax!) / len
+    const mx = (ax! + bx!) / 2
+    const my = (ay! + by!) / 2
+    // (A wall against a neighbour's: no door in it.)
+    if (blocked && (blocked(mx + nx * 0.6, my + ny * 0.6) || blocked(mx + nx * 1.6, my + ny * 1.6))) continue
+    const tx = road ? road.px - mx : nx
+    const ty = road ? road.py - my : ny
+    const tl = Math.hypot(tx, ty) || 1
+    const score = (nx * tx + ny * ty) / tl + Math.min(len, 8) * 0.03
+    if (!best || score > best.score) best = { k, score, mx, my, nx, ny, len }
+  }
+  return best
+}
+
+/** The door's opening in a business's front wall (metres): its width, its height. */
+export const DOORWAY = { w: 1.4, h: 2.3 }
+
 export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], tile?: Tile | null): ChunkParts {
   const rand = seeded(cx * 73856093 ^ cy * 19349663)
   const land = new Mesher()
@@ -675,7 +715,7 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
   const places: TilePlace[] = []
   const signs: Sign[] = []
   // Each real building drawn: its footprint, height, whether a shopfront (for its sign).
-  const drawn = new Map<number, { pts: number[][]; h: number; shop: boolean; kind: string; box: ReturnType<typeof boxAround> }>()
+  const drawn = new Map<number, { pts: number[][]; h: number; shop: boolean; kind: string; box: ReturnType<typeof boxAround>; door?: ReturnType<typeof frontWall> }>()
   /** A street lamp at the kerb, its arm over the road (toward rx, ry): a galvanised steel post on
    * its concrete base, the arm, the lamp head and its glass; most work (a few are broken, as in
    * town), each throwing its pool of light at night. */
@@ -747,6 +787,13 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
       if (pts.length < 3) continue
       for (const [a, b, c] of ShapeUtils.triangulateShape(pts, [])) land.tri([pts[a!]!.x, 0.012, -pts[a!]!.y], [pts[b!]!.x, 0.012, -pts[b!]!.y], [pts[c!]!.x, 0.012, -pts[c!]!.y], 0, 1, 0, colour)
     }
+    // Every building's footprint (a door is never put in a wall against another).
+    const footprints = tile.b.map((b) => {
+      const flat: number[] = []
+      for (let k = 3; k + 1 < b.length; k += 2) flat.push(x0 + b[k]! / 10, y0 + b[k + 1]! / 10)
+      return poly(flat)
+    })
+    const against = (self: number) => (x: number, y: number) => footprints.some((f, j) => j !== self && f.pts.length >= 6 && inPoly(f, x, y))
     // Every building as it stands: its footprint, raised to its storeys, roofed as Monrovia roofs.
     tile.b.forEach((b, i) => {
       const kind = BUILDING_KINDS[b[0]!] ?? 'other'
@@ -785,6 +832,10 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
       const style = kind === 'block' || kind === 'hotel' || kind === 'office' || storeys >= 3 ? WALL_STYLE.storeys : mesh === shops ? WALL_STYLE.painted : r() < 0.14 ? WALL_STYLE.blocks : r() < 0.55 ? WALL_STYLE.house : WALL_STYLE.painted
       if (style === WALL_STYLE.blocks) tint = BLOCK[Math.floor(r() * BLOCK.length)]!
       const sv = style * 100
+      // A place with an inside in it (its first): an opening in its front wall, the door, walked
+      // through into it (the inside itself is set in it by the town, CityScene).
+      const inside = tile.p.find((p) => p[4] === i && INSIDE_OF[p[0] as string] && tile.n[p[1] as number])
+      const door = inside && h >= 2.8 ? frontWall(city, pts, x0 + (inside[2] as number) / 10, y0 + (inside[3] as number) / 10, against(i)) : null
       for (let k = 0; k < pts.length; k++) {
         const [ax, ay] = pts[k]!
         const [bx, by] = pts[(k + 1) % pts.length]!
@@ -792,46 +843,45 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
         if (len < 0.05) continue
         const nx = (by! - ay!) / len
         const ny = -(bx! - ax!) / len
+        const ux = (bx! - ax!) / len
+        const uy = (by! - ay!) / len
+        // The wall in pieces (along it s0 to s1, up it z0 to z1): whole; or, the door's wall,
+        // either side of the opening and over it.
+        const t0 = len / 2 - DOORWAY.w / 2
+        const t1 = len / 2 + DOORWAY.w / 2
+        const pieces: number[][] = door && door.k === k ? [[0, t0, 0, h], [t1, len, 0, h], [t0, t1, DOORWAY.h, h]] : [[0, len, 0, h]]
         // A shop: its shopfront the ground floor's height; above it, the storeys' windows.
         const ground = mesh === shops ? Math.min(h, 3.1) : 0
-        if (ground > 0)
-          shops.quad(
-            [
-              [ax!, 0, -ay!],
-              [bx!, 0, -by!],
-              [bx!, ground, -by!],
-              [ax!, ground, -ay!],
-            ],
-            nx,
-            0,
-            -ny,
-            [
-              [0, 0],
-              [len / 4, 0],
-              [len / 4, 1],
-              [0, 1],
-            ],
-            tint,
-          )
-        if (h > ground)
-          (mesh === shops ? walls : mesh).quad(
-            [
-              [ax!, ground, -ay!],
-              [bx!, ground, -by!],
-              [bx!, h, -by!],
-              [ax!, h, -ay!],
-            ],
-            nx,
-            0,
-            -ny,
-            [
-              [0, sv + ground / 3.1],
-              [len / 4, sv + ground / 3.1],
-              [len / 4, sv + h / 3.1],
-              [0, sv + h / 3.1],
-            ],
-            tint,
-          )
+        for (const [s0, s1, z0, z1] of pieces as [number, number, number, number][]) {
+          const P = (sx: number, z: number) => [ax! + ux * sx, z, -(ay! + uy * sx)]
+          if (ground > z0)
+            shops.quad([P(s0, z0), P(s1, z0), P(s1, Math.min(ground, z1)), P(s0, Math.min(ground, z1))], nx, 0, -ny, [
+              [s0 / 4, z0 / 3.1],
+              [s1 / 4, z0 / 3.1],
+              [s1 / 4, Math.min(ground, z1) / 3.1],
+              [s0 / 4, Math.min(ground, z1) / 3.1],
+            ], tint)
+          const lo = Math.max(ground, z0)
+          if (z1 > lo)
+            (mesh === shops ? walls : mesh).quad([P(s0, lo), P(s1, lo), P(s1, z1), P(s0, z1)], nx, 0, -ny, [
+              [s0 / 4, sv + lo / 3.1],
+              [s1 / 4, sv + lo / 3.1],
+              [s1 / 4, sv + z1 / 3.1],
+              [s0 / 4, sv + z1 / 3.1],
+            ], tint)
+        }
+        // The opening's sides and top, the wall's thickness (seen from the street, in).
+        if (door && door.k === k)
+          for (const [x1, y1, x2, y2, z1, z2] of [
+            [t0, 0, t0, 0.22, 0, DOORWAY.h],
+            [t1, 0, t1, 0.22, 0, DOORWAY.h],
+          ] as number[][]) {
+            void y1
+            void y2
+            const a = [ax! + ux * x1!, ay! + uy * x1!]
+            const b = [ax! + ux * x2!, ay! + uy * x2!]
+            plain.quad([[a[0]!, z1!, -a[1]!], [a[0]! - nx * 0.22, z1!, -(a[1]! - ny * 0.22)], [b[0]! - nx * 0.22, z2!, -(b[1]! - ny * 0.22)], [b[0]!, z2!, -b[1]!]], ux, 0, -uy, [[0, 0], [1, 0], [1, 1], [0, 1]], '#d8d2c4')
+          }
       }
       // The roof: hipped zinc over a house's rectangle, else flat with its parapet (a water
       // tank on many).
@@ -866,8 +916,27 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
         }
         if (kind !== 'industrial' && r() < 0.55) plain.post(box.x + (r() - 0.5) * box.w * 0.5, box.y + (r() - 0.5) * box.d * 0.5, 0.75, 0.75, h, h + 1.5, '#1c1c20', 8)
       }
-      solids.push(solidOf(pts))
-      drawn.set(i, { pts, h, shop: mesh === shops, kind, box })
+      if (!door) solids.push(solidOf(pts))
+      else
+        // Its walls one by one (the door's with its opening), to walk in between.
+        for (let k = 0; k < pts.length; k++) {
+          const [ax, ay] = pts[k]!
+          const [bx, by] = pts[(k + 1) % pts.length]!
+          const len = Math.hypot(bx! - ax!, by! - ay!)
+          if (len < 0.05) continue
+          const ux = (bx! - ax!) / len
+          const uy = (by! - ay!) / len
+          const nx = uy
+          const ny = -ux
+          const spans = k === door.k ? [[0, len / 2 - DOORWAY.w / 2], [len / 2 + DOORWAY.w / 2, len]] : [[0, len]]
+          for (const [s0, s1] of spans as [number, number][]) {
+            if (s1 - s0 < 0.05) continue
+            const A = [ax! + ux * s0, ay! + uy * s0]
+            const B = [ax! + ux * s1, ay! + uy * s1]
+            solids.push(solidOf([[A[0]!, A[1]!], [B[0]!, B[1]!], [B[0]! - nx * 0.25, B[1]! - ny * 0.25], [A[0]! - nx * 0.25, A[1]! - ny * 0.25]]))
+          }
+        }
+      drawn.set(i, { pts, h, shop: mesh === shops, kind, box, door })
       take(box.x, box.y, Math.min(box.w, box.d) / 2)
       for (const [x, y] of pts) take(x!, y!, 0.5)
     })
@@ -879,23 +948,8 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
       const place: TilePlace = { cat: p[0] as string, name: tile.n[p[1] as number] ?? '', x: x0 + (p[2] as number) / 10, y: y0 + (p[3] as number) / 10, everyday: p[5] === 1 }
       const b = drawn.get(p[4] as number)
       if (b && place.name) {
-        const road = nearestRoad(city, place.x, place.y, 60)
-        let best: { score: number; mx: number; my: number; nx: number; ny: number; len: number } | null = null
-        for (let k = 0; k < b.pts.length; k++) {
-          const [ax, ay] = b.pts[k]!
-          const [bx, by] = b.pts[(k + 1) % b.pts.length]!
-          const len = Math.hypot(bx! - ax!, by! - ay!)
-          if (len < 2.2) continue
-          const nx = (by! - ay!) / len
-          const ny = -(bx! - ax!) / len
-          const mx = (ax! + bx!) / 2
-          const my = (ay! + by!) / 2
-          const tx = road ? road.px - mx : nx
-          const ty = road ? road.py - my : ny
-          const tl = Math.hypot(tx, ty) || 1
-          const score = (nx * tx + ny * ty) / tl + Math.min(len, 8) * 0.03
-          if (!best || score > best.score) best = { score, mx, my, nx, ny, len }
-        }
+        // Its front: the door's wall if its building has the opening for it, else the wall to the road.
+        const best = b.door && INSIDE_OF[place.cat] ? b.door : frontWall(city, b.pts, place.x, place.y)
         const already = boards.get(p[4] as number) ?? 0
         boards.set(p[4] as number, already + 1)
         if (best && already < 2) {
@@ -905,6 +959,29 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
           signs.push({ text: place.name, cat: place.cat, x: best.mx + best.nx * 0.07, y: best.my + best.ny * 0.07, z, yaw: Math.atan2(best.ny, best.nx), w, h: hgt })
           place.door = [best.mx + best.nx * 1.4, best.my + best.ny * 1.4]
           place.face = [-best.nx, -best.ny]
+          // A place with an inside: its door in the wall (walked through, in): the dark doorway in
+          // its frame, the glass door standing open, the step before it.
+          if (!already && INSIDE_OF[place.cat] && b.door === best) {
+            const yaw = Math.atan2(best.nx, -best.ny)
+            const ax = -best.ny
+            const ay = best.nx
+            const at = (along: number, out: number): [number, number] => [best.mx + ax * along + best.nx * out, best.my + ay * along + best.ny * out]
+            for (const side of [-DOORWAY.w / 2 - 0.06, DOORWAY.w / 2 + 0.06]) plain.box(...at(side, 0.06), yaw, 0.12, 0.12, 0, DOORWAY.h + 0.1, '#5e4c3a', [1, 1])
+            plain.box(...at(0, 0.06), yaw, DOORWAY.w + 0.24, 0.12, DOORWAY.h, 0.13, '#5e4c3a', [1, 1])
+            plain.box(...at(0, 0.5), yaw, DOORWAY.w + 0.4, 0.85, 0, 0.12, '#a8a296', [1, 1])
+            // The room behind the door (in the door's frame: along the wall, in from it), for its inside.
+            let u0 = Infinity
+            let u1 = -Infinity
+            let d = 0
+            for (const [x, y] of b.pts) {
+              const dx = x! - best.mx
+              const dy = y! - best.my
+              u0 = Math.min(u0, dx * ax + dy * ay)
+              u1 = Math.max(u1, dx * ax + dy * ay)
+              d = Math.max(d, -(dx * best.nx + dy * best.ny))
+            }
+            place.room = { x: best.mx, y: best.my, nx: best.nx, ny: best.ny, u0, u1, d, h: b.h }
+          }
         }
       }
       places.push(place)
@@ -1327,7 +1404,7 @@ type Around = {
   y0: number
   cx: number
   cy: number
-  drawn: Map<number, { pts: number[][]; h: number; shop: boolean; kind: string; box: ReturnType<typeof boxAround> }>
+  drawn: Map<number, { pts: number[][]; h: number; shop: boolean; kind: string; box: ReturnType<typeof boxAround>; door?: ReturnType<typeof frontWall> }>
   signs: Sign[]
   solids: Solid[]
   land: Mesher

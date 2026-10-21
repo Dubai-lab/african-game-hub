@@ -18,12 +18,12 @@ import { person, type Stick } from './ArrivalsScene'
 import { CHARACTER_URL } from './character'
 import plans from './homePlan.json'
 import interiorPlans from './interiorsPlan.json'
-import { HOME_URL, OUTSIDE } from './homeModel'
+import { HOME_URL, INTERIORS_URL, OUTSIDE } from './homeModel'
 import { BUSINESS_KINDS, type BusinessKind } from './city/business'
 
 export { HOME_URL } from './homeModel'
 /** The insides of the town's places, one for each kind (scripts/oal/makeInteriors.py). */
-export const INTERIORS_URL = '/oal/interiors.v1.glb'
+export { INTERIORS_URL } from './homeModel'
 export type HomeKind = 'house' | 'room' | 'phoneshop' | 'starline' | 'citrus' | 'health' | BusinessKind
 export type HomePlace = 'bed' | 'kitchen' | 'table' | 'door' | 'bath' | 'counter' | 'desk' | 'ticket' | 'collect' | 'gate' | 'reception' | 'writing' | 'cashier'
 type At = { x: number; y: number; face: number[]; z?: number; side?: number[] }

@@ -29,6 +29,7 @@ import {
   MeshStandardMaterial,
   type Object3D,
   Quaternion,
+  Plane,
   PlaneGeometry,
   PMREMGenerator,
   RepeatWrapping,
@@ -47,7 +48,7 @@ import { CHARACTER_URL, CROWD_URL } from '../character'
 import { type TownMap, useTownMap } from '../MapView'
 import { TOWNS } from '../StreetScene'
 import { keepOutOf, type Moving, Traffic } from '../Traffic'
-import { businessKey } from './business'
+import { businessKey, INSIDE_OF } from './business'
 import { CityTraffic, CityWalkers } from './CityTraffic'
 import { type Destination, newRide, PASSENGER, type RidePhase, type RideState } from './ride'
 import { type Sign, SIGNAL_LAMPS, TREE_KINDS, type Signal, type SignalLamp, signalState, type TilePlace } from './cityGen'
@@ -55,7 +56,7 @@ import { groundHeight } from './cityGen'
 import { type ChunkRequest } from './chunk.worker'
 import { type PackedParts, unpackParts } from './chunkPack'
 import { type Landmark, LANDMARKS, landmarkPoint, landmarkSolids } from './landmarks'
-import { COMPOUNDS_BUILT, gates, HOME_URL, OUTSIDE } from '../homeModel'
+import { COMPOUNDS_BUILT, gates, HOME_URL, INSIDES, INTERIORS_URL, OUTSIDE } from '../homeModel'
 import { stillFigure, VEHICLES_URL, vehicleModels } from '../Traffic'
 import { defaultAppearance } from '../../../../supabase/functions/_shared/oal'
 import { buildChunk, buildCity, CHUNK, solidOf, type City, type ChunkParts, type Keep, nearestRoad, segsNear, type Solid, type Tile, toSeg, type TownMapData, waterGeometry } from './cityGen'
@@ -1244,6 +1245,191 @@ function Trees({ player }: { player: RefObject<{ x: number; y: number }> }) {
   )
 }
 
+// ---- The insides of the town's businesses, in their own buildings -----------------------------
+
+/** A business's inside set in its building: where it stands, how it is turned and sized. */
+type Room = { key: string; kind: string; name: string; cat: string; mx: number; my: number; nx: number; ny: number; u0: number; u1: number; d: number; h: number; s: number; f0: number }
+/** The insides near the player: their walls (to walk against), their places (the counter), their rooms. */
+const insideSolids = new Map<string, Solid[]>()
+const insidePlaces = new Map<string, CityPlace[]>()
+const insideRooms = new Map<string, Room>()
+
+/** A point of an inside (its own metres: x across, y from its front to its back) in the town. */
+function roomPoint(r: Room, x: number, y: number): [number, number] {
+  const ax = -r.ny
+  const ay = r.nx
+  const w = (y - r.f0) * r.s + 0.25
+  return [r.mx + ax * x * r.s - r.nx * w, r.my + ay * x * r.s - r.ny * w]
+}
+
+/** Whether a point is in a room. */
+function roomAtOf(r: Room, x: number, y: number) {
+  const dx = x - r.mx
+  const dy = y - r.my
+  const u = dx * -r.ny + dy * r.nx
+  const v = -(dx * r.nx + dy * r.ny)
+  return v > 0 && v < r.d && u > r.u0 && u < r.u1
+}
+
+/** The room the point is in, if any (to keep the camera under its ceiling). */
+function roomAt(x: number, y: number): Room | null {
+  for (const r of insideRooms.values()) {
+    const dx = x - r.mx
+    const dy = y - r.my
+    const u = dx * -r.ny + dy * r.nx
+    const v = -(dx * r.nx + dy * r.ny)
+    if (v > 0 && v < r.d && u > r.u0 && u < r.u1) return r
+  }
+  return null
+}
+
+/** The businesses near enough to see into: their insides set in their buildings (the nearest six). */
+function NearInsides({ player }: { player: RefObject<{ x: number; y: number }> }) {
+  const [near, setNear] = useState<Room[]>([])
+  const last = useRef(0)
+  useFrame(({ clock }) => {
+    if (clock.elapsedTime - last.current < 0.6) return
+    last.current = clock.elapsedTime
+    const p = player.current
+    if (!p) return
+    const pcx = Math.floor(p.x / CHUNK)
+    const pcy = Math.floor(p.y / CHUNK)
+    const found: { r: Room; dist: number }[] = []
+    for (let dx = -1; dx <= 1; dx++)
+      for (let dy = -1; dy <= 1; dy++)
+        for (const q of placesByChunk.get(`${pcx + dx},${pcy + dy}`) ?? []) {
+          const kind = INSIDE_OF[q.cat]
+          if (!q.room || !q.door || !q.face || !kind || !INSIDES[kind]) continue
+          const dist = Math.hypot(q.room.x - p.x, q.room.y - p.y)
+          if (dist > 40) continue
+          const plan = INSIDES[kind]!
+          const xs = plan.inside.flatMap((r) => [r[0]!, r[2]!])
+          const ys = plan.inside.flatMap((r) => [r[1]!, r[3]!])
+          const W = Math.max(...xs) - Math.min(...xs)
+          const D = Math.max(...ys) - Math.min(...ys)
+          const room = q.room
+          const s = Math.max(0.8, Math.min(1, (2 * Math.min(-room.u0, room.u1) - 0.3) / W, (room.d - 0.4) / D, (room.h - 0.2) / (plan.ceiling ?? 3)))
+          found.push({ r: { key: businessKey({ cat: q.cat, name: q.name, door: q.door, face: q.face }), kind, name: q.name, cat: q.cat, mx: room.x, my: room.y, nx: room.nx, ny: room.ny, u0: room.u0, u1: room.u1, d: room.d, h: room.h, s, f0: Math.min(...ys) }, dist })
+        }
+    found.sort((a, b) => a.dist - b.dist)
+    const now = found.slice(0, 6).map((f) => f.r)
+    if (now.map((r) => r.key).join('|') !== near.map((r) => r.key).join('|')) setNear(now)
+  })
+  return (
+    <>
+      {near.map((r) => (
+        <Suspense key={r.key} fallback={null}>
+          <InsideModel r={r} />
+        </Suspense>
+      ))}
+    </>
+  )
+}
+
+function InsideModel({ r }: { r: Room }) {
+  const gltf = useLoader(GLTFLoader, INTERIORS_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const crowd = useLoader(GLTFLoader, CROWD_URL('male'), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const { gl } = useThree()
+  const { root, light } = useMemo(() => {
+    gl.localClippingEnabled = true
+    const plan = INSIDES[r.kind]!
+    const root = gltf.scene.getObjectByName(r.kind)!.clone(true)
+    // Kept within its building's walls (a room smaller than the inside: cut, never through the walls).
+    const ax = -r.ny
+    const ay = r.nx
+    const plane = (nx: number, ny: number, px: number, py: number) => new Plane(new Vector3(nx, 0, -ny), -(nx * px + ny * py))
+    const planes = [
+      plane(-r.nx, -r.ny, r.mx - r.nx * 0.05, r.my - r.ny * 0.05),
+      plane(r.nx, r.ny, r.mx - r.nx * r.d, r.my - r.ny * r.d),
+      plane(ax, ay, r.mx + ax * r.u0, r.my + ay * r.u0),
+      plane(-ax, -ay, r.mx + ax * r.u1, r.my + ay * r.u1),
+      new Plane(new Vector3(0, -1, 0), r.h - 0.05),
+    ]
+    root.traverse((o) => {
+      if (OUTSIDE.test(o.name) || o.name.startsWith('sign')) {
+        o.visible = false
+        return
+      }
+      const m = o as Mesh
+      if (!m.isMesh) return
+      const mats = (Array.isArray(m.material) ? m.material : [m.material]).map((mat) => {
+        const c = mat.clone()
+        c.clippingPlanes = planes
+        return c
+      })
+      m.material = Array.isArray(m.material) ? mats : mats[0]!
+    })
+    const [ox, oy] = roomPoint(r, 0, 0)
+    root.position.set(ox, 0.02, -oy)
+    root.rotation.set(0, Math.atan2(r.nx, -r.ny), 0)
+    root.scale.setScalar(r.s)
+    // Its people at their work, standing (behind the counter, at the desk).
+    ;(plan.attendants ?? []).forEach((a, i) => {
+      const look = { ...defaultAppearance('male'), skin: [0.85, 0.7, 0.92][i % 3]!, outfit: ['shirt_jeans', 'tee_jeans'][i % 2]!, hair: ['short', 'lowcut'][i % 2]! }
+      const p = person(crowd.scene, crowd.animations, look)
+      ;(p.actions.idle ?? p.actions.walk)?.play()
+      p.mixer.update(0.3 + i)
+      const fig = stillFigure(p.root, `staff${i % 2}`)
+      fig.position.set(a.x, 0, -a.y)
+      fig.rotation.y = Math.atan2(a.face[0]!, -a.face[1]!)
+      fig.scale.setScalar(1 / r.s)
+      root.add(fig)
+    })
+    const [lx, ly] = roomPoint(r, 0, (r.f0 + (plan.inside[0]?.[3] ?? r.f0 + 6)) / 2)
+    return { root, light: [lx, Math.min(r.h, (plan.ceiling ?? 3) * r.s) - 0.4, -ly] as [number, number, number] }
+  }, [gltf, crowd, r, gl])
+  // Its walls and its places (the counter...) for the walker, while it is here.
+  useEffect(() => {
+    const plan = INSIDES[r.kind]!
+    // Its walls and fittings, cut to its building's room as it is drawn (a neighbour's doorway is
+    // never in it); not its own front (the building's wall, with its opening, is its front).
+    const ax = -r.ny
+    const ay = r.nx
+    const toRoom = (x: number, y: number) => {
+      const [px, py] = roomPoint(r, x, y)
+      return [(px - r.mx) * ax + (py - r.my) * ay, -((px - r.mx) * r.nx + (py - r.my) * r.ny)] as const
+    }
+    const fromRoom = (u: number, v: number): [number, number] => [r.mx + ax * u - r.nx * v, r.my + ay * u - r.ny * v]
+    const solids: Solid[] = []
+    for (const q of plan.solids) {
+      if (Math.max(q[1]!, q[3]!) <= r.f0 + 0.45) continue
+      const [ua, va] = toRoom(q[0]!, q[1]!)
+      const [ub, vb] = toRoom(q[2]!, q[3]!)
+      const u0 = Math.max(Math.min(ua, ub), r.u0)
+      const u1 = Math.min(Math.max(ua, ub), r.u1)
+      const v0 = Math.max(Math.min(va, vb), 0)
+      const v1 = Math.min(Math.max(va, vb), r.d)
+      if (u1 - u0 < 0.02 || v1 - v0 < 0.02) continue
+      solids.push(solidOf([fromRoom(u0, v0), fromRoom(u1, v0), fromRoom(u1, v1), fromRoom(u0, v1)]))
+    }
+    insideSolids.set(r.key, solids)
+    const places: CityPlace[] = []
+    for (const [name, at] of Object.entries(plan.places)) {
+      if (name === 'door' || name === 'bed') continue
+      const [x, y] = roomPoint(r, at.x, at.y)
+      if (roomAtOf(r, x, y) === false) continue
+      const [fx, fy] = [-r.ny * at.face[0]! - r.nx * at.face[1]!, r.nx * at.face[0]! - r.ny * at.face[1]!]
+      places.push({ name: `in:${r.key}`, x, y, face: [fx, fy] })
+    }
+    insidePlaces.set(r.key, places)
+    insideRooms.set(r.key, r)
+    return () => {
+      insideSolids.delete(r.key)
+      insidePlaces.delete(r.key)
+      insideRooms.delete(r.key)
+    }
+  }, [r])
+  return (
+    <>
+      <primitive object={root} />
+      <pointLight position={light} intensity={8} distance={Math.max(8, r.d * 1.4)} decay={1.5} color="#ffe9c8" />
+    </>
+  )
+}
+
+/** The game's places walked into at their doors (the rest are asked at: the gate, the ticket booth). */
+const WALK_IN = new Set(['home', 'health', 'visa', 'jobs', 'phone', 'starline', 'citrus'])
+
 /** The landmarks within sight (each its own file, loaded as one comes near it). */
 function NearLandmarks({ player }: { player: RefObject<{ x: number; y: number }> }) {
   const [near, setNear] = useState<string[]>([])
@@ -1322,6 +1508,10 @@ type Props = {
   pitch?: RefObject<number>
   paused: boolean
   onPlace: (place: string | null) => void
+  /** Kept but not shown (one is inside a place in the town): not drawn, not walked. */
+  hidden?: boolean
+  /** Walked in at a door (a business's doorway; the house's, the Ministry's, an office's): in, no button. */
+  onWalkIn?: (place: string) => void
   onPosition?: (x: number, y: number, facing: number, moving: boolean) => void
   onReady?: (places: CityPlace[]) => void
   /** The street the player is on (its name on the map), as it changes. */
@@ -1358,6 +1548,8 @@ function Beam({ at }: { at: { x: number; y: number } }) {
 
 function Walker({ props, city, start, compounds, hubs, places, solids, player }: { props: Props; city: City; start: { x: number; y: number; f: number }; compounds: Compound[]; hubs: Hub[]; places: CityPlace[]; solids: RefObject<Map<string, Solid[]>>; player: RefObject<{ x: number; y: number }> }) {
   const { appearance, stick, look, pitch, paused, onPlace, onPosition, onStreet } = props
+  // How long since walking began here (a door just come out of is not walked straight back into).
+  const walkedFor = useRef(0)
   const street = useRef<string | null | undefined>(undefined)
   const first = useRef(true)
   const roadside = useRef<boolean | undefined>(undefined)
@@ -1367,6 +1559,17 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
   const { camera } = useThree()
   const keys = useRef(new Set<string>())
   const state = useRef({ x: start.x, y: start.y, facing: start.f, speed: 0, place: null as string | null, told: 0 })
+  // Out of a door again (the town kept meanwhile): there, facing out, the camera behind.
+  const begun = useRef(start)
+  useEffect(() => {
+    if (begun.current === start) return
+    begun.current = start
+    Object.assign(state.current, { x: start.x, y: start.y, facing: start.f, speed: 0 })
+    if (player.current) player.current = { x: start.x, y: start.y }
+    if (look) look.current = start.f
+    first.current = true
+    walkedFor.current = 0
+  }, [start]) // eslint-disable-line react-hooks/exhaustive-deps
   const me = useMemo(() => {
     const p = person(gltf.scene, gltf.animations, appearance)
     p.actions.idle?.play()
@@ -1395,7 +1598,7 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
       const where = TOWNS[h.town]
       const lx = s.x - h.x
       const ly = s.y - h.y
-      if (Math.hypot(lx, ly) > where.plan.reach + 10) continue
+      if (Math.hypot(lx, ly) > hubExtent(h.town) + 10) continue
       const local = { x: lx, y: ly }
       keepOutOf(local, hubTraffic.get(h.town)?.current ?? [], RADIUS)
       for (const poly of where.polys) {
@@ -1416,6 +1619,7 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
           pushOut(s, poly)
         }
     for (const c of compounds) for (const poly of compoundSolids(c)) pushOut(s, poly)
+    for (const list of insideSolids.values()) for (const poly of list) pushOut(s, poly)
   }
   useFrame((_, raw) => {
     const dt = Math.min(raw, 0.25)
@@ -1518,7 +1722,8 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
     if (s.told > 0.25) {
       s.told = 0
       onPosition?.(s.x, s.y, s.facing, s.speed > 0.2)
-      const name = namedRoad(city, s.x, s.y)
+      // Inside a business: its name; else the road's.
+      const name = roomAt(s.x, s.y)?.name ?? namedRoad(city, s.x, s.y)
       // By a road a vehicle can pull in on (within a few metres of its edge).
       const road = nearestRoad(city, s.x, s.y, 30)
       const by = Boolean(road && road.d < road.seg.w / 2 + 6)
@@ -1533,6 +1738,8 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
     }
     let near: string | null = null
     for (const p of places) if (Math.hypot(s.x - p.x, s.y - p.y) < NEAR) near = p.name
+    // At a business's counter, inside it.
+    for (const list of insidePlaces.values()) for (const p of list) if (Math.hypot(s.x - p.x, s.y - p.y) < 2.8) near = p.name
     // A business's door (the town's places: "biz:" its category and name).
     if (!near) {
       const ck = `${Math.floor(s.x / CHUNK)},${Math.floor(s.y / CHUNK)}`
@@ -1542,12 +1749,33 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
       s.place = near
       onPlace(near)
     }
+    // Walked in at a door: into its doorway (a business), onto its step (the house, the Ministry's
+    // hall, an office, the shops on Tubman Boulevard). Not while just come out of it.
+    walkedFor.current += dt
+    if (props.onWalkIn && walkedFor.current > 1.2 && s.speed > 0.2 && near) {
+      let at: number[] | null = null
+      if (near.startsWith('biz:')) {
+        const ck = `${Math.floor(s.x / CHUNK)},${Math.floor(s.y / CHUNK)}`
+        const p = (placesByChunk.get(ck) ?? []).find((q) => q.door && q.face && businessKey({ cat: q.cat, name: q.name, door: q.door, face: q.face }) === near)
+        if (p && INSIDE_OF[p.cat] && !p.room) at = [p.door![0] + p.face![0] * 1.4, p.door![1] + p.face![1] * 1.4]
+      } else if (WALK_IN.has(near)) {
+        const p = places.find((q) => q.name === near)
+        if (p) at = [p.x, p.y]
+      }
+      if (at && Math.hypot(s.x - at[0]!, s.y - at[1]!) < (near.startsWith('biz:') ? 0.95 : 0.7)) {
+        walkedFor.current = -1e9
+        props.onWalkIn(near)
+      }
+    }
     // As in a game: the camera goes round the character at a fixed distance (turned by a drag
     // sideways, raised or lowered by a drag up or down), always looking at the character; it
     // never comes in close.
+    // Indoors (in a business's room): nearer, and under its ceiling.
+    const room = roomAt(s.x, s.y)
     const tilt = pitch?.current ?? 0
-    const elev = Math.max(-0.12, Math.min(1.15, 0.3 - tilt * 0.75))
-    const back = paused ? 3.4 : 4.6
+    const roomTop = room ? Math.min(room.h, 3 * room.s) - 0.35 : Infinity
+    const elev = Math.max(-0.12, Math.min(room ? Math.asin(Math.max(-0.1, Math.min(0.9, (roomTop - 1.45) / 2.5))) : 1.15, 0.3 - tilt * 0.75))
+    const back = room ? 2.5 : paused ? 3.4 : 4.6
     const flat = Math.cos(elev) * back
     target.set(s.x, ground + 1.45 + Math.max(0, -elev) * 2 + Math.max(0, tilt - 0.6) * 1.5, -s.y)
     eye.set(s.x - Math.sin(yaw) * flat, ground + Math.max(0.35, 1.45 + Math.sin(elev) * back), -(s.y + Math.cos(yaw) * flat))
@@ -1565,11 +1793,12 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
           pull = Math.min(pull, segmentHit(s.x, s.y, ex, ey, poly))
         }
     for (const c of compounds) if (Math.hypot(c.x - s.x, c.y - s.y) < 40) for (const poly of compoundSolids(c)) pull = Math.min(pull, segmentHit(s.x, s.y, ex, ey, poly))
+    for (const list of insideSolids.values()) for (const poly of list) pull = Math.min(pull, segmentHit(s.x, s.y, ex, ey, poly))
     if (pull < 1) {
       // A wall between: in front of it if that is not too close; else up over the character's
       // head, looking down on them (never in on them).
-      const t = pull - 0.08
-      if (t * back >= 2.2) {
+      const t = Math.max(pull - 0.08, room ? 0.12 : 0)
+      if (t * back >= 2.2 || room) {
         eye.x = s.x + (ex - s.x) * t
         eye.z = -(s.y + (ey - s.y) * t)
       } else {
@@ -1833,6 +2062,18 @@ function SiteModel({ s }: { s: Site }) {
 
 // ---- The scene ---------------------------------------------------------------------------------
 
+/** How far a street built by hand reaches: its reach, or its farthest building if farther. */
+const hubExtents = new Map<string, number>()
+function hubExtent(town: Hub['town']) {
+  const known = hubExtents.get(town)
+  if (known !== undefined) return known
+  const where = TOWNS[town]
+  let far = where.plan.reach
+  for (const poly of where.polys) for (const [x, y] of poly.points as number[][]) far = Math.max(far, Math.hypot(x!, y!))
+  hubExtents.set(town, far)
+  return far
+}
+
 /** The streets built by hand in each town, where they are on its map. */
 function hubsOf(town: string, map: TownMap): Hub[] {
   if (town !== 'Monrovia') return []
@@ -1864,7 +2105,8 @@ export default function CityScene(props: Props) {
   const sites = useMemo(() => (map.data && city ? sitesOf(props.town, map.data, city) : []), [map.data, city, props.town])
   const keep = useMemo<Keep[]>(
     () => [
-      ...hubs.map((h) => ({ x: h.x, y: h.y, r: TOWNS[h.town].plan.reach + 4 })),
+      // A street built by hand: the town gives way to all of it (its farthest building, not just its reach).
+      ...hubs.map((h) => ({ x: h.x, y: h.y, r: hubExtent(h.town) + 4 })),
       ...compounds.map((c) => ({ x: c.x, y: c.y, r: Math.max(c.w, c.d) / 2 + 3, roads: false })),
       ...sites.map((x) => ({ x: x.x, y: x.y, r: Math.max(x.w, x.d) / 2 + 3, roads: false, solids: siteSolids(x).map((p) => [...p]) })),
       ...(props.town === 'Monrovia' ? LANDMARKS : []).map((l) => ({ x: l.x, y: l.y, r: l.clear, roads: false, solids: landmarkSolids(l) })),
@@ -1942,7 +2184,7 @@ export default function CityScene(props: Props) {
   const ownRide = useRef<RideState>(newRide())
   const ride = props.ride ?? ownRide
   return (
-    <Canvas dpr={[1, 1.5]} camera={{ fov: 60, near: 0.1, far: 700, position: [0, 2.4, 3] }} gl={{ antialias: true }} style={{ touchAction: 'none' }}>
+    <Canvas frameloop={props.hidden ? 'never' : 'always'} dpr={[1, 1.5]} camera={{ fov: 60, near: 0.1, far: 700, position: [0, 2.4, 3] }} gl={{ antialias: true }} style={{ touchAction: 'none' }}>
       <color attach="background" args={['#c9d9e6']} />
       <fog attach="fog" args={['#c9d9e6', 110, 480]} />
       <Light />
@@ -1978,6 +2220,11 @@ export default function CityScene(props: Props) {
             <Optional>
               <Trees player={player} />
             </Optional>
+            {props.town === 'Monrovia' && (
+              <Optional>
+                <NearInsides player={player} />
+              </Optional>
+            )}
             <Optional>
               <CityWalkers city={city} keep={keep} player={player} />
             </Optional>

@@ -66,21 +66,26 @@ test('the places in the town, in and out', async ({ page }) => {
   // In at the house's door, out of it again: in the yard, in the town.
   for (const place of ['home', 'visa'].filter((p) => !process.env.ONLY || p === process.env.ONLY)) {
     await at(place)
-    // Back to the door (out of it, one is a few steps on), till its button shows.
-    const open = page.getByTestId('oal-place-open')
-    for (let i = 0; i < 40 && !(await open.isVisible()); i++) {
-      await page.keyboard.down('ArrowDown')
-      await page.waitForTimeout(200)
-      await page.keyboard.up('ArrowDown')
+    // Back to the door (out of it, one is a few steps on) and in at it: no button, walked in.
+    const street = page.getByTestId('oal-street')
+    // Up to the porch; along the front to the door (one way, else the other).
+    await page.keyboard.down('ArrowDown')
+    await page.waitForTimeout(place === 'home' ? 6000 : 3000)
+    for (const side of ['ArrowRight', 'ArrowLeft']) {
+      if (!(await street.isVisible())) break
+      await page.keyboard.down(side)
+      for (let i = 0; i < 25 && (await street.isVisible()); i++) await page.waitForTimeout(200)
+      await page.keyboard.up(side)
     }
-    await open.click()
-    await expect(page.getByTestId('oal-street')).toHaveCount(0, { timeout: 60_000 })
+    await expect(street).toBeHidden({ timeout: 30_000 })
+    await page.keyboard.up('ArrowDown')
+    await expect(page.getByTestId('oal-street')).toBeHidden({ timeout: 60_000 })
     await page.waitForTimeout(6000)
     await shot(page, `door-${place}-inside`)
     await page.keyboard.down('ArrowDown')
-    await expect(page.getByTestId('oal-street')).toHaveCount(1, { timeout: 30_000 })
+    await expect(page.getByTestId('oal-street')).toBeVisible({ timeout: 30_000 })
     await page.keyboard.up('ArrowDown')
-    await expect(page.getByTestId('oal-loading')).toBeHidden({ timeout: 120_000 })
+    await expect(page.getByTestId('oal-loading')).toHaveCount(0)
     await page.waitForTimeout(4000)
     await shot(page, `door-${place}-back-out`)
   }

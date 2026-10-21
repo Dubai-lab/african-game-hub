@@ -3,6 +3,7 @@
 // Tubman Boulevard. Shared by their insides (./HomeScene.tsx) and the town round them
 // (./city/CityScene.tsx), where the house and the Ministry stand in their compounds.
 import plans from './homePlan.json'
+import insides from './interiorsPlan.json'
 
 export const HOME_URL = '/oal/home.v5.glb'
 
@@ -22,3 +23,10 @@ export const COMPOUNDS_BUILT = {
 
 /** Whether the Ministry's gate is open (its guards have let the player in), this visit. */
 export const gates = { health: false }
+
+/** The insides of the town's businesses (scripts/oal/makeInteriors.py), one of each kind: set in
+ * the town's own buildings, behind their doors (./city/CityScene.tsx). */
+export const INTERIORS_URL = '/oal/interiors.v1.glb'
+type At = { x: number; y: number; face: number[] }
+export type InsidePlan = { solids: Rect[]; places: Record<string, At>; inside: Rect[]; attendants?: At[]; lights?: { x: number; y: number; z: number }[]; ceiling?: number }
+export const INSIDES = insides as unknown as Record<string, InsidePlan>
