@@ -49,6 +49,8 @@ export type Drive = {
   rank?: number
   /** Seconds backing off (to let the one going first by). */
   back?: number
+  /** Seconds held at a junction's line (giving way, or no room beyond it). */
+  atLine?: number
 }
 
 /** Which of two stopped in each other's way goes first: the longer waiting, else the higher rank. */
@@ -66,6 +68,8 @@ const ACCEL = 2.2
 const LAT = 2.6
 
 const lane = (city: City, e: number) => city.edges[e]!.w / 4
+/** The roads' order of way: a bigger road's traffic goes first. */
+const RANK = { major: 3, middle: 2, minor: 1, path: 0 } as const satisfies Record<string, number>
 
 // Each signalled junction's two ways, worked out once.
 const groupCache = new WeakMap<City, Map<number, Record<number, 'A' | 'B'>>>()
@@ -183,6 +187,55 @@ export function drive(city: City, d: Drive, dt: number, around: Around): boolean
     const line = turn.dist - jr - 4
     if (light !== 'g' && line > -0.5 && (light === 'r' || line > (d.v * d.v) / (2 * BRAKE))) want = Math.min(want, Math.sqrt(2 * BRAKE * 0.8 * Math.max(0, line - 0.5)))
   }
+  // The junction ahead without lights: give way (to the bigger road; on roads alike, to the one on
+  // the right; always to one already in it), and never go in without room beyond it to be out.
+  const node = city.nodes[here.to]!
+  const toLine = turn.dist - jr - 1
+  const nextLeg = d.legs[d.leg + 1]
+  let held = false
+  if (nextLeg && node.edges.length >= 3 && toLine > -0.5 && toLine < 35) {
+    const mine = RANK[e.kind]
+    const top = Math.max(0, ...node.edges.filter((i) => i !== here.edge).map((i) => RANK[city.edges[i]!.kind]))
+    const rx = fy
+    const ry = -fx
+    for (const o of around.others) {
+      const dn = Math.hypot(o.box.x - node.x, o.box.y - node.y)
+      if (dn > 35) continue
+      const ol = o.d?.legs[o.d.leg]
+      // (Behind it on its own road, or going the same way out: not in its way.)
+      if (ol && ol.edge === here.edge && ol.to === here.to) continue
+      // (In the junction itself, past any line, and moving or across its way.)
+      if (!lit && dn < jr - 0.5 && (!ol || ol.to !== here.to)) {
+        held = true
+        break
+      }
+      if (lit || !ol || ol.to !== here.to || o.v < 1) continue
+      const theirs = RANK[city.edges[ol.edge]!.kind]
+      const theirLine = city.edges[ol.edge]!.len - o.d!.s - junctionRadius(city, ol.to)
+      if (theirLine > Math.max(10, o.v * 3.5)) continue
+      const onRight = (o.box.x - d.x) * rx + (o.box.y - d.y) * ry > 0
+      if (theirs > mine || (theirs === mine && mine < top) || (theirs === mine && onRight)) {
+        held = true
+        break
+      }
+    }
+    // Room beyond it, on the road it turns into, for the whole of it.
+    if (!held) {
+      const out = legPoint(city, nextLeg, junctionRadius(city, nextLeg.from) + d.len * 0.5 + 2, lane(city, nextLeg.edge))
+      held = around.others.some((o) => {
+        if (o.v > 2) return false
+        const dx = o.box.x - out.x
+        const dy = o.box.y - out.y
+        const along = dx * out.ux + dy * out.uy
+        const side = -dx * out.uy + dy * out.ux
+        return Math.abs(side) < 1.6 && Math.abs(along) < d.len * 0.5 + o.box.hl + 0.5 && Math.cos(o.box.yaw - Math.atan2(out.uy, out.ux)) > 0.5
+      })
+    }
+  }
+  // (Held at the line a long while with the junction itself empty: it goes, carefully.)
+  d.atLine = held && toLine < 6 && d.v < 0.5 ? (d.atLine ?? 0) + dt : held ? (d.atLine ?? 0) : 0
+  const empty = !around.others.some((o) => Math.hypot(o.box.x - node.x, o.box.y - node.y) < jr - 0.5)
+  if (held && !((d.atLine ?? 0) > 10 && empty)) want = Math.min(want, Math.sqrt(2 * BRAKE * 0.8 * Math.max(0, toLine - 0.3)))
   // What is ahead in its way: the nearest vehicle (or person) in front, within its width.
   let gap = Infinity
   let slowAhead = false
@@ -200,6 +253,8 @@ export function drive(city: City, d: Drive, dt: number, around: Around): boolean
     // In its way: within its width, or crossing just ahead (in a junction).
     const crossing = Math.abs(Math.sin(o.box.yaw - d.yaw)) > 0.5
     if (side > d.wide / 2 + o.box.hw + (crossing ? 2.2 : 0.5)) continue
+    // (Beside it, going its way, not ahead of it: no reason to wait for it.)
+    if (!crossing && along < d.len / 2 + o.box.hl * 0.5 && side > d.wide / 2 + o.box.hw - 0.15) continue
     // Two waiting on each other across a junction: the one that has waited longer goes first
     // (the other's box still never met: it goes only where nothing is).
     // Two stopped in each other's way (across a junction, or nose to nose turning): one goes
