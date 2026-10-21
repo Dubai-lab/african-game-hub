@@ -555,6 +555,25 @@ export type Signal = { node: number; x: number; y: number; groups: Record<number
 /** The town's traffic lights all keep one cycle (seconds): A green, A amber, all red, B green,
  * B amber, all red. Which colour each way shows at a moment. */
 export const SIGNAL_CYCLE = [22, 3, 2, 22, 3, 2]
+/** A signalled junction's roads in its two ways (A: the first road's line and those along it; B:
+ * those across), which its lights give way to in turn. */
+export function signalGroups(city: City, n: number): Record<number, 'A' | 'B'> {
+  const node = city.nodes[n]!
+  const groups: Record<number, 'A' | 'B'> = {}
+  let ref: number | null = null
+  for (const e of node.edges) {
+    const ed = city.edges[e]!
+    if (ed.kind === 'path') continue
+    const other = city.nodes[ed.a === n ? ed.b : ed.a]!
+    const ang = Math.atan2(other.y - node.y, other.x - node.x)
+    ref ??= ang
+    let diff = Math.abs(((ang - ref) % Math.PI) + Math.PI) % Math.PI
+    if (diff > Math.PI / 2) diff = Math.PI - diff
+    groups[e] = diff < Math.PI / 4 ? 'A' : 'B'
+  }
+  return groups
+}
+
 export function signalState(seconds: number): { A: 'r' | 'y' | 'g'; B: 'r' | 'y' | 'g' } {
   const total = SIGNAL_CYCLE.reduce((a, b) => a + b, 0)
   let t = ((seconds % total) + total) % total
@@ -1007,8 +1026,7 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
     const node = city.nodes[n]!
     const roads = node.edges.filter((e) => city.edges[e]!.kind !== 'path')
     if (!signalled(city, n) || kept(node.x, node.y, 10)) continue
-    const groups: Record<number, 'A' | 'B'> = {}
-    let ref: number | null = null
+    const groups = signalGroups(city, n)
     for (const e of roads) {
       const ed = city.edges[e]!
       const other = city.nodes[ed.a === n ? ed.b : ed.a]!
@@ -1018,12 +1036,7 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
       const len = Math.hypot(dx, dy) || 1
       const ux = dx / len
       const uy = dy / len
-      const ang = Math.atan2(uy, ux)
-      ref ??= ang
-      let diff = Math.abs(((ang - ref) % Math.PI) + Math.PI) % Math.PI
-      if (diff > Math.PI / 2) diff = Math.PI - diff
-      const group = diff < Math.PI / 4 ? 'A' : 'B'
-      groups[e] = group
+      const group = groups[e]!
       // Traffic comes in along -u; its right is (-uy, ux) turned: for travel (-ux, -uy), right is (-uy, ux).
       const back = junctionRadius(city, n) + 4.6
       const px = node.x + ux * back + -uy * (ed.w / 2 + 1.2)

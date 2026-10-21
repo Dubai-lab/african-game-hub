@@ -15,7 +15,9 @@ import { CATALOGUE, defaultAppearance, type Sex } from '../../../../supabase/fun
 import { person } from '../ArrivalsScene'
 import { CROWD_URL } from '../character'
 import { buildVehicle, type Kind, type Moving, SIZE, SPEED, vehicleModels, VEHICLES_URL } from '../Traffic'
-import { type City, groundHeight, type Keep, nearestNode, route, toSeg } from './cityGen'
+import { CARS_URL, type CarModel, type CarModelName, buildCar, poseCar, randomPaint } from './cars'
+import { type City, groundHeight, type Keep, type Leg, nearestNode, route, toSeg } from './cityGen'
+import { type Around, type Box, boxOf, type Drive, drive, overlaps, startDrive } from './driving'
 import type { RidePhase, RideState } from './ride'
 
 const CARS = 26
@@ -93,7 +95,29 @@ function onward(city: City, usable: boolean[], g: Going, rand: () => number, all
   return { edge: next, from: g.to, to: e.a === g.to ? e.b : e.a, s: 0 }
 }
 
-type Car = { kind: Kind; root: Object3D; going: Going | null; v: number; want: number; yaw: number }
+type Car = { kind: Kind; root: Object3D; model: CarModel | null; d: Drive | null; size: { len: number; wide: number; L: number; r: number; top: number } }
+
+/** The next leg on from the end of one (not back the way it came, unless there is no other). */
+function nextLeg(city: City, usable: boolean[], leg: Leg, rand: () => number, allowed: (e: Edge) => boolean): Leg | null {
+  const g = onward(city, usable, { ...leg, s: 0 }, rand, allowed)
+  return g ? { edge: g.edge, from: g.from, to: g.to } : null
+}
+
+/** A vehicle's size and speed, its model's (a car of the new kind) or its kind's (a kekeh, a bus). */
+function sizeOf(kind: Kind, model: CarModel | null, rand: () => number) {
+  const top = SPEED[kind] * (0.85 + rand() * 0.3)
+  if (model) return { ...model.size, top }
+  const [len, wide] = SIZE[kind]
+  return { len, wide, L: len * 0.62, r: kind === 'kekeh' ? 0.22 : 0.45, top }
+}
+
+/** Which of the cars a kind is drawn as: the taxis, the sedan; the police, a pickup; others, any. */
+function modelFor(kind: Kind, rand: () => number): { model: CarModelName; paint: string } | null {
+  if (kind === 'taxi') return { model: 'sedan', paint: '#e9b51c' }
+  if (kind === 'police') return { model: 'pickup', paint: '#1f2f5a' }
+  if (kind === 'car') return { model: (['sedan', 'saloon', 'hatch', 'pickup'] as const)[Math.floor(rand() * 4)]!, paint: randomPaint(rand) }
+  return null
+}
 
 export function CityTraffic({
   city,
@@ -112,37 +136,59 @@ export function CityTraffic({
   onRide: (phase: RidePhase) => void
 }) {
   const gltf = useLoader(GLTFLoader, VEHICLES_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const carsFile = useLoader(GLTFLoader, CARS_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const people = useLoader(GLTFLoader, CROWD_URL('male'), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const index = useMemo(() => edgeIndex(city, keep), [city, keep])
+  const stats = useMemo(() => {
+    try {
+      return !!localStorage.getItem('oal-stats')
+    } catch {
+      return false
+    }
+  }, [])
   const { cars, rand, hire } = useMemo(() => {
     let seed = 99
     const rand = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646
     const models = vehicleModels(gltf.scene)
+    // A vehicle of a kind: a car of the new kind (its wheels, its steering), else the old model.
+    const make = (kind: Kind): Car | null => {
+      const m = modelFor(kind, rand)
+      const model = m ? buildCar(carsFile.scene, m.model, m.paint, people, rand) : null
+      const root = model ? model.root : buildVehicle(models, people, kind, rand)
+      if (!root) return null
+      root.visible = false
+      return { kind, root, model, d: null, size: sizeOf(kind, model, rand) }
+    }
     const cars: Car[] = []
     for (let i = 0; i < CARS; i++) {
       const r = rand()
       const kind: Kind = r < 0.45 ? 'taxi' : r < 0.7 ? 'kekeh' : r < 0.9 ? 'car' : r < 0.96 ? 'bus' : 'police'
-      const root = buildVehicle(models, people, kind, rand)
-      if (!root) continue
-      root.visible = false
-      cars.push({ kind, root, going: null, v: 0, want: SPEED[kind] * (0.8 + rand() * 0.35), yaw: 0 })
+      const car = make(kind)
+      if (car) cars.push(car)
     }
     // The vehicles that come when waved down: a taxi and a kekeh, kept apart from the rest.
-    const hire = { taxi: buildVehicle(models, people, 'taxi', rand)!, kekeh: buildVehicle(models, people, 'kekeh', rand)! }
-    hire.taxi.visible = false
-    hire.kekeh.visible = false
+    const hire = { taxi: make('taxi')!, kekeh: make('kekeh')! }
     return { cars, rand, hire }
-  }, [gltf, people])
+  }, [gltf, carsFile, people])
   const allowed = (kind: Kind) => (e: Edge) => e.kind !== 'path' && (kind === 'bus' ? e.kind !== 'minor' : true)
-
   // Vehicles keep to the roads (not the footpaths).
   const drives = (e: Edge) => e.kind !== 'path'
   const say = (r: RideState, phase: RidePhase) => {
     r.phase = phase
     onRide(phase)
   }
+  /** Draws a vehicle where its driving has it (a car: its wheels, its steering, its lean). */
+  const pose = (car: Car, dt: number) => {
+    const d = car.d!
+    const ground = 0.03 + groundHeight(city, d.x, d.y)
+    if (car.model) poseCar(car.model, d, ground, dt)
+    else {
+      car.root.position.set(d.x, ground + 0.05, -d.y)
+      car.root.rotation.y = d.yaw
+    }
+  }
   /** The hired vehicle: waved down, coming, waiting, driving the player, pulled in. */
-  const hired = (dt: number, p: { x: number; y: number }, boxes: Moving[]) => {
+  const hired = (dt: number, p: { x: number; y: number }, others: Around['others'], boxes: Moving[]) => {
     const r = ride.current
     if (!r) return
     const req = r.request
@@ -150,6 +196,7 @@ export function CityTraffic({
     const car = hire[r.kind]
     if (req?.type === 'hail' && r.phase === 'none') {
       r.kind = req.kind
+      const h = hire[r.kind]
       // The road nearest the player: a vehicle comes along it (on the player's side, unless the
       // road is one-way), from a way back.
       let best: { edge: number; t: number; d: number } | null = null
@@ -168,29 +215,29 @@ export function CityTraffic({
       const right = ((p.x - a.x) * (b.y - a.y) - (p.y - a.y) * (b.x - a.x)) / e.len
       const forward = e.one || right > 0
       const at = forward ? best.t : e.len - best.t
-      r.legs = [{ edge: best.edge, from: forward ? e.a : e.b, to: forward ? e.b : e.a }]
-      r.leg = 0
-      r.s = Math.max(0, at - 90)
+      const first = { edge: best.edge, from: forward ? e.a : e.b, to: forward ? e.b : e.a }
+      // From a way back along its road (the road before, if this one is short).
+      h.d = startDrive(city, [first], Math.max(0, at - 90), h.size, 8)
+      r.legs = [first]
       r.stop = at
-      r.v = 8
       r.to = null
       r.exit = null
-      hire[r.kind].visible = true
+      h.root.visible = true
       say(r, 'coming')
     }
     if (req?.type === 'cancel' && (r.phase === 'coming' || r.phase === 'waiting')) {
-      car.visible = false
+      car.root.visible = false
+      car.d = null
       say(r, 'none')
       return
     }
-    if (req?.type === 'go' && r.phase === 'waiting') {
+    if (req?.type === 'go' && r.phase === 'waiting' && car.d) {
       // The shortest way there by road, from where the vehicle stands.
-      const here = r.legs[r.leg]!
+      const here = car.d.legs[car.d.leg]!
       const target = nearestNode(city, req.to.x, req.to.y, drives)
       const way = target === null ? null : route(city, here.to, target, drives)
       if (!way) return
-      r.legs = [here, ...way]
-      r.leg = 0
+      car.d.legs = [...car.d.legs.slice(0, car.d.leg + 1), ...way]
       r.stop = Infinity
       r.to = req.to
       say(r, 'riding')
@@ -198,48 +245,39 @@ export function CityTraffic({
     if (req?.type === 'out' && r.phase === 'arrived') {
       say(r, 'none')
       // It drives off (gone, a little later).
-      setTimeout(() => (car.visible = false), 1500)
+      setTimeout(() => {
+        car.root.visible = false
+        car.d = null
+      }, 1500)
       return
     }
-    if (r.phase === 'none') return
-    const leg = r.legs[r.leg]
-    if (!leg) return
-    const e = city.edges[leg.edge]!
-    const end = r.leg === r.legs.length - 1 ? Math.min(r.stop, e.len) : Infinity
-    if (r.phase === 'coming' || r.phase === 'riding') {
-      const top = (e.kind === 'minor' ? 7 : 11) * (r.fast && r.phase === 'riding' ? 3 : 1)
-      const toEnd = end === Infinity ? Infinity : end - r.s
-      const want = Math.min(top, toEnd === Infinity ? top : Math.max(0, toEnd * 1.1))
-      r.v += Math.max(-7 * dt, Math.min(3 * dt * (r.fast ? 3 : 1), want - r.v))
-      r.v = Math.max(0, r.v)
-      r.s += r.v * dt
-      if (r.s >= e.len && r.leg < r.legs.length - 1) {
-        r.s -= e.len
-        r.leg++
-      } else if (toEnd < 0.4 && r.v < 0.3) {
-        r.v = 0
-        if (r.phase === 'coming') say(r, 'waiting')
-        else {
-          // Pulled in: the passenger steps out on the kerb side, facing on.
-          const at = placeOn(city, { ...leg, s: r.s }, e.w / 4)
-          r.exit = { x: at.x + at.uy * (e.w / 4 + 1.8), y: at.y - at.ux * (e.w / 4 + 1.8), f: Math.atan2(at.ux, -at.uy) }
-          say(r, 'arrived')
-        }
+    if (r.phase === 'none' || !car.d) return
+    const d = car.d
+    // Where it stops: by the player (coming); at the end of the way (riding: the last leg's end).
+    const last = d.leg === d.legs.length - 1
+    let stopAt: number | undefined
+    if (r.phase === 'coming' && last) stopAt = r.stop - d.s
+    if (r.phase === 'riding' && last) stopAt = city.edges[d.legs[d.leg]!.edge]!.len - d.s - 3
+    if (r.phase === 'waiting' || r.phase === 'arrived') stopAt = 0
+    const fast = r.fast && r.phase === 'riding'
+    for (let i = 0; i < (fast ? 3 : 1); i++) drive(city, d, dt, { others: r.phase === 'riding' ? others : [...others], player: r.phase === 'coming' ? undefined : undefined, seconds: Date.now() / 1000, stopAt })
+    if (stopAt !== undefined && stopAt < 0.6 && d.v < 0.2) {
+      if (r.phase === 'coming') say(r, 'waiting')
+      else if (r.phase === 'riding') {
+        // Pulled in: the passenger steps out on the kerb side, facing on.
+        const ux = Math.cos(d.yaw)
+        const uy = Math.sin(d.yaw)
+        r.exit = { x: d.x + uy * 2.2, y: d.y - ux * 2.2, f: Math.atan2(ux, -uy) }
+        say(r, 'arrived')
       }
     }
-    const cur = r.legs[r.leg]!
-    const at = placeOn(city, { ...cur, s: r.s }, city.edges[cur.edge]!.w / 4)
-    let turn = at.yaw - r.pos.yaw
-    turn = Math.atan2(Math.sin(turn), Math.cos(turn))
-    r.pos = { x: at.x, y: at.y, yaw: r.pos.yaw + turn * Math.min(1, dt * 6) }
-    // Metres left: the rest of this edge and the legs after it.
-    let left = city.edges[cur.edge]!.len - r.s
-    for (let i = r.leg + 1; i < r.legs.length; i++) left += city.edges[r.legs[i]!.edge]!.len
+    // Metres left: the rest of this leg and the legs after it.
+    let left = city.edges[d.legs[d.leg]!.edge]!.len - d.s
+    for (let i = d.leg + 1; i < d.legs.length; i++) left += city.edges[d.legs[i]!.edge]!.len
     r.left = r.phase === 'riding' ? left : 0
-    car.position.set(r.pos.x, 0.08 + groundHeight(city, r.pos.x, r.pos.y), -r.pos.y)
-    car.rotation.y = r.pos.yaw
-    const [len, wide] = SIZE[r.kind]
-    boxes.push({ x: r.pos.x, y: r.pos.y, yaw: r.pos.yaw, hl: len / 2, hw: wide / 2 })
+    r.pos = { x: d.x, y: d.y, yaw: d.yaw }
+    pose(car, dt)
+    boxes.push({ x: d.x, y: d.y, yaw: d.yaw, hl: car.size.len / 2, hw: car.size.wide / 2 })
   }
 
   useFrame((_, raw) => {
@@ -247,98 +285,87 @@ export function CityTraffic({
     const p = player.current
     if (!p) return
     const boxes: Moving[] = []
+    const seconds = Date.now() / 1000
+    // Every vehicle as the others see it (for keeping their distance, never meeting).
+    const all: { car: Car; box: Box; v: number }[] = []
+    for (const c of [...cars, hire.taxi, hire.kekeh]) if (c.d && c.root.visible) all.push({ car: c, box: boxOf(c.d), v: c.d.v })
+    const othersOf = (me: Car) => all.filter((o) => o.car !== me && Math.abs(o.box.x - me.d!.x) < 45 && Math.abs(o.box.y - me.d!.y) < 45)
     // While riding, the town is round the vehicle (the player is in it).
-    hired(dt, p, boxes)
+    const hiredCar = hire[ride.current?.kind ?? 'taxi']
+    hired(dt, p, hiredCar.d ? othersOf(hiredCar) : [], boxes)
     for (const car of cars) {
       // Far behind, or not yet out: put on a road round the player, out of sight.
-      const here = car.going ? placeOn(city, car.going, city.edges[car.going.edge]!.w / 4) : null
-      if (!here || Math.hypot(here.x - p.x, here.y - p.y) > FAR) {
+      const far = !car.d || Math.hypot(car.d.x - p.x, car.d.y - p.y) > FAR || (car.d.held > 12 && Math.hypot(car.d.x - p.x, car.d.y - p.y) > 60)
+      if (far) {
         const near = edgesNear(index, p.x, p.y, 300).filter((i) => {
           const e = city.edges[i]!
           return allowed(car.kind)(e) && e.len >= 15
         })
-        if (near.length === 0) {
-          car.root.visible = false
-          car.going = null
-          continue
-        }
         // The big roads are busier.
         const weighted = near.filter((i) => city.edges[i]!.kind !== 'minor' || car.kind === 'kekeh' || car.kind === 'taxi' || rand() < 0.4)
         const pickFrom = weighted.length ? weighted : near
-        const edge = pickFrom[Math.floor(rand() * pickFrom.length)]!
-        const e = city.edges[edge]!
-        const at = spotOn(city, edge, p.x, p.y, 80, 250, rand)
-        if (at === null) {
+        const edge = pickFrom.length ? pickFrom[Math.floor(rand() * pickFrom.length)]! : null
+        const at = edge === null ? null : spotOn(city, edge, p.x, p.y, 80, 250, rand)
+        if (edge === null || at === null) {
           car.root.visible = false
-          car.going = null
+          car.d = null
           continue
         }
+        const e = city.edges[edge]!
         const forward = e.one || rand() < 0.5
-        car.going = { edge, from: forward ? e.a : e.b, to: forward ? e.b : e.a, s: forward ? at : e.len - at }
-        car.v = car.want
+        const leg = { edge, from: forward ? e.a : e.b, to: forward ? e.b : e.a }
+        const d = startDrive(city, [leg], forward ? at : e.len - at, car.size, car.size.top * 0.8)
+        // (Not where another already is.)
+        if (all.some((o) => overlaps(boxOf(d), o.box, 1))) continue
+        car.d = d
         car.root.visible = true
         continue
       }
-      const g = car.going!
-      const e = city.edges[g.edge]!
-      const [len, wide] = SIZE[car.kind]
-      // Room ahead: the next vehicle the same way on the same edge; the player in the lane.
-      let room = Infinity
-      for (const other of cars) {
-        if (other === car || !other.going) continue
-        const og = other.going
-        if (og.edge === g.edge && og.from === g.from) {
-          const gap = og.s - g.s
-          if (gap > 0) room = Math.min(room, gap - (len + SIZE[other.kind][0]) / 2)
-        } else if (og.from === g.to && og.s < 6 && e.len - g.s < 10) room = Math.min(room, e.len - g.s + og.s - (len + SIZE[other.kind][0]) / 2)
+      const d = car.d!
+      // Its way ahead: a few legs on, chosen at each junction as it comes (the next turn known).
+      while (d.legs.length - d.leg < 4) {
+        const next = nextLeg(city, index.usable, d.legs[d.legs.length - 1]!, rand, allowed(car.kind))
+        if (!next) break
+        d.legs.push(next)
       }
-      const dx = p.x - here.x
-      const dy = p.y - here.y
-      const ahead = dx * here.ux + dy * here.uy
-      const side = Math.abs(-dx * here.uy + dy * here.ux)
-      if (ahead > 0 && side < wide / 2 + 0.9) room = Math.min(room, ahead - len / 2 - 0.8)
-      // Slower on the small roads, round the corners.
-      const limit = e.kind === 'minor' ? Math.min(car.want, 5.5) : car.want
-      const target = room < 2 ? 0 : Math.min(limit, (room - 2) * 0.9)
-      car.v += Math.max(-6 * dt, Math.min(2.5 * dt, target - car.v))
-      car.v = Math.max(0, car.v)
-      g.s += car.v * dt
-      if (g.s >= e.len) {
-        const next = onward(city, index.usable, g, rand, allowed(car.kind))
-        if (next) {
-          next.s = g.s - e.len
-          car.going = next
-        } else if (!e.one) {
-          // A dead end: turned round.
-          car.going = { edge: g.edge, from: g.to, to: g.from, s: 0 }
-        } else {
-          // The end of a one-way road with nowhere on: gone (it comes back elsewhere).
-          car.going = null
-          car.root.visible = false
-          continue
-        }
+      if (d.leg > 4) {
+        d.legs.splice(0, d.leg)
+        d.leg = 0
       }
-      const at = placeOn(city, car.going!, city.edges[car.going!.edge]!.w / 4)
-      let turn = at.yaw - car.yaw
-      turn = Math.atan2(Math.sin(turn), Math.cos(turn))
-      car.yaw += turn * Math.min(1, dt * 6)
-      car.root.position.set(at.x, 0.08 + groundHeight(city, at.x, at.y), -at.y)
-      car.root.rotation.y = car.yaw
-      boxes.push({ x: at.x, y: at.y, yaw: car.yaw, hl: len / 2, hw: wide / 2 })
+      const going = drive(city, d, dt, { others: othersOf(car), player: p, seconds })
+      if (!going) {
+        // The end of its way (a dead end): gone; it comes back elsewhere.
+        car.d = null
+        car.root.visible = false
+        continue
+      }
+      pose(car, dt)
+      boxes.push({ x: d.x, y: d.y, yaw: d.yaw, hl: car.size.len / 2, hw: car.size.wide / 2 })
     }
     if (moving.current) moving.current.splice(0, moving.current.length, ...boxes)
+    // (For tests: how the traffic is going.)
+    if (stats) {
+      const out = cars.filter((c) => c.d && c.root.visible).map((c) => c.d!)
+      ;(window as unknown as { oalTraffic: unknown }).oalTraffic = {
+        out: out.length,
+        moving: out.filter((d) => d.v > 0.5).length,
+        held: out.filter((d) => d.held > 3).length,
+        longestHeld: Math.max(0, ...out.map((d) => d.held)),
+        meanSpeed: out.reduce((a, d) => a + d.v, 0) / Math.max(1, out.length),
+        passing: out.filter((d) => d.wantOffset < 0).length,
+        overlapping: out.filter((d, i) => out.some((o, j) => j !== i && overlaps(boxOf(d), boxOf(o), 0))).length,
+      }
+    }
     // What is hidden is not worked out either (a driver's every bone, each frame, adds up).
-    for (const car of cars) car.root.matrixWorldAutoUpdate = car.root.visible
-    hire.taxi.matrixWorldAutoUpdate = hire.taxi.visible
-    hire.kekeh.matrixWorldAutoUpdate = hire.kekeh.visible
+    for (const car of [...cars, hire.taxi, hire.kekeh]) car.root.matrixWorldAutoUpdate = car.root.visible
   })
   return (
     <>
       {cars.map((c, i) => (
         <primitive key={i} object={c.root} />
       ))}
-      <primitive object={hire.taxi} />
-      <primitive object={hire.kekeh} />
+      <primitive object={hire.taxi.root} />
+      <primitive object={hire.kekeh.root} />
     </>
   )
 }
