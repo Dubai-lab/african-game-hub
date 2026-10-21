@@ -17,6 +17,7 @@ import { CROWD_URL } from '../character'
 import { buildVehicle, type Kind, type Moving, SIZE, SPEED, vehicleModels, VEHICLES_URL } from '../Traffic'
 import { CARS_URL, type CarModel, type CarModelName, buildCar, poseCar, randomPaint } from './cars'
 import { cityNight } from './night'
+import { ownCar } from './ownCar'
 import { type City, groundHeight, type Keep, type Leg, nearestNode, route, toSeg } from './cityGen'
 import { type Around, type Box, boxOf, type Drive, drive, overlaps, startDrive } from './driving'
 import type { RidePhase, RideState } from './ride'
@@ -97,6 +98,9 @@ function onward(city: City, usable: boolean[], g: Going, rand: () => number, all
 }
 
 type Car = { kind: Kind; root: Object3D; model: CarModel | null; d: Drive | null; size: { len: number; wide: number; L: number; r: number; top: number } }
+
+/** The player's own car among the others (it is never one of the traffic's). */
+const ownCarEntry = { kind: 'car', root: null, model: null, d: null, size: { len: 4.5, wide: 1.96, L: 2.5, r: 0.34, top: 0 } } as unknown as Car
 
 /** The next leg on from the end of one (not back the way it came, unless there is no other). */
 function nextLeg(city: City, usable: boolean[], leg: Leg, rand: () => number, allowed: (e: Edge) => boolean): Leg | null {
@@ -291,6 +295,8 @@ export function CityTraffic({
     // Every vehicle as the others see it (for keeping their distance, never meeting).
     const all: { car: Car; box: Box; v: number }[] = []
     for (const c of [...cars, hire.taxi, hire.kekeh]) if (c.d && c.root.visible) all.push({ car: c, box: boxOf(c.d), v: c.d.v })
+    // The player's own car (standing or driven): kept clear of as any other.
+    if (ownCar.d && ownCar.model) all.push({ car: ownCarEntry, box: boxOf(ownCar.d), v: ownCar.d.v })
     const othersOf = (me: Car) => all.filter((o) => o.car !== me && Math.abs(o.box.x - me.d!.x) < 45 && Math.abs(o.box.y - me.d!.y) < 45)
     // While riding, the town is round the vehicle (the player is in it).
     const hiredCar = hire[ride.current?.kind ?? 'taxi']

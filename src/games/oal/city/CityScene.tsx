@@ -56,6 +56,9 @@ import { groundHeight } from './cityGen'
 import { type ChunkRequest } from './chunk.worker'
 import { type PackedParts, unpackParts } from './chunkPack'
 import { cityNight } from './night'
+import { CAR_PLANS, CARS_URL, buildCar, poseCar } from './cars'
+import { driveOwn, outline, ownCar, type OwnCarPhase } from './ownCar'
+import { overlaps } from './driving'
 import { type Landmark, LANDMARKS, landmarkPoint, landmarkSolids } from './landmarks'
 import { COMPOUNDS_BUILT, gates, HOME_URL, INSIDES, INTERIORS_URL, OUTSIDE } from '../homeModel'
 import { stillFigure, VEHICLES_URL, vehicleModels } from '../Traffic'
@@ -1429,6 +1432,51 @@ function InsideModel({ r }: { r: Room }) {
   )
 }
 
+// ---- The player's own car ------------------------------------------------------------------------
+
+/** Whether a point is inside a solid (its box first). */
+function inSolid(poly: Solid, x: number, y: number) {
+  const bb = poly.bb
+  if (bb && (x < bb[0] || x > bb[2] || y < bb[1] || y > bb[3])) return false
+  let hit = false
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i] as [number, number]
+    const [xj, yj] = poly[j] as [number, number]
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) hit = !hit
+  }
+  return hit
+}
+
+/** The family's car, parked by the house's gate (on the verge before the compound's wall, along
+ * the road), drawn where it is (driven or standing), its door shutting once it is left. */
+function OwnCarModel({ c }: { c: Compound }) {
+  const file = useLoader(GLTFLoader, CARS_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const { camera } = useThree()
+  const model = useMemo(() => {
+    const m = buildCar(file.scene, 'suv', '#7a1a1a', null, () => 0.5)
+    m.root.name = 'own-car'
+    return m
+  }, [file])
+  useEffect(() => {
+    const plan = CAR_PLANS.suv
+    const [x, y] = compoundPoint(c, 5.5, -15.7)
+    // (Facing the way the traffic goes on this side: its driver's door to the road.)
+    if (!ownCar.d) ownCar.d = { legs: [], leg: 0, s: 0, x, y, yaw: c.yaw + Math.PI, v: 0, steer: 0, yawRate: 0, spin: 0, offset: 0, wantOffset: 0, len: plan.size[0]!, wide: Math.min(plan.size[2]!, 1.96), L: plan.wheelbase, r: Object.values(plan.wheels)[0]?.r ?? 0.34, top: 0, braking: false, slow: 0, held: 0, passing: 0 }
+    ownCar.model = model
+    return () => {
+      ownCar.model = null
+    }
+  }, [model, c])
+  useFrame((_, raw) => {
+    const dt = Math.min(raw, 0.1)
+    const d = ownCar.d
+    if (!d) return
+    if (ownCar.phase === 'parked') for (const door of model.doors) door.t = Math.max(0, door.t - dt * 2)
+    poseCar(model, d, 0.03, dt, { x: camera.position.x, z: camera.position.z }, cityNight.value)
+  })
+  return <primitive object={model.root} />
+}
+
 /** The game's places walked into at their doors (the rest are asked at: the gate, the ticket booth). */
 const WALK_IN = new Set(['home', 'health', 'visa', 'jobs', 'phone', 'starline', 'citrus'])
 
@@ -1623,6 +1671,133 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
     for (const c of compounds) for (const poly of compoundSolids(c)) pushOut(s, poly)
     for (const list of insideSolids.values()) for (const poly of list) pushOut(s, poly)
   }
+  /** Whether a car there would be in something (a building, a wall, another vehicle). */
+  const carHits = (x: number, y: number, yaw: number, len: number, wide: number) => {
+    const pts = outline(x, y, yaw, len - 0.1, wide - 0.1)
+    const cx = Math.floor(x / CHUNK)
+    const cy = Math.floor(y / CHUNK)
+    for (let dx = -1; dx <= 1; dx++)
+      for (let dy = -1; dy <= 1; dy++)
+        for (const poly of solids.current?.get(`${cx + dx},${cy + dy}`) ?? []) {
+          const bb = poly.bb
+          if (bb && (x < bb[0] - 6 || x > bb[2] + 6 || y < bb[1] - 6 || y > bb[3] + 6)) continue
+          if (pts.some(([px, py]) => inSolid(poly, px, py))) return true
+        }
+    for (const c of compounds) if (Math.hypot(c.x - x, c.y - y) < 40) for (const poly of compoundSolids(c)) if (pts.some(([px, py]) => inSolid(poly, px, py))) return true
+    const box = { x, y, yaw, hl: len / 2, hw: wide / 2 }
+    return cityMoving.current.some((m) => overlaps(box, m, 0.05))
+  }
+  const seatOwn = useRef(false)
+  /** The player's own car, a frame of it (true while in it: getting in, driving, getting out). */
+  const ownDriving = (dt: number) => {
+    const oc = ownCar
+    const d = oc.d
+    const car = oc.model
+    const req = oc.request
+    oc.request = null
+    if (!d || !car) return false
+    const s = state.current
+    const say = (phase: OwnCarPhase) => {
+      oc.phase = phase
+      oc.t = 0
+      oc.onPhase?.(phase)
+    }
+    if (req === 'in' && oc.phase === 'parked') say('entering')
+    if (req === 'out' && oc.phase === 'driving' && Math.abs(d.v) < 1.2) say('leaving')
+    if (req === 'view') oc.view = oc.view === 'outside' ? 'inside' : 'outside'
+    if (oc.phase === 'parked') return false
+    oc.t += dt
+    const plan = CAR_PLANS[car.model]
+    const door = car.doors.find((q) => q.side === 'left' && q.front)
+    const c = Math.cos(d.yaw)
+    const sn = Math.sin(d.yaw)
+    // A point of the car (x ahead, z to its right) on the map.
+    const at = (ax: number, az: number): [number, number] => [d.x + c * ax + sn * az, d.y + sn * ax - c * az]
+    const doorAt = plan.doors.find((q) => q.side === 'left' && q.front)
+    const [hx, , hz] = (doorAt as unknown as { at?: number[] })?.at ?? [0.9, 0, -0.8]
+    if (oc.phase === 'entering') {
+      // The door swung open, in, the door shut behind.
+      if (door) door.t = oc.t < 0.5 ? oc.t / 0.5 : oc.t < 1.0 ? 1 : Math.max(0, 1 - (oc.t - 1.0) / 0.5)
+      if (oc.t > 1.5) say('driving')
+    }
+    if (oc.phase === 'leaving') {
+      if (door) door.t = oc.t < 0.5 ? oc.t / 0.5 : oc.t < 1.0 ? 1 : Math.max(0, 1 - (oc.t - 1.0) / 0.5)
+      if (oc.t > 0.6) {
+        // Out beside the driver's door, facing along the car.
+        const [ox, oy] = at(hx! - 0.45, hz! - 0.9)
+        s.x = ox
+        s.y = oy
+        s.facing = Math.atan2(c, -sn)
+        seatOwn.current = false
+        me.root.visible = true
+        me.actions.sit?.stop()
+        if (look) look.current = s.facing
+        first.current = true
+        say('parked')
+        return false
+      }
+    }
+    if (oc.phase === 'driving') {
+      const k = keys.current
+      let x = stick.current?.x ?? 0
+      let y = stick.current?.y ?? 0
+      if (k.has('arrowup') || k.has('w')) y = 1
+      if (k.has('arrowdown') || k.has('s')) y = -1
+      if (k.has('arrowleft') || k.has('a')) x = -1
+      if (k.has('arrowright') || k.has('d')) x = 1
+      const step = driveOwn(d, dt, paused ? 0 : y, paused ? 0 : x)
+      const nx = d.x + Math.cos(step.yaw) * step.dist
+      const ny = d.y + Math.sin(step.yaw) * step.dist
+      // Never through anything: what it meets stops it (a little bounce back).
+      if (carHits(nx, ny, step.yaw, d.len, d.wide)) d.v = -d.v * 0.2
+      else {
+        d.x = nx
+        d.y = ny
+        d.yaw = Math.atan2(Math.sin(step.yaw), Math.cos(step.yaw))
+        d.spin += step.dist / d.r
+      }
+    }
+    // The player at the wheel (seen sitting there from outside; from the seat, the town ahead).
+    if (oc.phase !== 'leaving' && oc.t > (oc.phase === 'entering' ? 0.5 : 0)) {
+      if (!seatOwn.current) {
+        seatOwn.current = true
+        me.actions.walk && (me.actions.walk.weight = 0)
+        me.actions.idle && (me.actions.idle.weight = 0)
+        me.actions.sit?.reset().play()
+      }
+      const [dx, dy, dz] = plan.driver
+      const [px, py] = at(dx! - 0.1, dz!)
+      me.root.position.set(px, 0.03 + dy! - 0.42, -py)
+      me.root.rotation.y = d.yaw + Math.PI / 2
+      me.mixer.update(dt)
+    }
+    me.root.visible = !(oc.phase === 'driving' && oc.view === 'inside')
+    s.x = d.x
+    s.y = d.y
+    if (player.current) {
+      player.current.x = d.x
+      player.current.y = d.y
+    }
+    if (oc.phase === 'driving' && oc.view === 'inside') {
+      // From the driver's seat: the head's height, looking down the road ahead.
+      const [dx, dy, dz] = plan.driver
+      const [ex, ey] = at(dx! - 0.05, dz!)
+      const [tx, ty] = at(dx! + 20, dz! * 0.4)
+      eye.set(ex, 0.03 + dy! + 0.78, -ey)
+      target.set(tx, 0.03 + dy! + 0.5, -ty)
+      camera.position.copy(eye)
+    } else {
+      // From behind it, following it round.
+      target.set(d.x + c * 2, 1.1, -(d.y + sn * 2))
+      eye.set(d.x - c * 6.8, 2.7, -(d.y - sn * 6.8))
+      if (first.current) {
+        first.current = false
+        camera.position.copy(eye)
+      } else camera.position.lerp(eye, Math.min(1, dt * 4))
+    }
+    camera.lookAt(target)
+    return true
+  }
   useFrame((_, raw) => {
     const dt = Math.min(raw, 0.25)
     const s = state.current
@@ -1662,6 +1837,8 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
       camera.lookAt(target)
       return
     }
+    // The player's own car: got into, driven, got out of.
+    if (ownDriving(dt)) return
     if (seated.current) {
       // Out on the kerb, standing again.
       seated.current = false
@@ -1740,6 +1917,17 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
     }
     let near: string | null = null
     for (const p of places) if (Math.hypot(s.x - p.x, s.y - p.y) < NEAR) near = p.name
+    // By the driver's door of the player's own car.
+    if (ownCar.phase === 'parked' && ownCar.d && ownCar.model) {
+      const d = ownCar.d
+      const plan = CAR_PLANS[ownCar.model.model]
+      const [hx, , hz] = (plan.doors.find((q) => q.side === 'left' && q.front) as unknown as { at?: number[] })?.at ?? [0.9, 0, -0.8]
+      const c = Math.cos(d.yaw)
+      const sn = Math.sin(d.yaw)
+      const dxp = d.x + c * (hx! - 0.45) + sn * (hz! - 0.7)
+      const dyp = d.y + sn * (hx! - 0.45) - c * (hz! - 0.7)
+      if (Math.hypot(s.x - dxp, s.y - dyp) < 1.6) near = 'own-car'
+    }
     // At a business's counter, inside it.
     for (const list of insidePlaces.values()) for (const p of list) if (Math.hypot(s.x - p.x, s.y - p.y) < 2.8) near = p.name
     // A business's door (the town's places: "biz:" its category and name).
@@ -2210,6 +2398,13 @@ export default function CityScene(props: Props) {
                 <SiteModel s={x} />
               </Optional>
             ))}
+            {compounds
+              .filter((c) => c.name === 'home')
+              .map((c) => (
+                <Optional key="own-car">
+                  <OwnCarModel c={c} />
+                </Optional>
+              ))}
           </Suspense>
           <Suspense fallback={null}>
             <Optional>

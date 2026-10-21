@@ -3036,6 +3036,13 @@
         "transport": "Motor park",
         "sport": "Sports ground",
         "landmark": "Landmark"
+      },
+      "car": {
+        "in": "Get in",
+        "out": "Get out",
+        "inside": "Inside view",
+        "outside": "Outside view",
+        "yours": "Your family's car"
       }
     },
     "loading": {

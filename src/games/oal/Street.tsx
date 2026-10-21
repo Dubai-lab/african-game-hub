@@ -19,6 +19,7 @@ import { PhoneSection } from './Home'
 import { type TravelState, useGameNow } from './Journey'
 import { type BusinessKind, businessOf, INSIDE_OF } from './city/business'
 import { BusinessPanel } from './Business'
+import { ownCar, type OwnCarPhase, type OwnCarView } from './city/ownCar'
 import { Loading } from './Loading'
 import { newRide, type Destination, type RideKind, type RidePhase, type RideState } from './city/ride'
 import type { OtherPlayer, Place, TownId } from './StreetScene'
@@ -207,6 +208,7 @@ export function StreetView({
     // A business of the town: its name, and what it is.
     const biz = businessOf(p.startsWith('in:') ? p.slice(3) : p)
     if (biz) return `${biz.name} · ${t(`oal.city.cats.${biz.cat}`, { defaultValue: '' })}`
+    if (p === 'own-car') return t('oal.city.car.yours')
     if (COMPOUND_NAME[p]) return t(COMPOUND_NAME[p]!)
     const [hub, own] = p.includes(':') ? p.split(':') : [town, p]
     return t(`oal.street.towns.${hub}.places.${own}`)
@@ -214,6 +216,17 @@ export function StreetView({
   // A ride: waved down at the roadside, the driver asked where to and paid, ridden, got out of.
   const ride = useRef<RideState>(newRide())
   const [phase, setPhase] = useState<RidePhase>('none')
+  // The player's own car: standing (got into at its door) or being got into, driven, got out of.
+  const [carPhase, setCarPhase] = useState<OwnCarPhase>(ownCar.phase)
+  const [carView, setCarView] = useState<OwnCarView>(ownCar.view)
+  useEffect(() => {
+    ownCar.onPhase = setCarPhase
+    const id = setInterval(() => setCarView(ownCar.view), 300)
+    return () => {
+      ownCar.onPhase = undefined
+      clearInterval(id)
+    }
+  }, [])
   const [roadside, setRoadside] = useState(false)
   const [destinations, setDestinations] = useState<Destination[]>([])
   const [left, setLeft] = useState(0)
@@ -402,7 +415,29 @@ export function StreetView({
           stick.current = { x: 0, y: 0 }
         }}
       />
-      {city && phase === 'none' && roadside && !place && !open && (
+      {city && carPhase !== 'parked' && (
+        // In the player's own car: out of it (stopped), seen from inside it or from behind.
+        <div className="absolute bottom-6 right-6 flex flex-col items-end gap-2">
+          {carPhase === 'driving' && (
+            <Button variant="ghost" className="min-h-12 px-5" onClick={() => (ownCar.request = 'view')} data-testid="oal-car-view">
+              {t(carView === 'inside' ? 'oal.city.car.outside' : 'oal.city.car.inside')}
+            </Button>
+          )}
+          {carPhase === 'driving' && (
+            <Button className="min-h-12 px-5" onClick={() => (ownCar.request = 'out')} data-testid="oal-car-out">
+              {t('oal.city.car.out')}
+            </Button>
+          )}
+        </div>
+      )}
+      {city && carPhase === 'parked' && (place as string) === 'own-car' && !open && phase === 'none' && (
+        <div className="absolute bottom-6 right-6">
+          <Button className="min-h-14 px-6 text-lg" onClick={() => (ownCar.request = 'in')} data-testid="oal-car-in">
+            {t('oal.city.car.in')}
+          </Button>
+        </div>
+      )}
+      {city && carPhase === 'parked' && phase === 'none' && roadside && !place && !open && (
         <div className="absolute bottom-6 right-6 flex flex-col items-end gap-2">
           {(['taxi', 'kekeh'] as const).map((k) => (
             <Button key={k} className="min-h-12 px-5" onClick={() => (ride.current.request = { type: 'hail', kind: k })} data-testid={`oal-hail-${k}`}>
@@ -467,7 +502,7 @@ export function StreetView({
           </Button>
         </div>
       )}
-      {place && !businessOf(place) && !(city && WALKED_INTO.includes(place)) && !open && phase === 'none' && (
+      {place && (place as string) !== 'own-car' && !businessOf(place) && !(city && WALKED_INTO.includes(place)) && !open && phase === 'none' && (
         <div className="absolute bottom-6 right-6">
           <Button className="min-h-14 px-6 text-lg" onClick={() => (!place.startsWith('in:') && onEnter?.(place) ? undefined : setOpen(true))} data-testid="oal-place-open">
             {place.startsWith('in:') ? t('oal.home.at.counter') : businessOf(place) ? t('oal.city.enter.business') : COMPOUNDS.includes(place) ? t(`oal.city.enter.${place}`) : t(`oal.street.open.${place.split(':').pop()}`)}

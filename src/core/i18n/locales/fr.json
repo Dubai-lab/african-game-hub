@@ -3036,6 +3036,13 @@
         "transport": "Gare routière",
         "sport": "Terrain de sport",
         "landmark": "Monument"
+      },
+      "car": {
+        "in": "Monter",
+        "out": "Descendre",
+        "inside": "Vue de l'intérieur",
+        "outside": "Vue de l'extérieur",
+        "yours": "La voiture de votre famille"
       }
     },
     "loading": {

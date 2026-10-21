@@ -19,10 +19,10 @@ import mathutils
 OUT, PLAN_OUT = sys.argv[sys.argv.index('--') + 1:][:2]
 
 CARS = {
-    'Normal Car': 'suv',
+    'Private Car': 'suv',
+    'Private Car No Interior': 'suv_far',
     'Taxi Car': 'suv_taxi',
     'Police Car': 'suv_police',
-    'Normal Car No Interior': 'suv_far',
     'Taxi Car No Interior': 'suv_taxi_far',
     'Police Car No Interior': 'suv_police_far',
 }
@@ -74,6 +74,49 @@ def keep_parent(child, parent):
     child.parent = parent
     child.matrix_world = m
 
+
+# The private car: the taxi's body (its panels in a paint of their own) without its sign on the
+# roof, its paint plain (painted in the game). Copied, with every part, from the taxi.
+def copy_tree(root, name):
+    made = {}
+    for o in [root] + list(root.children_recursive):
+        c = o.copy()
+        if o.data:
+            c.data = o.data.copy()
+        scene.collection.objects.link(c)
+        made[o] = c
+    for o, c in made.items():
+        if o.parent in made:
+            c.parent = made[o.parent]
+            c.matrix_parent_inverse = o.matrix_parent_inverse.copy()
+    made[root].name = name
+    return made[root]
+
+
+paint = bpy.data.materials.new('paint')
+paint.use_nodes = True
+pb = paint.node_tree.nodes['Principled BSDF']
+pb.inputs['Base Color'].default_value = (0.8, 0.8, 0.8, 1)
+pb.inputs['Metallic'].default_value = 0.35
+pb.inputs['Roughness'].default_value = 0.22
+for taxi, private in (('Taxi Car', 'Private Car'), ('Taxi Car No Interior', 'Private Car No Interior')):
+    root = copy_tree(bpy.data.objects[taxi], private)
+    for o in root.children_recursive:
+        if o.type != 'MESH':
+            continue
+        for i, m in enumerate(o.data.materials):
+            if m and m.name.startswith('Taxi Body'):
+                o.data.materials[i] = paint
+        # The sign on its roof: what stands above the roof's line.
+        import bmesh
+        bm = bmesh.new()
+        bm.from_mesh(o.data)
+        W = o.matrix_world
+        roofSign = [f for f in bm.faces if (W @ f.calc_center_median()).z > 1.125]
+        if roofSign:
+            bmesh.ops.delete(bm, geom=roofSign, context='FACES')
+            bm.to_mesh(o.data)
+        bm.free()
 
 plan = {}
 for src_name, name in CARS.items():

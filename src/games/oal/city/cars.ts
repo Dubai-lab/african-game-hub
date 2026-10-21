@@ -39,8 +39,6 @@ export type CarModel = {
 
 // Paints Monrovia's private cars are seen in.
 const PAINTS = ['#f0f0ee', '#c8c8c8', '#1c1c1e', '#1f2f5a', '#7a1a1a', '#d0c8b0', '#2a5a3a', '#8a8f96', '#b0b6ba', '#5a2a1c']
-// The pack's body colour in its texture (the private car's dark paint), which a paint replaces.
-const BODY = new Color('#202021')
 
 /** A car's materials made its own: its paint (the private car's), its lamps (lit for it alone). */
 function ownMaterials(body: Object3D, paint: string | null, lamps: CarModel['lamps']) {
@@ -51,25 +49,10 @@ function ownMaterials(body: Object3D, paint: string | null, lamps: CarModel['lam
     const swap = (m: Material) => {
       if (made.has(m)) return made.get(m)!
       let c = m
-      if (paint && m.name.startsWith('Details')) {
-        // The body's colour in the texture replaced by the paint (its maps' shine and wear kept).
+      if (paint && m.name.startsWith('paint')) {
+        // Its paint (the private car's: the taxi's body in a plain paint of its own).
         const p = m.clone() as MeshStandardMaterial
-        const paintColour = { value: new Color(paint) }
-        const bodyColour = { value: BODY.clone() }
-        p.onBeforeCompile = (shader) => {
-          shader.uniforms.paintColour = paintColour
-          shader.uniforms.bodyColour = bodyColour
-          shader.fragmentShader = `uniform vec3 paintColour;\nuniform vec3 bodyColour;\n${shader.fragmentShader}`.replace(
-            '#include <map_fragment>',
-            `#ifdef USE_MAP
-  vec4 sampledDiffuseColor = texture2D(map, vMapUv);
-  float bodyness = 1.0 - smoothstep(0.004, 0.011, distance(sampledDiffuseColor.rgb, bodyColour));
-  sampledDiffuseColor.rgb = mix(sampledDiffuseColor.rgb, paintColour, bodyness);
-  diffuseColor *= sampledDiffuseColor;
-#endif`,
-          )
-        }
-        p.customProgramCacheKey = () => 'oal-car-paint'
+        p.color = new Color(paint)
         c = p
       } else if (m.name.startsWith('Headlights')) {
         // Its lamps: the white ones at night, the red ones (the rear's) as it brakes.
