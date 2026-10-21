@@ -43,6 +43,20 @@ export type Drive = {
   held: number
   /** Seconds out passing. */
   passing: number
+  /** Seconds stopped for a vehicle in its way (not for a light): the longest waiting goes first. */
+  wait?: number
+  /** Its place in the town's give-way (two that have waited as long: the higher goes first). */
+  rank?: number
+  /** Seconds backing off (to let the one going first by). */
+  back?: number
+}
+
+/** Which of two stopped in each other's way goes first: the longer waiting, else the higher rank. */
+const goesFirst = (a: Drive, b: Drive | undefined) => {
+  const wa = a.wait ?? 0
+  const wb = b?.wait ?? 0
+  if (Math.abs(wa - wb) > 0.5) return wa > wb
+  return (a.rank ?? 0) > (b?.rank ?? 0)
 }
 
 const MAX_STEER = 0.62
@@ -130,7 +144,7 @@ export function overlaps(a: Box, b: Box, margin = 0.15) {
 export const boxOf = (d: Drive): Box => ({ x: d.x, y: d.y, yaw: d.yaw, hl: d.len / 2, hw: d.wide / 2 })
 
 /** What is round a vehicle as it drives: the others (their boxes, their speeds), the player on foot. */
-export type Around = { others: { box: Box; v: number; d?: Drive }[]; player?: { x: number; y: number }; seconds: number; stopAt?: number }
+export type Around = { others: { box: Box; v: number; d?: Drive }[]; player?: { x: number; y: number }; seconds: number; stopAt?: number; eager?: boolean }
 
 /**
  * One step of driving: steered for the lane ahead, sped up or slowed (for the turn, the light,
@@ -162,7 +176,8 @@ export function drive(city: City, d: Drive, dt: number, around: Around): boolean
     want = Math.min(want, Math.sqrt(vTurn * vTurn + 2 * BRAKE * 0.6 * Math.max(0, turn.dist - jr)))
   }
   // The light at the junction ahead: not green, stopped before its line (amber, if it can).
-  if (signalled(city, here.to)) {
+  const lit = signalled(city, here.to)
+  if (lit) {
     const group = groupsAt(city, here.to)[here.edge]
     const light = group ? signalState(around.seconds)[group] : 'g'
     const line = turn.dist - jr - 4
@@ -171,6 +186,11 @@ export function drive(city: City, d: Drive, dt: number, around: Around): boolean
   // What is ahead in its way: the nearest vehicle (or person) in front, within its width.
   let gap = Infinity
   let slowAhead = false
+  let stuckAhead = false
+  let nearest: Around['others'][number] | null = null
+  const waited = d.wait ?? 0
+  let yielded = false
+  let giveWay = false
   for (const o of around.others) {
     const dx = o.box.x - d.x
     const dy = o.box.y - d.y
@@ -180,10 +200,33 @@ export function drive(city: City, d: Drive, dt: number, around: Around): boolean
     // In its way: within its width, or crossing just ahead (in a junction).
     const crossing = Math.abs(Math.sin(o.box.yaw - d.yaw)) > 0.5
     if (side > d.wide / 2 + o.box.hw + (crossing ? 2.2 : 0.5)) continue
+    // Two waiting on each other across a junction: the one that has waited longer goes first
+    // (the other's box still never met: it goes only where nothing is).
+    // Two stopped in each other's way (across a junction, or nose to nose turning): one goes
+    // first, round the other (its box never met: it goes only where nothing is); the other, if
+    // the first is stuck against it, backs off a little.
+    const facing = Math.cos(o.box.yaw - d.yaw) < 0.9
+    // The one just ahead backing off (to let another by): back a little with it.
+    if (!facing && (o.d?.back ?? 0) > 0 && along < d.len / 2 + o.box.hl + 3) giveWay = true
+    // (Waited long, not in a queue in its own lane: it edges on wherever there is room.)
+    const inLine = !facing && side < 1
+    if (o.v < 0.5 && waited > 12 && !inLine && !(lit && turn.dist - jr < 12)) {
+      yielded = true
+      continue
+    }
+    if (facing && o.v < 0.5 && waited > 2) {
+      if (goesFirst(d, o.d)) {
+        yielded = true
+        continue
+      }
+      if (o.d && o.d.held > 1 && along < 9) giveWay = true
+    }
     const g = along - d.len / 2 - (crossing ? o.box.hw : o.box.hl)
     if (g < gap) {
       gap = g
       slowAhead = o.v < d.top * 0.55
+      stuckAhead = !crossing && o.v < 0.5 && (o.d?.wait ?? 0) > 3
+      nearest = o
     }
   }
   if (around.player) {
@@ -193,13 +236,29 @@ export function drive(city: City, d: Drive, dt: number, around: Around): boolean
     if (along > 0 && Math.abs(-dx * fy + dy * fx) < d.wide / 2 + 0.8) gap = Math.min(gap, along - d.len / 2 - 0.3)
   }
   if (gap < Infinity) want = Math.min(want, Math.sqrt(2 * BRAKE * 0.7 * Math.max(0, gap - 2.5)))
+  // (Going first through the other's way, it keeps its turn till it is through.)
+  d.wait = yielded || (gap < 8 && d.v < 0.5) ? waited + dt : 0
   if (around.stopAt !== undefined) want = Math.min(want, Math.sqrt(2 * BRAKE * 0.7 * Math.max(0, around.stopAt)))
-  // Passing: held behind a slow one a while, on a road both ways with nobody coming, no junction near.
-  d.slow = slowAhead && gap < 14 ? d.slow + dt : 0
-  if (d.wantOffset > 0 && d.slow > 2.5 && !e.one && e.w >= 5.5 && turn.dist > 45 && clearToPass(d, around)) d.wantOffset = -lane(city, here.edge)
-  // Back in: past it, or out a while, or something coming the other way (in its own lane soon).
+  // Passing: held behind a slow one (or one stuck, not at a light) a while, on a road both ways
+  // with nobody coming, no junction near. A driver in a hurry (the player said faster) goes sooner.
+  const eager = around.eager ?? false
+  // (Never down a queue: a stopped one with another stopped in front of it is in one.)
+  const queue = nearest !== null && nearest.v < 1 && around.others.some((q) => {
+    if (q === nearest || q.v > 1 || Math.cos(q.box.yaw - d.yaw) < 0.8) return false
+    const dx = q.box.x - nearest!.box.x
+    const dy = q.box.y - nearest!.box.y
+    const al = dx * fx + dy * fy
+    return al > 0 && al < 14 && Math.abs(-dx * fy + dy * fx) < 1.6
+  })
+  d.slow = (slowAhead || stuckAhead) && !queue && gap < 16 ? d.slow + dt : 0
+  const atLight = lit && turn.dist < 80
+  const room = turn.dist > (eager ? 28 : 45) || (stuckAhead && turn.dist > 15)
+  if (d.wantOffset > 0 && d.slow > (eager ? 0.8 : 2.5) && !atLight && !e.one && e.w >= 5.5 && room && clearToPass(d, around, eager ? 50 : 70)) d.wantOffset = -lane(city, here.edge)
+  // Back in: its own lane clear beside it and a car's length ahead (past what it passed), or out
+  // a long while, or something coming the other way.
   d.passing = d.wantOffset < 0 ? d.passing + dt : 0
-  if (d.wantOffset < 0 && (gap > 12 || e.one || d.passing > 8 || comingAt(d, around)) && sideClear(d, around, lane(city, here.edge))) d.wantOffset = lane(city, here.edge)
+  if (d.wantOffset < 0 && (e.one || d.passing > 1.5 || comingAt(d, around)) && sideClear(d, around, lane(city, here.edge))) d.wantOffset = lane(city, here.edge)
+  else if (d.wantOffset < 0 && d.passing > 14 && comingAt(d, around)) want = Math.min(want, 2)
   d.braking = want < d.v - 0.3
   d.v += Math.max(-BRAKE * dt, Math.min(ACCEL * dt, want - d.v))
   d.v = Math.max(0, d.v)
@@ -209,14 +268,61 @@ export function drive(city: City, d: Drive, dt: number, around: Around): boolean
   const x = d.x + Math.cos(yaw) * d.v * dt
   const y = d.y + Math.sin(yaw) * d.v * dt
   const next: Box = { x, y, yaw, hl: d.len / 2, hw: d.wide / 2 }
-  // Never into another vehicle: if it would be, it stays where it is.
-  if (around.others.some((o) => overlaps(next, o.box, 0.1))) {
+  // Backing off (giving way to one going first, stuck against it): slowly back, a few metres.
+  if (giveWay && !(d.back ?? 0)) d.back = 0.01
+  if ((d.back ?? 0) > 0) {
+    d.back! += dt
+    if (d.back! > 2.2) {
+      // Backed off: the other goes first (it has waited longer now).
+      d.back = 0
+      d.wait = 0
+      d.held = 0
+    }
+    const bx = d.x - fx * 1.2 * dt
+    const by = d.y - fy * 1.2 * dt
+    const nb: Box = { x: bx, y: by, yaw: d.yaw, hl: d.len / 2, hw: d.wide / 2 }
+    d.v = 0
+    d.steer *= 0.9
+    if ((d.s > -6 || d.leg > 0) && !around.others.some((o) => overlaps(nb, o.box, 0.1))) {
+      d.x = bx
+      d.y = by
+      d.s -= 1.2 * dt
+      d.spin -= (1.2 * dt) / d.r
+      // Back into the road it came from.
+      if (d.s < 0 && d.leg > 0) {
+        d.leg--
+        d.s += city.edges[d.legs[d.leg]!.edge]!.len
+        d.offset = d.wantOffset = lane(city, d.legs[d.leg]!.edge)
+      }
+    }
+    d.yawRate = 0
+    return true
+  }
+  // Never into another vehicle: if it would be, it stays where it is (unless already touching it
+  // and moving away from it: two pressed together must still be able to part).
+  const here0: Box = { x: d.x, y: d.y, yaw: d.yaw, hl: d.len / 2, hw: d.wide / 2 }
+  const blockers = around.others.filter((o) => overlaps(next, o.box, 0.1) && (!overlaps(here0, o.box, 0.1) || (o.box.x - d.x) * (x - d.x) + (o.box.y - d.y) * (y - d.y) > 0))
+  if (blockers.length) {
+    // Held against one held against it: the one that does not go first backs off.
+    d.wait = Math.max(d.wait ?? 0, d.held)
+    if (d.held > 1.2 && blockers.some((o) => o.v < 0.5 && !goesFirst(d, o.d))) d.back = 0.01
+    // Going first but met the other: round it, keeping right (onto the kerb's edge if it must).
+    // (Round the side away from what it met.)
+    if (yielded) {
+      const b = blockers[0]!.box
+      const left = -(b.x - d.x) * Math.sin(d.yaw) + (b.y - d.y) * Math.cos(d.yaw)
+      const l = lane(city, here.edge)
+      d.wantOffset = left > 0 ? Math.max(d.wantOffset, l + 1.7) : Math.min(d.wantOffset, l - 1.7)
+    }
     d.v = 0
     d.held += dt
     d.yawRate = 0
     return true
   }
   d.held = 0
+  // Round it and on: back to its lane.
+  const own = lane(city, here.edge)
+  if (!yielded && d.wait === 0 && d.passing === 0 && Math.abs(d.wantOffset - own) > 0.1 && sideClear(d, around, own)) d.wantOffset = own
   d.yawRate = yawRate
   d.yaw = Math.atan2(Math.sin(yaw), Math.cos(yaw))
   d.x = x
@@ -234,7 +340,7 @@ export function drive(city: City, d: Drive, dt: number, around: Around): boolean
 }
 
 /** The other lane clear far enough ahead to pass (nobody coming, nobody in it). */
-function clearToPass(d: Drive, around: Around) {
+function clearToPass(d: Drive, around: Around, reach = 70) {
   const fx = Math.cos(d.yaw)
   const fy = Math.sin(d.yaw)
   for (const o of around.others) {
@@ -242,7 +348,7 @@ function clearToPass(d: Drive, around: Around) {
     const dy = o.box.y - d.y
     const along = dx * fx + dy * fy
     const left = -(-dx * fy + dy * fx)
-    if (along > -8 && along < 70 && left > 0.8 && left < 5.5) return false
+    if (along > -8 && along < reach && left > 0.8 && left < 5.5) return false
   }
   return true
 }
@@ -259,7 +365,7 @@ function comingAt(d: Drive, around: Around) {
   })
 }
 
-/** Its own lane clear beside it (to pull back in). */
+/** Its own lane clear beside it and a little ahead (to pull back in, in front of what it passed). */
 function sideClear(d: Drive, around: Around, laneW: number) {
   const fx = Math.cos(d.yaw)
   const fy = Math.sin(d.yaw)
@@ -268,7 +374,7 @@ function sideClear(d: Drive, around: Around, laneW: number) {
     const dy = o.box.y - d.y
     const along = dx * fx + dy * fy
     const right = -dx * fy + dy * fx
-    if (Math.abs(along) < d.len + 2 && right < 0 && right > -laneW * 2 - 1) return false
+    if (along > -(d.len + 1.5) && along < d.len + 6 && right < 0 && right > -laneW * 2 - 1) return false
   }
   return true
 }
@@ -276,5 +382,5 @@ function sideClear(d: Drive, around: Around, laneW: number) {
 /** A vehicle set on its way: at a point of its first leg, facing along it, in its lane. */
 export function startDrive(city: City, legs: Leg[], s: number, size: { len: number; wide: number; L: number; r: number; top: number }, v = 0): Drive {
   const p = legPoint(city, legs[0]!, s, lane(city, legs[0]!.edge))
-  return { legs, leg: 0, s, x: p.x, y: p.y, yaw: Math.atan2(p.uy, p.ux), v, steer: 0, yawRate: 0, spin: 0, offset: lane(city, legs[0]!.edge), wantOffset: lane(city, legs[0]!.edge), ...size, braking: false, slow: 0, held: 0, passing: 0 }
+  return { legs, leg: 0, s, x: p.x, y: p.y, yaw: Math.atan2(p.uy, p.ux), v, steer: 0, yawRate: 0, spin: 0, offset: lane(city, legs[0]!.edge), wantOffset: lane(city, legs[0]!.edge), ...size, braking: false, slow: 0, held: 0, passing: 0, rank: Math.random() }
 }

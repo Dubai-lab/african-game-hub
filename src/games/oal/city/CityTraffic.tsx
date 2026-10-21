@@ -8,7 +8,7 @@
 // is kept for the player to walk against.
 import { useFrame, useLoader, useThree } from '@react-three/fiber'
 import { type RefObject, useEffect, useMemo } from 'react'
-import type { Object3D } from 'three'
+import { type Object3D, Vector3 } from 'three'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { CATALOGUE, defaultAppearance, type Sex } from '../../../../supabase/functions/_shared/oal'
@@ -199,6 +199,7 @@ export function CityTraffic({
   }
   /** Draws a vehicle where its driving has it (a car: its wheels, its steering, its lean). */
   const { camera } = useThree()
+  const look = useMemo(() => new Vector3(), [])
   const pose = (car: Car, dt: number) => {
     const d = car.d!
     const ground = 0.03 + groundHeight(city, d.x, d.y)
@@ -283,7 +284,7 @@ export function CityTraffic({
     if (r.phase === 'riding' && last) stopAt = city.edges[d.legs[d.leg]!.edge]!.len - d.s - 3
     if (r.phase === 'waiting' || r.phase === 'arrived') stopAt = 0
     const fast = r.fast && r.phase === 'riding'
-    for (let i = 0; i < (fast ? 3 : 1); i++) drive(city, d, dt, { others: r.phase === 'riding' ? others : [...others], player: r.phase === 'coming' ? undefined : undefined, seconds: Date.now() / 1000, stopAt })
+    for (let i = 0; i < (fast ? 3 : 1); i++) drive(city, d, dt, { others, seconds: Date.now() / 1000, stopAt, eager: fast })
     if (stopAt !== undefined && stopAt < 0.6 && d.v < 0.2) {
       if (r.phase === 'coming') say(r, 'waiting')
       else if (r.phase === 'riding') {
@@ -310,17 +311,22 @@ export function CityTraffic({
     const boxes: Moving[] = []
     const seconds = Date.now() / 1000
     // Every vehicle as the others see it (for keeping their distance, never meeting).
-    const all: { car: Car; box: Box; v: number }[] = []
-    for (const c of [...cars, hire.taxi, hire.kekeh]) if (c.d && c.root.visible) all.push({ car: c, box: boxOf(c.d), v: c.d.v })
+    const all: { car: Car; box: Box; v: number; d?: Drive }[] = []
+    for (const c of [...cars, hire.taxi, hire.kekeh]) if (c.d && c.root.visible) all.push({ car: c, box: boxOf(c.d), v: c.d.v, d: c.d })
     // The player's own car (standing or driven): kept clear of as any other.
     if (ownCar.d && ownCar.model) all.push({ car: ownCarEntry, box: boxOf(ownCar.d), v: ownCar.d.v })
     const othersOf = (me: Car) => all.filter((o) => o.car !== me && Math.abs(o.box.x - me.d!.x) < 45 && Math.abs(o.box.y - me.d!.y) < 45)
     // While riding, the town is round the vehicle (the player is in it).
+    camera.getWorldDirection(look)
     const hiredCar = hire[ride.current?.kind ?? 'taxi']
     hired(dt, p, hiredCar.d ? othersOf(hiredCar) : [], boxes)
     for (const car of cars) {
       // Far behind, or not yet out: put on a road round the player, out of sight.
-      const far = !car.d || Math.hypot(car.d.x - p.x, car.d.y - p.y) > FAR || (car.d.held > 12 && Math.hypot(car.d.x - p.x, car.d.y - p.y) > 60)
+      // (Or stuck a long while in a knot of traffic: taken off the road where it is not seen go,
+      // behind the camera or well off, and another comes on elsewhere.)
+      const stuck = car.d ? Math.max(car.d.held, car.d.wait ?? 0) : 0
+      const unseen = car.d ? Math.hypot(car.d.x - p.x, car.d.y - p.y) > 60 || (car.d.x - camera.position.x) * look.x + (-car.d.y - camera.position.z) * look.z < 0 : false
+      const far = !car.d || Math.hypot(car.d.x - p.x, car.d.y - p.y) > FAR || (stuck > 15 && unseen) || (stuck > 45 && Math.hypot(car.d.x - camera.position.x, -car.d.y - camera.position.z) > 25)
       if (far) {
         const near = edgesNear(index, p.x, p.y, 300).filter((i) => {
           const e = city.edges[i]!

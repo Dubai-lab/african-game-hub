@@ -1896,7 +1896,19 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
         player.current.y = s.y
       }
       target.set(r.pos.x, 1.3, -r.pos.y)
-      eye.set(r.pos.x - c * 7.5, 3.4, -(r.pos.y - sn * 7.5))
+      // Behind it, nearer if a vehicle close behind would have the camera inside it (a bus).
+      let back = 7.5
+      const inside = (bx: number, by: number) =>
+        cityMoving.current.some((m) => {
+          if (Math.hypot(m.x - r.pos.x, m.y - r.pos.y) < 0.6) return false
+          const dx = bx - m.x
+          const dy = by - m.y
+          const a = dx * Math.cos(m.yaw) + dy * Math.sin(m.yaw)
+          const b = -dx * Math.sin(m.yaw) + dy * Math.cos(m.yaw)
+          return Math.abs(a) < m.hl + 0.6 && Math.abs(b) < m.hw + 0.6
+        })
+      while (back > 3 && inside(r.pos.x - c * back, r.pos.y - sn * back)) back -= 0.5
+      eye.set(r.pos.x - c * back, 3.4 + (7.5 - back) * 0.25, -(r.pos.y - sn * back))
       camera.position.lerp(eye, Math.min(1, dt * 3))
       camera.lookAt(target)
       return
