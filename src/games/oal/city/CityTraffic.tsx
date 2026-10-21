@@ -15,7 +15,7 @@ import { CATALOGUE, defaultAppearance, type Sex } from '../../../../supabase/fun
 import { person } from '../ArrivalsScene'
 import { CROWD_URL } from '../character'
 import { buildVehicle, type Kind, type Moving, SIZE, SPEED, vehicleModels, VEHICLES_URL } from '../Traffic'
-import { CARS_URL, type CarModel, type CarModelName, buildCar, poseCar, randomPaint } from './cars'
+import { CARS_URL, type CarModel, type CarModelName, buildCar, buildKekeh, KEKEH_URL, poseCar, randomPaint } from './cars'
 import { cityNight } from './night'
 import { ownCar } from './ownCar'
 import { type City, groundHeight, type Keep, type Leg, nearestNode, route, toSeg } from './cityGen'
@@ -142,6 +142,7 @@ export function CityTraffic({
 }) {
   const gltf = useLoader(GLTFLoader, VEHICLES_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const carsFile = useLoader(GLTFLoader, CARS_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const kekehFile = useLoader(GLTFLoader, KEKEH_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const people = useLoader(GLTFLoader, CROWD_URL('male'), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const index = useMemo(() => edgeIndex(city, keep), [city, keep])
   const stats = useMemo(() => {
@@ -158,7 +159,7 @@ export function CityTraffic({
     // A vehicle of a kind: a car of the new kind (its wheels, its steering), else the old model.
     const make = (kind: Kind): Car | null => {
       const m = modelFor(kind, rand)
-      const model = m ? buildCar(carsFile.scene, m.model, m.paint, people, rand) : null
+      const model = m ? buildCar(carsFile.scene, m.model, m.paint, people, rand) : kind === 'kekeh' ? buildKekeh(kekehFile.scene, people, rand) : null
       const root = model ? model.root : buildVehicle(models, people, kind, rand)
       if (!root) return null
       root.visible = false
@@ -174,7 +175,7 @@ export function CityTraffic({
     // The vehicles that come when waved down: a taxi and a kekeh, kept apart from the rest.
     const hire = { taxi: make('taxi')!, kekeh: make('kekeh')! }
     return { cars, rand, hire }
-  }, [gltf, carsFile, people])
+  }, [gltf, carsFile, kekehFile, people])
   const allowed = (kind: Kind) => (e: Edge) => e.kind !== 'path' && (kind === 'bus' ? e.kind !== 'minor' : true)
   // Vehicles keep to the roads (not the footpaths).
   const drives = (e: Edge) => e.kind !== 'path'

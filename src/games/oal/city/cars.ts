@@ -9,10 +9,14 @@ import { type AnimationClip, Color, Group, type Material, type Mesh, type MeshSt
 import { CATALOGUE, defaultAppearance } from '../../../../supabase/functions/_shared/oal'
 import { person } from '../ArrivalsScene'
 import plans from '../carsPlan.v2.json'
+import kekehPlans from '../kekehPlan.json'
 import { stillFigure } from '../Traffic'
 import type { Drive } from './driving'
 
 export const CARS_URL = '/oal/cars.v2.glb'
+/** The kekeh (scripts/oal/makeKekeh.py: its body from the owner's pictures, its wheels and steering made). */
+export const KEKEH_URL = '/oal/kekeh.v1.glb'
+export const KEKEH_PLAN = (kekehPlans as unknown as Record<string, { wheels: Record<string, { at: number[]; r: number; node: string }>; steer: string; handlebar: string; driver: number[]; passenger: number[]; size: number[]; wheelbase: number }>).kekeh!
 
 export type CarModelName = 'suv' | 'suv_taxi' | 'suv_police'
 type CarPlan = { wheels: Record<string, { at: number[]; r: number; node: string }>; doors: { name: string; side: string; front: boolean; open: number }[]; trunk: string | null; steer: string | null; driver: number[]; size: number[]; wheelbase: number }
@@ -26,7 +30,9 @@ type Wheel = { pivot: Object3D; front: boolean }
 export type CarModel = {
   root: Group
   lean: Group
-  model: CarModelName
+  model: CarModelName | 'kekeh'
+  /** What turns as it is steered, whole (a kekeh's front wheel, its fork and mudguard). */
+  steerPivot?: Object3D | null
   near: Object3D
   far: Object3D | null
   wheels: Wheel[]
@@ -134,6 +140,44 @@ export function buildCar(scene: Object3D, model: CarModelName, paint: string | n
   }
 }
 
+/** The kekeh: its driver at the handlebar (of the town's people, still). */
+export function buildKekeh(scene: Object3D, people: { scene: Object3D; animations: AnimationClip[] } | null, rand: () => number): CarModel {
+  const plan = KEKEH_PLAN
+  const near = scene.getObjectByName('kekeh')!.clone(true)
+  const lean = new Group()
+  lean.add(near)
+  const root = new Group()
+  root.add(lean)
+  if (people) {
+    const base = defaultAppearance('male')
+    const look = { ...base, skin: 0.6 + rand() * 0.35, outfit: CATALOGUE.outfit.male[Math.floor(rand() * CATALOGUE.outfit.male.length)]!, hair: CATALOGUE.hair.male[Math.floor(rand() * CATALOGUE.hair.male.length)]! }
+    const p = person(people.scene, people.animations, look)
+    ;(p.actions.sit ?? p.actions.idle)?.play()
+    p.mixer.update(0.5)
+    const fig = stillFigure(p.root, `${look.outfit}|${look.hair}`)
+    const [dx, dy, dz] = plan.driver
+    fig.position.set(dx! - 0.12, dy! - 0.42, dz!)
+    fig.rotation.y = Math.PI / 2
+    fig.scale.setScalar(0.95)
+    lean.add(fig)
+  }
+  const handle = near.getObjectByName(plan.handlebar)
+  return {
+    root,
+    lean,
+    model: 'kekeh',
+    near,
+    far: null,
+    steerPivot: near.getObjectByName(plan.steer) ?? null,
+    wheels: Object.entries(plan.wheels).map(([k, w]) => ({ pivot: near.getObjectByName(w.node)!, front: false, key: k })),
+    farWheels: [],
+    steering: handle?.children[0] ?? null,
+    doors: [],
+    lamps: { head: { value: 0 }, brake: { value: 0 } },
+    size: { len: plan.size[0]!, wide: plan.size[2]!, L: plan.wheelbase, r: Object.values(plan.wheels)[0]?.r ?? 0.226 },
+  }
+}
+
 export function randomPaint(rand: () => number) {
   return PAINTS[Math.floor(rand() * PAINTS.length)]!
 }
@@ -157,7 +201,9 @@ export function poseCar(car: CarModel, d: Drive, ground: number, dt: number, cam
     w.pivot.rotation.y = w.front ? d.steer : 0
     w.pivot.rotation.x = d.spin
   }
-  if (close && car.steering) car.steering.rotation.y = d.steer * 6
+  // A kekeh: its front wheel, fork and mudguard turned whole; its handlebar with them.
+  if (car.steerPivot) car.steerPivot.rotation.y = d.steer
+  if (close && car.steering) car.steering.rotation.y = car.steerPivot ? d.steer : d.steer * 6
   car.lamps.brake.value = d.braking || d.v < 0.2 ? 1 : 0.12
   car.lamps.head.value = night
   if (close) for (const door of car.doors) door.pivot.rotation.y = door.open * door.t * 1.15

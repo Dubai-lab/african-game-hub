@@ -1,0 +1,51 @@
+{
+ "kekeh": {
+  "wheels": {
+   "f": {
+    "node": "kekeh_wheel_f",
+    "at": [
+     1.115,
+     0.226,
+     0.006
+    ],
+    "r": 0.226
+   },
+   "rl": {
+    "node": "kekeh_wheel_rl",
+    "at": [
+     -0.865,
+     0.226,
+     -0.607
+    ],
+    "r": 0.226
+   },
+   "rr": {
+    "node": "kekeh_wheel_rr",
+    "at": [
+     -0.861,
+     0.226,
+     0.612
+    ],
+    "r": 0.226
+   }
+  },
+  "steer": "kekeh_steer",
+  "handlebar": "kekeh_handlebar",
+  "driver": [
+   0.095,
+   0.62,
+   0.006
+  ],
+  "passenger": [
+   -0.635,
+   0.58,
+   0.006
+  ],
+  "size": [
+   2.62,
+   1.68,
+   1.44
+  ],
+  "wheelbase": 1.98
+ }
+}

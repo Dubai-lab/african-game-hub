@@ -41,7 +41,7 @@ test('the traffic at a junction', async ({ page }) => {
   }
   if (process.env.HAIL) {
     // A taxi waved down: it comes along the road and pulls in beside the player (seen up close).
-    await page.getByTestId('oal-hail-taxi').click()
+    await page.getByTestId(`oal-hail-${process.env.HAIL === 'kekeh' ? 'kekeh' : 'taxi'}`).click()
     for (let i = 0; i < 8; i++) {
       await page.waitForTimeout(1000)
       await shot(page, `hail-${i}`)

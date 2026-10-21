@@ -56,7 +56,7 @@ import { groundHeight } from './cityGen'
 import { type ChunkRequest } from './chunk.worker'
 import { type PackedParts, unpackParts } from './chunkPack'
 import { cityNight } from './night'
-import { CAR_PLANS, CARS_URL, buildCar, poseCar } from './cars'
+import { CAR_PLANS, type CarModelName, CARS_URL, buildCar, poseCar } from './cars'
 import { driveOwn, outline, ownCar, type OwnCarPhase } from './ownCar'
 import { overlaps } from './driving'
 import { type Landmark, LANDMARKS, landmarkPoint, landmarkSolids } from './landmarks'
@@ -1707,7 +1707,7 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
     if (req === 'view') oc.view = oc.view === 'outside' ? 'inside' : 'outside'
     if (oc.phase === 'parked') return false
     oc.t += dt
-    const plan = CAR_PLANS[car.model]
+    const plan = CAR_PLANS[car.model as CarModelName]
     const door = car.doors.find((q) => q.side === 'left' && q.front)
     const c = Math.cos(d.yaw)
     const sn = Math.sin(d.yaw)
@@ -1920,7 +1920,7 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
     // By the driver's door of the player's own car.
     if (ownCar.phase === 'parked' && ownCar.d && ownCar.model) {
       const d = ownCar.d
-      const plan = CAR_PLANS[ownCar.model.model]
+      const plan = CAR_PLANS[ownCar.model.model as CarModelName]
       const [hx, , hz] = (plan.doors.find((q) => q.side === 'left' && q.front) as unknown as { at?: number[] })?.at ?? [0.9, 0, -0.8]
       const c = Math.cos(d.yaw)
       const sn = Math.sin(d.yaw)

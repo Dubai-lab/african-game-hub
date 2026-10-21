@@ -13,6 +13,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { CATALOGUE, defaultAppearance } from '../../../supabase/functions/_shared/oal'
 import { person } from './ArrivalsScene'
 import { CROWD_URL } from './character'
+import { buildCar, buildKekeh, type CarModel, CARS_URL, KEKEH_URL, poseCar, randomPaint } from './city/cars'
+import type { Drive } from './city/driving'
 
 export const VEHICLES_URL = '/oal/vehicles.v1.glb'
 
@@ -38,7 +40,7 @@ const PAINTS: Record<Kind, string[]> = {
 const SEAT: Record<Kind, [number, number, number]> = { taxi: [0.05, -0.24, -0.4], car: [0.05, -0.24, -0.4], police: [0.1, -0.26, -0.4], bus: [2.9, 0.6, -0.85], kekeh: [0.25, 0.12, 0] }
 
 type Lane = { pts: [number, number][]; at: number[]; length: number }
-type Car = { kind: Kind; lane: number; s: number; v: number; want: number; root: Object3D }
+type Car = { kind: Kind; lane: number; s: number; v: number; want: number; root: Object3D; model: CarModel | null; d: Drive | null }
 
 /** A lane, the part of it within reach of the street's centre (what can be seen, and a little). */
 function laneOf(points: number[][], reach: number): Lane {
@@ -164,6 +166,8 @@ function pick<T>(list: T[], r: number) {
 export function Traffic({ lanes, reach, player, moving, spacing = 35 }: { lanes: number[][][]; reach: number; player: { current: { x: number; y: number } }; moving: { current: Moving[] }; spacing?: number }) {
   const gltf = useLoader(GLTFLoader, VEHICLES_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const people = useLoader(GLTFLoader, CROWD_URL('male'), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const carsFile = useLoader(GLTFLoader, CARS_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const kekehFile = useLoader(GLTFLoader, KEKEH_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const { cars, roads, group } = useMemo(() => {
     const roads = lanes.map((l) => laneOf(l, reach)).filter((l) => l.length > 40)
     const models = vehicleModels(gltf.scene)
@@ -177,14 +181,19 @@ export function Traffic({ lanes, reach, player, moving, spacing = 35 }: { lanes:
       for (let k = 0; k < count; k++) {
         const r = rand()
         const kind: Kind = r < 0.42 ? 'taxi' : r < 0.67 ? 'car' : r < 0.88 ? 'kekeh' : r < 0.95 ? 'bus' : 'police'
-        const root = buildVehicle(models, people, kind, rand)
+        // The town's own (the cars of the owner's pack, the kekeh made from pictures); the bus as it was.
+        const model = kind === 'kekeh' ? buildKekeh(kekehFile.scene, people, rand) : kind === 'bus' ? null : buildCar(carsFile.scene, kind === 'taxi' ? 'suv_taxi' : kind === 'police' ? 'suv_police' : 'suv', kind === 'car' ? randomPaint(rand) : null, people, rand)
+        const root = model ? model.root : buildVehicle(models, people, kind, rand)
         if (!root) continue
-        cars.push({ kind, lane: li, s: ((k + rand() * 0.5) / count) * lane.length, v: SPEED[kind], want: SPEED[kind] * (0.85 + rand() * 0.3), root })
+        const s0 = ((k + rand() * 0.5) / count) * lane.length
+        const at0 = pointAt(lane, s0)
+        const d = model ? ({ x: at0.x, y: at0.y, yaw: at0.yaw, v: 0, steer: 0, yawRate: 0, spin: 0, braking: false, L: model.size.L, r: model.size.r } as unknown as Drive) : null
+        cars.push({ kind, lane: li, s: s0, v: SPEED[kind], want: SPEED[kind] * (0.85 + rand() * 0.3), root, model, d })
       }
     })
     const group = cars.map((c) => c.root)
     return { cars, roads, group }
-  }, [gltf, people, lanes, reach, spacing])
+  }, [gltf, carsFile, kekehFile, people, lanes, reach, spacing])
 
   useFrame((_, raw) => {
     const dt = Math.min(raw, 0.1)
@@ -215,8 +224,27 @@ export function Traffic({ lanes, reach, player, moving, spacing = 35 }: { lanes:
       car.s += car.v * dt
       if (car.s > lane.length) car.s -= lane.length
       const at = pointAt(lane, car.s)
-      car.root.position.set(at.x, 0.03, -at.y)
-      car.root.rotation.y = at.yaw
+      if (car.model && car.d) {
+        // Steered into the lane's bend as a car turns (no faster than its wheels allow), its
+        // wheels rolled, its front steered, its body leaning.
+        const d = car.d
+        let diff = at.yaw - d.yaw
+        diff = Math.atan2(Math.sin(diff), Math.cos(diff))
+        const most = (Math.max(car.v, 1) / d.L) * Math.tan(0.6) * dt
+        const turn = Math.max(-most, Math.min(most, diff))
+        d.yaw = Math.atan2(Math.sin(d.yaw + turn), Math.cos(d.yaw + turn))
+        d.yawRate = turn / Math.max(dt, 1e-3)
+        d.steer += (Math.atan((d.yawRate * d.L) / Math.max(car.v, 0.5)) - d.steer) * Math.min(1, dt * 6)
+        d.v = car.v
+        d.braking = target < car.v - 0.3
+        d.spin += (car.v * dt) / d.r
+        d.x = at.x
+        d.y = at.y
+        poseCar(car.model, d, 0.03, dt)
+      } else {
+        car.root.position.set(at.x, 0.03, -at.y)
+        car.root.rotation.y = at.yaw
+      }
       // Drawn only within sight (the far ones still drive on, unseen in the haze).
       car.root.visible = Math.abs(at.x - p.x) < SEEN && Math.abs(at.y - p.y) < SEEN
       car.root.matrixWorldAutoUpdate = car.root.visible
