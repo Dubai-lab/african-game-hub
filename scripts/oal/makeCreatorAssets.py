@@ -18,7 +18,11 @@
 #     never pokes through.
 #   * a standing idle movement from Mixamo, for the creator to show the character breathing.
 # Skin tone, eye colour and hair colour are the app's to set (it tints the pictures).
-import importlib
+import addon_utils
+
+addon_utils.enable('bl_ext.blender_org.mpfb', default_set=True)
+
+import importlib  # noqa: E402
 import math
 import os
 import sys
@@ -29,6 +33,11 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 from retargetBasketball import retarget, skeleton, use  # noqa: E402
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import random  # noqa: E402
+
+from peopleKit import Kit, print_image, textured  # noqa: E402
 
 args = sys.argv[sys.argv.index('--') + 1:]
 SEX, OUT = args[0], args[1]
@@ -47,6 +56,15 @@ SKIN = {'male': 'young_african_male/young_african_male.mhmat', 'female': 'young_
 # (Height is not a morph: MakeHuman's height changes the whole build with it. The app makes a
 # taller or shorter person by scaling them evenly, as people really differ.)
 BUILD = {'weight': (0.0, 1.0), 'muscle': (0.0, 1.0)}
+# Sliders made by MakeHuman's macros other than their own name: a woman's bust is her cup size.
+MACRO = {'bust': ('cupsize', 0.0, 1.0)} if SEX == 'female' else {}
+# The body's other sliders: MakeHuman's targets at each end (a belly, the hips, the bum; a man's chest).
+BODY = {
+    'belly': (['stomach/stomach-pregnant-decr'], ['stomach/stomach-pregnant-incr']),
+    'hips': (['hip/hip-scale-horiz-decr', 'hip/hip-scale-depth-decr'], ['hip/hip-scale-horiz-incr', 'hip/hip-scale-depth-incr']),
+    'bum': (['buttocks/buttocks-volume-decr'], ['buttocks/buttocks-volume-incr']),
+    **({} if SEX == 'female' else {'bust': (['torso/measure-bust-circ-decr'], ['torso/measure-bust-circ-incr'])}),
+}
 # Each face slider: MakeHuman's targets at its "min" and "max" ends (both sides for paired features).
 FACE = {
     'noseWidth': (['nose/nose-scale-horiz-decr'], ['nose/nose-scale-horiz-incr']),
@@ -60,13 +78,18 @@ FACE = {
 }
 # The catalogue's choices as MPFB assets (ids as in supabase/functions/_shared/oal.ts).
 HAIR = {
-    'male': {'lowcut': 'short01/short01.mhclo', 'short': 'short04/short04.mhclo', 'afro': 'afro01/afro01.mhclo'},
-    'female': {'bun': 'rehmanpolanski_hair_bun_brown/rehmanpolanski_hair_bun_brown.mhclo', 'afro': 'afro01/afro01.mhclo', 'braids': 'elvs_double_mh_braid/elvs_double_mh_braid.mhclo', 'short': 'short02/short02.mhclo'},
+    'male': {'short': 'short04/short04.mhclo', 'afro': 'afro01/afro01.mhclo'},
+    'female': {'bun': 'rehmanpolanski_hair_bun_brown/rehmanpolanski_hair_bun_brown.mhclo', 'afro': 'afro01/afro01.mhclo', 'short': 'short02/short02.mhclo'},
 }[SEX]
+# Made here (./peopleKit.py): a man's low cut; a woman's box braids and head-tie.
+MADE_HAIR = {'male': ['lowcut'], 'female': ['braids', 'headtie']}[SEX]
 OUTFITS = {
-    'male': {'tee_jeans': ['male_casualsuit06', 'shoes02'], 'shirt_jeans': ['male_casualsuit01', 'shoes02'], 'jacket_jeans': ['male_casualsuit05', 'shoes02'], 'suit': ['male_elegantsuit01', 'shoes01']},
+    'male': {'tee_jeans': ['male_casualsuit06', 'shoes02'], 'shirt_jeans': ['male_casualsuit01', 'shoes02'], 'jacket_jeans': ['male_casualsuit05', 'shoes02'], 'suit': ['male_elegantsuit01', 'shoes01'],
+             'overalls': ['male_worksuit01', 'shoes03'], 'striped_shirt': ['male_casualsuit03', 'shoes01']},
     'female': {'blouse_skirt': ['female_elegantsuit01', 'shoes05'], 'tee_jeans': ['female_casualsuit01', 'shoes05'], 'tee_shorts': ['female_casualsuit02', 'shoes05'], 'sport': ['female_sportsuit01', 'shoes03']},
 }[SEX]
+# Made here, after them in the catalogue's order: an ankara dress; a lappa and top in one print.
+MADE_OUTFITS = {'male': [], 'female': ['ankara_dress', 'lappa']}[SEX]
 PARTS = {'eyes': 'high-poly/high-poly.mhclo', 'eyebrows': {'male': 'eyebrow001/eyebrow001.mhclo', 'female': 'eyebrow007/eyebrow007.mhclo'}[SEX], 'eyelashes': 'eyelashes02/eyelashes02.mhclo'}
 
 
@@ -106,9 +129,10 @@ bpy.ops.wm.read_homefile(use_empty=True)
 
 # 1. The shapes: the average character, then each build slider's two ends.
 shapes = {}
-for name, (low, high) in BUILD.items():
+for name, (low, high) in {**BUILD, **{k: (lo, hi) for k, (_, lo, hi) in MACRO.items()}}.items():
+    macro = MACRO[name][0] if name in MACRO else name
     for end, value in (('min', low), ('max', high)):
-        body = human({**PHENOTYPE, name: value})
+        body = human({**PHENOTYPE, macro: value})
         shapes[f'build_{name}_{end}'] = shape_of(body)
         remove(body.parent if body.parent else body)
         print('SHAPE', name, end)
@@ -127,6 +151,16 @@ for name, (low, high) in FACE.items():
         for key in keys:
             body.shape_key_remove(key)
     print('FACE', name)
+for name, (low, high) in BODY.items():
+    for end, targets in (('min', low), ('max', high)):
+        keys = []
+        for target in targets:
+            path = os.path.join(TargetService.target_full_path(target.split('/')[-1]) or '')
+            keys.append(TargetService.load_target(body, path, weight=1.0, name=f'tmp_{len(keys)}'))
+        shapes[f'build_{name}_{end}'] = shape_of(body)
+        for key in keys:
+            body.shape_key_remove(key)
+    print('BODY', name)
 
 # 3. Every outfit and hairstyle, fitted to the average body.
 attachments = {}
@@ -173,13 +207,22 @@ for obj in followers:
             obj.modifiers.remove(m)
 
 
+afro = set(attachments.get('hair_afro', [])) if SEX == 'female' else set()
+kit = None
+
+
 def fitted(obj):
     ClothesService.fit_clothes_to_human(obj, body, set_parent=False)
     co = np.empty(len(obj.data.vertices) * 3, dtype=np.float32)
     obj.data.vertices.foreach_get('co', co)
+    if obj in afro:
+        # A woman's afro: fuller.
+        co = kit.bigger(co.reshape(-1, 3)).astype(np.float32).ravel()
     return co
 
 
+shapes['__average__'] = average
+kit = Kit(body, rig, shapes, [k for k in shapes if k.startswith('build_')], [k for k in shapes if k.startswith('face_')])
 captured = {obj.name: {} for obj in followers}
 for key in body.data.shape_keys.key_blocks[1:]:
     key.value = 1.0
@@ -199,20 +242,50 @@ for obj in followers:
             obj.shape_key_add(name=name, from_mix=False).data.foreach_set('co', co)
 print('FITTED', len(followers), 'pieces')
 
-# 6. Where each outfit covers the body: a mark on each point of the body it hides, one mark per
-# outfit (shoes leave the body alone; they fit close and hide too much of the legs). The app
-# hides the triangles an outfit covers completely, so skin never pokes through the clothes.
-# The marks are the four channels of the body's vertex colour (red for the first outfit, green
-# for the second, and so on: four outfits a sex), which survives every step to the phone.
-assert len(OUTFITS) <= 4, 'four outfits a sex: one colour channel each'
+# 5b. What is made here (./peopleKit.py), from the body itself, its morphs the body's.
+rnd = random.Random(SEX)
+made_cover = {}
+if 'lowcut' in MADE_HAIR:
+    attachments['hair_lowcut'] = [kit.low_cut()]
+if 'braids' in MADE_HAIR:
+    attachments['hair_braids'] = [kit.braids(rnd)]
+if MADE_OUTFITS or 'headtie' in MADE_HAIR:
+    ankara = textured('outfit_ankara_dress', print_image('ankara'), 0.8)
+    lappa = textured('outfit_lappa', print_image('lappa', seed=7), 0.8)
+if 'headtie' in MADE_HAIR:
+    attachments['hair_headtie'] = [kit.head_tie(lappa)]
+if 'ankara_dress' in MADE_OUTFITS:
+    attachments['outfit_ankara_dress'] = [kit.garment('ankara_dress', ankara, top=True, skirt='knee', offset=0.008)]
+    made_cover['ankara_dress'] = kit.covered('knee')
+if 'lappa' in MADE_OUTFITS:
+    attachments['outfit_lappa'] = [kit.garment('lappa', lappa, top=True, skirt='ankle', offset=0.012, loose=True)]
+    made_cover['lappa'] = kit.covered('ankle')
+if MADE_OUTFITS:
+    attachments['shoes_slippers'] = [kit.slippers(rnd)]
+del shapes['__average__']
+print('MADE', [k for k in attachments if any(m in k for m in MADE_HAIR + MADE_OUTFITS + ['slippers'])])
+
+# 6. Where each outfit covers the body: a mark on each point of the body it hides (shoes leave
+# the body alone; they fit close and hide too much of the legs). The app hides the triangles an
+# outfit covers completely, so skin never pokes through the clothes. The marks are bits of the
+# body's vertex colour, in the catalogue's order: the red channel's eight bits (as 0..255) the
+# first eight outfits, the green's the next eight, and so on (it survives every step to the phone).
+order = list(OUTFITS) + MADE_OUTFITS
+assert len(order) <= 32, 'thirty-two outfits a sex: a bit each'
 index = {g.name: g.index for g in body.vertex_groups}
-marks = np.zeros((len(body.data.vertices), 4), dtype=np.float32)
-for channel, (outfit_id, assets) in enumerate(OUTFITS.items()):
-    groups = {index[f'Delete.{a}'] for a in assets if not a.startswith('shoes') and f'Delete.{a}' in index}
-    for v in body.data.vertices:
-        if any(g.group in groups and g.weight > 0.5 for g in v.groups):
-            marks[v.index, channel] = 1.0
-    print('HIDE', outfit_id, int(marks[:, channel].sum()), 'points')
+bits = np.zeros((len(body.data.vertices), 4), dtype=np.int64)
+for n, outfit_id in enumerate(order):
+    hidden = np.zeros(len(body.data.vertices), dtype=bool)
+    if outfit_id in OUTFITS:
+        groups = {index[f'Delete.{a}'] for a in OUTFITS[outfit_id] if not a.startswith('shoes') and f'Delete.{a}' in index}
+        for v in body.data.vertices:
+            if any(g.group in groups and g.weight > 0.5 for g in v.groups):
+                hidden[v.index] = True
+    else:
+        hidden = made_cover[outfit_id]
+    bits[hidden, n // 8] |= 1 << (n % 8)
+    print('HIDE', outfit_id, int(hidden.sum()), 'points')
+marks = (bits / 255.0).astype(np.float32)
 colour = body.data.color_attributes.new('hide', 'FLOAT_COLOR', 'POINT')
 colour.data.foreach_set('color', marks.ravel())
 body.data.color_attributes.active_color = colour
@@ -267,6 +340,10 @@ for outfit_id, assets in OUTFITS.items():
     shoes = [a for a in assets if a.startswith('shoes')]
     if obj and shoes:
         obj['shoes'] = f'shoes_{shoes[0]}'
+for outfit_id in MADE_OUTFITS:
+    obj = bpy.data.objects.get(f'outfit_{outfit_id}')
+    if obj:
+        obj['shoes'] = 'shoes_slippers'
 
 # Pictures small enough for a phone: the skin (seen close up) 1024, the rest 512. Only hair,
 # brows and lashes keep a see-through channel; the rest leave it unused, so they go as JPEG.

@@ -139,7 +139,7 @@ function Creator() {
 
         {tab === 'body' && (
           <div className="flex flex-col gap-4">
-            {BUILD.map((field) => slider(t(`oal.creator.build.${field}`), appearance.build[field], (v) => set({ build: { ...appearance.build, [field]: v } })))}
+            {BUILD.map((field) => slider(t(`oal.creator.build.${field}`), appearance.build[field] ?? 0, (v) => set({ build: { ...appearance.build, [field]: v } })))}
           </div>
         )}
         {tab === 'face' && (

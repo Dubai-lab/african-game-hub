@@ -6,8 +6,8 @@
 // steering wheel turned with them, its body leaning a little in a bend and dipping as it brakes,
 // its rear lamps lit as it slows, its headlamps at night, its driver at the wheel.
 import { type AnimationClip, BoxGeometry, Color, Group, type Material, Mesh, MeshBasicMaterial, type MeshStandardMaterial, type Object3D, Quaternion, SpotLight, Vector3 } from 'three'
-import { CATALOGUE, defaultAppearance } from '../../../../supabase/functions/_shared/oal'
 import { person } from '../ArrivalsScene'
+import { lookKey, randomLook } from '../character'
 import plans from '../carsPlan.v2.json'
 import kekehPlans from '../kekehPlan.json'
 import { stillFigure } from '../Traffic'
@@ -111,12 +111,11 @@ export function buildCar(scene: Object3D, model: CarModelName, paint: string | n
   const doors = plan.doors.map((d) => ({ pivot: near.getObjectByName(d.name)!, open: d.open, side: d.side, front: d.front, t: 0 })).filter((d) => d.pivot)
   // The driver: at the wheel, seated (the left seat: Liberia drives on the right).
   if (people) {
-    const base = defaultAppearance('male')
-    const look = { ...base, skin: 0.6 + rand() * 0.35, outfit: CATALOGUE.outfit.male[Math.floor(rand() * CATALOGUE.outfit.male.length)]!, hair: CATALOGUE.hair.male[Math.floor(rand() * CATALOGUE.hair.male.length)]! }
+    const look = randomLook('male', rand, model === 'suv_police' ? ['shirt_jeans'] : undefined)
     const p = person(people.scene, people.animations, look)
     ;(p.actions.sit ?? p.actions.idle)?.play()
     p.mixer.update(0.5)
-    const fig = stillFigure(p.root, `${look.outfit}|${look.hair}`)
+    const fig = stillFigure(p.root, lookKey(look))
     const [dx, dy, dz] = plan.driver
     fig.position.set(dx! - 0.1, dy! - 0.42, dz!)
     fig.rotation.y = Math.PI / 2
@@ -149,12 +148,11 @@ export function buildKekeh(scene: Object3D, people: { scene: Object3D; animation
   const root = new Group()
   root.add(lean)
   if (people) {
-    const base = defaultAppearance('male')
-    const look = { ...base, skin: 0.6 + rand() * 0.35, outfit: CATALOGUE.outfit.male[Math.floor(rand() * CATALOGUE.outfit.male.length)]!, hair: CATALOGUE.hair.male[Math.floor(rand() * CATALOGUE.hair.male.length)]! }
+    const look = randomLook('male', rand)
     const p = person(people.scene, people.animations, look)
     ;(p.actions.sit ?? p.actions.idle)?.play()
     p.mixer.update(0.5)
-    const fig = stillFigure(p.root, `${look.outfit}|${look.hair}`)
+    const fig = stillFigure(p.root, lookKey(look))
     const [dx, dy, dz] = plan.driver
     fig.position.set(dx! - 0.12, dy! - 0.42, dz!)
     fig.rotation.y = Math.PI / 2

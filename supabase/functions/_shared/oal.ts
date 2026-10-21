@@ -36,21 +36,23 @@ export const AGE = { min: 18, max: 60 } as const
 
 export type Sex = 'male' | 'female'
 
-/** Body and face, each from -1 to 1 (0 is average). */
-export const BUILD = ['weight', 'muscle', 'height'] as const
+/** Body and face, each from -1 to 1 (0 is average). The belly, hips, bum and bust came later: an
+ * appearance made before them has them average. */
+export const BUILD = ['weight', 'muscle', 'height', 'belly', 'hips', 'bum', 'bust'] as const
+const LATER_BUILD: readonly string[] = ['belly', 'hips', 'bum', 'bust']
 export const FACE = ['noseWidth', 'noseLength', 'lips', 'mouthWidth', 'jaw', 'chin', 'cheekbones', 'eyes'] as const
 
 /** The catalogue: every choice the creator offers, by sex. More are added here as they are made. */
 export const CATALOGUE = {
   hair: {
     male: ['lowcut', 'short', 'afro', 'bald'],
-    female: ['bun', 'afro', 'braids', 'short'],
+    female: ['bun', 'afro', 'braids', 'short', 'headtie'],
   },
   hairColour: ['black', 'darkbrown', 'brown', 'auburn'],
   eyes: ['darkbrown', 'brown', 'hazel'],
   outfit: {
-    male: ['tee_jeans', 'shirt_jeans', 'jacket_jeans', 'suit'],
-    female: ['blouse_skirt', 'tee_jeans', 'tee_shorts', 'sport'],
+    male: ['tee_jeans', 'shirt_jeans', 'jacket_jeans', 'suit', 'overalls', 'striped_shirt'],
+    female: ['blouse_skirt', 'tee_jeans', 'tee_shorts', 'sport', 'ankara_dress', 'lappa'],
   },
 } as const
 
@@ -59,7 +61,7 @@ export type Appearance = {
   sex: Sex
   /** Skin tone, from the lightest (0) to the darkest (1) of the African skins. */
   skin: number
-  build: Record<(typeof BUILD)[number], number>
+  build: Record<'weight' | 'muscle' | 'height', number> & Partial<Record<'belly' | 'hips' | 'bum' | 'bust', number>>
   face: Record<(typeof FACE)[number], number>
   hair: string
   hairColour: string
@@ -82,6 +84,10 @@ export function checkAppearance(input: unknown): Appearance | null {
     if (Object.keys(g).some((k) => !names.includes(k))) return null
     const out: Record<string, number> = {}
     for (const name of names) {
+      if (g[name] === undefined && LATER_BUILD.includes(name)) {
+        out[name] = 0
+        continue
+      }
       if (!inRange(g[name], -1, 1)) return null
       out[name] = round(g[name] as number)
     }
@@ -105,7 +111,7 @@ export function defaultAppearance(sex: Sex): Appearance {
     version: 1,
     sex,
     skin: 0.7,
-    build: { weight: 0, muscle: 0, height: 0 },
+    build: { weight: 0, muscle: 0, height: 0, belly: 0, hips: 0, bum: 0, bust: 0 },
     face: { noseWidth: 0, noseLength: 0, lips: 0, mouthWidth: 0, jaw: 0, chin: 0, cheekbones: 0, eyes: 0 },
     hair: CATALOGUE.hair[sex][0],
     hairColour: 'black',

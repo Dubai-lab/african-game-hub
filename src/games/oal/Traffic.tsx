@@ -10,9 +10,8 @@ import { useMemo } from 'react'
 import { type AnimationClip, BufferAttribute, BufferGeometry, Color, Group, type Material, Matrix4, type Mesh, Mesh as MeshClass, type Object3D, type SkinnedMesh, Vector3 } from 'three'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { CATALOGUE, defaultAppearance } from '../../../supabase/functions/_shared/oal'
 import { person } from './ArrivalsScene'
-import { CROWD_URL } from './character'
+import { CROWD_URL, lookKey, randomLook } from './character'
 import { buildCar, buildKekeh, type CarModel, CARS_URL, KEKEH_URL, poseCar, randomPaint } from './city/cars'
 import type { Drive } from './city/driving'
 
@@ -89,19 +88,13 @@ export function buildVehicle(models: Record<string, Object3D | undefined>, peopl
     })
   }
   // The driver: seated at the wheel, posed once (a still figure costs a phone little).
-  const base = defaultAppearance('male')
-  const look = {
-    ...base,
-    skin: 0.6 + rand() * 0.35,
-    outfit: kind === 'police' ? 'shirt_jeans' : pick([...CATALOGUE.outfit.male], rand()),
-    hair: pick([...CATALOGUE.hair.male], rand()),
-  }
+  const look = randomLook('male', rand, kind === 'police' ? ['shirt_jeans'] : undefined)
   const driver = person(people.scene, people.animations, look)
   const sit = driver.actions.sit ?? driver.actions.idle
   sit?.play()
   driver.mixer.update(0.5)
   const [sx, sy, sz] = SEAT[kind]
-  const still = stillFigure(driver.root, `${look.outfit}|${look.hair}`)
+  const still = stillFigure(driver.root, lookKey(look))
   still.position.set(sx, sy, sz)
   still.rotation.y = Math.PI / 2
   still.scale.setScalar(0.94)

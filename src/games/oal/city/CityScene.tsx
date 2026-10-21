@@ -44,7 +44,7 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import type { Appearance } from '../../../../supabase/functions/_shared/oal'
 import { person, type Stick } from '../ArrivalsScene'
-import { CHARACTER_URL, CROWD_URL } from '../character'
+import { CHARACTER_URL, CROWD_URL, lookKey, randomLook, seeded } from '../character'
 import { type TownMap, useTownMap } from '../MapView'
 import { TOWNS } from '../StreetScene'
 import { keepOutOf, type Moving, Traffic } from '../Traffic'
@@ -63,7 +63,6 @@ import { overlaps } from './driving'
 import { type Landmark, LANDMARKS, landmarkPoint, landmarkSolids } from './landmarks'
 import { COMPOUNDS_BUILT, gates, HOME_URL, INSIDES, INTERIORS_URL, OUTSIDE } from '../homeModel'
 import { stillFigure, VEHICLES_URL, vehicleModels } from '../Traffic'
-import { defaultAppearance } from '../../../../supabase/functions/_shared/oal'
 import { buildChunk, buildCity, CHUNK, solidOf, type City, type ChunkParts, type Keep, nearestRoad, segsNear, type Solid, type Tile, toSeg, type TownMapData, waterGeometry } from './cityGen'
 
 const WALK_SPEED = 1.45
@@ -1387,11 +1386,11 @@ function InsideModel({ r }: { r: Room }) {
     root.scale.setScalar(r.s)
     // Its people at their work, standing (behind the counter, at the desk).
     ;(plan.attendants ?? []).forEach((a, i) => {
-      const look = { ...defaultAppearance('male'), skin: [0.85, 0.7, 0.92][i % 3]!, outfit: ['shirt_jeans', 'tee_jeans'][i % 2]!, hair: ['short', 'lowcut'][i % 2]! }
+      const look = randomLook('male', seeded(Math.round(Math.abs(ox * 31 + oy * 17)) + i * 101 + 7), ['shirt_jeans', 'tee_jeans', 'striped_shirt'])
       const p = person(crowd.scene, crowd.animations, look)
       ;(p.actions.idle ?? p.actions.walk)?.play()
       p.mixer.update(0.3 + i)
-      const fig = stillFigure(p.root, `staff${i % 2}`)
+      const fig = stillFigure(p.root, lookKey(look))
       fig.position.set(a.x, 0, -a.y)
       fig.rotation.y = Math.atan2(a.face[0]!, -a.face[1]!)
       fig.scale.setScalar(1 / r.s)
@@ -2158,8 +2157,7 @@ function CompoundModel({ c }: { c: Compound }) {
     const leaf = 'gate' in plan && plan.gate ? root.getObjectByName(plan.gate.name) : undefined
     // The police at the Ministry's gate, in navy, standing.
     const guards = ('guards' in plan ? (plan.guards ?? []) : []).map((g, i) => {
-      const base = defaultAppearance('male')
-      const p = person(crowd.scene, crowd.animations, { ...base, skin: [0.8, 0.65][i % 2]!, outfit: 'suit', hair: 'lowcut' }, '#1f2f5a')
+      const p = person(crowd.scene, crowd.animations, { ...randomLook('male', seeded(i * 131 + 11), ['suit']), hair: 'lowcut' }, '#1f2f5a')
       ;(p.actions.idle ?? p.actions.walk)?.play()
       p.mixer.update(0.3)
       const fig = stillFigure(p.root, 'guard')

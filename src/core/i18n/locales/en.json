@@ -2310,7 +2310,11 @@
       "build": {
         "weight": "Weight",
         "muscle": "Muscle",
-        "height": "Height"
+        "height": "Height",
+        "belly": "Belly",
+        "hips": "Hips",
+        "bum": "Bum",
+        "bust": "Chest"
       },
       "face": {
         "noseWidth": "Nose width",
@@ -2335,7 +2339,8 @@
         "afro": "Afro",
         "bald": "Bald",
         "bun": "Bun",
-        "braids": "Braids"
+        "braids": "Box braids",
+        "headtie": "Head-tie"
       },
       "hairColour": {
         "black": "Black",
@@ -2343,7 +2348,7 @@
         "brown": "Brown",
         "auburn": "Auburn"
       },
-      "hairHint": "More styles are coming: fades, cornrows, box braids, locs and head wraps.",
+      "hairHint": "More styles are coming: fades, cornrows and locs.",
       "outfit": {
         "tee_jeans": "T-shirt and jeans",
         "shirt_jeans": "Shirt and jeans",
@@ -2351,7 +2356,11 @@
         "suit": "Suit",
         "blouse_skirt": "Blouse and skirt",
         "tee_shorts": "T-shirt and shorts",
-        "sport": "Sportswear"
+        "sport": "Sportswear",
+        "overalls": "Overalls",
+        "striped_shirt": "Striped shirt and jeans",
+        "ankara_dress": "Ankara dress",
+        "lappa": "Lappa and top"
       },
       "name": "Your name in the game",
       "nameHint": "It does not have to be your real name, and others may have the same one. Your hub username is what makes you you.",

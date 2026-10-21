@@ -2310,7 +2310,11 @@
       "build": {
         "weight": "Poids",
         "muscle": "Muscles",
-        "height": "Taille"
+        "height": "Taille",
+        "belly": "Ventre",
+        "hips": "Hanches",
+        "bum": "Fesses",
+        "bust": "Poitrine"
       },
       "face": {
         "noseWidth": "Largeur du nez",
@@ -2335,7 +2339,8 @@
         "afro": "Afro",
         "bald": "Crâne rasé",
         "bun": "Chignon",
-        "braids": "Tresses"
+        "braids": "Tresses africaines",
+        "headtie": "Foulard de tête"
       },
       "hairColour": {
         "black": "Noirs",
@@ -2343,7 +2348,7 @@
         "brown": "Bruns",
         "auburn": "Auburn"
       },
-      "hairHint": "D'autres coiffures arrivent : dégradés, nattes collées, box braids, locks et foulards.",
+      "hairHint": "D'autres coiffures arrivent : dégradés, nattes collées et locks.",
       "outfit": {
         "tee_jeans": "T-shirt et jean",
         "shirt_jeans": "Chemise et jean",
@@ -2351,7 +2356,11 @@
         "suit": "Costume",
         "blouse_skirt": "Chemisier et jupe",
         "tee_shorts": "T-shirt et short",
-        "sport": "Tenue de sport"
+        "sport": "Tenue de sport",
+        "overalls": "Salopette",
+        "striped_shirt": "Chemise rayée et jean",
+        "ankara_dress": "Robe en wax",
+        "lappa": "Pagne et haut"
       },
       "name": "Votre nom dans le jeu",
       "nameHint": "Ce n'est pas forcément votre vrai nom, et d'autres peuvent avoir le même. C'est votre nom d'utilisateur du hub qui vous distingue.",

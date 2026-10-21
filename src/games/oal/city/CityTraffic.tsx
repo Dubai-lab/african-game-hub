@@ -11,9 +11,9 @@ import { type RefObject, useEffect, useMemo } from 'react'
 import { type Object3D, Vector3 } from 'three'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { CATALOGUE, defaultAppearance, type Sex } from '../../../../supabase/functions/_shared/oal'
+import { type Sex } from '../../../../supabase/functions/_shared/oal'
 import { person } from '../ArrivalsScene'
-import { CROWD_URL } from '../character'
+import { CROWD_URL, randomLook } from '../character'
 import { buildVehicle, type Kind, type Moving, SIZE, SPEED, vehicleModels, VEHICLES_URL } from '../Traffic'
 import { CARS_URL, type CarModel, type CarModelName, buildCar, buildKekeh, KEKEH_URL, poseCar, randomPaint } from './cars'
 import { cityNight } from './night'
@@ -447,9 +447,7 @@ export function CityWalkers({ city, keep, player }: { city: City; keep: Keep[]; 
       const female = i % 2 === 1
       const file = female ? women : men
       const s: Sex = female ? 'female' : 'male'
-      const base = defaultAppearance(s)
-      const pickOf = <T,>(list: readonly T[]) => list[Math.floor(rand() * list.length)]!
-      const p = person(file.scene, file.animations, { ...base, skin: 0.55 + rand() * 0.4, outfit: pickOf(CATALOGUE.outfit[s]), hair: pickOf(CATALOGUE.hair[s]) })
+      const p = person(file.scene, file.animations, randomLook(s, rand))
       p.actions.walk?.play()
       if (p.actions.walk) p.actions.walk.time = rand() * 2
       p.root.visible = false
