@@ -297,16 +297,23 @@ function seeded(seed: number) {
   }
 }
 
+/** A colour by its name, read once (reading '#rrggbb' is slow, and asked for every face). */
+const colours = new Map<string, Color>()
+function colourOf(name: string) {
+  let c = colours.get(name)
+  if (!c) colours.set(name, (c = new Color(name)))
+  return c
+}
+
 /** A mesh being built: positions, normals, uvs, colours. */
 class Mesher {
   p: number[] = []
   n: number[] = []
   uv: number[] = []
   c: number[] = []
-  private col = new Color()
   /** A quad (four corners in order), its normal, its uv corners, a colour. */
   quad(v: number[][], nx: number, ny: number, nz: number, uvs: number[][], colour: string | Color) {
-    const col = typeof colour === 'string' ? this.col.set(colour) : colour
+    const col = typeof colour === 'string' ? colourOf(colour) : colour
     for (const i of [0, 1, 2, 0, 2, 3]) {
       const q = v[i]!
       this.p.push(q[0]!, q[1]!, q[2]!)
@@ -316,7 +323,7 @@ class Mesher {
     }
   }
   tri(a: number[], b: number[], c: number[], nx: number, ny: number, nz: number, colour: string | Color, uvs = [[0, 0], [1, 0], [0.5, 1]]) {
-    const col = typeof colour === 'string' ? this.col.set(colour) : colour
+    const col = typeof colour === 'string' ? colourOf(colour) : colour
     for (const [q, u] of [[a, uvs[0]], [b, uvs[1]], [c, uvs[2]]] as [number[], number[]][]) {
       this.p.push(q[0]!, q[1]!, q[2]!)
       this.n.push(nx, ny, nz)
@@ -576,6 +583,8 @@ export type ChunkParts = {
   plain: BufferGeometry | null
   leaves: BufferGeometry | null
   solids: Solid[]
+  /** The trees: [kind (TREE), x, y, turn, size], each drawn by the page from its model. */
+  trees: number[][]
 }
 
 /** A circle the chunk leaves alone (a hub built by hand, a compound placed by the game). */
@@ -587,6 +596,9 @@ const PLASTER = ['#efe6d2', '#e8d6a6', '#d9e6ea', '#f2d9c4', '#e6efd8', '#f4f0e6
 const ZINC = ['#8a4a2c', '#7a3f26', '#9a5a3a', '#6e4a3a', '#a06040', '#8a8a86']
 const KIOSK = ['#2f6fb8', '#c8281e', '#2f8a4a', '#e2b62a', '#e86a1c', '#6a3a8a']
 const WALL = ['#d8d0c0', '#cfc6b4', '#e4ddcc', '#bdb3a0']
+/** The trees' kinds, as the trees file has them (public/oal/trees.v1.glb, scripts/oal/makeTrees.py). */
+export const TREE = { shade: 0, palm: 1, banana: 2 } as const
+export const TREE_KINDS = ['shade_tree', 'coconut_palm', 'banana_clump'] as const
 const BLOCK = ['#f4f2ee', '#e8e4dc', '#ece6da']
 /** The walls' styles: the facade atlas's four tiles (CityScene), picked by v (style × 100). */
 export const WALL_STYLE = { house: 0, painted: 1, blocks: 2, storeys: 3 } as const
@@ -663,7 +675,7 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
   const places: TilePlace[] = []
   const signs: Sign[] = []
   // Each real building drawn: its footprint, height, whether a shopfront (for its sign).
-  const drawn = new Map<number, { pts: number[][]; h: number; shop: boolean }>()
+  const drawn = new Map<number, { pts: number[][]; h: number; shop: boolean; kind: string; box: ReturnType<typeof boxAround> }>()
   /** A street lamp at the kerb, its arm over the road (toward rx, ry): a galvanised steel post on
    * its concrete base, the arm, the lamp head and its glass; most work (a few are broken, as in
    * town), each throwing its pool of light at night. */
@@ -692,6 +704,9 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
   const plain = new Mesher()
   const leaves = new Mesher()
   const solids: Solid[] = []
+  // The trees: where each stands (drawn by the page from the owner's models, TREE_KINDS).
+  const trees: number[][] = []
+  const plant = (kind: number, x: number, y: number) => trees.push([kind, x, y, rand() * Math.PI * 2, 0.8 + rand() * 0.4])
   const x0 = cx * CHUNK
   const y0 = cy * CHUNK
   const inChunk = (x: number, y: number) => x >= x0 && x < x0 + CHUNK && y >= y0 && y < y0 + CHUNK
@@ -701,13 +716,15 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
     return inChunk((s.ax + s.bx) / 2, (s.ay + s.by) / 2)
   })
   // Taken ground in this chunk (2 m cells): buildings never overlap.
-  const taken = new Set<string>()
+  // (Cells by number, not by name: this is asked thousands of times a chunk.)
+  const taken = new Set<number>()
+  const cell = (gx: number, gy: number) => (gx + 20000) * 40000 + (gy + 20000)
   const free = (x: number, y: number, r: number) => {
-    for (let gx = Math.floor((x - r) / 2); gx <= Math.floor((x + r) / 2); gx++) for (let gy = Math.floor((y - r) / 2); gy <= Math.floor((y + r) / 2); gy++) if (taken.has(key(gx, gy))) return false
+    for (let gx = Math.floor((x - r) / 2); gx <= Math.floor((x + r) / 2); gx++) for (let gy = Math.floor((y - r) / 2); gy <= Math.floor((y + r) / 2); gy++) if (taken.has(cell(gx, gy))) return false
     return true
   }
   const take = (x: number, y: number, r: number) => {
-    for (let gx = Math.floor((x - r) / 2); gx <= Math.floor((x + r) / 2); gx++) for (let gy = Math.floor((y - r) / 2); gy <= Math.floor((y + r) / 2); gy++) taken.add(key(gx, gy))
+    for (let gx = Math.floor((x - r) / 2); gx <= Math.floor((x + r) / 2); gx++) for (let gy = Math.floor((y - r) / 2); gy <= Math.floor((y + r) / 2); gy++) taken.add(cell(gx, gy))
   }
   /** Clear of every road (each by its width), of water, of what is kept. */
   const clear = (x: number, y: number, r: number) => {
@@ -850,7 +867,7 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
         if (kind !== 'industrial' && r() < 0.55) plain.post(box.x + (r() - 0.5) * box.w * 0.5, box.y + (r() - 0.5) * box.d * 0.5, 0.75, 0.75, h, h + 1.5, '#1c1c20', 8)
       }
       solids.push(solidOf(pts))
-      drawn.set(i, { pts, h, shop: mesh === shops })
+      drawn.set(i, { pts, h, shop: mesh === shops, kind, box })
       take(box.x, box.y, Math.min(box.w, box.d) / 2)
       for (const [x, y] of pts) take(x!, y!, 0.5)
     })
@@ -892,6 +909,7 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
       }
       places.push(place)
     }
+    surroundings(city, tile, { x0, y0, cx, cy, drawn, signs, solids, land, plain, leaves, dirt, free, take, clear, kept, inChunk, plant })
   }
 
   // Traffic lights where big roads meet (three big roads' arms or more): for each
@@ -1000,7 +1018,7 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
     const pts: number[][] = []
     for (let k = 0; k < 16; k++) pts.push([ring.x + Math.cos((k / 16) * Math.PI * 2) * ri, ring.y + Math.sin((k / 16) * Math.PI * 2) * ri])
     solids.push(solidOf(pts))
-    palm(plain, leaves, ring.x, ring.y, rand)
+    plant(TREE.palm, ring.x, ring.y)
   }
 
   for (const id of mine) {
@@ -1239,7 +1257,7 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
         if (rand() < 0.3) {
           const px = bx + nx * (d / 2 + 1.5) + s.ux * (rand() - 0.5) * w
           const py = by + ny * (d / 2 + 1.5) + s.uy * (rand() - 0.5) * w
-          if (clear(px, py, 0.5)) palm(plain, leaves, px, py, rand)
+          if (clear(px, py, 0.5)) plant(TREE.palm, px, py)
         }
       }
     }
@@ -1269,7 +1287,7 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
       if (rand() < 0.15) {
         const px = bx + (rand() - 0.5) * 10
         const py = by + (rand() - 0.5) * 10
-        if (free(px, py, 0.6) && clear(px, py, 0.6)) palm(plain, leaves, px, py, rand)
+        if (free(px, py, 0.6) && clear(px, py, 0.6)) plant(TREE.palm, px, py)
       }
     }
   // What is kept here and has walls of its own (a landmark): solid in each chunk it reaches.
@@ -1298,32 +1316,313 @@ export function buildChunk(city: City, cx: number, cy: number, keep: Keep[], til
     plain: plain.geometry(),
     leaves: leaves.geometry(),
     solids,
+    trees,
   }
 }
 
-/** A coconut palm: its leaning trunk, its crown of arching fronds. */
-function palm(trunk: Mesher, leaves: Mesher, x: number, y: number, rand: () => number) {
-  const h = 7 + rand() * 4
-  const lean = [(rand() - 0.5) * 1.6, (rand() - 0.5) * 1.6]
-  trunk.post(x, y, 0.22, 0.15, 0, h, '#7a6650', 6, lean)
-  const tx = x + lean[0]!
-  const ty = y + lean[1]!
-  const green = new Color()
-  for (let i = 0; i < 9; i++) {
-    const a = (i / 9) * Math.PI * 2 + rand()
-    const len = 3.2 + rand() * 1.2
-    green.setHSL(0.24 + rand() * 0.04, 0.45, 0.24 + rand() * 0.08)
-    // Each frond: two quads, up and out then down, a leaf's width across.
-    const ux = Math.cos(a)
-    const uy = Math.sin(a)
-    const wx = -uy * 0.45
-    const wy = ux * 0.45
-    const mid = [tx + ux * len * 0.5, h + 0.6, ty + uy * len * 0.5]
-    const tip = [tx + ux * len, h - 1.2, ty + uy * len]
-    const P = (p: number[], s: number) => [p[0]! + wx * s, p[1]!, -(p[2]! + wy * s)]
-    const base = [tx, h, ty]
-    leaves.quad([P(base, -0.3), P(base, 0.3), P(mid, 1), P(mid, -1)], 0, 1, 0, [[0, 0], [1, 0], [1, 0.5], [0, 0.5]], green)
-    leaves.quad([P(mid, -1), P(mid, 1), P(tip, 0.2), P(tip, -0.2)], 0, 1, 0, [[0, 0.5], [1, 0.5], [1, 1], [0, 1]], green)
+// ---- The town round its buildings: markets, trees, compound walls, the beaches -----------------
+
+type Around = {
+  x0: number
+  y0: number
+  cx: number
+  cy: number
+  drawn: Map<number, { pts: number[][]; h: number; shop: boolean; kind: string; box: ReturnType<typeof boxAround> }>
+  signs: Sign[]
+  solids: Solid[]
+  land: Mesher
+  plain: Mesher
+  leaves: Mesher
+  dirt: Mesher
+  free: (x: number, y: number, r: number) => boolean
+  take: (x: number, y: number, r: number) => void
+  clear: (x: number, y: number, r: number) => boolean
+  kept: (x: number, y: number, pad?: number) => boolean
+  inChunk: (x: number, y: number) => boolean
+  plant: (kind: number, x: number, y: number) => void
+}
+
+/** How far a market spreads round its point (Red Light, the biggest in the country, far more). */
+const MARKET_REACH: [RegExp, number][] = [
+  [/red light/i, 75],
+  [/general market|waterside/i, 38],
+  [/./, 24],
+]
+const UMBRELLA = [
+  ['#d8282a', '#f2f2f2'],
+  ['#2a6ad8', '#f2d82a'],
+  ['#2a9a4a', '#f2f2f2'],
+  ['#e86a1c', '#2a6ad8'],
+  ['#8a2ad8', '#f2d82a'],
+  ['#d8282a', '#2a9a4a', '#f2d82a', '#2a6ad8'],
+  ['#f2d82a', '#d8282a'],
+]
+// What is piled on the tables: tomatoes, peppers, onions, greens, dried fish, palm oil, cloth.
+const GOODS = ['#c8281e', '#e83a1c', '#b8885a', '#4a8a2a', '#6a6a5a', '#b8501c', '#2a6ad8', '#e8b82a', '#8a2a6a', '#f2f2e8']
+const CANOE = ['#2a6ad8', '#d8282a', '#f2d82a', '#2a9a4a', '#f2f2f2']
+
+function surroundings(city: City, tile: Tile, a: Around) {
+  const rand = seeded(a.cx * 2654435761 + a.cy * 40503 + 17)
+  const lands = tile.l
+    .map((l) => {
+      const flat: number[] = []
+      for (let i = 1; i + 1 < l.length; i += 2) flat.push(a.x0 + (l[i] as number) / 10, a.y0 + (l[i + 1] as number) / 10)
+      return { kind: (l[0] as string).replace(/^~/, ''), poly: poly(flat) }
+    })
+    .filter((l) => l.poly.pts.length >= 6)
+  const landAt = (x: number, y: number) => lands.find((l) => inPoly(l.poly, x, y))?.kind
+  const footprints = [...a.drawn].map(([i, b]) => ({ i, p: poly(b.pts.flat() as number[]) }))
+  const insideBuilding = (x: number, y: number, except = -1) => footprints.some((f) => f.i !== except && inPoly(f.p, x, y))
+  const rect = (x: number, y: number, yaw: number, w: number, d: number) => {
+    const c = Math.cos(yaw)
+    const s = Math.sin(yaw)
+    return solidOf([
+      [x + c * (-w / 2) - s * (-d / 2), y + s * (-w / 2) + c * (-d / 2)],
+      [x + c * (w / 2) - s * (-d / 2), y + s * (w / 2) + c * (-d / 2)],
+      [x + c * (w / 2) - s * (d / 2), y + s * (w / 2) + c * (d / 2)],
+      [x + c * (-w / 2) - s * (d / 2), y + s * (-w / 2) + c * (d / 2)],
+    ])
+  }
+
+  // Markets: the ground worn bare, packed with stalls (tables of goods under striped umbrellas,
+  // white tarpaulin tents, rice bags), the market's own board at the road.
+  for (const p of tile.p) {
+    if (p[0] !== 'market' || p[5] === 1) continue
+    const name = tile.n[p[1] as number] ?? ''
+    const mx = a.x0 + (p[2] as number) / 10
+    const my = a.y0 + (p[3] as number) / 10
+    if (a.kept(mx, my, 10)) continue
+    const R = MARKET_REACH.find(([re]) => re.test(name))![1]
+    const mr = seeded(Math.round(mx * 31 + my * 17))
+    // The ground: laterite trodden bare, in a ragged ring.
+    const n = 20
+    const edge = Array.from({ length: n }, () => R * (0.85 + mr() * 0.2) * 1.05)
+    for (let i = 0; i < n; i++) {
+      const a0 = (i / n) * Math.PI * 2
+      const a1 = ((i + 1) / n) * Math.PI * 2
+      a.land.tri([mx, 0.014, -my], [mx + Math.cos(a0) * edge[i]!, 0.014, -(my + Math.sin(a0) * edge[i]!)], [mx + Math.cos(a1) * edge[(i + 1) % n]!, 0.014, -(my + Math.sin(a1) * edge[(i + 1) % n]!)], 0, 1, 0, '#a2683f')
+    }
+    // The rows of stalls, turned the way the nearest road runs.
+    const road = nearestRoad(city, mx, my, 120)
+    const yaw = road ? Math.atan2(road.seg.uy, road.seg.ux) : 0
+    const c = Math.cos(yaw)
+    const sn = Math.sin(yaw)
+    const step = 3.8
+    for (let u = -R; u <= R; u += step)
+      for (let v = -R; v <= R; v += step) {
+        if (Math.hypot(u, v) > R * (0.9 + mr() * 0.15)) continue
+        if (mr() < 0.35) continue
+        const x = mx + c * u - sn * v + (mr() - 0.5) * 0.6
+        const y = my + sn * u + c * v + (mr() - 0.5) * 0.6
+        if (!a.free(x, y, 0.6) || !a.clear(x, y, 1.4) || insideBuilding(x, y) || onWater(city, x, y)) continue
+        const roll = mr()
+        if (roll < 0.12) {
+          // A tarpaulin tent: four poles, its white roof sagging.
+          if (!a.clear(x, y, 2.4)) continue
+          for (const [du, dv] of [[-1.8, -1.8], [1.8, -1.8], [1.8, 1.8], [-1.8, 1.8]] as const) a.plain.post(x + c * du - sn * dv, y + sn * du + c * dv, 0.05, 0.05, 0, 2.5, '#6a5a4a', 5)
+          a.plain.box(x, y, yaw, 4.2, 4.2, 2.5, 0.06, mr() < 0.7 ? '#eeeeea' : '#2a6ad8', [1, 1])
+          a.plain.box(x, y, yaw, 4.0, 1.0, 0, 0.8, '#7a5a3a', [1, 1])
+          a.solids.push(rect(x, y, yaw, 4.0, 1.0))
+          continue
+        }
+        // A table of planks, its goods piled.
+        const ty = yaw + (mr() < 0.5 ? 0 : Math.PI / 2)
+        a.plain.box(x, y, ty, 1.8, 0.9, 0, 0.82, mr() < 0.5 ? '#7a5a3a' : '#5a4430', [1, 1])
+        const tc = Math.cos(ty)
+        const ts = Math.sin(ty)
+        // Two heaps of goods (each its own colour), some in an enamel basin.
+        for (const du of [-0.42, 0.42]) {
+          const gx = x + tc * du
+          const gy = y + ts * du
+          const g = GOODS[Math.floor(mr() * GOODS.length)]!
+          if (mr() < 0.3) a.plain.post(gx, gy, 0.3, 0.36, 0.82, 0.95, '#c8c8c4', 5)
+          a.plain.box(gx, gy, ty + (mr() - 0.5) * 0.4, 0.7, 0.62, 0.82, 0.12 + mr() * 0.14, g, [1, 1])
+        }
+        a.solids.push(rect(x, y, ty, 1.8, 0.9))
+        // Rice bags stacked beside, now and then.
+        if (mr() < 0.2) a.plain.box(x - ts * 1.0, y + tc * 1.0, ty, 0.9, 0.55, 0, 0.6, '#ecebe2', [1, 1])
+        if (mr() < 0.78) umbrella(a.plain, x + (mr() - 0.5) * 0.4, y + (mr() - 0.5) * 0.4, 1.3 + mr() * 0.4, 2.2 + mr() * 0.3, UMBRELLA[Math.floor(mr() * UMBRELLA.length)]!, mr() * 6)
+      }
+    // Its board at the road: on two posts, its face to the traffic.
+    if (road && name) {
+      let nx = mx - road.px
+      let ny = my - road.py
+      const l = Math.hypot(nx, ny) || 1
+      nx /= l
+      ny /= l
+      const off = road.seg.w / 2 + 3
+      const bx = road.px + nx * off
+      const by = road.py + ny * off
+      if (a.clear(bx, by, 0.4)) {
+        const w = Math.min(7, 2.2 + name.length * 0.3)
+        for (const d of [-1, 1]) a.plain.post(bx - ny * d * (w / 2 - 0.3), by + nx * d * (w / 2 - 0.3), 0.08, 0.08, 0, 4.4, '#4a4a48', 6)
+        a.signs.push({ text: name, cat: 'market', x: bx - nx * 0.05, y: by - ny * 0.05, z: 3.4, yaw: Math.atan2(-ny, -nx), w, h: 1.1 })
+        a.signs.push({ text: name, cat: 'market', x: bx + nx * 0.05, y: by + ny * 0.05, z: 3.4, yaw: Math.atan2(ny, nx), w, h: 1.1 })
+      }
+    }
+  }
+
+  // Compound walls round houses (not businesses, open to the street): plastered block, its cap,
+  // the gate's opening toward the road between two pillars.
+  const business = new Set(tile.p.map((p) => p[4] as number))
+  for (const [i, b] of a.drawn) {
+    if (b.kind !== 'house' || business.has(i)) continue
+    const bb = b.box
+    if (bb.w * bb.d > 420 || bb.w * bb.d < 30) continue
+    const r = seeded(a.cx * 7919 + a.cy * 104729 + i * 31)
+    if (r() > 0.5) continue
+    const m = 2 + r() * 1.5
+    const W = bb.w + m * 2
+    const D = bb.d + m * 2
+    const c = Math.cos(bb.yaw)
+    const sn = Math.sin(bb.yaw)
+    const at = (u: number, v: number) => [bb.x + c * u - sn * v, bb.y + sn * u + c * v] as const
+    // Every point of the wall clear of the roads, the water and every other building; no other
+    // building inside it.
+    let ok = true
+    for (let k = 0; k < 4 && ok; k++) {
+      for (let t = 0; t <= 1.0001 && ok; t += 0.125) {
+        const u = k === 0 ? -W / 2 + W * t : k === 1 ? W / 2 : k === 2 ? W / 2 - W * t : -W / 2
+        const v = k === 0 ? -D / 2 : k === 1 ? -D / 2 + D * t : k === 2 ? D / 2 : D / 2 - D * t
+        const [x, y] = at(u, v)
+        if (!a.clear(x, y, 0.6) || insideBuilding(x, y, i) || !a.inChunk(x, y)) ok = false
+      }
+    }
+    if (!ok) continue
+    for (const [j, o] of a.drawn) {
+      if (j === i || Math.abs(o.box.x - bb.x) > W || Math.abs(o.box.y - bb.y) > W) continue
+      for (const [x, y] of o.pts) {
+        const dx = x! - bb.x
+        const dy = y! - bb.y
+        if (Math.abs(dx * c + dy * sn) < W / 2 && Math.abs(-dx * sn + dy * c) < D / 2) ok = false
+      }
+    }
+    if (!ok) continue
+    // The side facing the road: the gate's.
+    const road = nearestRoad(city, bb.x, bb.y, 60)
+    const sides = [
+      { u: 0, v: -D / 2, len: W, nu: 0, nv: -1 },
+      { u: W / 2, v: 0, len: D, nu: 1, nv: 0 },
+      { u: 0, v: D / 2, len: W, nu: 0, nv: 1 },
+      { u: -W / 2, v: 0, len: D, nu: -1, nv: 0 },
+    ]
+    let gate = 0
+    if (road) {
+      const tx = road.px - bb.x
+      const ty = road.py - bb.y
+      let best = -Infinity
+      sides.forEach((sd, k) => {
+        const dot = (c * sd.nu - sn * sd.nv) * tx + (sn * sd.nu + c * sd.nv) * ty
+        if (dot > best) {
+          best = dot
+          gate = k
+        }
+      })
+    }
+    const colour = WALL[Math.floor(r() * WALL.length)]!
+    const h = 2.1 + r() * 0.4
+    const gw = 3.2
+    sides.forEach((sd, k) => {
+      const along = sd.nu === 0 ? 0 : Math.PI / 2
+      const pieces: [number, number][] = k === gate ? [[-sd.len / 2, -gw / 2], [gw / 2, sd.len / 2]] : [[-sd.len / 2, sd.len / 2]]
+      for (const [s0, s1] of pieces) {
+        const mid = (s0 + s1) / 2
+        const len = s1 - s0 + 0.2
+        const pu = sd.nu === 0 ? sd.u + mid : sd.u
+        const pv = sd.nu === 0 ? sd.v : sd.v + mid
+        const [x, y] = at(pu, pv)
+        a.plain.box(x, y, bb.yaw + along, len, 0.2, 0, h, colour, [1, 1])
+        a.plain.box(x, y, bb.yaw + along, len, 0.3, h, 0.08, '#9a958a', [1, 1])
+        a.solids.push(rect(x, y, bb.yaw + along, len, 0.25))
+      }
+      if (k === gate)
+        for (const d of [-1, 1]) {
+          const pu = sd.nu === 0 ? sd.u + (d * gw) / 2 : sd.u
+          const pv = sd.nu === 0 ? sd.v : sd.v + (d * gw) / 2
+          const [x, y] = at(pu, pv)
+          a.plain.box(x, y, bb.yaw, 0.45, 0.45, 0, h + 0.4, colour, [1, 1])
+          // The gate's leaf, swung open inward against the wall.
+          const [lx, ly] = at(pu - sd.nu * 0.8 + (sd.nu === 0 ? -d * 0.05 : 0), pv - sd.nv * 0.8 + (sd.nv === 0 ? -d * 0.05 : 0))
+          a.plain.box(lx, ly, bb.yaw + along + Math.PI / 2, 1.5, 0.05, 0.05, h - 0.2, GATE[Math.floor(r() * GATE.length)]!, [1, 1])
+        }
+    })
+  }
+
+  // Trees: shade trees and palms in the yards, woods where the land is forest or bush, palms
+  // and canoes along the beaches.
+  const tree = (x: number, y: number, kind: 'palm' | 'shade' | 'bush') => {
+    if (!a.free(x, y, kind === 'bush' ? 0.6 : 1.2) || !a.clear(x, y, kind === 'bush' ? 0.6 : 1.5) || insideBuilding(x, y) || onWater(city, x, y)) return
+    a.take(x, y, kind === 'bush' ? 0.5 : 1)
+    a.plant(kind === 'palm' ? TREE.palm : kind === 'bush' ? TREE.banana : TREE.shade, x, y)
+    if (kind !== 'bush') a.solids.push(rect(x, y, 0, 0.5, 0.5))
+  }
+  // A yard's tree, beside about every other house.
+  for (const [i, b] of a.drawn) {
+    if (b.kind !== 'house' && b.kind !== 'other' && b.kind !== 'school' && b.kind !== 'church') continue
+    const r = seeded(a.cx * 131 + a.cy * 977 + i * 7)
+    if (r() > 0.5) continue
+    const bb = b.box
+    const side = r() * Math.PI * 2
+    const dist = Math.max(bb.w, bb.d) / 2 + 2 + r() * 3
+    tree(bb.x + Math.cos(side) * dist, bb.y + Math.sin(side) * dist, r() < 0.4 ? 'palm' : 'shade')
+  }
+  // The land's own: woods, bush, the beaches.
+  for (let k = 0; k < 260; k++) {
+    const x = a.x0 + rand() * CHUNK
+    const y = a.y0 + rand() * CHUNK
+    const kind = landAt(x, y)
+    if (kind === 'forest') tree(x, y, rand() < 0.15 ? 'palm' : rand() < 0.3 ? 'bush' : 'shade')
+    else if (kind === 'scrub' || kind === 'wetland') {
+      if (rand() < 0.55) tree(x, y, rand() < 0.25 ? 'shade' : 'bush')
+    } else if (kind === 'grass' || kind === 'farm' || kind === 'cemetery') {
+      if (rand() < 0.08) tree(x, y, rand() < 0.5 ? 'palm' : 'shade')
+    } else if (kind === 'sand') {
+      if (rand() < 0.25) tree(x, y, 'palm')
+      else if (rand() < 0.12 && a.free(x, y, 3.5) && a.clear(x, y, 3) && !onWater(city, x, y)) {
+        a.take(x, y, 3)
+        canoe(a.plain, x, y, rand() * Math.PI, CANOE[Math.floor(rand() * CANOE.length)]!, CANOE[Math.floor(rand() * CANOE.length)]!)
+      }
+    } else if (!kind && rand() < 0.07) {
+      // Open ground among the houses: a mango or a palm now and then.
+      tree(x, y, rand() < 0.5 ? 'palm' : 'shade')
+    }
+  }
+}
+
+/** A market umbrella: its pole, its canopy of coloured panels, tilted a little. */
+function umbrella(m: Mesher, x: number, y: number, r: number, h: number, colours: string[], turn: number) {
+  m.post(x, y, 0.025, 0.025, 0, h + 0.35, '#d8d8d4', 4)
+  const n = 8
+  const tilt = [0.12, 0.08]
+  for (let i = 0; i < n; i++) {
+    const a0 = turn + (i / n) * Math.PI * 2
+    const a1 = turn + ((i + 1) / n) * Math.PI * 2
+    const p = (a: number) => {
+      const ex = Math.cos(a) * r
+      const ey = Math.sin(a) * r
+      return [x + ex, h + ex * tilt[0]! + ey * tilt[1]!, -(y + ey)]
+    }
+    m.tri([x, h + 0.45, -y], p(a0), p(a1), 0, 1, 0, colours[i % colours.length]!)
+  }
+}
+
+/** A fishing canoe drawn up on the sand: its long hull painted in two colours, pointed at both ends. */
+function canoe(m: Mesher, x: number, y: number, yaw: number, hull: string, band: string) {
+  const L = 7.5
+  m.box(x, y, yaw, L - 2, 1.1, 0, 0.55, hull, [1, 1])
+  m.box(x, y, yaw, L - 2, 1.14, 0.38, 0.12, band, [1, 1])
+  const c = Math.cos(yaw)
+  const s = Math.sin(yaw)
+  for (const d of [-1, 1]) {
+    const bx = x + c * d * ((L - 2) / 2)
+    const by = y + s * d * ((L - 2) / 2)
+    const tx = x + c * d * (L / 2)
+    const ty = y + s * d * (L / 2)
+    const lx = -s * 0.55
+    const ly = c * 0.55
+    for (const z of [0.55, 0.0]) m.tri([bx + lx, z, -(by + ly)], [bx - lx, z, -(by - ly)], [tx, z + 0.2, -ty], 0, z ? 1 : -1, 0, hull)
+    m.quad([[bx + lx, 0, -(by + ly)], [tx, 0.2, -ty], [tx, 0.75, -ty], [bx + lx, 0.55, -(by + ly)]], ly, 0, lx, [[0, 0], [1, 0], [1, 1], [0, 1]], hull)
+    m.quad([[tx, 0.2, -ty], [bx - lx, 0, -(by - ly)], [bx - lx, 0.55, -(by - ly)], [tx, 0.75, -ty]], -ly, 0, -lx, [[0, 0], [1, 0], [1, 1], [0, 1]], hull)
   }
 }
 

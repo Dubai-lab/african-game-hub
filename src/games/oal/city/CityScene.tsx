@@ -5,7 +5,7 @@
 // family's compound and the Ministry of Health where they are, each with its gate. The ground,
 // the haze and the sky go on to the horizon. Loaded only here.
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
-import { type RefObject, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Component, type ReactNode, type RefObject, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AdditiveBlending,
   BackSide,
@@ -23,11 +23,16 @@ import {
   type Group,
   Mesh,
   MeshBasicMaterial,
+  InstancedMesh,
+  Matrix4,
   MeshStandardMaterial,
+  type Object3D,
+  Quaternion,
   PlaneGeometry,
   PMREMGenerator,
   RepeatWrapping,
   SphereGeometry,
+  type SkinnedMesh,
   SRGBColorSpace,
   type Texture,
   Vector3,
@@ -44,8 +49,10 @@ import { keepOutOf, type Moving, Traffic } from '../Traffic'
 import { businessKey } from './business'
 import { CityTraffic, CityWalkers } from './CityTraffic'
 import { type Destination, newRide, PASSENGER, type RidePhase, type RideState } from './ride'
-import { type Sign, SIGNAL_LAMPS, type Signal, type SignalLamp, signalState, type TilePlace } from './cityGen'
+import { type Sign, SIGNAL_LAMPS, TREE_KINDS, type Signal, type SignalLamp, signalState, type TilePlace } from './cityGen'
 import { groundHeight } from './cityGen'
+import { type ChunkRequest } from './chunk.worker'
+import { type PackedParts, unpackParts } from './chunkPack'
 import { type Landmark, LANDMARKS, landmarkPoint, landmarkSolids } from './landmarks'
 import { buildChunk, buildCity, CHUNK, type City, type ChunkParts, type Keep, nearestRoad, segsNear, type Solid, type Tile, toSeg, type TownMapData, waterGeometry } from './cityGen'
 
@@ -659,9 +666,85 @@ function disposeParts(parts: ChunkParts) {
  * there are tiles for it. */
 const TILES: Record<string, string> = { Monrovia: '/oal/city/monrovia/t' }
 
-function Chunks({ city, keep, player, solids, town }: { city: City; keep: Keep[]; player: RefObject<{ x: number; y: number }>; solids: RefObject<Map<string, Solid[]>>; town: string }) {
+function Chunks({ city, map, keep, player, solids, town }: { city: City; map: TownMapData; keep: Keep[]; player: RefObject<{ x: number; y: number }>; solids: RefObject<Map<string, Solid[]>>; town: string }) {
   const mats = useMaterials()
   const built = useRef(new Map<string, Built>())
+  // The chunks are built in a worker (so the screen never waits for one); the one asked for.
+  const worker = useMemo(() => {
+    try {
+      return new Worker(new URL('./chunk.worker.ts', import.meta.url), { type: 'module' })
+    } catch {
+      return null
+    }
+  }, [])
+  const pending = useRef<string | null>(null)
+  // A worker that fails (it cannot start, it throws): the chunks built here instead.
+  const broken = useRef(false)
+  /** A chunk built: its meshes into the scene, its places, lamps, lights, walls registered. */
+  const place = (cx: number, cy: number, parts: ChunkParts) => {
+    const group = root.current
+    const k = `${cx},${cy}`
+    if (!group || built.current.has(k)) {
+      disposeParts(parts)
+      return
+    }
+    const g = new (group.constructor as new () => Group)()
+    const add = (geo: BufferGeometry | null | undefined, mat: keyof Materials) => {
+      if (!geo) return
+      const m = new Mesh(geo, mats[mat])
+      m.matrixAutoUpdate = false
+      g.add(m)
+    }
+    add(parts.land, 'land')
+    add(parts.dirt, 'dirt')
+    add(parts.pavement, 'pavement')
+    add(parts.asphalt, 'asphalt')
+    add(parts.marks, 'marks')
+    add(parts.walls, 'walls')
+    add(parts.shops, 'shops')
+    add(parts.roofs, 'roofs')
+    add(parts.plain, 'plain')
+    add(parts.leaves, 'leaves')
+    add(parts.glow, 'glow')
+    for (const s of SIGNAL_LAMPS) add(parts.signalLamps[s] ?? null, `sig${s}`)
+    signalsByChunk.set(k, parts.signals)
+    add(parts.pools, 'pools')
+    lampsByChunk.set(k, parts.lamps)
+    placesByChunk.set(k, parts.places)
+    treesByChunk.set(k, parts.trees)
+    treesVersion.n++
+    const board = signMesh(parts.signs)
+    if (board) g.add(board.mesh)
+    group.add(g)
+    built.current.set(k, { group: g, parts, dispose: board?.dispose })
+    solids.current?.set(k, parts.solids)
+  }
+  const placeRef = useRef(place)
+  placeRef.current = place
+  useEffect(() => {
+    if (!worker) return
+    worker.postMessage({ type: 'map', map } satisfies ChunkRequest)
+    worker.onmessage = (e: MessageEvent<{ type: 'built' | 'failed'; cx: number; cy: number; ms?: number; parts?: PackedParts }>) => {
+      const { cx, cy } = e.data
+      pending.current = null
+      const at = player.current
+      // Gone past it meanwhile: not wanted now.
+      if (at && (Math.abs(cx - Math.floor(at.x / CHUNK)) > AROUND + 1 || Math.abs(cy - Math.floor(at.y / CHUNK)) > AROUND + 1)) return
+      if (e.data.type === 'built' && e.data.parts) {
+        cityStats.build = Math.max(cityStats.build, e.data.ms ?? 0)
+        placeRef.current(cx, cy, unpackParts(e.data.parts))
+      } else placeRef.current(cx, cy, buildChunk(city, cx, cy, keep, tiles.current.get(`${cx},${cy}`) ?? null))
+    }
+  }, [worker, map]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!worker) return
+    worker.onerror = (e) => {
+      console.error('[city] chunk worker failed, building here:', e.message)
+      broken.current = true
+      pending.current = null
+    }
+    return () => worker.terminate()
+  }, [worker])
   // The tiles fetched (null: none there) and being fetched.
   const tiles = useRef(new Map<string, Tile | null>())
   const asked = useRef(new Set<string>())
@@ -740,36 +823,19 @@ function Chunks({ city, keep, player, solids, town }: { city: City; keep: Keep[]
     }
     if (want) {
       const [cx, cy] = want
-      const parts = buildChunk(city, cx, cy, keep, source ? tiles.current.get(`${cx},${cy}`) : null)
-      const g = new (group.constructor as new () => Group)()
-      const add = (geo: BufferGeometry | null | undefined, mat: keyof Materials) => {
-        if (!geo) return
-        const m = new Mesh(geo, mats[mat])
-        m.matrixAutoUpdate = false
-        g.add(m)
+      const tile = source ? (tiles.current.get(`${cx},${cy}`) ?? null) : null
+      if (worker && !broken.current) {
+        // One at a time: the next asked for once this one is back.
+        if (pending.current === null) {
+          pending.current = `${cx},${cy}`
+          worker.postMessage({ type: 'build', cx, cy, keep, tile } satisfies ChunkRequest)
+        }
+      } else {
+        const t0 = performance.now()
+        const parts = buildChunk(city, cx, cy, keep, tile)
+        cityStats.build = Math.max(cityStats.build, performance.now() - t0)
+        place(cx, cy, parts)
       }
-      add(parts.land, 'land')
-      add(parts.dirt, 'dirt')
-      add(parts.pavement, 'pavement')
-      add(parts.asphalt, 'asphalt')
-      add(parts.marks, 'marks')
-      add(parts.walls, 'walls')
-      add(parts.shops, 'shops')
-      add(parts.roofs, 'roofs')
-      add(parts.plain, 'plain')
-      add(parts.leaves, 'leaves')
-      add(parts.glow, 'glow')
-      for (const k of SIGNAL_LAMPS) add(parts.signalLamps[k] ?? null, `sig${k}`)
-      signalsByChunk.set(`${cx},${cy}`, parts.signals)
-      add(parts.pools, 'pools')
-      lampsByChunk.set(`${cx},${cy}`, parts.lamps)
-      placesByChunk.set(`${cx},${cy}`, parts.places)
-      const board = signMesh(parts.signs)
-      if (board) g.add(board.mesh)
-      group.add(g)
-      const k = `${cx},${cy}`
-      built.current.set(k, { group: g, parts, dispose: board?.dispose })
-      solids.current?.set(k, parts.solids)
     }
     // Let go of what is far behind.
     for (const [k, b] of built.current) {
@@ -780,13 +846,15 @@ function Chunks({ city, keep, player, solids, town }: { city: City; keep: Keep[]
         b.dispose?.()
         placesByChunk.delete(k)
         lampsByChunk.delete(k)
+        treesByChunk.delete(k)
+        treesVersion.n++
         signalsByChunk.delete(k)
         built.current.delete(k)
         solids.current?.delete(k)
       }
     }
   })
-  return <group ref={root} />
+  return <group ref={root} name="chunks" />
 }
 
 /** The ground under everything, to the horizon, following the player (its texture fixed to the town). */
@@ -983,7 +1051,7 @@ function HubStreet({ hub, player }: { hub: Hub; player: RefObject<{ x: number; y
     }
   })
   return (
-    <group position={[hub.x, 0.005, -hub.y]}>
+    <group position={[hub.x, 0.005, -hub.y]} name={`hub-${hub.town}`}>
       <primitive object={scene} />
       {where.plan.lanes && where.plan.lanes.length > 0 && (
         <Suspense fallback={null}>
@@ -1018,6 +1086,156 @@ function NearHubs({ hubs, player }: { hubs: Hub[]; player: RefObject<{ x: number
             <HubStreet hub={h} player={player} />
           </Suspense>
         ))}
+    </>
+  )
+}
+
+/** What the town has besides its streets (its traffic, its people, the hubs' streets, the
+ * landmarks): if one cannot be fetched (a dropped connection), the town goes on without it. */
+class Optional extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false }
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+  componentDidCatch(error: unknown) {
+    console.warn('[city] left out:', error)
+  }
+  render() {
+    return this.state.failed ? null : this.props.children
+  }
+}
+
+/** What drawing the city costs (for tests, with localStorage 'oal-stats'): the slowest chunk
+ * built (ms), the frame's triangles and draw calls, frames' average time over the last second. */
+const cityStats = { build: 0, triangles: 0, calls: 0, frame: 0 }
+function Stats() {
+  const acc = useRef({ t: 0, n: 0 })
+  const on = useMemo(() => {
+    try {
+      return !!localStorage.getItem('oal-stats')
+    } catch {
+      return false
+    }
+  }, [])
+  useFrame(({ gl, scene }, dt) => {
+    if (!on) return
+    acc.current.t += dt
+    acc.current.n++
+    if (acc.current.t >= 1) {
+      cityStats.frame = (acc.current.t / acc.current.n) * 1000
+      acc.current = { t: 0, n: 0 }
+    }
+    cityStats.triangles = gl.info.render.triangles
+    cityStats.calls = gl.info.render.calls
+    if (acc.current.n === 0) {
+      // Once a second: what is drawn, by whose it is (the nearest named group up), people apart.
+      const by: Record<string, number> = {}
+      scene.traverse((o) => {
+        const m = o as Mesh
+        if (!m.isMesh || !m.visible) return
+        let up: Object3D | null = o
+        let shown = true
+        while (up) {
+          if (!up.visible) shown = false
+          up = up.parent
+        }
+        if (!shown) return
+        let owner: Object3D | null = o.parent
+        while (owner && !owner.name) owner = owner.parent
+        const k = (o as SkinnedMesh).isSkinnedMesh ? 'people' : (owner?.name ?? 'other')
+        by[k] = (by[k] ?? 0) + 1
+      })
+      ;(cityStats as unknown as { by: Record<string, number> }).by = by
+      // And what the renderer works out each frame (all but subtrees left alone), by whose.
+      const nodes: Record<string, number> = {}
+      const walk = (o: Object3D, owner: string) => {
+        const k = o.name && !o.name.startsWith('mixamorig') && o.parent === scene ? o.name : owner
+        nodes[k] = (nodes[k] ?? 0) + 1
+        for (const c of o.children) if (c.matrixWorldAutoUpdate) walk(c, o.parent === scene ? o.name || `${o.type}${scene.children.indexOf(o)}` : k)
+      }
+      walk(scene, 'scene')
+      ;(cityStats as unknown as { nodes: Record<string, number> }).nodes = nodes
+    }
+    ;(window as unknown as { oalCityStats: typeof cityStats }).oalCityStats = cityStats
+  })
+  return null
+}
+
+/** The trees of the chunks built (each [kind, x, y, turn, size]); counted up as they change. */
+const treesByChunk = new Map<string, number[][]>()
+const treesVersion = { n: 0 }
+const TREES_URL = '/oal/trees.v1.glb'
+// Near: the trees as modelled; out to far, made light; past that, lost in the haze.
+const TREE_NEAR = 60
+const TREE_FAR = 230
+const TREE_ROOM = { near: 160, far: 1400 }
+
+/** The town's trees, every one of a kind drawn at once (an instanced mesh for each of its parts,
+ * near and far), placed again as the player moves on. */
+function Trees({ player }: { player: RefObject<{ x: number; y: number }> }) {
+  const gltf = useLoader(GLTFLoader, TREES_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const layers = useMemo(
+    () =>
+      TREE_KINDS.map((name) =>
+        (['near', 'far'] as const).map((lod) => {
+          const node = gltf.scene.getObjectByName(lod === 'near' ? name : `${name}_far`)
+          const parts: InstancedMesh[] = []
+          node?.updateMatrixWorld(true)
+          const inv = node ? new Matrix4().copy(node.matrixWorld).invert() : new Matrix4()
+          node?.traverse((o) => {
+            const m = o as Mesh
+            if (!m.isMesh) return
+            const im = new InstancedMesh(m.geometry, m.material, TREE_ROOM[lod])
+            im.count = 0
+            im.frustumCulled = false
+            // Its own place in the tree (the packed file's scale and shift kept).
+            im.userData.local = new Matrix4().multiplyMatrices(inv, m.matrixWorld)
+            parts.push(im)
+          })
+          return parts
+        }),
+      ),
+    [gltf],
+  )
+  const last = useRef({ x: Infinity, y: Infinity, v: -1, t: 0 })
+  const m4 = useMemo(() => new Matrix4(), [])
+  const one = useMemo(() => new Matrix4(), [])
+  const q = useMemo(() => new Quaternion(), [])
+  const up = useMemo(() => new Vector3(0, 1, 0), [])
+  const at = useMemo(() => new Vector3(), [])
+  const size = useMemo(() => new Vector3(), [])
+  useFrame(({ clock }) => {
+    const p = player.current
+    if (!p) return
+    const l = last.current
+    if (clock.elapsedTime - l.t < 0.25 || (l.v === treesVersion.n && Math.hypot(p.x - l.x, p.y - l.y) < 4)) return
+    last.current = { x: p.x, y: p.y, v: treesVersion.n, t: clock.elapsedTime }
+    const counts = layers.map(() => ({ near: 0, far: 0 }))
+    for (const list of treesByChunk.values())
+      for (const [kind, x, y, turn, s] of list as [number, number, number, number, number][]) {
+        const d = Math.hypot(x - p.x, y - p.y)
+        if (d > TREE_FAR) continue
+        const lod = d < TREE_NEAR ? 'near' : 'far'
+        const c = counts[kind]!
+        if (c[lod] >= TREE_ROOM[lod]) continue
+        m4.compose(at.set(x, 0, -y), q.setFromAxisAngle(up, turn), size.set(s, s, s))
+        for (const im of layers[kind]![lod === 'near' ? 0 : 1]!) im.setMatrixAt(c[lod], one.multiplyMatrices(m4, im.userData.local as Matrix4))
+        c[lod]++
+      }
+    layers.forEach((pair, kind) =>
+      pair.forEach((parts, i) => {
+        for (const im of parts) {
+          im.count = counts[kind]![i === 0 ? 'near' : 'far']
+          im.instanceMatrix.needsUpdate = true
+        }
+      }),
+    )
+  })
+  return (
+    <>
+      {layers.flat(2).map((im, i) => (
+        <primitive key={i} object={im} />
+      ))}
     </>
   )
 }
@@ -1575,19 +1793,29 @@ export default function CityScene(props: Props) {
       <DayNight clock={props.clock} player={player} />
       {props.target && <Beam at={props.target} />}
       <Signals />
+      <Stats />
       {city && (
         <>
           <Ground player={player} />
           <Water city={city} />
-          <Chunks city={city} keep={keep} player={player} solids={solids} town={props.town} />
+          <Chunks city={city} map={map.data as unknown as TownMapData} keep={keep} player={player} solids={solids} town={props.town} />
           {compounds.map((c) => (
             <CompoundModel key={c.name} c={c} />
           ))}
           <Suspense fallback={null}>
-            <NearHubs hubs={hubs} player={player} />
-            {props.town === 'Monrovia' && <NearLandmarks player={player} />}
-            <CityTraffic city={city} keep={keep} player={player} moving={cityMoving} ride={ride} onRide={(p) => props.onRide?.(p)} />
-            <CityWalkers city={city} keep={keep} player={player} />
+            <Optional>
+              <NearHubs hubs={hubs} player={player} />
+            </Optional>
+            <Optional>{props.town === 'Monrovia' && <NearLandmarks player={player} />}</Optional>
+            <Optional>
+              <CityTraffic city={city} keep={keep} player={player} moving={cityMoving} ride={ride} onRide={(p) => props.onRide?.(p)} />
+            </Optional>
+            <Optional>
+              <Trees player={player} />
+            </Optional>
+            <Optional>
+              <CityWalkers city={city} keep={keep} player={player} />
+            </Optional>
             {start && <Walker props={props} city={city} start={start} compounds={compounds} hubs={hubs} places={places} solids={solids} player={player} />}
           </Suspense>
         </>

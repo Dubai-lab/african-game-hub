@@ -1,6 +1,7 @@
 // One Africa Life: Monrovia's landmarks (./src/games/oal/city/landmarks.ts) seen from before
 // each (the Capitol, the Executive Mansion, the Ducor Hotel, Providence Baptist Church, the
-// maternity hospital at JFK), and the town's walls in their styles by day and at night.
+// maternity hospital at JFK), the town's walls in their styles by day and at night, and what is
+// round the buildings: Red Light and the General Market, a street's compounds and trees, a beach.
 // Run with: npm run on-dev -- e2e -- e2e/oal-landmarks.spec.ts --headed (SHOTS=<dir> for pictures)
 import { expect, type Page, test } from '@playwright/test'
 import { runSql } from '../scripts/lib/managementApi.ts'
@@ -19,11 +20,13 @@ import { LANDMARKS } from '../src/games/oal/city/landmarks.ts'
 const AWAY: Record<string, number> = { capitol: 85, mansion: 62, ducor: 55, providence: 34, jfk: 34 }
 const SPOTS: [string, number, number, number, number][] = LANDMARKS.map((l) => [l.name, l.x + Math.sin(l.yaw) * AWAY[l.name]!, l.y - Math.cos(l.yaw) * AWAY[l.name]!, l.yaw + Math.PI, 13])
 SPOTS.push(['walls-day', 1679.5, -1781, -0.356, 13], ['walls-night', 1679.5, -1781, -0.356, 21])
+SPOTS.push(['around-redlight', 10984.1, -1362.1, -2.967, 13], ['around-general', -1462.4, 411.5, 1.075, 13], ['around-street', 1679.5, -1781, 2.786, 13], ['around-beach', -198, -1320, 2.2, 13])
 
 test('the landmarks, the walls', async ({ page }) => {
   const account = TEST_ACCOUNTS[1]!
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
+  page.on('console', (m) => m.type() === 'error' && console.log('console:', m.text().slice(0, 300)))
   const [me] = await runSql<{ id: string }>(`select id from auth.users where email = '${account.email}'`)
   await runSql(`select public.oal_start_life('${me!.id}', 'Musu Kollie', 'female', 26, 'LR', 'Monrovia', '${JSON.stringify(APPEARANCE)}'::jsonb)`)
   await page.goto('/login')

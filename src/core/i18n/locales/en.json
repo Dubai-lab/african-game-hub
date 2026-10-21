@@ -3032,7 +3032,8 @@
         "shop": "Shop",
         "office": "Office",
         "transport": "Motor park",
-        "sport": "Sports ground"
+        "sport": "Sports ground",
+        "landmark": "Landmark"
       }
     },
     "loading": {
@@ -3046,6 +3047,7 @@
       "away": "{{km}} km away",
       "arrived": "You are at {{place}}.",
       "filters": {
+        "landmark": "Landmarks",
         "health": "Health",
         "school": "Schools",
         "worship": "Churches & mosques",

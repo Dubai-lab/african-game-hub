@@ -10,7 +10,8 @@
 # Out (metres east and north of the map's centre, 6.3045 N 10.79 W, as the town's map):
 #   public/oal/city/monrovia/t/<cx>_<cy>.v1.json   one 200 m tile (cx, cy = floor(x / 200), floor(y / 200)):
 #       b: buildings [kind, storeys, name index or -1, x0, y0, x1, y1, ...] (decimetres from the tile's corner)
-#       l: land [kind, x0, y0, ...] (decimetres, polygons whose middle is in the tile)
+#       l: land [kind, x0, y0, ...] (decimetres, polygons whose middle is in the tile; '~kind': one
+#          whose middle is in another tile, reaching into this one)
 #       p: places [category, name index, x, y, building index or -1] (decimetres)
 #       n: the tile's names
 #   public/oal/city/monrovia/places.v1.json   every named place: [category, name, x, y] (metres)
@@ -333,6 +334,7 @@ def main(pbf):
             if kind == 'shop' or rnd.random() < 0.55:
                 cat = rnd.choices([c for c, _ in EVERYDAY], [w for _, w in EVERYDAY])[0]
                 everyday.append((cat, everyday_name(rnd, cat), cx, cy, k, index))
+    spans = []
     for kind, coords in r.land:
         cx = sum(p[0] for p in coords) / len(coords)
         cy = sum(p[1] for p in coords) / len(coords)
@@ -340,6 +342,19 @@ def main(pbf):
         ox, oy = k[0] * TILE, k[1] * TILE
         ring = simplify(coords, 2.0)
         tiles[k]['l'].append([kind] + [v for p in ring for v in (round((p[0] - ox) * 10), round((p[1] - oy) * 10))])
+        spans.append((kind, k, ring))
+    # A big piece of land (a beach, a forest) reaches beyond the tile that draws it: every other
+    # tile it reaches has it too, as '~kind' (not drawn again; what grows there is planted by it).
+    have = set(tiles)
+    for kind, k, ring in spans:
+        xs = [p[0] for p in ring]
+        ys = [p[1] for p in ring]
+        for tx in range(int(math.floor(min(xs) / TILE)), int(math.floor(max(xs) / TILE)) + 1):
+            for ty in range(int(math.floor(min(ys) / TILE)), int(math.floor(max(ys) / TILE)) + 1):
+                if (tx, ty) == k or (tx, ty) not in have:
+                    continue
+                ox, oy = tx * TILE, ty * TILE
+                tiles[(tx, ty)]['l'].append(['~' + kind] + [v for p in ring for v in (round((p[0] - ox) * 10), round((p[1] - oy) * 10))])
     every = []
     seen = set()
     taken = set()

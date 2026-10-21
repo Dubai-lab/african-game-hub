@@ -4,6 +4,7 @@
 // marks, the streets built in 3D as one mark until near enough to show their own places; the
 // player as an arrow. A mark tapped: what it is, and Go here (or Walk here, on a 3D street). The
 // same places as a list too, for those who would rather read one.
+import { LANDMARKS } from './city/landmarks'
 import { useQuery } from '@tanstack/react-query'
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -73,13 +74,16 @@ function useTownPlaces(town: string) {
     queryFn: async () => {
       const res = await fetch(`/oal/city/${mapOf(town)}/places.v1.json`)
       if (!res.ok) throw new Error(String(res.status))
-      return (await res.json()) as TownPlace[]
+      // The landmarks first, by their names (the city builds them: city/landmarks.ts).
+      const marks: TownPlace[] = LANDMARKS.map((l) => ['landmark', l.title, l.x, l.y] as TownPlace)
+      return [...marks, ...((await res.json()) as TownPlace[])]
     },
   })
 }
 
 /** The map's kinds of place, as its filters group them. */
 const FILTERS: { id: string; cats: string[]; colour: string }[] = [
+  { id: 'landmark', cats: ['landmark', 'sport'], colour: '#d4a017' },
   { id: 'health', cats: ['health', 'pharmacy'], colour: '#e0453a' },
   { id: 'school', cats: ['school'], colour: '#3a7ae0' },
   { id: 'worship', cats: ['church', 'mosque'], colour: '#a07ae0' },

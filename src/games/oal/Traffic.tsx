@@ -7,12 +7,12 @@
 // the player to walk against (./StreetScene.tsx).
 import { useFrame, useLoader } from '@react-three/fiber'
 import { useMemo } from 'react'
-import { type AnimationClip, Color, type Material, type Mesh, type Object3D } from 'three'
+import { type AnimationClip, BufferAttribute, BufferGeometry, Color, Group, type Material, Matrix4, type Mesh, Mesh as MeshClass, type Object3D, type SkinnedMesh, Vector3 } from 'three'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { CATALOGUE, defaultAppearance } from '../../../supabase/functions/_shared/oal'
 import { person } from './ArrivalsScene'
-import { CHARACTER_URL } from './character'
+import { CROWD_URL } from './character'
 
 export const VEHICLES_URL = '/oal/vehicles.v1.glb'
 
@@ -88,21 +88,73 @@ export function buildVehicle(models: Record<string, Object3D | undefined>, peopl
   }
   // The driver: seated at the wheel, posed once (a still figure costs a phone little).
   const base = defaultAppearance('male')
-  const driver = person(people.scene, people.animations, {
+  const look = {
     ...base,
     skin: 0.6 + rand() * 0.35,
     outfit: kind === 'police' ? 'shirt_jeans' : pick([...CATALOGUE.outfit.male], rand()),
     hair: pick([...CATALOGUE.hair.male], rand()),
-  })
+  }
+  const driver = person(people.scene, people.animations, look)
   const sit = driver.actions.sit ?? driver.actions.idle
   sit?.play()
-  driver.mixer.update(0.4 + rand())
+  driver.mixer.update(0.5)
   const [sx, sy, sz] = SEAT[kind]
-  driver.root.position.set(sx, sy, sz)
-  driver.root.rotation.y = Math.PI / 2
-  driver.root.scale.setScalar(0.94)
-  root.add(driver.root)
+  const still = stillFigure(driver.root, `${look.outfit}|${look.hair}`)
+  still.position.set(sx, sy, sz)
+  still.rotation.y = Math.PI / 2
+  still.scale.setScalar(0.94)
+  root.add(still)
   return root
+}
+
+// The seated figures' shapes, by their look (outfit, hair): made once, shared by every driver
+// who looks so (each keeps the colours of their own skin and clothes).
+const stillShapes = new Map<string, BufferGeometry[]>()
+
+/** A posed person made still: what it shows, baked in its pose as plain meshes (no skeleton to
+ * work out each frame, no skinning to draw), in the person's own frame. */
+export function stillFigure(person: Object3D, look: string): Object3D {
+  person.updateMatrixWorld(true)
+  const toPerson = new Matrix4().copy(person.matrixWorld).invert()
+  const shown: SkinnedMesh[] = []
+  person.traverse((o) => {
+    const m = o as SkinnedMesh
+    if (!m.isSkinnedMesh) return
+    for (let up: Object3D | null = o; up && up !== person; up = up.parent) if (!up.visible) return
+    shown.push(m)
+  })
+  let shapes = stillShapes.get(look)
+  if (!shapes) {
+    const v = new Vector3()
+    shapes = shown.map((m) => {
+      m.skeleton.update()
+      const src = m.geometry
+      const n = src.getAttribute('position').count
+      const pos = new Float32Array(n * 3)
+      const into = new Matrix4().multiplyMatrices(toPerson, m.matrixWorld)
+      for (let i = 0; i < n; i++) {
+        m.getVertexPosition(i, v)
+        v.applyMatrix4(into)
+        pos[i * 3] = v.x
+        pos[i * 3 + 1] = v.y
+        pos[i * 3 + 2] = v.z
+      }
+      const g = new BufferGeometry()
+      g.setAttribute('position', new BufferAttribute(pos, 3))
+      for (const name of ['uv', 'color']) {
+        const a = src.getAttribute(name)
+        if (a) g.setAttribute(name, a)
+      }
+      if (src.index) g.setIndex(src.index)
+      g.computeVertexNormals()
+      g.computeBoundingSphere()
+      return g
+    })
+    stillShapes.set(look, shapes)
+  }
+  const out = new Group()
+  shown.forEach((m, i) => out.add(new MeshClass(shapes[i]!, m.material)))
+  return out
 }
 
 function pick<T>(list: T[], r: number) {
@@ -111,7 +163,7 @@ function pick<T>(list: T[], r: number) {
 
 export function Traffic({ lanes, reach, player, moving, spacing = 35 }: { lanes: number[][][]; reach: number; player: { current: { x: number; y: number } }; moving: { current: Moving[] }; spacing?: number }) {
   const gltf = useLoader(GLTFLoader, VEHICLES_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
-  const people = useLoader(GLTFLoader, CHARACTER_URL('male'), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const people = useLoader(GLTFLoader, CROWD_URL('male'), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const { cars, roads, group } = useMemo(() => {
     const roads = lanes.map((l) => laneOf(l, reach)).filter((l) => l.length > 40)
     const models = vehicleModels(gltf.scene)
@@ -165,6 +217,9 @@ export function Traffic({ lanes, reach, player, moving, spacing = 35 }: { lanes:
       const at = pointAt(lane, car.s)
       car.root.position.set(at.x, 0.03, -at.y)
       car.root.rotation.y = at.yaw
+      // Drawn only within sight (the far ones still drive on, unseen in the haze).
+      car.root.visible = Math.abs(at.x - p.x) < SEEN && Math.abs(at.y - p.y) < SEEN
+      car.root.matrixWorldAutoUpdate = car.root.visible
       boxes.push({ x: at.x, y: at.y, yaw: at.yaw, hl: len / 2, hw: wide / 2 })
     }
     moving.current = boxes
@@ -178,6 +233,9 @@ export function Traffic({ lanes, reach, player, moving, spacing = 35 }: { lanes:
     </>
   )
 }
+
+/** How far off a vehicle is drawn (metres either way). */
+const SEEN = 150
 
 /** Pushes a walker (radius r) out of any vehicle box it is in. */
 export function keepOutOf(p: { x: number; y: number }, boxes: Moving[], r: number) {

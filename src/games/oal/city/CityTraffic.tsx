@@ -13,7 +13,7 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { CATALOGUE, defaultAppearance, type Sex } from '../../../../supabase/functions/_shared/oal'
 import { person } from '../ArrivalsScene'
-import { CHARACTER_URL } from '../character'
+import { CROWD_URL } from '../character'
 import { buildVehicle, type Kind, type Moving, SIZE, SPEED, vehicleModels, VEHICLES_URL } from '../Traffic'
 import { type City, groundHeight, type Keep, nearestNode, route, toSeg } from './cityGen'
 import type { RidePhase, RideState } from './ride'
@@ -112,7 +112,7 @@ export function CityTraffic({
   onRide: (phase: RidePhase) => void
 }) {
   const gltf = useLoader(GLTFLoader, VEHICLES_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
-  const people = useLoader(GLTFLoader, CHARACTER_URL('male'), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const people = useLoader(GLTFLoader, CROWD_URL('male'), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const index = useMemo(() => edgeIndex(city, keep), [city, keep])
   const { cars, rand, hire } = useMemo(() => {
     let seed = 99
@@ -327,6 +327,10 @@ export function CityTraffic({
       boxes.push({ x: at.x, y: at.y, yaw: car.yaw, hl: len / 2, hw: wide / 2 })
     }
     if (moving.current) moving.current.splice(0, moving.current.length, ...boxes)
+    // What is hidden is not worked out either (a driver's every bone, each frame, adds up).
+    for (const car of cars) car.root.matrixWorldAutoUpdate = car.root.visible
+    hire.taxi.matrixWorldAutoUpdate = hire.taxi.visible
+    hire.kekeh.matrixWorldAutoUpdate = hire.kekeh.visible
   })
   return (
     <>
@@ -343,8 +347,8 @@ type Walker = { root: Object3D; mixer: { update: (dt: number) => void }; going: 
 
 /** People on foot along the roadsides. */
 export function CityWalkers({ city, keep, player }: { city: City; keep: Keep[]; player: RefObject<{ x: number; y: number }> }) {
-  const men = useLoader(GLTFLoader, CHARACTER_URL('male'), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
-  const women = useLoader(GLTFLoader, CHARACTER_URL('female'), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const men = useLoader(GLTFLoader, CROWD_URL('male'), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const women = useLoader(GLTFLoader, CROWD_URL('female'), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const index = useMemo(() => edgeIndex(city, keep), [city, keep])
   const { walkers, rand } = useMemo(() => {
     let seed = 41
@@ -414,6 +418,7 @@ export function CityWalkers({ city, keep, player }: { city: City; keep: Keep[]; 
       // Only the near ones are moved frame by frame (the far ones are small).
       if (Math.hypot(at.x - p.x, at.y - p.y) < 80) w.mixer.update(dt)
     }
+    for (const w of walkers) w.root.matrixWorldAutoUpdate = w.root.visible
   })
   return (
     <>

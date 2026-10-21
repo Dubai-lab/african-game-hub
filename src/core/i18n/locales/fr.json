@@ -3032,7 +3032,8 @@
         "shop": "Boutique",
         "office": "Bureau",
         "transport": "Gare routière",
-        "sport": "Terrain de sport"
+        "sport": "Terrain de sport",
+        "landmark": "Monument"
       }
     },
     "loading": {
@@ -3046,6 +3047,7 @@
       "away": "à {{km}} km",
       "arrived": "Vous êtes à {{place}}.",
       "filters": {
+        "landmark": "Monuments",
         "health": "Santé",
         "school": "Écoles",
         "worship": "Églises et mosquées",
