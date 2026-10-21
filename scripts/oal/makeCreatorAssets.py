@@ -388,6 +388,9 @@ CLIPS = {
     'standUp': 'Sit To Stand.fbx',
     # Waving down a taxi or a kekeh at the roadside.
     'wave': 'Waving.fbx',
+    # At the wheel: seated, both hands on it, the feet on the pedals (the game puts the hands on
+    # the wheel's rim as it turns).
+    'drive': 'Driving.fbx',
 }
 for clip, file in CLIPS.items():
     path = os.path.join(ANIMATIONS, file)

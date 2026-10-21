@@ -11,7 +11,7 @@ import { type Gear, ownCar } from './ownCar'
 const LOCK = 2.4
 const GEARS: Gear[] = ['P', 'R', 'N', 'D']
 
-export function DriveControls() {
+export function DriveControls({ seeThrough = false }: { seeThrough?: boolean }) {
   const { t } = useTranslation()
   const c = ownCar.controls
   const [, redraw] = useState(0)
@@ -62,6 +62,8 @@ export function DriveControls() {
   const parkedWanting = c.gas > 0 && (c.gear === 'P' || c.gear === 'N')
   const blinkLeft = ownCar.blink && (c.indicator === 'left' || c.indicator === 'hazard')
   const blinkRight = ownCar.blink && (c.indicator === 'right' || c.indicator === 'hazard')
+  // From the driver's seat, the wheel, gears and pedals faint (the real wheel and the hands seen through them).
+  const faint = seeThrough ? 'opacity-40' : ''
   const toggle = (on: boolean) => `glass flex h-11 min-w-11 items-center justify-center rounded-full border px-3 text-sm font-semibold ${on ? 'border-edge bg-brand text-brand-ink' : 'border-line text-fg'}`
 
   return (
@@ -90,7 +92,7 @@ export function DriveControls() {
 
       {/* The steering wheel. */}
       <div
-        className="pointer-events-auto absolute bottom-20 left-3 h-36 w-36 touch-none rounded-full"
+        className={`pointer-events-auto absolute bottom-20 left-3 h-36 w-36 touch-none rounded-full ${faint}`}
         role="slider"
         aria-label={t('oal.city.car.drive.wheel')}
         aria-valuemin={-100}
@@ -131,7 +133,7 @@ export function DriveControls() {
       </div>
 
       {/* The gears. */}
-      <div className="pointer-events-auto absolute bottom-20 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 min-[420px]:left-auto min-[420px]:right-40 min-[420px]:translate-x-0">
+      <div className={`pointer-events-auto absolute bottom-20 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 min-[420px]:left-auto min-[420px]:right-40 min-[420px]:translate-x-0 ${faint}`}>
         <div className="glass flex flex-col gap-1 rounded-full border border-line p-1" role="radiogroup" aria-label={t('oal.city.car.drive.gear')}>
           {GEARS.map((g) => (
             <button
@@ -156,12 +158,12 @@ export function DriveControls() {
       </div>
 
       {/* The handbrake, over the pedals: the brake (wide), the accelerator (tall). */}
-      <div className="pointer-events-auto absolute bottom-[13.5rem] right-3">
+      <div className={`pointer-events-auto absolute bottom-[13.5rem] right-3 ${faint}`}>
           <button type="button" aria-label={t('oal.city.car.drive.handbrake')} aria-pressed={c.handbrake} className={toggle(c.handbrake)} {...hold((on) => (c.handbrake = on))} data-testid="oal-drive-handbrake">
           {t('oal.city.car.drive.handbrakeShort')}
         </button>
       </div>
-      <div className="pointer-events-auto absolute bottom-20 right-3 flex items-end gap-3">
+      <div className={`pointer-events-auto absolute bottom-20 right-3 flex items-end gap-3 ${faint}`}>
         <button type="button" aria-label={t('oal.city.car.drive.brake')} className={`glass h-20 w-16 touch-none rounded-2xl border ${c.brake > 0 ? 'border-edge bg-hibiscus' : 'border-line'}`} {...hold((on) => (c.brake = on ? 1 : 0))} data-testid="oal-drive-brake">
           <Ridges />
         </button>

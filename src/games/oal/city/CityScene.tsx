@@ -51,6 +51,10 @@ import { keepOutOf, type Moving, Traffic } from '../Traffic'
 import { businessKey, INSIDE_OF } from './business'
 import { CityTraffic, CityWalkers } from './CityTraffic'
 import { type Destination, newRide, PASSENGER, type RidePhase, type RideState } from './ride'
+import { armsOf, FITS, grips, hold, legsOf, seat } from './wheelHands'
+
+/** Where the driver is first put from the plan's seat point (then seated by the car's measured fit). */
+const SEAT = { back: -0.18 }
 import { type Sign, SIGNAL_LAMPS, TREE_KINDS, type Signal, type SignalLamp, signalState, type TilePlace } from './cityGen'
 import { groundHeight } from './cityGen'
 import { type ChunkRequest } from './chunk.worker'
@@ -1716,6 +1720,10 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
     return cityMoving.current.some((m) => overlaps(box, m, 0.05))
   }
   const seatOwn = useRef(false)
+  const arms = useRef(armsOf(me.root))
+  const legs = useRef(legsOf(me.root))
+  const headBone = useRef(me.root.getObjectByName('mixamorigHead') ?? null)
+  const carRight = useMemo(() => new Vector3(), [])
   const ownEngine = useRef<Engine | null>(null)
   useEffect(() => () => ownEngine.current?.stop(), [])
   /** The player's own car, a frame of it (true while in it: getting in, driving, getting out). */
@@ -1780,6 +1788,7 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
         seatOwn.current = false
         me.root.visible = true
         me.actions.sit?.stop()
+        me.actions.drive?.stop()
         if (look) look.current = s.facing
         first.current = true
         say('parked')
@@ -1824,17 +1833,29 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
         seatOwn.current = true
         me.actions.walk && (me.actions.walk.weight = 0)
         me.actions.idle && (me.actions.idle.weight = 0)
-        me.actions.sit?.reset().play()
+        ;(me.actions.drive ?? me.actions.sit)?.reset().play()
       }
       const [dx, dy, dz] = plan.driver
-      const [px, py] = at(dx! - 0.1, dz!)
+      const [px, py] = at(dx! - SEAT.back, dz!)
       me.root.position.set(px, 0.03 + dy! - 0.42, -py)
       me.root.rotation.y = d.yaw + Math.PI / 2
       me.mixer.update(dt)
     }
     // (Drawn where it now is: else the seat's camera, moved with it, is ahead of it at speed.)
     poseCar(car, d, 0.03, 0, { x: camera.position.x, z: camera.position.z }, cityNight.value)
-    me.root.visible = !(oc.phase === 'driving' && oc.view === 'inside')
+    // Both hands on the wheel, turning with it.
+    if (seatOwn.current && car.steering && arms.current) {
+      // In the seat, the feet on the floor at the pedals (as measured on the car), then the hands.
+      car.root.updateMatrixWorld(true)
+      seat(me.root, car.lean.matrixWorld, FITS.suv!, legs.current)
+      carRight.set(0, 0, 1).transformDirection(car.root.matrixWorld)
+      hold(arms.current, car.steering, grips(car.steering, 'wheel', carRight), carRight)
+    }
+    // From the seat: the driver's own arms and hands on the wheel seen, the head (the camera is
+    // in it) not.
+    const head = headBone.current
+    if (head) head.scale.setScalar(oc.phase === 'driving' && oc.view === 'inside' ? 0.001 : 1)
+    me.root.visible = true
     s.x = d.x
     s.y = d.y
     if (player.current) {
@@ -1842,12 +1863,21 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
       player.current.y = d.y
     }
     if (oc.phase === 'driving' && oc.view === 'inside') {
-      // From the driver's seat: the head's height, looking down the road ahead.
+      // From the driver's seat: the driver's own eyes (above the neck, a little forward of it),
+      // looking down the road ahead.
       const [dx, dy, dz] = plan.driver
-      const [ex, ey] = at(dx! - 0.05, dz!)
-      const [tx, ty] = at(dx! + 20, dz! * 0.4)
-      eye.set(ex, 0.03 + dy! + 0.78, -ey)
-      target.set(tx, 0.03 + dy! + 0.5, -ty)
+      // (Tilted down as a driver looks: the wheel and both hands in the bottom of the view.)
+      const [tx, ty] = at(dx! + 10, dz! * 0.6)
+      if (head) {
+        head.getWorldPosition(eye)
+        eye.x += c * 0.09
+        eye.z -= sn * 0.09
+        eye.y += 0.06
+      } else {
+        const [ex, ey] = at(dx! - 0.05, dz!)
+        eye.set(ex, 0.03 + dy! + 0.78, -ey)
+      }
+      target.set(tx, eye.y - 3.2, -ty)
       camera.position.copy(eye)
     } else {
       // From behind it, following it round.
@@ -1857,6 +1887,15 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
         first.current = false
         camera.position.copy(eye)
       } else camera.position.lerp(eye, Math.min(1, dt * 4))
+    }
+    // (In development, for the end-to-end checks: a camera put anywhere round the car, in its frame.)
+    const shotAt = import.meta.env.DEV ? (window as unknown as { oalCarCamera?: number[] }).oalCarCamera : undefined
+    if (shotAt) {
+      const [ea, er, eu, ta, tr, tu] = shotAt as [number, number, number, number, number, number]
+      const [ex, ey] = at(ea, er)
+      const [tx, ty] = at(ta, tr)
+      camera.position.set(ex, eu, -ey)
+      target.set(tx, tu, -ty)
     }
     camera.lookAt(target)
     return true

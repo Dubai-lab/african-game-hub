@@ -392,7 +392,7 @@ export function StreetView({
           {company.present.length > 0 && <span className="ml-2 text-muted">· {t('oal.street.company', { count: company.present.length })}</span>}
         </p>
       </div>
-      {city && carPhase === 'driving' && <DriveControls />}
+      {city && carPhase === 'driving' && <DriveControls seeThrough={carView === 'inside'} />}
       <div
         data-stick
         className={`glass absolute bottom-6 left-6 h-32 w-32 touch-none rounded-full border border-line ${city && carPhase === 'driving' ? 'hidden' : ''}`}

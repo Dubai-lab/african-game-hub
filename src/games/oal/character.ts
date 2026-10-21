@@ -1,15 +1,15 @@
 // One Africa Life: a person in 3D, dressed by an appearance. One file per sex
-// (public/oal/creator-<sex>.v7.glb, made by scripts/oal/makeCreatorAssets.py) carries every body
+// (public/oal/creator-<sex>.v8.glb, made by scripts/oal/makeCreatorAssets.py) carries every body
 // shape as morphs, every hairstyle and outfit, the body's marks of what each outfit covers, and
 // the movements (idle, walk, talk). The creator dresses it live; the game dresses copies of it
 // for the player and for everyone else (an officer is a person in a navy uniform).
 import { BufferAttribute, Color, type Material, type Mesh, type MeshStandardMaterial, type Object3D, Vector4 } from 'three'
 import { type Appearance, CATALOGUE, defaultAppearance, type Sex } from '../../../supabase/functions/_shared/oal'
 
-export const CHARACTER_URL = (sex: Sex) => `/oal/creator-${sex}.v7.glb`
+export const CHARACTER_URL = (sex: Sex) => `/oal/creator-${sex}.v8.glb`
 /** The same people made light (an eighth of the triangles, pictures half size) for the town's
  * crowds: walkers, drivers, passengers. The player and those met up close keep the full file. */
-export const CROWD_URL = (sex: Sex) => `/oal/crowd-${sex}.v2.glb`
+export const CROWD_URL = (sex: Sex) => `/oal/crowd-${sex}.v3.glb`
 
 const HAIR_COLOURS: Record<string, string> = { black: '#2a2522', darkbrown: '#4a3426', brown: '#7a5233', auburn: '#8c3b22' }
 const EYE_COLOURS: Record<string, string> = { darkbrown: '#3a2416', brown: '#6b4024', hazel: '#7a6a35' }

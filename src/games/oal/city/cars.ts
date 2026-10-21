@@ -8,6 +8,8 @@
 import { type AnimationClip, BoxGeometry, Color, Group, type Material, Mesh, MeshBasicMaterial, type MeshStandardMaterial, type Object3D, Quaternion, SpotLight, Vector3 } from 'three'
 import { person } from '../ArrivalsScene'
 import { lookKey, randomLook } from '../character'
+import type { Appearance } from '../../../../supabase/functions/_shared/oal'
+import { armsOf, FITS, grips, hipsAt, hold, legsOf, seat as sitIn } from './wheelHands'
 import plans from '../carsPlan.v2.json'
 import kekehPlans from '../kekehPlan.json'
 import { stillFigure } from '../Traffic'
@@ -110,18 +112,7 @@ export function buildCar(scene: Object3D, model: CarModelName, paint: string | n
   const steerPivot = plan.steer ? near.getObjectByName(plan.steer) : null
   const doors = plan.doors.map((d) => ({ pivot: near.getObjectByName(d.name)!, open: d.open, side: d.side, front: d.front, t: 0 })).filter((d) => d.pivot)
   // The driver: at the wheel, seated (the left seat: Liberia drives on the right).
-  if (people) {
-    const look = randomLook('male', rand, model === 'suv_police' ? ['shirt_jeans'] : undefined)
-    const p = person(people.scene, people.animations, look)
-    ;(p.actions.sit ?? p.actions.idle)?.play()
-    p.mixer.update(0.5)
-    const fig = stillFigure(p.root, lookKey(look))
-    const [dx, dy, dz] = plan.driver
-    fig.position.set(dx! - 0.1, dy! - 0.42, dz!)
-    fig.rotation.y = Math.PI / 2
-    fig.scale.setScalar(0.95)
-    lean.add(fig)
-  }
+  if (people) seatDriver(people, randomLook('male', rand, model === 'suv_police' ? ['shirt_jeans'] : undefined), lean, plan.driver, -0.18, steerPivot ?? null, 'wheel', model)
   const r = Object.values(plan.wheels)[0]?.r ?? 0.34
   return {
     root,
@@ -147,19 +138,8 @@ export function buildKekeh(scene: Object3D, people: { scene: Object3D; animation
   lean.add(near)
   const root = new Group()
   root.add(lean)
-  if (people) {
-    const look = randomLook('male', rand)
-    const p = person(people.scene, people.animations, look)
-    ;(p.actions.sit ?? p.actions.idle)?.play()
-    p.mixer.update(0.5)
-    const fig = stillFigure(p.root, lookKey(look))
-    const [dx, dy, dz] = plan.driver
-    fig.position.set(dx! - 0.12, dy! - 0.42, dz!)
-    fig.rotation.y = Math.PI / 2
-    fig.scale.setScalar(0.95)
-    lean.add(fig)
-  }
   const handle = near.getObjectByName(plan.handlebar)
+  if (people) seatDriver(people, randomLook('male', rand), lean, plan.driver, 0.12, handle?.children[0] ?? null, 'bar', 'kekeh', 0.06, 'kekeh')
   return {
     root,
     lean,
@@ -174,6 +154,37 @@ export function buildKekeh(scene: Object3D, people: { scene: Object3D; animation
     lamps: { head: { value: 0 }, brake: { value: 0 } },
     size: { len: plan.size[0]!, wide: plan.size[2]!, L: plan.wheelbase, r: Object.values(plan.wheels)[0]?.r ?? 0.226 },
   }
+}
+
+/** How far above the plan's seat point a driver's hips are. */
+export const DRIVER_HIPS = 0.34
+
+/** A driver at the wheel (or the handlebar), both hands on it: posed seated as at the wheel, the
+ * arms bent to it, then frozen (a still figure costs a phone little). */
+function seatDriver(people: { scene: Object3D; animations: AnimationClip[] }, look: Appearance, lean: Group, seat: number[], back: number, steering: Object3D | null, kind: 'wheel' | 'bar', key: string, hips = DRIVER_HIPS, fit = 'suv') {
+  const p = person(people.scene, people.animations, look)
+  ;(p.actions.drive ?? p.actions.sit ?? p.actions.idle)?.play()
+  p.mixer.update(0.5)
+  const [dx, dy, dz] = seat
+  p.root.position.set(dx! - back, dy! - 0.42, dz!)
+  p.root.rotation.y = Math.PI / 2
+  p.root.scale.multiplyScalar(0.95)
+  lean.add(p.root)
+  lean.updateMatrixWorld(true)
+  // In its seat, the feet on the floor at the pedals (a car's, as measured), else the hips at their height.
+  if (FITS[fit]) sitIn(p.root, lean.matrixWorld, FITS[fit]!, legsOf(p.root))
+  else hipsAt(p.root, dy! + hips)
+  const arms = armsOf(p.root)
+  if (arms && steering) {
+    const right = new Vector3(0, 0, 1).transformDirection(lean.matrixWorld)
+    hold(arms, steering, grips(steering, kind, right), right)
+  }
+  const fig = stillFigure(p.root, `${key}|${lookKey(look)}`)
+  lean.remove(p.root)
+  fig.position.copy(p.root.position)
+  fig.rotation.copy(p.root.rotation)
+  fig.scale.copy(p.root.scale)
+  lean.add(fig)
 }
 
 export function randomPaint(rand: () => number) {
