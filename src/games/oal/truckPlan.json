@@ -1,0 +1,88 @@
+{
+ "truck": {
+  "wheels": {
+   "fl": {
+    "node": "truck_wheel_fl",
+    "at": [
+     2.55,
+     0.41,
+     -0.83
+    ],
+    "r": 0.41
+   },
+   "fr": {
+    "node": "truck_wheel_fr",
+    "at": [
+     2.55,
+     0.41,
+     0.83
+    ],
+    "r": 0.41
+   },
+   "rl": {
+    "node": "truck_wheel_rl",
+    "at": [
+     -1.15,
+     0.41,
+     -0.82
+    ],
+    "r": 0.41
+   },
+   "rr": {
+    "node": "truck_wheel_rr",
+    "at": [
+     -1.15,
+     0.41,
+     0.82
+    ],
+    "r": 0.41
+   }
+  },
+  "doors": [
+   {
+    "name": "truck_door_l",
+    "side": "left",
+    "front": true,
+    "open": -1.15
+   },
+   {
+    "name": "truck_door_r",
+    "side": "right",
+    "front": true,
+    "open": 1.15
+   },
+   {
+    "name": "truck_back_l",
+    "side": "left",
+    "front": false,
+    "open": -1.6,
+    "back": true
+   },
+   {
+    "name": "truck_back_r",
+    "side": "right",
+    "front": false,
+    "open": 1.6,
+    "back": true
+   }
+  ],
+  "steer": "truck_steer",
+  "driver": [
+   1.95,
+   1.04,
+   -0.5
+  ],
+  "size": [
+   6.62,
+   3.34,
+   2.28
+  ],
+  "wheelbase": 3.7,
+  "cargo": {
+   "x0": -3.2,
+   "x1": 1.28,
+   "floor": 1.02,
+   "wide": 2.14
+  }
+ }
+}
