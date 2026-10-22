@@ -99,8 +99,11 @@ if [ "$site" = player ]; then
   for folder in "${folders[@]}"; do
     aws s3 sync "$dist/$folder" "$s3/$folder" --cache-control "$month" --exclude '*.wasm' --delete "${common[@]}"
   done
-  # Browsers only compile WebAssembly quickly when it is labelled as such.
-  aws s3 cp "$dist/engine" "$s3/engine" --recursive --exclude '*' --include '*.wasm' --content-type 'application/wasm' --cache-control "$month" "${common[@]}"
+  # Browsers only compile WebAssembly quickly when it is labelled as such: every folder's (the
+  # chess engine's, One Africa Life's picture decoder in basis/).
+  for folder in "${folders[@]}"; do
+    aws s3 cp "$dist/$folder" "$s3/$folder" --recursive --exclude '*' --include '*.wasm' --content-type 'application/wasm' --cache-control "$month" "${common[@]}"
+  done
 fi
 # Everything at the top level: the entry pages, the service worker, the icons.
 skip=(--exclude 'assets/*' --exclude '*.webmanifest')
