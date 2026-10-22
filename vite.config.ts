@@ -82,7 +82,7 @@ export default defineConfig({
         // (The flag font is for computers that cannot draw flags; phones must not be made to fetch it.)
         // Nor the 3D library, street basketball and One Africa Life's characters (only those who
         // play them fetch them).
-        globIgnores: ['**/HeroScene-*.js', '**/three-*.js', '**/BasketballPracticePage-*.js', 'landing/**', 'engine/**', 'words/**', 'fonts/**', 'basketball/**', 'oal/**', '**/CreatorScene-*.js', '**/ArrivalsScene-*.js', '**/StreetScene-*.js', '**/*-{math,symbols,vietnamese}-*.woff2'],
+        globIgnores: ['**/HeroScene-*.js', '**/three-*.js', '**/BasketballPracticePage-*.js', 'landing/**', 'engine/**', 'words/**', 'fonts/**', 'basketball/**', 'oal/**', 'basis/**', '**/CreatorScene-*.js', '**/ArrivalsScene-*.js', '**/StreetScene-*.js', '**/*-{math,symbols,vietnamese}-*.woff2'],
         // App routes open the empty shell; '/' itself is the prerendered landing page.
         navigateFallback: '/app.html',
         navigateFallbackDenylist: [/^\/$/],
@@ -102,11 +102,25 @@ export default defineConfig({
             handler: 'CacheFirst',
             options: { cacheName: 'oal-city', expiration: { maxEntries: 800 } },
           },
-          // One Africa Life's characters, streets and homes: fetched the first time, then kept.
+          // One Africa Life's characters, cars, streets and homes: fetched the first time, then
+          // kept (room for all of them: a file let go is a file downloaded again).
           {
             urlPattern: ({ url }) => url.pathname.startsWith('/oal/'),
             handler: 'CacheFirst',
-            options: { cacheName: 'oal', expiration: { maxEntries: 30 } },
+            options: { cacheName: 'oal', expiration: { maxEntries: 200 } },
+          },
+          // The 3D library and the game screens left out of the install (above), and the picture
+          // decoder: fetched the first time they are needed, then kept (their names change with
+          // their contents, so a kept one is never stale).
+          {
+            urlPattern: ({ url }) => /^\/assets\/(three|HeroScene|BasketballPracticePage|CreatorScene|ArrivalsScene|StreetScene)-.*\.js$/.test(url.pathname),
+            handler: 'CacheFirst',
+            options: { cacheName: 'scenes', expiration: { maxEntries: 30 } },
+          },
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/basis/'),
+            handler: 'CacheFirst',
+            options: { cacheName: 'basis', expiration: { maxEntries: 4 } },
           },
           // Street basketball's characters: fetched the first time someone plays, then kept.
           {

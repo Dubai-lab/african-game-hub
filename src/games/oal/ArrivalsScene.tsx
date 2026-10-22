@@ -15,7 +15,7 @@ import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
 import { type RefObject, Suspense, useEffect, useMemo, useRef } from 'react'
 import { type AnimationAction, type AnimationClip, AnimationMixer, type Object3D, PMREMGenerator, Vector3 } from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
-import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+import { packed } from './gltf'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import { type Appearance, defaultAppearance } from '../../../supabase/functions/_shared/oal'
@@ -37,8 +37,8 @@ export type Plan = {
 }
 /** Each airport's arrivals hall: its file, its plan, the colour its officers wear. */
 export const HALLS: Record<'ROB' | 'ACC', { url: string; plan: Plan; uniform: string }> = {
-  ROB: { url: '/oal/ria-arrivals.v2.glb', plan: ria as Plan, uniform: '#1d2b55' },
-  ACC: { url: '/oal/kotoka-arrivals.v2.glb', plan: kotoka as Plan, uniform: '#22304a' },
+  ROB: { url: '/oal/ria-arrivals.v3.glb', plan: ria as Plan, uniform: '#1d2b55' },
+  ACC: { url: '/oal/kotoka-arrivals.v3.glb', plan: kotoka as Plan, uniform: '#22304a' },
 }
 
 type Solid = [number, number, number, number, string?]
@@ -90,7 +90,7 @@ export function person(source: Object3D, animations: AnimationClip[], appearance
 }
 
 function Hall({ open, url, plan }: { open: string | null; url: string; plan: Plan }) {
-  const gltf = useLoader(GLTFLoader, url, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const gltf = useLoader(GLTFLoader, url, packed)
   useFrame((_, dt) => {
     // The admitted traveller's gate swings open toward the landside.
     for (const b of plan.booths) {
@@ -105,7 +105,7 @@ function Hall({ open, url, plan }: { open: string | null; url: string; plan: Pla
 
 function People({ airport, appearance, stick, look, paused, open, onNear, onExit, onPosition }: Props) {
   const { plan, uniform } = HALLS[airport]
-  const gltf = useLoader(GLTFLoader, CHARACTER_URL(appearance.sex), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const gltf = useLoader(GLTFLoader, CHARACTER_URL(appearance.sex), packed)
   const { camera } = useThree()
   const keys = useRef(new Set<string>())
   const state = useRef({ u: plan.spawn.u, v: plan.spawn.v, facing: 0, speed: 0, near: null as number | null, left: false, told: 0 })

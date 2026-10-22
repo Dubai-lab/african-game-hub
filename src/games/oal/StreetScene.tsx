@@ -13,7 +13,7 @@ import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
 import { type RefObject, Suspense, useEffect, useMemo, useRef } from 'react'
 import { PMREMGenerator, Vector3 } from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
-import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+import { packed } from './gltf'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { type Appearance, defaultAppearance } from '../../../supabase/functions/_shared/oal'
 import { person, type Stick } from './ArrivalsScene'
@@ -52,23 +52,23 @@ function town(url: string, plan: Plan, locals: (sex: 'male' | 'female') => Local
 }
 
 export const TOWNS = {
-  sinkor: town('/oal/sinkor-street.v5.glb', sinkor as Plan, (sex) => [
+  sinkor: town('/oal/sinkor-street.v6.glb', sinkor as Plan, (sex) => [
     ['cookshop', { skin: 0.85, build: { weight: 0.5, muscle: 0, height: -0.2 }, outfit: sex === 'male' ? 'tee_jeans' : 'blouse_skirt' }, 'talk'],
     ['phone', { skin: 0.7, build: { weight: -0.1, muscle: 0.2, height: 0.2 }, outfit: sex === 'male' ? 'shirt_jeans' : 'tee_jeans' }, 'idle'],
     ['changer', { skin: 0.9, build: { weight: 0.2, muscle: 0.3, height: 0.1 }, outfit: sex === 'male' ? 'jacket_jeans' : 'sport' }, 'talk'],
     ['kekeh', { skin: 0.78, build: { weight: -0.2, muscle: 0.4, height: 0 }, outfit: sex === 'male' ? 'tee_jeans' : 'tee_shorts' }, 'idle'],
   ]),
-  waterside: town('/oal/waterside-market.v2.glb', waterside as Plan, (sex) => [
+  waterside: town('/oal/waterside-market.v3.glb', waterside as Plan, (sex) => [
     ['cookshop', { skin: 0.88, build: { weight: 0.6, muscle: 0, height: -0.1 }, outfit: sex === 'male' ? 'tee_jeans' : 'blouse_skirt' }, 'talk'],
     ['changer', { skin: 0.82, build: { weight: 0.1, muscle: 0.3, height: 0.1 }, outfit: sex === 'male' ? 'shirt_jeans' : 'sport' }, 'talk'],
   ]),
-  voinjama: town('/oal/voinjama.v1.glb', voinjama as Plan, (sex) => [
+  voinjama: town('/oal/voinjama.v2.glb', voinjama as Plan, (sex) => [
     ['cookshop', { skin: 0.86, build: { weight: 0.5, muscle: 0, height: -0.1 }, outfit: sex === 'male' ? 'tee_jeans' : 'blouse_skirt' }, 'talk'],
     ['changer', { skin: 0.9, build: { weight: 0.1, muscle: 0.3, height: 0.2 }, outfit: sex === 'male' ? 'jacket_jeans' : 'sport' }, 'talk'],
     ['phone', { skin: 0.75, build: { weight: -0.1, muscle: 0.2, height: 0.1 }, outfit: sex === 'male' ? 'shirt_jeans' : 'tee_jeans' }, 'idle'],
     ['kekeh', { skin: 0.8, build: { weight: -0.2, muscle: 0.4, height: 0 }, outfit: sex === 'male' ? 'tee_jeans' : 'tee_shorts' }, 'idle'],
   ]),
-  skd: town('/oal/skd-stadium.v1.glb', skd as Plan, (sex) => [
+  skd: town('/oal/skd-stadium.v2.glb', skd as Plan, (sex) => [
     ['tickets', { skin: 0.84, build: { weight: 0.3, muscle: 0.1, height: 0 }, outfit: sex === 'male' ? 'shirt_jeans' : 'blouse_skirt' }, 'idle'],
   ]),
 }
@@ -144,7 +144,7 @@ function placeAt(p: Point, where: Town): Place | null {
 }
 
 function Street({ where }: { where: Town }) {
-  const gltf = useLoader(GLTFLoader, where.url, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const gltf = useLoader(GLTFLoader, where.url, packed)
   // Water (a material named so) has its ripples drift.
   const ripples = useMemo(() => {
     const maps: { offset: { x: number; y: number } }[] = []
@@ -165,7 +165,7 @@ function Street({ where }: { where: Town }) {
 
 /** Another player out on the street: drawn walking toward where they last said they were. */
 function Other({ entry }: { entry: OtherPlayer }) {
-  const gltf = useLoader(GLTFLoader, CHARACTER_URL(entry.appearance.sex), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const gltf = useLoader(GLTFLoader, CHARACTER_URL(entry.appearance.sex), packed)
   const them = useMemo(() => {
     const p = person(gltf.scene, gltf.animations, entry.appearance)
     p.actions.idle?.play()
@@ -204,7 +204,7 @@ function Other({ entry }: { entry: OtherPlayer }) {
 
 function People({ town: id, start, appearance, stick, look, pitch, paused, onPlace, onPosition }: Props) {
   const where = TOWNS[id]
-  const gltf = useLoader(GLTFLoader, CHARACTER_URL(appearance.sex), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const gltf = useLoader(GLTFLoader, CHARACTER_URL(appearance.sex), packed)
   const { camera } = useThree()
   const keys = useRef(new Set<string>())
   // Arriving a few steps apart along the street, so two players never stand in one another.

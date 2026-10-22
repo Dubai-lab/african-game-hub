@@ -1,13 +1,13 @@
-// One Africa Life: Furniture City on Tubman Boulevard (public/oal/furniture-city.v1.glb, made by
+// One Africa Life: Furniture City on Tubman Boulevard (public/oal/furniture-city.v2.glb, made by
 // scripts/oal/makeFurnitureCity.py; ../furnitureCity.json its plan), walked into from the street
 // and up its stairs to every floor: each floor's walls, railings and things on display walked
 // against while on that floor, the camera under its ceiling, and before each thing on display a
 // place to look at it (and buy it: ./ItemPanel.tsx). The things are the game's own
-// (public/oal/items.v2.glb), as one buys and keeps them.
+// (public/oal/items.v3.glb), as one buys and keeps them.
 import { useFrame, useLoader } from '@react-three/fiber'
 import { type RefObject, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { type Object3D } from 'three'
-import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+import { packed } from '../gltf'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import type { ItemId } from '../../../../supabase/functions/_shared/oalItems'
 import plan from '../furnitureCity.json'
@@ -15,8 +15,8 @@ import itemsPlan from '../itemsPlan.json'
 import { type City, groundHeight, solidOf, type Solid } from './cityGen'
 import { type CityPlace, insidePlaces, insideRooms, insideSolids } from './insides'
 
-export const STORE_URL = '/oal/furniture-city.v1.glb'
-export const ITEMS_URL = '/oal/items.v2.glb'
+export const STORE_URL = '/oal/furniture-city.v2.glb'
+export const ITEMS_URL = '/oal/items.v3.glb'
 
 type Stair = { x0: number; x1: number; y0: number; y1: number; from: number; to: number; up: number }
 type Display = { item: ItemId; level: number; x: number; y: number; yaw: number; hang?: boolean }
@@ -136,8 +136,8 @@ function roomOf(level: number) {
 }
 
 export function FurnitureCity({ city }: { city: City }) {
-  const store = useLoader(GLTFLoader, STORE_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
-  const items = useLoader(GLTFLoader, ITEMS_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const store = useLoader(GLTFLoader, STORE_URL, packed)
+  const items = useLoader(GLTFLoader, ITEMS_URL, packed)
   const root = useMemo(() => {
     const r = store.scene.clone(true)
     const base = groundHeight(city, STORE.x, STORE.y)

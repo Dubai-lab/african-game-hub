@@ -1,11 +1,11 @@
-// The game's own places built by scripts/oal/makeHome.py (public/oal/home.v5.glb and
+// The game's own places built by scripts/oal/makeHome.py (public/oal/home.v6.glb and
 // ./homePlan.json): the family house on its plot, the Ministry of Health's compound, the shops on
 // Tubman Boulevard. Shared by their insides (./HomeScene.tsx) and the town round them
 // (./city/CityScene.tsx), where the house and the Ministry stand in their compounds.
 import plans from './homePlan.json'
 import insides from './interiorsPlan.json'
 
-export const HOME_URL = '/oal/home.v5.glb'
+export const HOME_URL = '/oal/home.v6.glb'
 
 /** What each place had outside it before the town was built round it: its street, pavement,
  * verge, the neighbours across (never drawn now: out of the door is the town itself). */
@@ -26,7 +26,7 @@ export const gates = { health: false }
 
 /** The insides of the town's businesses (scripts/oal/makeInteriors.py), one of each kind: set in
  * the town's own buildings, behind their doors (./city/CityScene.tsx). */
-export const INTERIORS_URL = '/oal/interiors.v1.glb'
+export const INTERIORS_URL = '/oal/interiors.v2.glb'
 type At = { x: number; y: number; face: number[] }
 export type InsidePlan = { solids: Rect[]; places: Record<string, At>; inside: Rect[]; attendants?: At[]; lights?: { x: number; y: number; z: number }[]; ceiling?: number }
 export const INSIDES = insides as unknown as Record<string, InsidePlan>

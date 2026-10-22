@@ -1,4 +1,4 @@
-// One Africa Life: the town's cars as they are drawn (public/oal/cars.v2.glb, made by
+// One Africa Life: the town's cars as they are drawn (public/oal/cars.v3.glb, made by
 // scripts/oal/makePaidCars.py from the owner's car pack; ../carsPlan.v2.json where their parts
 // are): an SUV coupe as a private car (in its owner's paint), a taxi, a police car. Each at full
 // quality near (its inside, its doors on their hinges, its steering wheel), its outside alone far
@@ -16,14 +16,14 @@ import truckPlans from '../truckPlan.json'
 import { stillFigure } from '../Traffic'
 import type { Drive } from './driving'
 
-export const CARS_URL = '/oal/cars.v2.glb'
+export const CARS_URL = '/oal/cars.v3.glb'
 /** The kekeh (scripts/oal/makeKekeh.py: its body from the owner's pictures, its wheels and steering made). */
-export const KEKEH_URL = '/oal/kekeh.v1.glb'
+export const KEKEH_URL = '/oal/kekeh.v2.glb'
 export const KEKEH_PLAN = (kekehPlans as unknown as Record<string, { wheels: Record<string, { at: number[]; r: number; node: string }>; steer: string; handlebar: string; driver: number[]; passenger: number[]; size: number[]; wheelbase: number }>).kekeh!
 
 /** Furniture City's delivery truck (scripts/oal/makeTruck.py): its cab's doors, its box's back
  * doors, its wheels (twin at the back), its steering wheel. */
-export const TRUCK_URL = '/oal/truck.v1.glb'
+export const TRUCK_URL = '/oal/truck.v2.glb'
 export const TRUCK_PLAN = (truckPlans as unknown as Record<string, CarPlan & { cargo: { x0: number; x1: number; floor: number; wide: number } }>).truck!
 
 export type CarModelName = 'suv' | 'suv_taxi' | 'suv_police'

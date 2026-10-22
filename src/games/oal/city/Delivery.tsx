@@ -9,7 +9,7 @@
 import { useFrame, useLoader, useThree } from '@react-three/fiber'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial, type Object3D } from 'three'
-import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+import { packed } from '../gltf'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import i18n from '@/core/i18n'
 import { callFunction } from '@/core/lib/functions'
@@ -106,8 +106,8 @@ function legBeside(city: City, at: { edge: number; t: number; right: number }) {
 }
 
 function Run({ city, toMap, fromMap, player }: Props) {
-  const file = useLoader(GLTFLoader, TRUCK_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
-  const crowd = useLoader(GLTFLoader, CROWD_URL('male'), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const file = useLoader(GLTFLoader, TRUCK_URL, packed)
+  const crowd = useLoader(GLTFLoader, CROWD_URL('male'), packed)
   const { camera } = useThree()
   const { truck, men, group } = useMemo(() => {
     const rand = seeded(4417)

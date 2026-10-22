@@ -82,7 +82,8 @@ test('a delivery: the truck brings the sofa, its men carry it in', async ({ page
     await shot(page, `delivery-m${i}`)
   }
   await expect.poll(async () => (await runSql<{ arrives_at: string | null }>(`select arrives_at from public.oal_things where user_id = '${me!.id}'`))[0]?.arrives_at, { timeout: 120_000 }).toBeNull()
-  await expect.poll(() => phase(page), { timeout: 30_000 }).toBe('leaving')
+  // (Gone already, perhaps: back to the store and out of sight.)
+  await expect.poll(() => phase(page), { timeout: 30_000 }).toMatch(/leaving|none/)
   await page.waitForTimeout(3000)
   await shot(page, 'delivery-4-leaving')
   expect(errors).toEqual([])

@@ -9,7 +9,7 @@
 import { useFrame, useLoader, useThree } from '@react-three/fiber'
 import { type RefObject, useEffect, useMemo } from 'react'
 import { type Object3D, Vector3 } from 'three'
-import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+import { packed } from '../gltf'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { type Sex } from '../../../../supabase/functions/_shared/oal'
 import { person } from '../ArrivalsScene'
@@ -146,10 +146,10 @@ export function CityTraffic({
   ride: RefObject<RideState>
   onRide: (phase: RidePhase) => void
 }) {
-  const gltf = useLoader(GLTFLoader, VEHICLES_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
-  const carsFile = useLoader(GLTFLoader, CARS_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
-  const kekehFile = useLoader(GLTFLoader, KEKEH_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
-  const people = useLoader(GLTFLoader, CROWD_URL('male'), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const gltf = useLoader(GLTFLoader, VEHICLES_URL, packed)
+  const carsFile = useLoader(GLTFLoader, CARS_URL, packed)
+  const kekehFile = useLoader(GLTFLoader, KEKEH_URL, packed)
+  const people = useLoader(GLTFLoader, CROWD_URL('male'), packed)
   const index = useMemo(() => edgeIndex(city, keep), [city, keep])
   const stats = useMemo(() => {
     try {
@@ -447,8 +447,8 @@ type Walker = { root: Object3D; mixer: { update: (dt: number) => void }; going: 
 
 /** People on foot along the roadsides. */
 export function CityWalkers({ city, keep, player }: { city: City; keep: Keep[]; player: RefObject<{ x: number; y: number }> }) {
-  const men = useLoader(GLTFLoader, CROWD_URL('male'), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
-  const women = useLoader(GLTFLoader, CROWD_URL('female'), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const men = useLoader(GLTFLoader, CROWD_URL('male'), packed)
+  const women = useLoader(GLTFLoader, CROWD_URL('female'), packed)
   const index = useMemo(() => edgeIndex(city, keep), [city, keep])
   const { walkers, rand } = useMemo(() => {
     let seed = 41

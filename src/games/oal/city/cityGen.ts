@@ -627,7 +627,7 @@ const PLASTER = ['#efe6d2', '#e8d6a6', '#d9e6ea', '#f2d9c4', '#e6efd8', '#f4f0e6
 const ZINC = ['#8a4a2c', '#7a3f26', '#9a5a3a', '#6e4a3a', '#a06040', '#8a8a86']
 const KIOSK = ['#2f6fb8', '#c8281e', '#2f8a4a', '#e2b62a', '#e86a1c', '#6a3a8a']
 const WALL = ['#d8d0c0', '#cfc6b4', '#e4ddcc', '#bdb3a0']
-/** The trees' kinds, as the trees file has them (public/oal/trees.v1.glb, scripts/oal/makeTrees.py). */
+/** The trees' kinds, as the trees file has them (public/oal/trees.v2.glb, scripts/oal/makeTrees.py). */
 export const TREE = { shade: 0, palm: 1, banana: 2 } as const
 export const TREE_KINDS = ['shade_tree', 'coconut_palm', 'banana_clump'] as const
 const BLOCK = ['#f4f2ee', '#e8e4dc', '#ece6da']

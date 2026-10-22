@@ -6,10 +6,10 @@
 import { BufferAttribute, Color, type Material, type Mesh, type MeshStandardMaterial, type Object3D, Vector4 } from 'three'
 import { type Appearance, CATALOGUE, defaultAppearance, type Sex } from '../../../supabase/functions/_shared/oal'
 
-export const CHARACTER_URL = (sex: Sex) => `/oal/creator-${sex}.v9.glb`
+export const CHARACTER_URL = (sex: Sex) => `/oal/creator-${sex}.v10.glb`
 /** The same people made light (an eighth of the triangles, pictures half size) for the town's
  * crowds: walkers, drivers, passengers. The player and those met up close keep the full file. */
-export const CROWD_URL = (sex: Sex) => `/oal/crowd-${sex}.v4.glb`
+export const CROWD_URL = (sex: Sex) => `/oal/crowd-${sex}.v5.glb`
 
 const HAIR_COLOURS: Record<string, string> = { black: '#2a2522', darkbrown: '#4a3426', brown: '#7a5233', auburn: '#8c3b22' }
 const EYE_COLOURS: Record<string, string> = { darkbrown: '#3a2416', brown: '#6b4024', hazel: '#7a6a35' }

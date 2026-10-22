@@ -6,7 +6,7 @@ import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
 import { type RefObject, Suspense, useEffect, useMemo, useRef } from 'react'
 import { AnimationMixer, type Mesh, type Object3D, PMREMGenerator, Vector3 } from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
-import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+import { packed } from './gltf'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import type { Appearance } from '../../../supabase/functions/_shared/oal'
 import { CHARACTER_URL, prepare } from './character'
@@ -16,7 +16,7 @@ import { CHARACTER_URL, prepare } from './character'
 export type Framing = 'full' | 'face'
 
 function Character({ appearance, framing }: { appearance: Appearance; framing: Framing }) {
-  const gltf = useLoader(GLTFLoader, CHARACTER_URL(appearance.sex), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const gltf = useLoader(GLTFLoader, CHARACTER_URL(appearance.sex), packed)
 
   // Once per file: the person's own materials, shadows, the idle.
   const { look, mixer } = useMemo(() => {

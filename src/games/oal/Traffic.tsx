@@ -1,6 +1,6 @@
 // One Africa Life: the traffic on a 3D street. Taxis (yellow), private cars, kekehs, the odd
 // bus and police car (the owner's models, made light by scripts/oal/makeVehicles.py:
-// public/oal/vehicles.v1.glb) drive the street's lanes (its plan's "lanes", on the right), at
+// public/oal/vehicles.v2.glb) drive the street's lanes (its plan's "lanes", on the right), at
 // town speeds, slowing behind whoever is ahead and stopping for the player in front of them;
 // at a lane's end, back to its start (out of sight, in the haze). Each has its driver at the
 // wheel (a kekeh its rider), seated, of every look. Where each vehicle is, as a box, is kept for
@@ -8,14 +8,14 @@
 import { useFrame, useLoader } from '@react-three/fiber'
 import { useMemo } from 'react'
 import { type AnimationClip, BufferAttribute, BufferGeometry, Color, Group, type Material, Matrix4, type Mesh, Mesh as MeshClass, type Object3D, type SkinnedMesh, Vector3 } from 'three'
-import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+import { packed } from './gltf'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { person } from './ArrivalsScene'
 import { CROWD_URL, lookKey, randomLook } from './character'
 import { buildCar, buildKekeh, type CarModel, CARS_URL, KEKEH_URL, poseCar, randomPaint } from './city/cars'
 import type { Drive } from './city/driving'
 
-export const VEHICLES_URL = '/oal/vehicles.v1.glb'
+export const VEHICLES_URL = '/oal/vehicles.v2.glb'
 
 export type Kind = 'taxi' | 'car' | 'kekeh' | 'bus' | 'police'
 /** A vehicle's box on the map, for walking against: centre, heading, half length and width. */
@@ -157,10 +157,10 @@ function pick<T>(list: T[], r: number) {
 }
 
 export function Traffic({ lanes, reach, player, moving, spacing = 35 }: { lanes: number[][][]; reach: number; player: { current: { x: number; y: number } }; moving: { current: Moving[] }; spacing?: number }) {
-  const gltf = useLoader(GLTFLoader, VEHICLES_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
-  const people = useLoader(GLTFLoader, CROWD_URL('male'), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
-  const carsFile = useLoader(GLTFLoader, CARS_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
-  const kekehFile = useLoader(GLTFLoader, KEKEH_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const gltf = useLoader(GLTFLoader, VEHICLES_URL, packed)
+  const people = useLoader(GLTFLoader, CROWD_URL('male'), packed)
+  const carsFile = useLoader(GLTFLoader, CARS_URL, packed)
+  const kekehFile = useLoader(GLTFLoader, KEKEH_URL, packed)
   const { cars, roads, group } = useMemo(() => {
     const roads = lanes.map((l) => laneOf(l, reach)).filter((l) => l.length > 40)
     const models = vehicleModels(gltf.scene)

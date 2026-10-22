@@ -1,25 +1,25 @@
 // One Africa Life: on the road up-country, in 3D. The player's own character sits by the window
 // of the shared car or the bus (seen through its glass), and the road (scripts/oal/makeRoadKit.py:
-// laterite through the bush, public/oal/road-kit.v1.glb) runs past at the speed of the journey:
+// laterite through the bush, public/oal/road-kit.v2.glb) runs past at the speed of the journey:
 // still while the car fills or the bus waits, then on its way. Loaded only here.
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
 import { Suspense, useMemo } from 'react'
 import { Color, type Material, type Mesh, type Object3D, PMREMGenerator, Vector3 } from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
-import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+import { packed } from './gltf'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import type { Appearance } from '../../../supabase/functions/_shared/oal'
 import { person } from './ArrivalsScene'
 import { CHARACTER_URL } from './character'
 import { VEHICLES_URL } from './Traffic'
 
-export const ROAD_URL = '/oal/road-kit.v1.glb'
+export const ROAD_URL = '/oal/road-kit.v2.glb'
 const STRETCH = 120
 // Where the passenger sits, in the vehicle's own frame (x ahead, y up, z to its right).
 const SEAT = { car: new Vector3(0.15, 0.08, 0.42), bus: new Vector3(0.6, 0.78, 1.05) }
 
 function Road({ moving }: { moving: () => number }) {
-  const gltf = useLoader(GLTFLoader, ROAD_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const gltf = useLoader(GLTFLoader, ROAD_URL, packed)
   // Five stretches in a row, from the three in the file, carried past and round again.
   const pieces = useMemo(() => {
     const kinds = [0, 1, 2].map((n) => gltf.scene.getObjectByName(`stretch_${n}`)!).filter(Boolean)
@@ -46,8 +46,8 @@ function Road({ moving }: { moving: () => number }) {
 }
 
 function Ride({ mode, appearance, moving }: { mode: 'car' | 'bus'; appearance: Appearance; moving: () => number }) {
-  const cars = useLoader(GLTFLoader, VEHICLES_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
-  const body = useLoader(GLTFLoader, CHARACTER_URL(appearance.sex), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const cars = useLoader(GLTFLoader, VEHICLES_URL, packed)
+  const body = useLoader(GLTFLoader, CHARACTER_URL(appearance.sex), packed)
   const { camera } = useThree()
   const { vehicle, rider } = useMemo(() => {
     const vehicle = cars.scene.getObjectByName(mode === 'bus' ? 'bus' : 'sedan')!.clone(true) as Object3D

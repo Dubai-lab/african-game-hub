@@ -6,7 +6,7 @@ import { Canvas, useFrame, useLoader } from '@react-three/fiber'
 import { type RefObject, Suspense, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Box3, type Group, Vector3 } from 'three'
-import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+import { packed } from '../gltf'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { callFunction, refusalMessage } from '@/core/lib/functions'
 import { Button } from '@/core/ui/Button'
@@ -15,7 +15,7 @@ import { ITEMS, type ItemId } from '../../../../supabase/functions/_shared/oalIt
 import { ITEMS_URL } from './FurnitureCity'
 
 function Thing({ item, turn }: { item: ItemId; turn: RefObject<number> }) {
-  const gltf = useLoader(GLTFLoader, ITEMS_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const gltf = useLoader(GLTFLoader, ITEMS_URL, packed)
   const ref = useRef<Group>(null)
   const thing = useMemo(() => {
     const t = gltf.scene.getObjectByName(`item_${item}`)!.clone(true)

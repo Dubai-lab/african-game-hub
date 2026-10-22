@@ -6,7 +6,7 @@
 import { useFrame, useLoader } from '@react-three/fiber'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Group, type Object3D } from 'three'
-import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+import { packed } from '../gltf'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import type { ItemId } from '../../../../supabase/functions/_shared/oalItems'
 import plans from '../homePlan.json'
@@ -140,7 +140,7 @@ function WhereInHouse({ toMap, fromMap, yaw, player }: Props) {
 
 /** The things in the house, drawn where they are (and walked against). */
 function DrawnThings({ toMap, yaw }: Props) {
-  const items = useLoader(GLTFLoader, ITEMS_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const items = useLoader(GLTFLoader, ITEMS_URL, packed)
   const group = useMemo(() => new Group(), [])
   const seen = useRef(-1)
   useFrame(() => {

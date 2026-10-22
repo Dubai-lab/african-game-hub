@@ -11,7 +11,7 @@ import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
 import { type RefObject, Suspense, useEffect, useMemo, useRef } from 'react'
 import { BoxGeometry, type Group, LoopOnce, Matrix4, Mesh, MeshStandardMaterial, type Object3D, PMREMGenerator, Raycaster, Vector3 } from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
-import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+import { packed } from './gltf'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import type { Appearance } from '../../../supabase/functions/_shared/oal'
 import { person, type Stick } from './ArrivalsScene'
@@ -209,7 +209,7 @@ const walker = { current: { x: 0, y: 0 } }
 
 function Home({ kind, gateOpen }: { kind: HomeKind; gateOpen: boolean }) {
   const url = (BUSINESS_KINDS as readonly string[]).includes(kind) ? INTERIORS_URL : HOME_URL
-  const gltf = useLoader(GLTFLoader, url, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const gltf = useLoader(GLTFLoader, url, packed)
   const plan = PLANS[kind]
   const { home, doors, gate } = useMemo(() => {
     const home = gltf.scene.getObjectByName(kind)!.clone(true)
@@ -301,7 +301,7 @@ type Props = {
 function Body(props: Props) {
   const { kind, appearance, asleep, stick, view, onPlace, shelf, carrying, onDisplay, gesture, hold, laid, staffSeq, staffAct, gateOpen, seat, onSeat } = props
   const plan = PLANS[kind]
-  const gltf = useLoader(GLTFLoader, CHARACTER_URL(appearance.sex), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const gltf = useLoader(GLTFLoader, CHARACTER_URL(appearance.sex), packed)
   const { camera } = useThree()
   const keys = useRef(new Set<string>())
   // In by the door, or out of bed.

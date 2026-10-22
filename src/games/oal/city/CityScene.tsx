@@ -40,7 +40,7 @@ import {
   Vector3,
 } from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
-import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+import { packed } from '../gltf'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import type { Appearance } from '../../../../supabase/functions/_shared/oal'
 import { person, type Stick } from '../ArrivalsScene'
@@ -1059,7 +1059,7 @@ function HubStreet({ hub, player }: { hub: Hub; player: RefObject<{ x: number; y
     return m
   }, [hub.town])
   useEffect(() => () => void hubTraffic.delete(hub.town), [hub.town])
-  const gltf = useLoader(GLTFLoader, where.url, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const gltf = useLoader(GLTFLoader, where.url, packed)
   const scene = useMemo(() => gltf.scene.clone(true), [gltf])
   useFrame(() => {
     const p = player.current
@@ -1198,7 +1198,7 @@ function Stats() {
 /** The trees of the chunks built (each [kind, x, y, turn, size]); counted up as they change. */
 const treesByChunk = new Map<string, number[][]>()
 const treesVersion = { n: 0 }
-const TREES_URL = '/oal/trees.v1.glb'
+const TREES_URL = '/oal/trees.v2.glb'
 // Near: the trees as modelled; out to far, made light; past that, lost in the haze.
 const TREE_NEAR = 60
 const TREE_FAR = 230
@@ -1207,7 +1207,7 @@ const TREE_ROOM = { near: 160, far: 1400 }
 /** The town's trees, every one of a kind drawn at once (an instanced mesh for each of its parts,
  * near and far), placed again as the player moves on. */
 function Trees({ player }: { player: RefObject<{ x: number; y: number }> }) {
-  const gltf = useLoader(GLTFLoader, TREES_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const gltf = useLoader(GLTFLoader, TREES_URL, packed)
   const layers = useMemo(
     () =>
       TREE_KINDS.map((name) =>
@@ -1351,8 +1351,8 @@ function NearInsides({ player }: { player: RefObject<{ x: number; y: number }> }
 }
 
 function InsideModel({ r }: { r: Room }) {
-  const gltf = useLoader(GLTFLoader, INTERIORS_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
-  const crowd = useLoader(GLTFLoader, CROWD_URL('male'), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const gltf = useLoader(GLTFLoader, INTERIORS_URL, packed)
+  const crowd = useLoader(GLTFLoader, CROWD_URL('male'), packed)
   const { gl } = useThree()
   const { root, light } = useMemo(() => {
     gl.localClippingEnabled = true
@@ -1469,7 +1469,7 @@ function inSolid(poly: Solid, x: number, y: number) {
 /** The family's car, parked by the house's gate (on the verge before the compound's wall, along
  * the road), drawn where it is (driven or standing), its door shutting once it is left. */
 function OwnCarModel({ c }: { c: Compound }) {
-  const file = useLoader(GLTFLoader, CARS_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const file = useLoader(GLTFLoader, CARS_URL, packed)
   const { camera } = useThree()
   const model = useMemo(() => {
     const m = buildCar(file.scene, 'suv', '#7a1a1a', null, () => 0.5)
@@ -1530,7 +1530,7 @@ function NearLandmarks({ player }: { player: RefObject<{ x: number; y: number }>
 }
 
 function LandmarkModel({ l }: { l: Landmark }) {
-  const gltf = useLoader(GLTFLoader, l.url, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const gltf = useLoader(GLTFLoader, l.url, packed)
   const [x, y] = landmarkPoint(l, 0, 0)
   return <primitive object={gltf.scene} position={[x, 0.01, -y]} rotation={[0, l.yaw, 0]} />
 }
@@ -1631,7 +1631,7 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
   const roadside = useRef<boolean | undefined>(undefined)
   const seated = useRef(false)
   const told = useRef(false)
-  const gltf = useLoader(GLTFLoader, CHARACTER_URL(appearance.sex), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const gltf = useLoader(GLTFLoader, CHARACTER_URL(appearance.sex), packed)
   const { camera } = useThree()
   const keys = useRef(new Set<string>())
   const state = useRef({ x: start.x, y: start.y, facing: start.f, speed: 0, place: null as string | null, told: 0 })
@@ -2157,6 +2157,37 @@ function namedRoad(city: City, x: number, y: number): string | null {
 /** The town's own traffic (town metres). */
 const cityMoving: { current: Moving[] } = { current: [] }
 
+/** Smooth before sharp (as console games do): when the device cannot keep up (fewer than 40
+ * frames a second, over two seconds), the scene is drawn at fewer pixels, a step at a time, down
+ * to three quarters of the screen's; when it is well ahead again (57 and more, for five seconds),
+ * back up, to the screen's own (at most 1.5 a pixel). */
+function SmoothFrames() {
+  const setDpr = useThree((s) => s.setDpr)
+  const top = Math.min(1.5, typeof window !== 'undefined' ? window.devicePixelRatio : 1)
+  const st = useMemo(() => ({ dpr: top, frames: 0, time: 0, good: 0 }), [top])
+  useFrame((_, dt) => {
+    st.frames++
+    st.time += Math.min(dt, 0.5)
+    if (st.time < 2) return
+    const fps = st.frames / st.time
+    st.frames = 0
+    st.time = 0
+    if (fps < 40 && st.dpr > 0.75) {
+      st.dpr = Math.max(0.75, st.dpr - 0.25)
+      st.good = 0
+      setDpr(st.dpr)
+    } else if (fps >= 57 && st.dpr < top) {
+      st.good += 2
+      if (st.good >= 5) {
+        st.dpr = Math.min(top, st.dpr + 0.25)
+        st.good = 0
+        setDpr(st.dpr)
+      }
+    } else st.good = 0
+  })
+  return null
+}
+
 /** A point of a compound's model (x across, y from its gate at the front to its back) in the town. */
 /** A point of the town in a compound's own metres (compoundPoint's inverse). */
 function compoundLocal(c: Compound, x: number, y: number): [number, number] {
@@ -2197,8 +2228,8 @@ function compoundSolids(c: Compound): Solid[] {
  * when the guards let one in, the guards at the gate. */
 function CompoundModel({ c }: { c: Compound }) {
   const built = COMPOUNDS_BUILT[c.name as keyof typeof COMPOUNDS_BUILT]
-  const gltf = useLoader(GLTFLoader, HOME_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
-  const crowd = useLoader(GLTFLoader, CROWD_URL('male'), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const gltf = useLoader(GLTFLoader, HOME_URL, packed)
+  const crowd = useLoader(GLTFLoader, CROWD_URL('male'), packed)
   const { root, gate, guards, doors } = useMemo(() => {
     const root = gltf.scene.getObjectByName(built.kind)!.clone(true)
     root.traverse((o) => {
@@ -2299,7 +2330,7 @@ function siteSolids(s: Site): Solid[] {
 
 function SiteModel({ s }: { s: Site }) {
   const mats = useMaterials()
-  const vehicles = useLoader(GLTFLoader, VEHICLES_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const vehicles = useLoader(GLTFLoader, VEHICLES_URL, packed)
   const { group, boards } = useMemo(() => {
     const group = new ThreeGroup()
     const [ox, oy] = sitePoint(s, 0, 0)
@@ -2542,6 +2573,7 @@ export default function CityScene(props: Props) {
       {props.target && <Beam at={props.target} />}
       <Signals />
       <Stats />
+      <SmoothFrames />
       <Sounds player={player} />
       {city && (
         <>
