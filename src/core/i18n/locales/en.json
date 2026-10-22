@@ -161,7 +161,8 @@
       "NOT_PAID": "Pay at the cashier first.",
       "HOME_FULL": "Your house cannot hold more things. Sell some first.",
       "NOT_YOURS": "That is not yours.",
-      "ALREADY_SOLD": "Already sold."
+      "ALREADY_SOLD": "Already sold.",
+      "ON_ITS_WAY": "It is still on its way from Furniture City."
     },
     "samePassword": "That is your current password. Choose a different one.",
     "captchaFailed": "The security check did not pass. Reload the page and try again."
@@ -2875,7 +2876,9 @@
         "putHere": "Put it here",
         "noRoom": "No room there: move it clear of the walls and other things.",
         "toward": "Toward you",
-        "away": "Away from you"
+        "away": "Away from you",
+        "onItsWay": "On its way",
+        "onItsWayHint": "Furniture City's truck is bringing it: their men will carry it in. You can put it where you want once it is here."
       }
     },
     "shop": {
@@ -3156,8 +3159,10 @@
       "look": "Look at it",
       "buy": "Buy",
       "close": "Close",
-      "bought": "Bought: {{name}}. It is at your house: arrange it there.",
-      "delivery": "Paid in US dollars. Taken to your family's house, ready for you to put where you want it."
+      "bought": "Bought: {{name}}. Furniture City's truck is bringing it to your house.",
+      "delivery": "Paid in US dollars. Furniture City's truck brings it to your family's house and their men carry it in, ready for you to put where you want it.",
+      "delivered_one": "Furniture City delivered: the thing you bought is in your house. Arrange it there.",
+      "delivered_other": "Furniture City delivered: {{count}} things are in your house. Arrange them there."
     }
   }
 }

@@ -43,6 +43,9 @@ export const FITS: Record<string, Fit> = {
   // The SUV coupe (the private car, the taxi, the police car): the cushion at 0.67 m, the footwell
   // floor at 0.39 m, the wheel's middle 0.6 m ahead of the seat's back, 1.04 m up.
   suv: { hips: [0.25, 0.76, -0.362], left: [0.88, 0.47, -0.46], right: [0.9, 0.47, -0.27] },
+  // The delivery truck's cab: the cushion at 1.04 m, the floor at 0.62 m, the dashboard from
+  // 2.65 m ahead, the wheel on its column at 2.58 m, 1.5 m up.
+  truck: { hips: [1.86, 1.13, -0.5], left: [2.42, 0.7, -0.62], right: [2.45, 0.7, -0.38] },
 }
 
 const point = new Vector3()

@@ -161,7 +161,8 @@
       "NOT_PAID": "Payez d'abord à la caisse.",
       "HOME_FULL": "Votre maison ne peut pas contenir plus d'objets. Vendez-en d'abord.",
       "NOT_YOURS": "Ce n'est pas à vous.",
-      "ALREADY_SOLD": "Déjà vendu."
+      "ALREADY_SOLD": "Déjà vendu.",
+      "ON_ITS_WAY": "C'est encore en route depuis Furniture City."
     },
     "samePassword": "C’est votre mot de passe actuel. Choisissez-en un autre.",
     "captchaFailed": "La vérification de sécurité a échoué. Rechargez la page et réessayez."
@@ -2875,7 +2876,9 @@
         "putHere": "Le poser ici",
         "noRoom": "Pas de place ici : éloignez-le des murs et des autres objets.",
         "toward": "Vers vous",
-        "away": "Loin de vous"
+        "away": "Loin de vous",
+        "onItsWay": "En route",
+        "onItsWayHint": "Le camion de Furniture City l'apporte : leurs hommes le porteront à l'intérieur. Vous pourrez le placer une fois arrivé."
       }
     },
     "shop": {
@@ -3156,8 +3159,10 @@
       "look": "Regarder",
       "buy": "Acheter",
       "close": "Fermer",
-      "bought": "Acheté : {{name}}. C'est chez vous : placez-le où vous voulez.",
-      "delivery": "Payé en dollars US. Livré à la maison familiale, prêt à être placé où vous voulez."
+      "bought": "Acheté : {{name}}. Le camion de Furniture City l'apporte chez vous.",
+      "delivery": "Payé en dollars US. Le camion de Furniture City l'apporte chez votre famille et leurs hommes le portent à l'intérieur, prêt à être placé.",
+      "delivered_one": "Furniture City a livré : votre achat est dans la maison. Placez-le.",
+      "delivered_other": "Furniture City a livré : {{count}} objets sont dans la maison. Placez-les."
     }
   }
 }

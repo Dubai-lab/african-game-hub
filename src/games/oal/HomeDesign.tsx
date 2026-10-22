@@ -39,7 +39,7 @@ export function HomeDesign() {
     meta: { silent: true },
     queryFn: async () => {
       const [a, b] = await Promise.all([
-        supabase.from('oal_things').select('id, item, placed, x, y, rot, paid').order('id'),
+        supabase.from('oal_things').select('id, item, placed, x, y, rot, paid, bought_at, arrives_at').order('id'),
         supabase.from('oal_pieces_sold').select('piece'),
       ])
       if (a.error) throw a.error
@@ -56,10 +56,12 @@ export function HomeDesign() {
   }, [things.data])
   useEffect(() => {
     homeStore.onInside = setInside
+    homeStore.onDelivered = () => void queryClient.invalidateQueries({ queryKey: ['oal-things'] })
     return () => {
       homeStore.onInside = undefined
+      homeStore.onDelivered = undefined
     }
-  }, [])
+  }, [queryClient])
   useEffect(() => {
     if (!inside) {
       setOpen(false)
@@ -156,7 +158,7 @@ export function HomeDesign() {
               {(things.data?.things ?? []).map((x) => (
                 <button key={x.id} type="button" className="flex items-center justify-between rounded-2xl border border-line bg-panel px-3 py-2 text-left" onClick={() => setChosen(x.id)} data-testid={`oal-thing-${x.item}`}>
                   <span className="font-semibold">{ITEMS[x.item].name}</span>
-                  <span className="text-xs text-muted">{x.placed ? t('oal.home.design.inHouse') : t('oal.home.design.aside')}</span>
+                  <span className="text-xs text-muted">{onItsWay(x) ? t('oal.home.design.onItsWay') : x.placed ? t('oal.home.design.inHouse') : t('oal.home.design.aside')}</span>
                 </button>
               ))}
               <h3 className="mt-2 text-sm font-bold text-muted">{t('oal.home.design.ownTitle')}</h3>
@@ -228,7 +230,9 @@ export function HomeDesign() {
                 </>
               ) : (
                 <div className="flex flex-col gap-2">
-                  {thing.placed ? (
+                  {onItsWay(thing) ? (
+                    <p className="text-sm text-muted" data-testid="oal-thing-on-its-way">{t('oal.home.design.onItsWayHint')}</p>
+                  ) : thing.placed ? (
                     <>
                       <Button className="min-h-12" onClick={() => startMoving(thing)} data-testid="oal-thing-move">
                         {t('oal.home.design.move')}
@@ -263,6 +267,9 @@ export function HomeDesign() {
     </>
   )
 }
+
+/** Bought, still on Furniture City's truck. */
+const onItsWay = (x: Thing) => Boolean(x.arrives_at && Date.parse(x.arrives_at) > Date.now())
 
 /** A thing's width and depth as it stands unturned. */
 function ITEMS_SIZE(x: Thing): [number, number] {

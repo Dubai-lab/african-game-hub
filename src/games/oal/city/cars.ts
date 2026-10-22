@@ -12,6 +12,7 @@ import type { Appearance } from '../../../../supabase/functions/_shared/oal'
 import { armsOf, FITS, grips, hipsAt, hold, legsOf, seat as sitIn } from './wheelHands'
 import plans from '../carsPlan.v2.json'
 import kekehPlans from '../kekehPlan.json'
+import truckPlans from '../truckPlan.json'
 import { stillFigure } from '../Traffic'
 import type { Drive } from './driving'
 
@@ -19,6 +20,11 @@ export const CARS_URL = '/oal/cars.v2.glb'
 /** The kekeh (scripts/oal/makeKekeh.py: its body from the owner's pictures, its wheels and steering made). */
 export const KEKEH_URL = '/oal/kekeh.v1.glb'
 export const KEKEH_PLAN = (kekehPlans as unknown as Record<string, { wheels: Record<string, { at: number[]; r: number; node: string }>; steer: string; handlebar: string; driver: number[]; passenger: number[]; size: number[]; wheelbase: number }>).kekeh!
+
+/** Furniture City's delivery truck (scripts/oal/makeTruck.py): its cab's doors, its box's back
+ * doors, its wheels (twin at the back), its steering wheel. */
+export const TRUCK_URL = '/oal/truck.v1.glb'
+export const TRUCK_PLAN = (truckPlans as unknown as Record<string, CarPlan & { cargo: { x0: number; x1: number; floor: number; wide: number } }>).truck!
 
 export type CarModelName = 'suv' | 'suv_taxi' | 'suv_police'
 type CarPlan = { wheels: Record<string, { at: number[]; r: number; node: string }>; doors: { name: string; side: string; front: boolean; open: number }[]; trunk: string | null; steer: string | null; needles?: string[]; driver: number[]; size: number[]; wheelbase: number }
@@ -32,7 +38,9 @@ type Wheel = { pivot: Object3D; front: boolean }
 export type CarModel = {
   root: Group
   lean: Group
-  model: CarModelName | 'kekeh'
+  model: CarModelName | 'kekeh' | 'truck'
+  /** (Its wheels' own turn at rest, about the upright: the truck's are made a quarter turned.) */
+  wheelYaw?: number
   /** What turns as it is steered, whole (a kekeh's front wheel, its fork and mudguard). */
   steerPivot?: Object3D | null
   near: Object3D
@@ -156,6 +164,42 @@ export function buildKekeh(scene: Object3D, people: { scene: Object3D; animation
   }
 }
 
+/** The delivery truck, its driver at the wheel (of the town's people, still), in Furniture City's
+ * overalls. */
+export function buildTruck(scene: Object3D, people: { scene: Object3D; animations: AnimationClip[] } | null, rand: () => number): CarModel {
+  const plan = TRUCK_PLAN
+  const near = scene.getObjectByName('truck')!.clone(true)
+  const lean = new Group()
+  lean.add(near)
+  const root = new Group()
+  root.add(lean)
+  // The steering wheel turned about its own axis (its column's up): a part of its own between.
+  const column = near.getObjectByName(plan.steer!)
+  const wheel = near.getObjectByName('truck_steering_wheel')
+  let steering: Object3D | null = null
+  if (column && wheel) {
+    steering = new Group()
+    column.add(steering)
+    steering.add(wheel)
+  }
+  const doors = plan.doors.map((d) => ({ pivot: near.getObjectByName(d.name)!, open: d.open, side: d.side, front: d.front, t: 0 })).filter((d) => d.pivot)
+  if (people) seatDriver(people, randomLook('male', rand, ['overalls']), lean, plan.driver, -0.18, steering, 'wheel', 'truck', DRIVER_HIPS, 'truck')
+  return {
+    root,
+    lean,
+    model: 'truck',
+    near,
+    far: null,
+    wheelYaw: Math.PI / 2,
+    wheels: wheelsOf(near, plan),
+    farWheels: [],
+    steering,
+    doors,
+    lamps: { head: { value: 0 }, brake: { value: 0 } },
+    size: { len: plan.size[0]!, wide: 2.24, L: plan.wheelbase, r: Object.values(plan.wheels)[0]?.r ?? 0.41 },
+  }
+}
+
 /** How far above the plan's seat point a driver's hips are. */
 export const DRIVER_HIPS = 0.34
 
@@ -207,7 +251,7 @@ export function poseCar(car: CarModel, d: Drive, ground: number, dt: number, cam
   // (The parts keep the frame they were made in: a wheel's axle its x, its upright its y.)
   for (const w of close ? car.wheels : car.farWheels) {
     w.pivot.rotation.order = 'YXZ'
-    w.pivot.rotation.y = w.front ? d.steer : 0
+    w.pivot.rotation.y = (w.front ? d.steer : 0) + (car.wheelYaw ?? 0)
     w.pivot.rotation.x = d.spin
   }
   // A kekeh: its front wheel, fork and mudguard turned whole; its handlebar with them.

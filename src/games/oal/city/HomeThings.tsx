@@ -14,7 +14,7 @@ import { solidOf, type Solid } from './cityGen'
 import { ITEM_SIZES, ITEMS_URL } from './FurnitureCity'
 import { insideRooms, insideSolids } from './insides'
 
-export type Thing = { id: number; item: ItemId; placed: boolean; x: number | null; y: number | null; rot: number | null; paid: number }
+export type Thing = { id: number; item: ItemId; placed: boolean; x: number | null; y: number | null; rot: number | null; paid: number; bought_at: string; arrives_at: string | null }
 type HousePlan = { solids: number[][]; inside: number[][]; ceiling?: number; pieces: Record<string, { objects: string[]; solids: number[] }> }
 export const HOUSE = (plans as unknown as Record<string, HousePlan>).house!
 
@@ -32,6 +32,10 @@ export const homeStore = {
   /** (For the end-to-end checks: a point of the house on the map, the house's turn.) */
   toMap: undefined as undefined | ((u: number, v: number) => [number, number]),
   yaw: 0,
+  /** Furniture City's men carrying things in (the house's metres): the doors open for them. */
+  carriers: [] as [number, number][],
+  /** (The page's: the delivery is in, its things to be fetched again.) */
+  onDelivered: undefined as undefined | (() => void),
 }
 if (typeof window !== 'undefined') (window as unknown as { oalHome: typeof homeStore }).oalHome = homeStore
 

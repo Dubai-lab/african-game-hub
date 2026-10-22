@@ -52,6 +52,7 @@ import { businessKey, INSIDE_OF } from './business'
 import { CityTraffic, CityWalkers } from './CityTraffic'
 import { NearStore, STORE_KEEP, storeGround, storeToMap } from './FurnitureCity'
 import { HOUSE, HomeThings, homeStore } from './HomeThings'
+import { Delivery } from './Delivery'
 import { type CityPlace, insidePlaces, insideRooms, insideSolids, type Room } from './insides'
 import { type Destination, newRide, PASSENGER, type RidePhase, type RideState } from './ride'
 import { armsOf, FITS, grips, hold, legsOf, seat } from './wheelHands'
@@ -2198,7 +2199,7 @@ function CompoundModel({ c }: { c: Compound }) {
   const built = COMPOUNDS_BUILT[c.name as keyof typeof COMPOUNDS_BUILT]
   const gltf = useLoader(GLTFLoader, HOME_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
   const crowd = useLoader(GLTFLoader, CROWD_URL('male'), (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
-  const { root, gate, guards } = useMemo(() => {
+  const { root, gate, guards, doors } = useMemo(() => {
     const root = gltf.scene.getObjectByName(built.kind)!.clone(true)
     root.traverse((o) => {
       if (OUTSIDE.test(o.name)) o.visible = false
@@ -2219,7 +2220,9 @@ function CompoundModel({ c }: { c: Compound }) {
       root.add(fig)
       return fig
     })
-    return { root, gate: leaf ? { obj: leaf, x: leaf.position.x, open: 0 } : null, guards }
+    // The house's doors (on their hinges, as at home).
+    const doors = c.name === 'home' ? (plan.doors ?? []).map((d) => ({ ...d, obj: root.getObjectByName(d.name) ?? null, open: 0 })) : []
+    return { root, gate: leaf ? { obj: leaf, x: leaf.position.x, open: 0 } : null, guards, doors }
   }, [gltf, crowd, c, built])
   // The house's own furniture the family sold: gone from it.
   const soldSeen = useRef(-1)
@@ -2229,6 +2232,17 @@ function CompoundModel({ c }: { c: Compound }) {
     for (const [piece, p] of Object.entries(HOUSE.pieces)) for (const name of p.objects) {
       const o = root.getObjectByName(name)
       if (o) o.visible = !homeStore.sold.has(piece)
+    }
+  })
+  // A door swings open for whoever comes within a step and a half of it (the player, the men
+  // carrying a delivery in), and shuts after.
+  useFrame((_, raw) => {
+    const dt = Math.min(raw, 0.1)
+    for (const d of doors) {
+      if (!d.obj) continue
+      const near = [homeStore.at, ...homeStore.carriers].some(([u, v]) => Math.hypot(u - d.cx, v - d.cy) < 1.6)
+      d.open += ((near ? 1 : 0) - d.open) * Math.min(1, dt * 4)
+      d.obj.rotation.y = d.yaw + d.swing * d.open
     }
   })
   useFrame((_, raw) => {
@@ -2547,6 +2561,14 @@ export default function CityScene(props: Props) {
                   <HomeThings toMap={(u, v) => compoundPoint(c, u, v)} fromMap={(x, y) => compoundLocal(c, x, y)} yaw={c.yaw} player={player} />
                 </Optional>
               ))}
+            {props.town === 'Monrovia' &&
+              compounds
+                .filter((c) => c.name === 'home')
+                .map((c) => (
+                  <Optional key="delivery">
+                    <Delivery city={city} toMap={(u, v) => compoundPoint(c, u, v)} fromMap={(x, y) => compoundLocal(c, x, y)} player={player} />
+                  </Optional>
+                ))}
             {sites.map((x) => (
               <Optional key={x.name}>
                 <SiteModel s={x} />

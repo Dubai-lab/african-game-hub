@@ -98,6 +98,11 @@ function onward(city: City, usable: boolean[], g: Going, rand: () => number, all
   return { edge: next, from: g.to, to: e.a === g.to ? e.b : e.a, s: 0 }
 }
 
+/** Vehicles driven by others than the traffic (Furniture City's truck): kept clear of, as any
+ * other; and what the traffic is, each frame, for them to keep clear of. */
+export const extraVehicles = new Set<{ d: Drive | null }>()
+export const trafficNow: { all: Around['others'] } = { all: [] }
+
 type Car = { kind: Kind; root: Object3D; model: CarModel | null; d: Drive | null; size: { len: number; wide: number; L: number; r: number; top: number } }
 
 /** The player's own car among the others (it is never one of the traffic's). */
@@ -315,6 +320,12 @@ export function CityTraffic({
     for (const c of [...cars, hire.taxi, hire.kekeh]) if (c.d && c.root.visible) all.push({ car: c, box: boxOf(c.d), v: c.d.v, d: c.d })
     // The player's own car (standing or driven): kept clear of as any other.
     if (ownCar.d && ownCar.model) all.push({ car: ownCarEntry, box: boxOf(ownCar.d), v: ownCar.d.v })
+    for (const x of extraVehicles)
+      if (x.d) {
+        all.push({ car: x as unknown as Car, box: boxOf(x.d), v: x.d.v, d: x.d })
+        boxes.push({ x: x.d.x, y: x.d.y, yaw: x.d.yaw, hl: x.d.len / 2, hw: x.d.wide / 2 })
+      }
+    trafficNow.all = all
     const othersOf = (me: Car) => all.filter((o) => o.car !== me && Math.abs(o.box.x - me.d!.x) < 45 && Math.abs(o.box.y - me.d!.y) < 45)
     // While riding, the town is round the vehicle (the player is in it).
     camera.getWorldDirection(look)

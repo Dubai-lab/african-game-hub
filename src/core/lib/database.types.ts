@@ -2470,6 +2470,7 @@ export type Database = {
       }
       oal_things: {
         Row: {
+          arrives_at: string | null
           bought_at: string
           home: string
           id: number
@@ -2482,6 +2483,7 @@ export type Database = {
           y: number | null
         }
         Insert: {
+          arrives_at?: string | null
           bought_at?: string
           home?: string
           id?: never
@@ -2494,6 +2496,7 @@ export type Database = {
           y?: number | null
         }
         Update: {
+          arrives_at?: string | null
           bought_at?: string
           home?: string
           id?: never

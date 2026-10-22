@@ -29,13 +29,15 @@ const body = z.discriminatedUnion('action', [
   // Things for the house (public.oal_thing_action).
   z.object({ action: z.literal('buy_thing'), item: z.enum(ITEM_IDS as [ItemId, ...ItemId[]]) }),
   z.object({ action: z.enum(['sell_thing', 'store_thing']), id: z.int().min(1) }),
+  // The delivery carried in at the house (public.oal_thing_action: 'receive').
+  z.object({ action: z.literal('receive_things') }),
   z.object({ action: z.literal('sell_piece'), piece: z.enum(['living', 'bedroom']) }),
   z.object({ action: z.literal('place_thing'), id: z.int().min(1), x: z.number().min(-40).max(40), y: z.number().min(-40).max(40), rot: z.number().min(-7).max(7) }),
 ])
 
 const PHONE: Record<string, string> = { text: 'text', send_money: 'send', cash_in: 'cash_in', cash_out: 'cash_out', read_texts: 'read' }
 
-const THING: Record<string, string> = { buy_thing: 'buy', sell_thing: 'sell', place_thing: 'place', store_thing: 'store' }
+const THING: Record<string, string> = { buy_thing: 'buy', sell_thing: 'sell', place_thing: 'place', store_thing: 'store', receive_things: 'receive' }
 
 serve(body, async ({ userId, body }) => {
   const thing = THING[body.action]

@@ -12,7 +12,7 @@ export const HOME_URL = '/oal/home.v5.glb'
 export const OUTSIDE = /^(street|verge|neighbours|.*_(street|pavement|verge|across))$/
 
 type Rect = number[]
-type CompoundPlan = { solids: Rect[]; places: Record<string, { x: number; y: number }>; doors?: { name: string; cx: number; cy: number }[]; guards?: { x: number; y: number; face: number[] }[]; gate?: { name: string; solid: Rect; slide: number } }
+type CompoundPlan = { solids: Rect[]; places: Record<string, { x: number; y: number }>; doors?: { name: string; cx: number; cy: number; yaw: number; swing: number }[]; guards?: { x: number; y: number; face: number[] }[]; gate?: { name: string; solid: Rect; slide: number } }
 
 /** The compounds standing in the town: the model's root, its plot (x across, y from the gate at
  * the front, -y, to the back), the plot's middle (y), its walls and places. */

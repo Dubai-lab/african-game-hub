@@ -391,12 +391,14 @@ CLIPS = {
     # At the wheel: seated, both hands on it, the feet on the pedals (the game puts the hands on
     # the wheel's rim as it turns).
     'drive': 'Driving.fbx',
+    # Walking with something big held in both arms (a delivery carried in), on the spot.
+    'carry': 'Carrying.fbx',
 }
 for clip, file in CLIPS.items():
     path = os.path.join(ANIMATIONS, file)
     if not os.path.exists(path):
         continue
-    action = retarget(path, rig, clip, prefix='mixamorig:', recorded=skeleton(lambda t: 'mixamorig:' + t, fps=30), travel=clip != 'walk', at_rest=())
+    action = retarget(path, rig, clip, prefix='mixamorig:', recorded=skeleton(lambda t: 'mixamorig:' + t, fps=30), travel=clip not in ('walk', 'carry'), at_rest=())
     track = rig.animation_data.nla_tracks.new()
     track.name = clip
     track.strips.new(clip, 0, action)
