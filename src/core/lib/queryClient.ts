@@ -35,7 +35,10 @@ export const queryClient = new QueryClient({
       // (Browser only: at build time, when the landing page is rendered to HTML, a day-long timer
       // would keep the build process from ever exiting.)
       gcTime: typeof window === 'undefined' ? Infinity : ONE_DAY_MS,
-      retry: 2,
+      // On a weak connection a request is tried again (after 1, 2 and 4 seconds) before the
+      // player is told it could not be loaded.
+      retry: 3,
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
     },
     mutations: { retry: 0 },
   },

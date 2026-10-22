@@ -6,8 +6,8 @@
 // (public/oal/items.v3.glb), as one buys and keeps them.
 import { useFrame, useLoader } from '@react-three/fiber'
 import { type RefObject, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { type Object3D } from 'three'
-import { packed } from '../gltf'
+import { Group, type Object3D } from 'three'
+import { packed, useWarm } from '../gltf'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import type { ItemId } from '../../../../supabase/functions/_shared/oalItems'
 import plan from '../furnitureCity.json'
@@ -135,9 +135,17 @@ function roomOf(level: number) {
   return { key: 'store', kind: 'store', name: 'Furniture City', cat: 'store', mx, my, nx: -Y[0], ny: -Y[1], u0: -PLAN.W / 2, u1: PLAN.W / 2, d: PLAN.D, h: PLAN.ceilings[level]! - PLAN.levels[level]!, s: 1, f0: 0 }
 }
 
-export function FurnitureCity({ city }: { city: City }) {
+/** A model that never moves: its place worked out once, not again each frame. */
+export function freeze(root: Object3D) {
+  root.updateMatrixWorld(true)
+  root.traverse((o) => {
+    o.matrixAutoUpdate = false
+  })
+  root.matrixWorldAutoUpdate = false
+}
+
+export function FurnitureCity({ city, player }: { city: City; player: RefObject<{ x: number; y: number }> }) {
   const store = useLoader(GLTFLoader, STORE_URL, packed)
-  const items = useLoader(GLTFLoader, ITEMS_URL, packed)
   const root = useMemo(() => {
     const r = store.scene.clone(true)
     const base = groundHeight(city, STORE.x, STORE.y)
@@ -145,22 +153,26 @@ export function FurnitureCity({ city }: { city: City }) {
     storeWalker.loaded = true
     r.position.set(STORE.x, base, -STORE.y)
     r.rotation.y = STORE.yaw
-    // The things on display: the game's own, each where the plan has it.
-    for (const d of PLAN.displays) {
-      const src = items.scene.getObjectByName(`item_${d.item}`)
-      if (!src) continue
-      const thing: Object3D = src.clone(true)
-      const h = ITEM_SIZES[d.item].size[2]
-      thing.position.set(d.x, d.hang ? PLAN.ceilings[d.level]! - h : PLAN.levels[d.level]!, -d.y)
-      thing.rotation.set(0, d.yaw, 0)
-      r.add(thing)
-    }
     r.traverse((o) => {
       o.castShadow = false
       o.receiveShadow = true
     })
     return r
-  }, [store, items, city])
+  }, [store, city])
+  useWarm([root])
+  // (Fixed in place once it is in the scene.)
+  useEffect(() => freeze(root), [root])
+  // Its furniture on display only while one is near enough to see it (its file loaded then).
+  const [displays, setDisplays] = useState(false)
+  const lastLook = useRef(0)
+  useFrame(({ clock }) => {
+    if (clock.elapsedTime - lastLook.current < 1) return
+    lastLook.current = clock.elapsedTime
+    const p = player.current
+    if (!p) return
+    const want = Math.hypot(p.x - STORE.x, p.y - STORE.y) < (displays ? 110 : 90)
+    if (want !== displays) setDisplays(want)
+  })
   // Its floor's walls and places while one is there (or about it); its rooms for the camera.
   useFrame(() => {
     const key = storeWalker.inside ? storeWalker.level : -1
@@ -181,9 +193,45 @@ export function FurnitureCity({ city }: { city: City }) {
     },
     [],
   )
-  return <primitive object={root} />
+  return (
+    <>
+      <primitive object={root} />
+      {displays && (
+        <Suspense fallback={null}>
+          <Displays root={root} />
+        </Suspense>
+      )}
+    </>
+  )
 }
 let lastLevel = -2
+
+/** The things on display: the game's own, each where the plan has it (in the store, fixed). */
+function Displays({ root }: { root: Object3D }) {
+  const items = useLoader(GLTFLoader, ITEMS_URL, packed)
+  const group = useMemo(() => {
+    const g = new Group()
+    for (const d of PLAN.displays) {
+      const src = items.scene.getObjectByName(`item_${d.item}`)
+      if (!src) continue
+      const thing: Object3D = src.clone(true)
+      const h = ITEM_SIZES[d.item].size[2]
+      thing.position.set(d.x, d.hang ? PLAN.ceilings[d.level]! - h : PLAN.levels[d.level]!, -d.y)
+      thing.rotation.set(0, d.yaw, 0)
+      g.add(thing)
+    }
+    return g
+  }, [items])
+  useWarm([group])
+  useEffect(() => {
+    root.add(group)
+    freeze(group)
+    return () => {
+      root.remove(group)
+    }
+  }, [root, group])
+  return null
+}
 
 /** Furniture City while within sight of it (loaded as one comes near, as the landmarks are). */
 export function NearStore({ city, player }: { city: City; player: RefObject<{ x: number; y: number }> }) {
@@ -199,7 +247,7 @@ export function NearStore({ city, player }: { city: City; player: RefObject<{ x:
   })
   return near ? (
     <Suspense fallback={null}>
-      <FurnitureCity city={city} />
+      <FurnitureCity city={city} player={player} />
     </Suspense>
   ) : null
 }

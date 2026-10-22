@@ -2,6 +2,9 @@
 // in the form a graphics chip reads as it is (KTX2: Basis, turned on the device into the chip's
 // own compressed form: ASTC on phones, BC on computers), so a picture takes a fraction of the
 // memory it would unpacked. Every loader of the game's files is set up by `packed`.
+import { useThree } from '@react-three/fiber'
+import { useEffect } from 'react'
+import { Group, type Material, type Mesh, type MeshPhysicalMaterial, type Object3D } from 'three'
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import type { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
@@ -31,6 +34,25 @@ export function packed(loader: GLTFLoader) {
   loader.setKTX2Loader(ktx2Loader())
   if (retried.has(loader)) return
   retried.add(loader)
+  // Glass that bends the light behind it (a material's transmission) costs the whole scene drawn
+  // a second time each frame, every material's shader made twice: plain see-through glass instead.
+  loader.register(() => ({
+    name: 'oal-plain-glass',
+    afterRoot: async (result: { scene: Object3D }) => {
+      result.scene.traverse((o) => {
+        const mesh = o as Mesh
+        if (!mesh.isMesh) return
+        for (const m of (Array.isArray(mesh.material) ? mesh.material : [mesh.material]) as Material[]) {
+          const p = m as MeshPhysicalMaterial
+          if (!p.isMeshPhysicalMaterial || !(p.transmission > 0)) continue
+          p.transmission = 0
+          p.transparent = true
+          p.opacity = Math.min(p.opacity, 0.35)
+          p.depthWrite = false
+        }
+      })
+    },
+  }))
   const load = loader.load.bind(loader)
   loader.load = (url, onLoad, onProgress, onError) => {
     let tries = 0
@@ -41,4 +63,20 @@ export function packed(loader: GLTFLoader) {
       })
     attempt()
   }
+}
+
+/** Models' shaders made before they are first seen (in the background, where the graphics chip
+ * can: a model first drawn would otherwise hold the frame while its shaders are made). Hidden
+ * ones too (every mesh under them is gone through). */
+export function useWarm(objects: (Object3D | null | undefined)[]) {
+  const { gl, camera, scene } = useThree()
+  useEffect(() => {
+    const list = objects.filter((o): o is Object3D => Boolean(o))
+    if (!list.length) return
+    // (Gathered for the call only: each stays where it is, its parent its own.)
+    const holder = new Group()
+    holder.children.push(...list)
+    void gl.compileAsync(holder, camera, scene).catch(() => {})
+    holder.children.length = 0
+  }, objects) // eslint-disable-line react-hooks/exhaustive-deps
 }

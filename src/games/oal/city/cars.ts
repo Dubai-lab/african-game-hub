@@ -1,4 +1,4 @@
-// One Africa Life: the town's cars as they are drawn (public/oal/cars.v3.glb, made by
+// One Africa Life: the town's cars as they are drawn (public/oal/cars.v4.glb, made by
 // scripts/oal/makePaidCars.py from the owner's car pack; ../carsPlan.v2.json where their parts
 // are): an SUV coupe as a private car (in its owner's paint), a taxi, a police car. Each at full
 // quality near (its inside, its doors on their hinges, its steering wheel), its outside alone far
@@ -16,9 +16,11 @@ import truckPlans from '../truckPlan.json'
 import { stillFigure } from '../Traffic'
 import type { Drive } from './driving'
 
-export const CARS_URL = '/oal/cars.v3.glb'
+export const CARS_URL = '/oal/cars.v4.glb'
 /** The kekeh (scripts/oal/makeKekeh.py: its body from the owner's pictures, its wheels and steering made). */
 export const KEKEH_URL = '/oal/kekeh.v2.glb'
+/** The kekeh seen from afar: the same, a twelfth of its triangles. */
+export const KEKEH_FAR_URL = '/oal/kekeh-far.v1.glb'
 export const KEKEH_PLAN = (kekehPlans as unknown as Record<string, { wheels: Record<string, { at: number[]; r: number; node: string }>; steer: string; handlebar: string; driver: number[]; passenger: number[]; size: number[]; wheelbase: number }>).kekeh!
 
 /** Furniture City's delivery truck (scripts/oal/makeTruck.py): its cab's doors, its box's back
@@ -139,11 +141,14 @@ export function buildCar(scene: Object3D, model: CarModelName, paint: string | n
 }
 
 /** The kekeh: its driver at the handlebar (of the town's people, still). */
-export function buildKekeh(scene: Object3D, people: { scene: Object3D; animations: AnimationClip[] } | null, rand: () => number): CarModel {
+export function buildKekeh(scene: Object3D, people: { scene: Object3D; animations: AnimationClip[] } | null, rand: () => number, farScene?: Object3D): CarModel {
   const plan = KEKEH_PLAN
   const near = scene.getObjectByName('kekeh')!.clone(true)
+  const far = farScene?.getObjectByName('kekeh')?.clone(true) ?? null
+  if (far) far.visible = false
   const lean = new Group()
   lean.add(near)
+  if (far) lean.add(far)
   const root = new Group()
   root.add(lean)
   const handle = near.getObjectByName(plan.handlebar)
@@ -153,10 +158,10 @@ export function buildKekeh(scene: Object3D, people: { scene: Object3D; animation
     lean,
     model: 'kekeh',
     near,
-    far: null,
+    far,
     steerPivot: near.getObjectByName(plan.steer) ?? null,
     wheels: Object.entries(plan.wheels).map(([k, w]) => ({ pivot: near.getObjectByName(w.node)!, front: false, key: k })),
-    farWheels: [],
+    farWheels: far ? Object.values(plan.wheels).flatMap((w) => { const pivot = far.getObjectByName(w.node); return pivot ? [{ pivot, front: false }] : [] }) : [],
     steering: handle?.children[0] ?? null,
     doors: [],
     lamps: { head: { value: 0 }, brake: { value: 0 } },
@@ -241,8 +246,14 @@ export function poseCar(car: CarModel, d: Drive, ground: number, dt: number, cam
   car.root.position.set(d.x, ground, -d.y)
   car.root.rotation.y = d.yaw
   const close = !car.far || !camera || Math.hypot(camera.x - d.x, camera.z + d.y) < NEAR
-  car.near.visible = close
-  if (car.far) car.far.visible = !close
+  // Only the version seen is in the scene (the other not even worked out each frame).
+  if (car.far) {
+    const on = close ? car.near : car.far
+    const off = close ? car.far : car.near
+    if (off.parent) off.parent.remove(off)
+    if (on.parent !== car.lean) car.lean.add(on)
+    on.visible = true
+  } else car.near.visible = true
   // Leaning out of the bend (its turning times its speed), dipping its nose as it brakes.
   const roll = Math.max(-0.05, Math.min(0.05, -d.yawRate * d.v * 0.012))
   const pitch = d.braking ? Math.min(0.025, d.v * 0.004) : 0

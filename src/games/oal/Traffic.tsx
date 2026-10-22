@@ -12,7 +12,7 @@ import { packed } from './gltf'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { person } from './ArrivalsScene'
 import { CROWD_URL, lookKey, randomLook } from './character'
-import { buildCar, buildKekeh, type CarModel, CARS_URL, KEKEH_URL, poseCar, randomPaint } from './city/cars'
+import { buildCar, buildKekeh, type CarModel, CARS_URL, KEKEH_FAR_URL, KEKEH_URL, poseCar, randomPaint } from './city/cars'
 import type { Drive } from './city/driving'
 
 export const VEHICLES_URL = '/oal/vehicles.v2.glb'
@@ -161,6 +161,7 @@ export function Traffic({ lanes, reach, player, moving, spacing = 35 }: { lanes:
   const people = useLoader(GLTFLoader, CROWD_URL('male'), packed)
   const carsFile = useLoader(GLTFLoader, CARS_URL, packed)
   const kekehFile = useLoader(GLTFLoader, KEKEH_URL, packed)
+  const kekehFar = useLoader(GLTFLoader, KEKEH_FAR_URL, packed)
   const { cars, roads, group } = useMemo(() => {
     const roads = lanes.map((l) => laneOf(l, reach)).filter((l) => l.length > 40)
     const models = vehicleModels(gltf.scene)
@@ -175,7 +176,7 @@ export function Traffic({ lanes, reach, player, moving, spacing = 35 }: { lanes:
         const r = rand()
         const kind: Kind = r < 0.42 ? 'taxi' : r < 0.67 ? 'car' : r < 0.88 ? 'kekeh' : r < 0.95 ? 'bus' : 'police'
         // The town's own (the cars of the owner's pack, the kekeh made from pictures); the bus as it was.
-        const model = kind === 'kekeh' ? buildKekeh(kekehFile.scene, people, rand) : kind === 'bus' ? null : buildCar(carsFile.scene, kind === 'taxi' ? 'suv_taxi' : kind === 'police' ? 'suv_police' : 'suv', kind === 'car' ? randomPaint(rand) : null, people, rand)
+        const model = kind === 'kekeh' ? buildKekeh(kekehFile.scene, people, rand, kekehFar.scene) : kind === 'bus' ? null : buildCar(carsFile.scene, kind === 'taxi' ? 'suv_taxi' : kind === 'police' ? 'suv_police' : 'suv', kind === 'car' ? randomPaint(rand) : null, people, rand)
         const root = model ? model.root : buildVehicle(models, people, kind, rand)
         if (!root) continue
         const s0 = ((k + rand() * 0.5) / count) * lane.length
@@ -186,7 +187,7 @@ export function Traffic({ lanes, reach, player, moving, spacing = 35 }: { lanes:
     })
     const group = cars.map((c) => c.root)
     return { cars, roads, group }
-  }, [gltf, carsFile, kekehFile, people, lanes, reach, spacing])
+  }, [gltf, carsFile, kekehFile, kekehFar, people, lanes, reach, spacing])
 
   useFrame((_, raw) => {
     const dt = Math.min(raw, 0.1)
@@ -233,7 +234,7 @@ export function Traffic({ lanes, reach, player, moving, spacing = 35 }: { lanes:
         d.spin += (car.v * dt) / d.r
         d.x = at.x
         d.y = at.y
-        poseCar(car.model, d, 0.03, dt)
+        poseCar(car.model, d, 0.03, dt, { x: p.x, z: -p.y })
       } else {
         car.root.position.set(at.x, 0.03, -at.y)
         car.root.rotation.y = at.yaw

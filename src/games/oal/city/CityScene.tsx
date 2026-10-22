@@ -27,7 +27,7 @@ import {
   InstancedMesh,
   Matrix4,
   MeshStandardMaterial,
-  type Object3D,
+  Object3D,
   Quaternion,
   Plane,
   PlaneGeometry,
@@ -50,7 +50,7 @@ import { TOWNS } from '../StreetScene'
 import { keepOutOf, type Moving, Traffic } from '../Traffic'
 import { businessKey, INSIDE_OF } from './business'
 import { CityTraffic, CityWalkers } from './CityTraffic'
-import { NearStore, STORE_KEEP, storeGround, storeToMap } from './FurnitureCity'
+import { freeze, NearStore, STORE_KEEP, storeGround, storeToMap } from './FurnitureCity'
 import { HOUSE, HomeThings, homeStore } from './HomeThings'
 import { Delivery } from './Delivery'
 import { type CityPlace, insidePlaces, insideRooms, insideSolids, type Room } from './insides'
@@ -1061,6 +1061,16 @@ function HubStreet({ hub, player }: { hub: Hub; player: RefObject<{ x: number; y
   useEffect(() => () => void hubTraffic.delete(hub.town), [hub.town])
   const gltf = useLoader(GLTFLoader, where.url, packed)
   const scene = useMemo(() => gltf.scene.clone(true), [gltf])
+  // (The street itself never moves: fixed in place once it stands there; its own traffic moves.)
+  const fixed = useRef<Group>(null)
+  useEffect(() => {
+    const g = fixed.current
+    if (g) {
+      g.updateMatrixWorld(true)
+      g.matrixAutoUpdate = false
+    }
+    freeze(scene)
+  }, [scene])
   useFrame(() => {
     const p = player.current
     if (p && local.current) {
@@ -1069,7 +1079,7 @@ function HubStreet({ hub, player }: { hub: Hub; player: RefObject<{ x: number; y
     }
   })
   return (
-    <group position={[hub.x, 0.005, -hub.y]} name={`hub-${hub.town}`}>
+    <group ref={fixed} position={[hub.x, 0.005, -hub.y]} name={`hub-${hub.town}`}>
       <primitive object={scene} />
       {where.plan.lanes && where.plan.lanes.length > 0 && (
         <Suspense fallback={null}>
@@ -1151,8 +1161,22 @@ function Stats() {
       return false
     }
   }, [])
+  // (Counting, while the numbers are on: which of the scene's parts are worked out each frame.)
+  const counted = useMemo(() => ({ by: {} as Record<string, number>, patched: false }), [])
   useFrame(({ gl, scene }, dt) => {
     if (!on) return
+    if (!counted.patched && localStorage.getItem('oal-stats') === 'updates') {
+      counted.patched = true
+      const proto = Object3D.prototype as unknown as { updateMatrixWorld: (force?: boolean) => void }
+      const orig = proto.updateMatrixWorld
+      proto.updateMatrixWorld = function (this: Object3D, force?: boolean) {
+        let top: Object3D = this
+        while (top.parent && top.parent !== scene) top = top.parent
+        const k = top === scene ? 'scene' : top.name || `${top.type}${scene.children.indexOf(top)}`
+        counted.by[k] = (counted.by[k] ?? 0) + 1
+        return orig.call(this, force)
+      }
+    }
     acc.current.t += dt
     acc.current.n++
     if (acc.current.t >= 1) {
@@ -1161,9 +1185,14 @@ function Stats() {
     }
     cityStats.triangles = gl.info.render.triangles
     cityStats.calls = gl.info.render.calls
+    // (The shaders made so far: each a pause the first time it is needed.)
+    const programs = (gl.info as unknown as { programs?: { name: string; cacheKey: string }[] }).programs ?? []
+    ;(cityStats as unknown as { programs: number; programNames: string[] }).programs = programs.length
+    ;(cityStats as unknown as { programNames: string[] }).programNames = programs.map((p) => `${p.name}|${p.cacheKey}`)
     if (acc.current.n === 0) {
       // Once a second: what is drawn, by whose it is (the nearest named group up), people apart.
       const by: Record<string, number> = {}
+      const tris: Record<string, number> = {}
       scene.traverse((o) => {
         const m = o as Mesh
         if (!m.isMesh || !m.visible) return
@@ -1178,8 +1207,16 @@ function Stats() {
         while (owner && !owner.name) owner = owner.parent
         const k = (o as SkinnedMesh).isSkinnedMesh ? 'people' : (owner?.name ?? 'other')
         by[k] = (by[k] ?? 0) + 1
+        // (And its triangles, by the scene's top-level group it is in: what draws the most.)
+        let top: Object3D = o
+        while (top.parent && top.parent !== scene) top = top.parent
+        const g = m.geometry
+        const n = ((g.index ? g.index.count : (g.getAttribute('position')?.count ?? 0)) / 3) * ((m as unknown as { count?: number }).count ?? 1)
+        const tk = (o as SkinnedMesh).isSkinnedMesh ? 'people' : top.name || `${top.type}${scene.children.indexOf(top)}`
+        tris[tk] = (tris[tk] ?? 0) + n
       })
       ;(cityStats as unknown as { by: Record<string, number> }).by = by
+      ;(cityStats as unknown as { tris: Record<string, number> }).tris = tris
       // And what the renderer works out each frame (all but subtrees left alone), by whose.
       const nodes: Record<string, number> = {}
       const walk = (o: Object3D, owner: string) => {
@@ -1189,8 +1226,12 @@ function Stats() {
       }
       walk(scene, 'scene')
       ;(cityStats as unknown as { nodes: Record<string, number> }).nodes = nodes
+      // (Per frame, over the second gone.)
+      ;(cityStats as unknown as { updates: Record<string, number> }).updates = Object.fromEntries(Object.entries(counted.by).map(([k, n]) => [k, Math.round(n / 60)]))
+      counted.by = {}
     }
     ;(window as unknown as { oalCityStats: typeof cityStats }).oalCityStats = cityStats
+    ;(window as unknown as { oalScene: unknown }).oalScene = scene
   })
   return null
 }
@@ -1532,6 +1573,8 @@ function NearLandmarks({ player }: { player: RefObject<{ x: number; y: number }>
 function LandmarkModel({ l }: { l: Landmark }) {
   const gltf = useLoader(GLTFLoader, l.url, packed)
   const [x, y] = landmarkPoint(l, 0, 0)
+  // (It never moves: fixed in place once it stands there.)
+  useEffect(() => freeze(gltf.scene), [gltf])
   return <primitive object={gltf.scene} position={[x, 0.01, -y]} rotation={[0, l.yaw, 0]} />
 }
 
@@ -2255,6 +2298,14 @@ function CompoundModel({ c }: { c: Compound }) {
     const doors = c.name === 'home' ? (plan.doors ?? []).map((d) => ({ ...d, obj: root.getObjectByName(d.name) ?? null, open: 0 })) : []
     return { root, gate: leaf ? { obj: leaf, x: leaf.position.x, open: 0 } : null, guards, doors }
   }, [gltf, crowd, c, built])
+  // Its parts fixed in place (worked out once), but for those that move: its doors, its gate.
+  useEffect(() => {
+    root.updateMatrixWorld(true)
+    const moving = new Set<Object3D>([...doors.map((d) => d.obj), gate?.obj].filter((o): o is Object3D => Boolean(o)))
+    root.traverse((o) => {
+      if (!moving.has(o)) o.matrixAutoUpdate = false
+    })
+  }, [root, doors, gate])
   // The house's own furniture the family sold: gone from it.
   const soldSeen = useRef(-1)
   useFrame(() => {
@@ -2565,7 +2616,12 @@ export default function CityScene(props: Props) {
   const ownRide = useRef<RideState>(newRide())
   const ride = props.ride ?? ownRide
   return (
-    <Canvas frameloop={props.hidden ? 'never' : 'always'} dpr={[1, 1.5]} camera={{ fov: 60, near: 0.1, far: 700, position: [0, 2.4, 3] }} gl={{ antialias: true }} style={{ touchAction: 'none' }}>
+    <Canvas frameloop={props.hidden ? 'never' : 'always'} dpr={[1, 1.5]} camera={{ fov: 60, near: 0.1, far: 700, position: [0, 2.4, 3] }} gl={{ antialias: true }} onCreated={({ gl, scene }) => {
+        // (Shaders made without waiting on each to report: a frame is never held for it.)
+        gl.debug.checkShaderErrors = false
+        // The town itself never moves: its parts are worked out again only when they move.
+        scene.matrixAutoUpdate = false
+      }} style={{ touchAction: 'none' }}>
       <color attach="background" args={['#c9d9e6']} />
       <fog attach="fog" args={['#c9d9e6', 110, 480]} />
       <Light />

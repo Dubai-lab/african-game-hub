@@ -9,7 +9,7 @@
 import { useFrame, useLoader, useThree } from '@react-three/fiber'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial, type Object3D } from 'three'
-import { packed } from '../gltf'
+import { packed, useWarm } from '../gltf'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import i18n from '@/core/i18n'
 import { callFunction } from '@/core/lib/functions'
@@ -136,6 +136,7 @@ function Run({ city, toMap, fromMap, player }: Props) {
     })
     return { truck, men, group }
   }, [file, crowd])
+  useWarm([group])
   const state = useMemo(() => ({ v: { d: null as Drive | null }, stopS: 0, wait: 0, back: 0, sending: false, home: null as null | { leg: Leg; s: number }, way: [] as [number, number][], since: 0 }), [])
   useEffect(() => {
     extraVehicles.add(state.v)

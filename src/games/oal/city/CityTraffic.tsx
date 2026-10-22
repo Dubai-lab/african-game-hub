@@ -9,13 +9,13 @@
 import { useFrame, useLoader, useThree } from '@react-three/fiber'
 import { type RefObject, useEffect, useMemo } from 'react'
 import { type Object3D, Vector3 } from 'three'
-import { packed } from '../gltf'
+import { packed, useWarm } from '../gltf'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { type Sex } from '../../../../supabase/functions/_shared/oal'
 import { person } from '../ArrivalsScene'
 import { CROWD_URL, randomLook } from '../character'
 import { buildVehicle, type Kind, type Moving, SIZE, SPEED, vehicleModels, VEHICLES_URL } from '../Traffic'
-import { CARS_URL, type CarModel, type CarModelName, buildCar, buildKekeh, KEKEH_URL, poseCar, randomPaint } from './cars'
+import { CARS_URL, type CarModel, type CarModelName, buildCar, buildKekeh, KEKEH_FAR_URL, KEKEH_URL, poseCar, randomPaint } from './cars'
 import { cityNight } from './night'
 import { ownCar } from './ownCar'
 import { type Engine, engine, playOnce } from './sound'
@@ -149,6 +149,7 @@ export function CityTraffic({
   const gltf = useLoader(GLTFLoader, VEHICLES_URL, packed)
   const carsFile = useLoader(GLTFLoader, CARS_URL, packed)
   const kekehFile = useLoader(GLTFLoader, KEKEH_URL, packed)
+  const kekehFar = useLoader(GLTFLoader, KEKEH_FAR_URL, packed)
   const people = useLoader(GLTFLoader, CROWD_URL('male'), packed)
   const index = useMemo(() => edgeIndex(city, keep), [city, keep])
   const stats = useMemo(() => {
@@ -165,7 +166,7 @@ export function CityTraffic({
     // A vehicle of a kind: a car of the new kind (its wheels, its steering), else the old model.
     const make = (kind: Kind): Car | null => {
       const m = modelFor(kind, rand)
-      const model = m ? buildCar(carsFile.scene, m.model, m.paint, people, rand) : kind === 'kekeh' ? buildKekeh(kekehFile.scene, people, rand) : null
+      const model = m ? buildCar(carsFile.scene, m.model, m.paint, people, rand) : kind === 'kekeh' ? buildKekeh(kekehFile.scene, people, rand, kekehFar.scene) : null
       const root = model ? model.root : buildVehicle(models, people, kind, rand)
       if (!root) return null
       root.visible = false
@@ -181,7 +182,8 @@ export function CityTraffic({
     // The vehicles that come when waved down: a taxi and a kekeh, kept apart from the rest.
     const hire = { taxi: make('taxi')!, kekeh: make('kekeh')! }
     return { cars, rand, hire }
-  }, [gltf, carsFile, kekehFile, people])
+  }, [gltf, carsFile, kekehFile, kekehFar, people])
+  useWarm([...cars.map((c) => c.root), hire.taxi.root, hire.kekeh.root])
   const allowed = (kind: Kind) => (e: Edge) => e.kind !== 'path' && (kind === 'bus' ? e.kind !== 'minor' : true)
   // The engines heard (the nearest few), which police drive with their sirens on, the horns' and
   // tyres' rests, the last speeds (to hear a hard stop).
@@ -466,6 +468,7 @@ export function CityWalkers({ city, keep, player }: { city: City; keep: Keep[]; 
     }
     return { walkers, rand }
   }, [men, women])
+  useWarm(walkers.map((w) => w.root))
   const everywhere = () => true
   useFrame((_, raw) => {
     const dt = Math.min(raw, 0.1)
