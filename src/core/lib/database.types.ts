@@ -1709,6 +1709,21 @@ export type Database = {
           },
         ]
       }
+      oal_item_prices: {
+        Row: {
+          id: string
+          price: number
+        }
+        Insert: {
+          id: string
+          price: number
+        }
+        Update: {
+          id?: string
+          price?: number
+        }
+        Relationships: []
+      }
       oal_jobs: {
         Row: {
           closes: string
@@ -2109,6 +2124,32 @@ export type Database = {
           },
         ]
       }
+      oal_pieces_sold: {
+        Row: {
+          piece: string
+          sold_at: string
+          user_id: string
+        }
+        Insert: {
+          piece: string
+          sold_at?: string
+          user_id: string
+        }
+        Update: {
+          piece?: string
+          sold_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oal_pieces_sold_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "oal_lives"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       oal_road_routes: {
         Row: {
           closes: string
@@ -2421,6 +2462,60 @@ export type Database = {
           {
             foreignKeyName: "oal_texts_to_user_fkey"
             columns: ["to_user"]
+            isOneToOne: false
+            referencedRelation: "oal_lives"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      oal_things: {
+        Row: {
+          bought_at: string
+          home: string
+          id: number
+          item: string
+          paid: number
+          placed: boolean
+          rot: number | null
+          user_id: string
+          x: number | null
+          y: number | null
+        }
+        Insert: {
+          bought_at?: string
+          home?: string
+          id?: never
+          item: string
+          paid: number
+          placed?: boolean
+          rot?: number | null
+          user_id: string
+          x?: number | null
+          y?: number | null
+        }
+        Update: {
+          bought_at?: string
+          home?: string
+          id?: never
+          item?: string
+          paid?: number
+          placed?: boolean
+          rot?: number | null
+          user_id?: string
+          x?: number | null
+          y?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oal_things_item_fkey"
+            columns: ["item"]
+            isOneToOne: false
+            referencedRelation: "oal_item_prices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oal_things_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "oal_lives"
             referencedColumns: ["user_id"]
@@ -4287,6 +4382,10 @@ export type Database = {
         Args: { p_action: string; p_user_id: string }
         Returns: Json
       }
+      oal_piece_sell: {
+        Args: { p_piece: string; p_user_id: string }
+        Returns: Json
+      }
       oal_road_action: {
         Args: { p_action: string; p_target: string; p_user_id: string }
         Returns: Json
@@ -4310,6 +4409,10 @@ export type Database = {
           p_stock: number
           p_user_id: string
         }
+        Returns: Json
+      }
+      oal_thing_action: {
+        Args: { p_action: string; p_data: Json; p_user_id: string }
         Returns: Json
       }
       oal_travel_state: { Args: { p_user_id: string }; Returns: Json }

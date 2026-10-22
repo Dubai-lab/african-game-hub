@@ -29,6 +29,7 @@ const body = z.discriminatedUnion('action', [
   // Things for the house (public.oal_thing_action).
   z.object({ action: z.literal('buy_thing'), item: z.enum(ITEM_IDS as [ItemId, ...ItemId[]]) }),
   z.object({ action: z.enum(['sell_thing', 'store_thing']), id: z.int().min(1) }),
+  z.object({ action: z.literal('sell_piece'), piece: z.enum(['living', 'bedroom']) }),
   z.object({ action: z.literal('place_thing'), id: z.int().min(1), x: z.number().min(-40).max(40), y: z.number().min(-40).max(40), rot: z.number().min(-7).max(7) }),
 ])
 
@@ -38,7 +39,9 @@ const THING: Record<string, string> = { buy_thing: 'buy', sell_thing: 'sell', pl
 
 serve(body, async ({ userId, body }) => {
   const thing = THING[body.action]
-  const result = thing
+  const result = body.action === 'sell_piece'
+    ? await admin.rpc('oal_piece_sell', { p_user_id: userId, p_piece: body.piece })
+    : thing
     ? await admin.rpc('oal_thing_action', { p_user_id: userId, p_action: thing, p_data: { ...body, action: undefined } })
     : body.action === 'unbox' || body.action === 'charge'
     ? await admin.rpc('oal_phone_box_action', { p_user_id: userId, p_action: body.action })

@@ -160,7 +160,8 @@
       "ALREADY_PAID": "You have paid already.",
       "NOT_PAID": "Pay at the cashier first.",
       "HOME_FULL": "Your house cannot hold more things. Sell some first.",
-      "NOT_YOURS": "That is not yours."
+      "NOT_YOURS": "That is not yours.",
+      "ALREADY_SOLD": "Already sold."
     },
     "samePassword": "That is your current password. Choose a different one.",
     "captchaFailed": "The security check did not pass. Reload the page and try again."
@@ -2846,7 +2847,36 @@
         "charged": "On charge. It will be full in an hour."
       },
       "sitDown": "Sit down",
-      "standUp": "Stand up"
+      "standUp": "Stand up",
+      "design": {
+        "open": "Arrange your home",
+        "title": "Your home",
+        "none": "Nothing yet: buy things at Furniture City on Tubman Boulevard.",
+        "inHouse": "In the house",
+        "aside": "Kept aside",
+        "ownTitle": "The house's own furniture",
+        "pieces": {
+          "living": "The living room furniture (sofa, armchairs, table, TV)",
+          "bedroom": "The bedroom furniture (wardrobes, side tables, desk, guest bed)"
+        },
+        "sellFor": "Sell for US$ {{got}}",
+        "sellPieceConfirm": "Sell this furniture for US$ {{got}}? It is gone at once.",
+        "sellConfirm": "Sell the {{name}} for US$ {{got}}? It is gone at once.",
+        "sold": "Sold for US$ {{got}}.",
+        "back": "Back",
+        "moveHint": "Move it a step at a time (as you see it) and turn it; Done puts it there.",
+        "left": "Left",
+        "right": "Right",
+        "turn": "Turn",
+        "cancel": "Cancel",
+        "done": "Done",
+        "move": "Move it",
+        "putAside": "Put it aside",
+        "putHere": "Put it here",
+        "noRoom": "No room there: move it clear of the walls and other things.",
+        "toward": "Toward you",
+        "away": "Away from you"
+      }
     },
     "shop": {
       "look": "Look at the {{name}}",
@@ -2984,7 +3014,8 @@
       "places": {
         "home": "Your family's house",
         "health": "Ministry of Health",
-        "healthGate": "Ministry of Health, the gate"
+        "healthGate": "Ministry of Health, the gate",
+        "furniture": "Furniture City, Tubman Boulevard"
       },
       "enter": {
         "home": "Go in",

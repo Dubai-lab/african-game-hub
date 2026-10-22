@@ -384,11 +384,13 @@ box(bm, uv, (-3.6, -2.7, 0), (1.1, 0.6, 0.42), mat=3)
 box(bm, uv, (0.55, -4.0, 0), (0.45, 1.6, 0.55), mat=3)
 box(bm, uv, (0.7, -4.0, 0.9), (0.05, 1.3, 0.75), mat=4)
 house.add(kit.new_object('living_furniture', bm, [m_fabric, m_cushion, m_rug, m_dark_wood, m_tv]))
+LIVING_SOLIDS = len(house.solids)
 house.solid(-5.95, -3.98, -4.98, -1.62)
 house.solid(-3.45, -4.65, -2.55, -3.75)
 house.solid(-3.45, -1.65, -2.55, -0.75)
 house.solid(-4.2, -3.05, -3.0, -2.35)
 house.solid(0.3, -4.85, 0.85, -3.15)
+LIVING_SOLIDS = list(range(LIVING_SOLIDS, len(house.solids)))
 house.add(kit.thing('potted_palm', (-5.4, -0.2), 0.4))
 # Curtains at the living room's windows.
 bm = bmesh.new()
@@ -459,11 +461,13 @@ box(bm, uv, (5.7, 3.9, 0), (0.06, 1.3, 1.0), mat=1)
 box(bm, uv, (2.0, 4.6, 0), (1.1, 0.6, 2.0), mat=0)
 box(bm, uv, (2.0, 1.2, 0.72), (1.0, 0.55, 0.04), mat=0)
 house.add(kit.new_object('bedroom_furniture', bm, [m_dark_wood, m_wood, m_bedding]))
+BEDROOM_SOLIDS = len(house.solids)
 house.solid(-5.92, 0.58, -5.28, 2.22)
 house.solid(-2.45, 4.35, -1.95, 4.85)
 house.solid(3.85, 3.25, 5.75, 4.55)
 house.solid(1.45, 4.3, 2.55, 4.95)
 house.solid(1.5, 0.92, 2.5, 1.48)
+BEDROOM_SOLIDS = list(range(BEDROOM_SOLIDS, len(house.solids)))
 # The master bed's own place is 'bed' (from bed()); the second bed is a guest's.
 
 # ---- The yard, the compound wall and gate, the street ----
@@ -911,6 +915,12 @@ offices.append(health)
 # (a chair at its table): the sitter is seated straight away.
 PLAN_EXTRA['house']['seats'] = [{'x': -5.25, 'y': y, 'face': [1, 0], 'z': 0.1} for y in (-3.6, -2.8, -2.0)] + [
     {'x': x, 'y': y, 'face': f, 'z': 0.02, 'tight': True} for (x, y, f) in ((2.9, -3.65, [0, 1]), (3.9, -3.65, [0, 1]), (2.9, -2.35, [0, -1]), (3.9, -2.35, [0, -1]), (2.35, -3.0, [1, 0]), (4.45, -3.0, [-1, 0]))]
+# The house's own furniture the family may sell (the game hides each piece sold, its solids, its
+# seats): the living room's (its sofa's seats are the ones along the west wall), the bedrooms'.
+PLAN_EXTRA['house']['pieces'] = {
+    'living': {'objects': ['living_furniture'], 'solids': LIVING_SOLIDS, 'seats_x': -5.25},
+    'bedroom': {'objects': ['bedroom_furniture'], 'solids': BEDROOM_SOLIDS},
+}
 PLAN_EXTRA.setdefault('room', {})['seats'] = [{'x': -1.4, 'y': 0.5, 'face': [0, 1], 'z': 0.0, 'tight': True}]
 
 # ---- Out -----------------------------------------------------------------------------------------

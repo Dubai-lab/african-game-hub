@@ -50,7 +50,8 @@ import { TOWNS } from '../StreetScene'
 import { keepOutOf, type Moving, Traffic } from '../Traffic'
 import { businessKey, INSIDE_OF } from './business'
 import { CityTraffic, CityWalkers } from './CityTraffic'
-import { NearStore, STORE_KEEP, storeGround } from './FurnitureCity'
+import { NearStore, STORE_KEEP, storeGround, storeToMap } from './FurnitureCity'
+import { HOUSE, HomeThings, homeStore } from './HomeThings'
 import { type CityPlace, insidePlaces, insideRooms, insideSolids, type Room } from './insides'
 import { type Destination, newRide, PASSENGER, type RidePhase, type RideState } from './ride'
 import { armsOf, FITS, grips, hold, legsOf, seat } from './wheelHands'
@@ -2001,6 +2002,7 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
     if (player.current) {
       player.current.x = s.x
       player.current.y = s.y
+      ;(player.current as { f?: number }).f = s.facing
     }
     if (me.actions.walk && me.actions.idle) {
       const w = waving ? 0 : 1
@@ -2014,7 +2016,7 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
       s.told = 0
       onPosition?.(s.x, s.y, s.facing, s.speed > 0.2)
       // Inside a business: its name; else the road's.
-      const name = roomAt(s.x, s.y)?.name ?? namedRoad(city, s.x, s.y)
+      const name = roomAt(s.x, s.y)?.name || namedRoad(city, s.x, s.y)
       // By a road a vehicle can pull in on (within a few metres of its edge).
       const road = nearestRoad(city, s.x, s.y, 30)
       const by = Boolean(road && road.d < road.seg.w / 2 + 6)
@@ -2155,6 +2157,15 @@ function namedRoad(city: City, x: number, y: number): string | null {
 const cityMoving: { current: Moving[] } = { current: [] }
 
 /** A point of a compound's model (x across, y from its gate at the front to its back) in the town. */
+/** A point of the town in a compound's own metres (compoundPoint's inverse). */
+function compoundLocal(c: Compound, x: number, y: number): [number, number] {
+  const cs = Math.cos(c.yaw)
+  const sn = Math.sin(c.yaw)
+  const dx = x - c.x
+  const dy = y - c.y
+  return [cs * dx + sn * dy, -sn * dx + cs * dy + COMPOUNDS_BUILT[c.name as keyof typeof COMPOUNDS_BUILT].cy]
+}
+
 function compoundPoint(c: Compound, u: number, v: number): [number, number] {
   const cs = Math.cos(c.yaw)
   const sn = Math.sin(c.yaw)
@@ -2171,6 +2182,11 @@ function compoundSolids(c: Compound): Solid[] {
   const k = `${c.name}:${c.x}:${c.y}`
   let walls = builtSolids.get(k)
   if (!walls) builtSolids.set(k, (walls = built.plan.solids.map(rect)))
+  // (The house's own furniture the family sold: no longer walked against.)
+  if (c.name === 'home' && homeStore.sold.size) {
+    const gone = new Set([...homeStore.sold].flatMap((piece) => HOUSE.pieces[piece]?.solids ?? []))
+    walls = walls.filter((_, i) => !gone.has(i))
+  }
   const gate = 'gate' in built.plan ? built.plan.gate : undefined
   return gate && c.name === 'health' && !gates.health ? [...walls, rect(gate.solid)] : walls
 }
@@ -2205,6 +2221,16 @@ function CompoundModel({ c }: { c: Compound }) {
     })
     return { root, gate: leaf ? { obj: leaf, x: leaf.position.x, open: 0 } : null, guards }
   }, [gltf, crowd, c, built])
+  // The house's own furniture the family sold: gone from it.
+  const soldSeen = useRef(-1)
+  useFrame(() => {
+    if (c.name !== 'home' || soldSeen.current === homeStore.version) return
+    soldSeen.current = homeStore.version
+    for (const [piece, p] of Object.entries(HOUSE.pieces)) for (const name of p.objects) {
+      const o = root.getObjectByName(name)
+      if (o) o.visible = !homeStore.sold.has(piece)
+    }
+  })
   useFrame((_, raw) => {
     if (!gate || !('gate' in built.plan) || !built.plan.gate) return
     const want = c.name === 'health' && gates.health ? 1 : 0
@@ -2462,6 +2488,11 @@ export default function CityScene(props: Props) {
         if (p) list.push({ name, x: p.x, y: p.y })
       }
     }
+    // Furniture City, on Tubman Boulevard: dropped at its forecourt.
+    if (props.town === 'Monrovia') {
+      const [fx, fy] = storeToMap(0, -6)
+      list.push({ name: 'furniture', x: fx, y: fy })
+    }
     props.onDestinations?.(list)
   }, [places, hubs, city]) // eslint-disable-line react-hooks/exhaustive-deps
   // Where to start: the point given; out of a place's door (a step toward the street, facing it);
@@ -2509,6 +2540,13 @@ export default function CityScene(props: Props) {
                 <CompoundModel c={c} />
               </Optional>
             ))}
+            {compounds
+              .filter((c) => c.name === 'home')
+              .map((c) => (
+                <Optional key="home-things">
+                  <HomeThings toMap={(u, v) => compoundPoint(c, u, v)} fromMap={(x, y) => compoundLocal(c, x, y)} yaw={c.yaw} player={player} />
+                </Optional>
+              ))}
             {sites.map((x) => (
               <Optional key={x.name}>
                 <SiteModel s={x} />

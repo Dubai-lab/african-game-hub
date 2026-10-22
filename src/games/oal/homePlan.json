@@ -633,7 +633,34 @@
     "z": 0.02,
     "tight": true
    }
-  ]
+  ],
+  "pieces": {
+   "living": {
+    "objects": [
+     "living_furniture"
+    ],
+    "solids": [
+     37,
+     38,
+     39,
+     40,
+     41
+    ],
+    "seats_x": -5.25
+   },
+   "bedroom": {
+    "objects": [
+     "bedroom_furniture"
+    ],
+    "solids": [
+     50,
+     51,
+     52,
+     53,
+     54
+    ]
+   }
+  }
  },
  "room": {
   "solids": [

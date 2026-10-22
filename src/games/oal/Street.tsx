@@ -21,6 +21,7 @@ import { type BusinessKind, businessOf, INSIDE_OF } from './city/business'
 import { BusinessPanel } from './Business'
 import { DriveControls } from './city/DriveControls'
 import { ItemPanel } from './city/ItemPanel'
+import { HomeDesign } from './HomeDesign'
 import { ITEMS, type ItemId } from '../../../supabase/functions/_shared/oalItems'
 import { ownCar, type OwnCarPhase, type OwnCarView } from './city/ownCar'
 import { Loading } from './Loading'
@@ -37,7 +38,7 @@ export type CityOpen = {
   start: { x: number; y: number; f: number } | { place: string }
 }
 /** The town's places that are not a hub street's own, and what they are called. */
-const COMPOUND_NAME: Record<string, string> = { home: 'oal.city.places.home', health: 'oal.city.places.health', 'health-gate': 'oal.city.places.healthGate', jobs: 'oal.world.places.jobs', visa: 'oal.world.places.visa', station: 'oal.world.places.stationMonrovia', sinkor: 'oal.street.towns.sinkor.where', waterside: 'oal.street.towns.waterside.where', skd: 'oal.street.towns.skd.where' }
+const COMPOUND_NAME: Record<string, string> = { home: 'oal.city.places.home', health: 'oal.city.places.health', 'health-gate': 'oal.city.places.healthGate', jobs: 'oal.world.places.jobs', visa: 'oal.world.places.visa', station: 'oal.world.places.stationMonrovia', sinkor: 'oal.street.towns.sinkor.where', waterside: 'oal.street.towns.waterside.where', skd: 'oal.street.towns.skd.where', furniture: 'oal.city.places.furniture' }
 const COMPOUNDS = ['home', 'health', 'health-gate', 'jobs', 'visa', 'station']
 // Walked into at their doors in the town (no button): the house, the Ministry's hall, the offices,
 // the shops on Tubman Boulevard, and every business with an inside.
@@ -524,6 +525,7 @@ export function StreetView({
         </div>
       )}
       {looking && <ItemPanel item={looking} onClose={() => setLooking(null)} />}
+      {city && carPhase === 'parked' && <HomeDesign />}
       {place && !place.startsWith('item:') && (place as string) !== 'own-car' && !businessOf(place) && !(city && WALKED_INTO.includes(place)) && !open && phase === 'none' && (
         <div className="absolute bottom-6 right-6">
           <Button className="min-h-14 px-6 text-lg" onClick={() => (!place.startsWith('in:') && onEnter?.(place) ? undefined : setOpen(true))} data-testid="oal-place-open">

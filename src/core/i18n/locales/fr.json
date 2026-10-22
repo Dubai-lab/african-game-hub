@@ -160,7 +160,8 @@
       "ALREADY_PAID": "Vous avez déjà payé.",
       "NOT_PAID": "Payez d'abord à la caisse.",
       "HOME_FULL": "Votre maison ne peut pas contenir plus d'objets. Vendez-en d'abord.",
-      "NOT_YOURS": "Ce n'est pas à vous."
+      "NOT_YOURS": "Ce n'est pas à vous.",
+      "ALREADY_SOLD": "Déjà vendu."
     },
     "samePassword": "C’est votre mot de passe actuel. Choisissez-en un autre.",
     "captchaFailed": "La vérification de sécurité a échoué. Rechargez la page et réessayez."
@@ -2846,7 +2847,36 @@
         "charged": "En charge. Il sera plein dans une heure."
       },
       "sitDown": "S’asseoir",
-      "standUp": "Se lever"
+      "standUp": "Se lever",
+      "design": {
+        "open": "Aménager la maison",
+        "title": "Votre maison",
+        "none": "Rien pour l'instant : achetez chez Furniture City, Tubman Boulevard.",
+        "inHouse": "Dans la maison",
+        "aside": "De côté",
+        "ownTitle": "Les meubles de la maison",
+        "pieces": {
+          "living": "Les meubles du salon (canapé, fauteuils, table, télé)",
+          "bedroom": "Les meubles des chambres (armoires, chevets, bureau, lit d'amis)"
+        },
+        "sellFor": "Vendre pour {{got}} $ US",
+        "sellPieceConfirm": "Vendre ces meubles pour {{got}} $ US ? Ils partent tout de suite.",
+        "sellConfirm": "Vendre {{name}} pour {{got}} $ US ? Il part tout de suite.",
+        "sold": "Vendu pour {{got}} $ US.",
+        "back": "Retour",
+        "moveHint": "Déplacez-le pas à pas (comme vous le voyez) et tournez-le ; Terminé le pose là.",
+        "left": "Gauche",
+        "right": "Droite",
+        "turn": "Tourner",
+        "cancel": "Annuler",
+        "done": "Terminé",
+        "move": "Le déplacer",
+        "putAside": "Le mettre de côté",
+        "putHere": "Le poser ici",
+        "noRoom": "Pas de place ici : éloignez-le des murs et des autres objets.",
+        "toward": "Vers vous",
+        "away": "Loin de vous"
+      }
     },
     "shop": {
       "look": "Regarder le {{name}}",
@@ -2984,7 +3014,8 @@
       "places": {
         "home": "La maison de votre famille",
         "health": "Ministère de la Santé",
-        "healthGate": "Ministère de la Santé, le portail"
+        "healthGate": "Ministère de la Santé, le portail",
+        "furniture": "Furniture City, Tubman Boulevard"
       },
       "enter": {
         "home": "Entrer",
