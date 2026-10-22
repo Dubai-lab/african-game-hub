@@ -1,10 +1,12 @@
 // One Africa Life: home and body. A phone, its SIM (registered with the document the law asks
 // for: the database checks which), airtime, a room (public.oal_home_action); eating, sleeping,
 // the clinic (public.oal_needs_action); texts and mobile money (public.oal_phone_action); the
-// government offices' counters: the birth certificate (public.oal_office_action). Each
+// government offices' counters: the birth certificate (public.oal_office_action); things from
+// Furniture City, bought, put in the house, moved, kept aside, sold (public.oal_thing_action). Each
 // step is the database's, under the life's row lock, after time's changes.
 import { z } from 'npm:zod@4'
 import { admin, json, refuse, serve } from '../_shared/http.ts'
+import { ITEM_IDS, type ItemId } from '../_shared/oalItems.ts'
 
 const body = z.discriminatedUnion('action', [
   z.object({
@@ -24,12 +26,21 @@ const body = z.discriminatedUnion('action', [
   z.object({ action: z.enum(['birth_pay', 'birth_lodge', 'birth_collect']) }),
   // The new phone at home: out of its box, on charge (public.oal_phone_box_action).
   z.object({ action: z.enum(['unbox', 'charge']) }),
+  // Things for the house (public.oal_thing_action).
+  z.object({ action: z.literal('buy_thing'), item: z.enum(ITEM_IDS as [ItemId, ...ItemId[]]) }),
+  z.object({ action: z.enum(['sell_thing', 'store_thing']), id: z.int().min(1) }),
+  z.object({ action: z.literal('place_thing'), id: z.int().min(1), x: z.number().min(-40).max(40), y: z.number().min(-40).max(40), rot: z.number().min(-7).max(7) }),
 ])
 
 const PHONE: Record<string, string> = { text: 'text', send_money: 'send', cash_in: 'cash_in', cash_out: 'cash_out', read_texts: 'read' }
 
+const THING: Record<string, string> = { buy_thing: 'buy', sell_thing: 'sell', place_thing: 'place', store_thing: 'store' }
+
 serve(body, async ({ userId, body }) => {
-  const result = body.action === 'unbox' || body.action === 'charge'
+  const thing = THING[body.action]
+  const result = thing
+    ? await admin.rpc('oal_thing_action', { p_user_id: userId, p_action: thing, p_data: { ...body, action: undefined } })
+    : body.action === 'unbox' || body.action === 'charge'
     ? await admin.rpc('oal_phone_box_action', { p_user_id: userId, p_action: body.action })
     : body.action.startsWith('birth_')
     ? await admin.rpc('oal_office_action', { p_user_id: userId, p_action: body.action, p_data: body.action === 'birth_apply' ? { father: body.father, mother: body.mother, witness: body.witness, relation: body.relation } : {} })

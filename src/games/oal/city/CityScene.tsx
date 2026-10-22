@@ -50,6 +50,8 @@ import { TOWNS } from '../StreetScene'
 import { keepOutOf, type Moving, Traffic } from '../Traffic'
 import { businessKey, INSIDE_OF } from './business'
 import { CityTraffic, CityWalkers } from './CityTraffic'
+import { NearStore, STORE_KEEP, storeGround } from './FurnitureCity'
+import { type CityPlace, insidePlaces, insideRooms, insideSolids, type Room } from './insides'
 import { type Destination, newRide, PASSENGER, type RidePhase, type RideState } from './ride'
 import { armsOf, FITS, grips, hold, legsOf, seat } from './wheelHands'
 
@@ -76,7 +78,7 @@ const NEAR = 2.6
 const AROUND = 2
 
 /** A place in the town: what, where, which way one faces it. */
-export type CityPlace = { name: string; x: number; y: number; face: number[]; out?: number; exit?: [number, number] }
+export type { CityPlace } from './insides'
 
 // ---- Textures, drawn in code (nothing to download) --------------------------------------------
 
@@ -1272,12 +1274,7 @@ function Trees({ player }: { player: RefObject<{ x: number; y: number }> }) {
 
 // ---- The insides of the town's businesses, in their own buildings -----------------------------
 
-/** A business's inside set in its building: where it stands, how it is turned and sized. */
-type Room = { key: string; kind: string; name: string; cat: string; mx: number; my: number; nx: number; ny: number; u0: number; u1: number; d: number; h: number; s: number; f0: number }
-/** The insides near the player: their walls (to walk against), their places (the counter), their rooms. */
-const insideSolids = new Map<string, Solid[]>()
-const insidePlaces = new Map<string, CityPlace[]>()
-const insideRooms = new Map<string, Room>()
+// (The insides near the player: their walls, their places, their rooms: ./insides.ts.)
 
 /** A point of an inside (its own metres: x across, y from its front to its back) in the town. */
 function roomPoint(r: Room, x: number, y: number): [number, number] {
@@ -1997,7 +1994,8 @@ function Walker({ props, city, start, compounds, hubs, places, solids, player }:
       s.facing += turn * Math.min(1, dt * 10)
     }
     s.speed += (amount - s.speed) * Math.min(1, dt * 8)
-    const ground = groundHeight(city, s.x, s.y)
+    // (In Furniture City: its floor's, its stairs'.)
+    const ground = storeGround(s.x, s.y) ?? groundHeight(city, s.x, s.y)
     me.root.position.set(s.x, 0.05 + ground, -s.y)
     me.root.rotation.y = s.facing
     if (player.current) {
@@ -2416,6 +2414,7 @@ export default function CityScene(props: Props) {
       ...compounds.map((c) => ({ x: c.x, y: c.y, r: Math.max(c.w, c.d) / 2 + 3, roads: false })),
       ...sites.map((x) => ({ x: x.x, y: x.y, r: Math.max(x.w, x.d) / 2 + 3, roads: false, solids: siteSolids(x).map((p) => [...p]) })),
       ...(props.town === 'Monrovia' ? LANDMARKS : []).map((l) => ({ x: l.x, y: l.y, r: l.clear, roads: false, solids: landmarkSolids(l) })),
+      ...(props.town === 'Monrovia' ? [STORE_KEEP] : []),
     ],
     [hubs, compounds, sites, props.town],
   )
@@ -2528,6 +2527,7 @@ export default function CityScene(props: Props) {
               <NearHubs hubs={hubs} player={player} />
             </Optional>
             <Optional>{props.town === 'Monrovia' && <NearLandmarks player={player} />}</Optional>
+            <Optional>{props.town === 'Monrovia' && <NearStore city={city} player={player} />}</Optional>
             <Optional>
               <CityTraffic city={city} keep={keep} player={player} moving={cityMoving} ride={ride} onRide={(p) => props.onRide?.(p)} />
             </Optional>
