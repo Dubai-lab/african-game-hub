@@ -209,14 +209,14 @@ export function HomeView({
       {hud}
       {flash && <div className="pointer-events-none absolute inset-0 z-20 bg-white/80" aria-hidden />}
       {asleep ? (
-        <div className="glass absolute inset-x-3 bottom-24 mx-auto max-w-lg rounded-2xl border border-line p-1">
+        <div className="glass absolute inset-x-3 bottom-24 mx-auto max-w-lg rounded-2xl border border-line p-1 landscape:bottom-6">
           <Resting travel={travel} />
         </div>
       ) : (
         <>
           <div
             data-stick
-            className="glass absolute bottom-24 left-6 h-28 w-28 touch-none rounded-full border border-line"
+            className="glass absolute bottom-24 left-6 h-28 w-28 touch-none rounded-full border border-line landscape:bottom-6"
             onPointerDown={(e) => {
               e.currentTarget.setPointerCapture(e.pointerId)
               const r = e.currentTarget.getBoundingClientRect()
@@ -238,7 +238,7 @@ export function HomeView({
               stick.current = { x: 0, y: 0 }
             }}
           />
-          <div className="absolute bottom-24 right-6 flex flex-col items-end gap-2">
+          <div className="absolute bottom-24 right-6 flex flex-col items-end gap-2 landscape:bottom-6">
             {seated !== null ? (
               <Button onClick={() => setSeated(null)} data-testid="oal-stand-up">
                 {t('oal.home.standUp')}
@@ -308,7 +308,7 @@ export function HomeView({
             )}
           </div>
           {open && (
-            <div data-panel className="glass absolute inset-x-0 bottom-20 z-10 mx-auto flex max-h-[68vh] max-w-lg flex-col gap-2 overflow-y-auto rounded-t-3xl border border-line p-3" data-testid="oal-home-panel">
+            <div data-panel className="glass absolute inset-x-0 bottom-20 z-10 mx-auto flex max-h-[68vh] landscape:inset-x-auto landscape:right-0 landscape:top-[4.5rem] landscape:bottom-0 landscape:mx-0 landscape:w-[min(26rem,55vw)] landscape:max-h-none landscape:rounded-t-none landscape:rounded-tl-3xl max-w-lg flex-col gap-2 overflow-y-auto rounded-t-3xl border border-line p-3" data-testid="oal-home-panel">
               <div className="flex items-center justify-between">
                 <p className="font-semibold">{title}</p>
                 <Button variant="ghost" onClick={() => setOpen(null)}>

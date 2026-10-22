@@ -12,6 +12,7 @@ import { Skeleton } from '@/core/ui/Skeleton'
 import { toast } from '@/core/ui/toast'
 import { AGE, type Appearance, BUILD, CATALOGUE, checkGameName, defaultAppearance, FACE, HOME_TOWNS, type HomeCountry, type Sex } from '../../../supabase/functions/_shared/oal'
 import type { Framing } from './CreatorScene'
+import { Sideways } from './Sideways'
 import { type Life, World } from './World'
 
 const CreatorScene = lazy(() => import('./CreatorScene'))
@@ -38,7 +39,7 @@ export default function LifePage() {
         </Button>
       </div>
     )
-  return life.data ? <LifeHome life={life.data} /> : <Creator />
+  return <Sideways>{life.data ? <LifeHome life={life.data} /> : <Creator />}</Sideways>
 }
 
 // ---- The creator -----------------------------------------------------------------------------
@@ -97,10 +98,10 @@ function Creator() {
   )
 
   return (
-    <div className="flex min-h-(--app-h) flex-col lg:flex-row" data-testid="oal-creator">
+    <div className="flex min-h-(--app-h) flex-col lg:flex-row landscape:h-(--app-h) landscape:flex-row landscape:overflow-hidden" data-testid="oal-creator">
       {/* The character, large. Dragged sideways, it turns. */}
       <div
-        className="relative h-[52vh] shrink-0 lg:h-auto lg:flex-1"
+        className="relative h-[52vh] shrink-0 lg:h-auto lg:flex-1 landscape:h-full landscape:flex-1"
         onPointerDown={(e) => {
           // A tap on a button over the picture is the button's, not a turn.
           if ((e.target as HTMLElement).closest('button, a')) return
@@ -127,7 +128,7 @@ function Creator() {
       </div>
 
       {/* The choices. */}
-      <div className="flex flex-1 flex-col gap-4 p-4 lg:max-w-md">
+      <div className="flex flex-1 flex-col gap-4 p-4 lg:max-w-md landscape:max-w-md landscape:overflow-y-auto">
         <h1 className="font-display text-2xl font-extrabold text-accent">{t('oal.creator.title')}</h1>
         <div className="flex gap-1 overflow-x-auto pb-1" role="tablist">
           {TABS.map((id) => (

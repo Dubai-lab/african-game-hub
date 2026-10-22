@@ -24,7 +24,11 @@ export default defineConfig({
     ...(process.env.AGH_CHROME ? { launchOptions: { executablePath: process.env.AGH_CHROME } } : {}),
   },
   // A mid-range Android viewport: this is what most players use.
-  projects: [{ name: 'mobile-chrome', use: { ...devices['Pixel 5'] } }],
+  // One Africa Life is played with the phone sideways.
+  projects: [
+    { name: 'mobile-chrome', use: { ...devices['Pixel 5'] }, testIgnore: /oal[-.]/ },
+    { name: 'mobile-landscape', use: { ...devices['Pixel 5 landscape'] }, testMatch: /oal[-.]/ },
+  ],
   webServer: [
     {
       command: `npm run dev --${mode} --port ${playerPort} --strictPort`,

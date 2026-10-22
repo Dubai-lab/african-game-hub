@@ -249,7 +249,7 @@ export function World({ life }: { life: Life }) {
       <Backdrop src={here.country === 'GH' ? '/oal/backdrops/accra.webp' : '/oal/backdrops/ria.webp'}>
         {hud}
         {/* Not on glass: the arrivals hall inside is a full-screen layer, which a blur would hold in. */}
-        <div className="absolute inset-x-0 bottom-20 top-44 overflow-y-auto px-3">
+        <div className="absolute inset-x-0 bottom-20 top-44 overflow-y-auto px-3 landscape:bottom-3 landscape:top-[5.5rem]">
           <div className="mx-auto flex max-w-lg flex-col gap-3">
             <OnTheWay travel={here} appearance={life.appearance} homeCountry={life.home_country} />
           </div>
@@ -469,7 +469,7 @@ function Backdrop({ src, children }: { src: string; children: ReactNode }) {
 /** What is open in the world: under the clock, above the buttons, scrolling if long. */
 function Middle({ children }: { children: ReactNode }) {
   return (
-    <div className="absolute inset-x-0 bottom-20 top-44 overflow-y-auto px-3" data-panel>
+    <div className="absolute inset-x-0 bottom-20 top-44 overflow-y-auto px-3 landscape:bottom-3 landscape:top-[5.5rem]" data-panel>
       <div className="glass mx-auto flex max-w-lg flex-col gap-3 rounded-3xl border border-line p-3">{children}</div>
     </div>
   )
@@ -510,13 +510,16 @@ function Hud({ life, travel, onMap, onPhone, walking }: { life: Life; travel: Tr
   const warning = b && (b.health < 30 ? t('oal.world.unwell') : b.rest < 15 ? t('oal.world.tired') : b.food < 15 ? t('oal.world.hungry') : null)
   return (
     <div data-hud className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 p-3" data-testid="oal-hud">
-      <div className="glass pointer-events-auto flex min-w-36 flex-col gap-1 rounded-2xl border border-line px-3 py-2">
-        <p className="font-display text-xl font-extrabold leading-none tabular-nums" data-testid="oal-hud-time">
-          {time}
-        </p>
-        <p className="text-xs text-muted">{day}</p>
+      {/* (Sideways, the screen is short: the clock and the body's meters side by side.) */}
+      <div className="glass pointer-events-auto flex min-w-36 flex-col gap-1 rounded-2xl border border-line px-3 py-2 landscape:flex-row landscape:flex-wrap landscape:items-center landscape:gap-x-3 landscape:py-1.5">
+        <div>
+          <p className="font-display text-xl font-extrabold leading-none tabular-nums" data-testid="oal-hud-time">
+            {time}
+          </p>
+          <p className="text-xs text-muted">{day}</p>
+        </div>
         {b && (
-          <div className="mt-1 flex flex-col gap-1" aria-label={t('oal.body.title')}>
+          <div className="mt-1 flex flex-col gap-1 landscape:mt-0 landscape:w-32 landscape:gap-0.5" aria-label={t('oal.body.title')}>
             <Meter label={t('oal.body.food')} value={b.food} testId="oal-hud-food" />
             <Meter label={t('oal.body.rest')} value={b.rest} testId="oal-hud-rest" />
             <Meter label={t('oal.body.health')} value={b.health} testId="oal-hud-health" />
@@ -529,6 +532,15 @@ function Hud({ life, travel, onMap, onPhone, walking }: { life: Life; travel: Tr
       </div>
       <div className="pointer-events-auto flex flex-col items-end gap-2">
         <div className="flex gap-2">
+          {/* Sideways: the map and the phone here, in the row along the top. */}
+          <div className="hidden gap-2 landscape:flex group-data-[sheet]/street:landscape:hidden group-has-[[data-panel]]/street:landscape:hidden">
+            <button type="button" onClick={onMap} className="glass h-11 rounded-full border border-line px-4 text-sm font-bold" data-testid="oal-map">
+              {t('oal.world.map')}
+            </button>
+            <button type="button" onClick={onPhone} className="glass h-11 rounded-full border border-line px-4 text-sm font-bold" data-testid="oal-phone-button">
+              {t('oal.world.phone')}
+            </button>
+          </div>
           <button type="button" onClick={() => setAllMoney((v) => !v)} className="glass rounded-2xl border border-line px-3 py-2 text-right" aria-expanded={allMoney} data-testid="oal-hud-money">
             <span className="block font-display text-base font-extrabold leading-tight tabular-nums">{fmt(local)}</span>
             <span className="block text-xs tabular-nums text-muted">{fmt('USD')}</span>
@@ -560,11 +572,11 @@ function Hud({ life, travel, onMap, onPhone, walking }: { life: Life; travel: Tr
       </div>
       {/* Walking: round buttons on the right, above the place's button (driving: on the left, up
           out of the wheel's way); else a bar at the foot. */}
-      <div className={walking ? 'pointer-events-auto fixed bottom-28 right-4 flex flex-col gap-3 group-data-[driving]/street:bottom-auto group-data-[driving]/street:left-4 group-data-[driving]/street:right-auto group-data-[driving]/street:top-56 group-data-[driving]/street:flex-row group-data-[sheet]/street:hidden group-has-[[data-panel]]/street:hidden' : 'pointer-events-auto fixed inset-x-0 bottom-0 flex justify-center gap-3 p-3'}>
-        <button type="button" onClick={onMap} className={`glass border border-line font-bold ${walking ? 'h-14 w-14 rounded-full text-xs' : 'min-h-12 flex-1 rounded-full text-base sm:max-w-48'}`} data-testid="oal-map">
+      <div className={`landscape:hidden ${walking ? 'pointer-events-auto fixed bottom-28 right-4 flex flex-col gap-3 group-data-[driving]/street:bottom-auto group-data-[driving]/street:left-4 group-data-[driving]/street:right-auto group-data-[driving]/street:top-56 group-data-[driving]/street:flex-row group-data-[sheet]/street:hidden group-has-[[data-panel]]/street:hidden' : 'pointer-events-auto fixed inset-x-0 bottom-0 flex justify-center gap-3 p-3'}`}>
+        <button type="button" onClick={onMap} className={`glass border border-line font-bold ${walking ? 'h-14 w-14 rounded-full text-xs' : 'min-h-12 flex-1 rounded-full text-base sm:max-w-48'}`} data-testid="oal-map-upright">
           {t('oal.world.map')}
         </button>
-        <button type="button" onClick={onPhone} className={`glass border border-line font-bold ${walking ? 'h-14 w-14 rounded-full text-xs' : 'min-h-12 flex-1 rounded-full text-base sm:max-w-48'}`} data-testid="oal-phone-button">
+        <button type="button" onClick={onPhone} className={`glass border border-line font-bold ${walking ? 'h-14 w-14 rounded-full text-xs' : 'min-h-12 flex-1 rounded-full text-base sm:max-w-48'}`} data-testid="oal-phone-upright">
           {t('oal.world.phone')}
         </button>
       </div>

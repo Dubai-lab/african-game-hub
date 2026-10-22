@@ -115,7 +115,10 @@ function WhereInHouse({ toMap, fromMap, yaw, player }: Props) {
       if (inside !== homeStore.inside) {
         homeStore.inside = inside
         homeStore.onInside?.(inside)
-        // In it, the camera under its ceiling (as in a business's room).
+      }
+      // In it, the camera under its ceiling (as in a business's room). (Kept so each frame: the
+      // scene round it may have been put back since.)
+      if (inside !== insideRooms.has('house')) {
         if (inside) {
           const xs = HOUSE.inside.flatMap((r) => [r[0]!, r[2]!])
           const ys = HOUSE.inside.flatMap((r) => [r[1]!, r[3]!])

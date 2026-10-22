@@ -383,7 +383,7 @@ export function StreetView({
       </div>
       {!ready && <Loading what={t('oal.loading.town', { town: city?.town ?? '' })} />}
       {city && target && guide && (
-        <div className="pointer-events-none absolute inset-x-0 top-56 flex justify-center px-3">
+        <div className="pointer-events-none absolute inset-x-0 top-56 flex justify-center px-3 landscape:top-[7.75rem]">
           <p className="glass flex items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-semibold" data-testid="oal-gps">
             <span className="inline-block text-lg text-accent" style={{ transform: `rotate(${guide.turn}rad)` }} aria-hidden>
               ↑
@@ -393,7 +393,7 @@ export function StreetView({
         </div>
       )}
       {hud}
-      <div className="pointer-events-none absolute inset-x-0 top-44 flex justify-center px-3">
+      <div className="pointer-events-none absolute inset-x-0 top-44 flex justify-center px-3 landscape:top-[4.75rem]">
         <p className="glass rounded-full border border-line px-4 py-2 text-sm font-semibold" data-testid="oal-street-chip">
           {place ? placeName(place) : city ? (streetName ?? t('oal.city.where', { town: city.town })) : t(`oal.street.towns.${town}.where`)}
           {company.present.length > 0 && <span className="ml-2 text-muted">· {t('oal.street.company', { count: company.present.length })}</span>}
@@ -426,7 +426,7 @@ export function StreetView({
       />
       {city && carPhase !== 'parked' && (
         // In the player's own car: out of it (stopped), seen from inside it or from behind.
-        <div className="absolute right-4 top-56 flex flex-col items-end gap-2" data-hud>
+        <div className="absolute right-4 top-56 flex flex-col items-end gap-2 landscape:right-3 landscape:top-[4.25rem] landscape:flex-row" data-hud>
           {carPhase === 'driving' && (
             <Button variant="ghost" className="min-h-11 px-4 text-sm" onClick={() => (ownCar.request = 'view')} data-testid="oal-car-view">
               {t(carView === 'inside' ? 'oal.city.car.outside' : 'oal.city.car.inside')}
@@ -471,7 +471,7 @@ export function StreetView({
         </div>
       )}
       {city && phase === 'waiting' && (
-        <div data-panel className="glass absolute inset-x-0 bottom-0 z-10 mx-auto flex max-h-[70vh] max-w-lg flex-col gap-2 overflow-y-auto rounded-t-3xl border border-line p-3" data-testid="oal-ride-where">
+        <div data-panel className="glass absolute inset-x-0 bottom-0 z-10 mx-auto flex max-h-[70vh] max-w-lg flex-col gap-2 overflow-y-auto rounded-t-3xl border border-line p-3 landscape:inset-x-auto landscape:right-0 landscape:top-[4.5rem] landscape:bottom-0 landscape:mx-0 landscape:w-[min(26rem,55vw)] landscape:max-h-none landscape:rounded-t-none landscape:rounded-tl-3xl" data-testid="oal-ride-where">
           <p className="font-semibold">{t(`oal.city.ride.driver.${kind}`)}</p>
           <p className="text-sm text-muted">{t('oal.city.ride.fare', { fare: FARE[travel.country][kind] })}</p>
           {destinations.map((d) => (
@@ -534,7 +534,7 @@ export function StreetView({
         </div>
       )}
       {place && open && (
-        <div data-panel className="absolute inset-x-0 bottom-0 z-10 mx-auto flex max-h-[70vh] max-w-lg flex-col gap-2 overflow-y-auto p-3" data-testid={`oal-place-${place}`}>
+        <div data-panel className="absolute inset-x-0 bottom-0 z-10 mx-auto flex max-h-[70vh] max-w-lg flex-col gap-2 overflow-y-auto p-3 landscape:inset-x-auto landscape:right-0 landscape:top-[4.5rem] landscape:bottom-0 landscape:mx-0 landscape:w-[min(26rem,55vw)] landscape:max-h-none landscape:rounded-t-none landscape:rounded-tl-3xl" data-testid={`oal-place-${place}`}>
           <div className="flex justify-end">
             <Button variant="ghost" onClick={() => setOpen(false)}>
               {t('oal.street.done')}

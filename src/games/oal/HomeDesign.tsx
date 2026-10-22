@@ -138,14 +138,14 @@ export function HomeDesign() {
   return (
     <>
       {!open && (
-        <div className="absolute right-4 top-56">
+        <div className="absolute right-4 top-56 landscape:right-3 landscape:top-[4.25rem]">
           <Button variant="ghost" className="min-h-12 px-5" onClick={() => setOpen(true)} data-testid="oal-arrange">
             {t('oal.home.design.open')}
           </Button>
         </div>
       )}
       {open && (
-        <div data-panel className="glass absolute inset-x-0 bottom-0 z-10 mx-auto flex max-h-[62vh] max-w-lg flex-col gap-2 overflow-y-auto rounded-t-3xl border border-line p-3" data-testid="oal-arrange-panel">
+        <div data-panel className="glass absolute inset-x-0 bottom-0 z-10 mx-auto flex max-h-[62vh] max-w-lg flex-col gap-2 overflow-y-auto rounded-t-3xl border border-line p-3 landscape:inset-x-auto landscape:right-0 landscape:top-[4.5rem] landscape:bottom-0 landscape:mx-0 landscape:w-[min(26rem,55vw)] landscape:max-h-none landscape:rounded-t-none landscape:rounded-tl-3xl" data-testid="oal-arrange-panel">
           {!thing ? (
             <>
               <div className="flex items-center justify-between">

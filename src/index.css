@@ -388,3 +388,13 @@ body::before {
     animation: none;
   }
 }
+
+/* One Africa Life: the phone turning sideways (asked of a phone held upright). */
+@keyframes oal-turn {
+  0%, 25% { transform: rotate(0deg); }
+  55%, 85% { transform: rotate(-90deg); }
+  100% { transform: rotate(0deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [class*='oal-turn'] { animation: none !important; }
+}

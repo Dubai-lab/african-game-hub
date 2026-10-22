@@ -3163,6 +3163,11 @@
       "delivery": "Payé en dollars US. Le camion de Furniture City l'apporte chez votre famille et leurs hommes le portent à l'intérieur, prêt à être placé.",
       "delivered_one": "Furniture City a livré : votre achat est dans la maison. Placez-le.",
       "delivered_other": "Furniture City a livré : {{count}} objets sont dans la maison. Placez-les."
+    },
+    "sideways": {
+      "title": "Tournez votre téléphone",
+      "body": "One Africa Life se joue avec le téléphone à l'horizontale. Tournez-le pour continuer (s'il ne tourne pas, vérifiez que la rotation de l'écran est activée).",
+      "turn": "Tourner"
     }
   }
 }

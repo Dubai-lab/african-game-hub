@@ -3163,6 +3163,11 @@
       "delivery": "Paid in US dollars. Furniture City's truck brings it to your family's house and their men carry it in, ready for you to put where you want it.",
       "delivered_one": "Furniture City delivered: the thing you bought is in your house. Arrange it there.",
       "delivered_other": "Furniture City delivered: {{count}} things are in your house. Arrange them there."
+    },
+    "sideways": {
+      "title": "Turn your phone sideways",
+      "body": "One Africa Life is played with the phone held sideways. Turn it to carry on (if it does not turn, check that screen rotation is on).",
+      "turn": "Turn it"
     }
   }
 }

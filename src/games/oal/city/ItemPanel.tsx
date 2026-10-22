@@ -64,9 +64,9 @@ export function ItemPanel({ item, onClose }: { item: ItemId; onClose: () => void
     }
   }
   return (
-    <div data-panel className="glass absolute inset-x-0 bottom-0 z-10 mx-auto flex max-h-[80vh] max-w-lg flex-col gap-3 rounded-t-3xl border border-line p-4" data-testid="oal-item-panel">
+    <div data-panel className="glass absolute inset-x-0 bottom-0 z-10 mx-auto flex max-h-[80vh] max-w-lg flex-col gap-3 rounded-t-3xl border border-line p-4 landscape:overflow-y-auto landscape:inset-x-auto landscape:right-0 landscape:top-[4.5rem] landscape:bottom-0 landscape:mx-0 landscape:w-[min(26rem,55vw)] landscape:max-h-none landscape:rounded-t-none landscape:rounded-tl-3xl" data-testid="oal-item-panel">
       <div
-        className="h-56 touch-none overflow-hidden rounded-2xl border border-line bg-panel"
+        className="h-56 shrink-0 touch-none landscape:h-40 overflow-hidden rounded-2xl border border-line bg-panel"
         onPointerDown={(e) => {
           e.currentTarget.setPointerCapture(e.pointerId)
           from.current = { x: e.clientX, turn: turn.current }
