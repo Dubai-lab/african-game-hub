@@ -9,6 +9,7 @@ export const ITEMS = {
   sofa: { name: 'Three-seat sofa, blue', price: 520, dept: 'living' },
   chandelier: { name: 'Ceiling light', price: 260, dept: 'living' },
   double_bed: { name: 'Double bed with mattress', price: 650, dept: 'bed_bath' },
+  modern_bed: { name: 'Modern double bed with mattress', price: 890, dept: 'bed_bath' },
   toilet: { name: 'Toilet', price: 180, dept: 'bed_bath' },
   bathtub: { name: 'Bathtub', price: 420, dept: 'bed_bath' },
   sink: { name: 'Hand basin', price: 120, dept: 'bed_bath' },

@@ -1,5 +1,5 @@
 # One Africa Life: the things sold at Furniture City (and kept, arranged, sold again at home), one
-# game file of them all (public/oal/items.v1.glb, and src/games/oal/itemsPlan.json: each one's size),
+# game file of them all (public/oal/items.v2.glb, and src/games/oal/itemsPlan.json: each one's size),
 # from the owner's downloads (art-src/one-africa-life/Houses_design_to_buy): each made real (its
 # real size; its textures on it; the heaviest made lighter, unseen), standing on the floor at the
 # origin, its front to -Y (the side away from its back: a sofa's backrest, a bed's headboard, a
@@ -29,6 +29,7 @@ ITEMS = {
     'kitchen_counter': ('blue_kitchen_marble_counter_sink.glb', 2.35, 20000, None),
     'sink': ('sink.glb', 0.85, 12000, None),
     'chandelier': ('ligh45.blend', 0.85, 12000, None),
+    'modern_bed': ('Modern Bed.fbx', 2.25, 20000, ('textures_modern_bed', 'Modern Bed', {'BaseColor': 'd', 'Roughness': 'r', 'Normal': 'n'})),
 }
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -50,7 +51,7 @@ def load(path):
     return [o for o in set(bpy.data.objects) - before if o.type == 'MESH' and o.name in bpy.context.scene.objects]
 
 
-def textured(objs, folder, stem):
+def textured(objs, folder, stem, names=None):
     """Its own textures put on it (a model that came without them linked)."""
     d = os.path.join(SRC, folder)
     mat = bpy.data.materials.new(stem)
@@ -58,7 +59,7 @@ def textured(objs, folder, stem):
     tree = mat.node_tree
     bsdf = tree.nodes['Principled BSDF']
     for suffix, socket, colour in (('BaseColor', 'Base Color', True), ('Roughness', 'Roughness', False), ('Metallic', 'Metallic', False), ('Normal', 'Normal', False)):
-        path = os.path.join(d, f'{stem}_{suffix}.png')
+        path = os.path.join(d, f'{stem}_{(names or {}).get(suffix, suffix)}.png')
         if not os.path.exists(path):
             continue
         tex = tree.nodes.new('ShaderNodeTexImage')

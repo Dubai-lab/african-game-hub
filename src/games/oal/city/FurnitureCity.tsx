@@ -3,7 +3,7 @@
 // and up its stairs to every floor: each floor's walls, railings and things on display walked
 // against while on that floor, the camera under its ceiling, and before each thing on display a
 // place to look at it (and buy it: ./ItemPanel.tsx). The things are the game's own
-// (public/oal/items.v1.glb), as one buys and keeps them.
+// (public/oal/items.v2.glb), as one buys and keeps them.
 import { useFrame, useLoader } from '@react-three/fiber'
 import { type RefObject, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { type Object3D } from 'three'
@@ -16,7 +16,7 @@ import { type City, groundHeight, solidOf, type Solid } from './cityGen'
 import { type CityPlace, insidePlaces, insideRooms, insideSolids } from './insides'
 
 export const STORE_URL = '/oal/furniture-city.v1.glb'
-export const ITEMS_URL = '/oal/items.v1.glb'
+export const ITEMS_URL = '/oal/items.v2.glb'
 
 type Stair = { x0: number; x1: number; y0: number; y1: number; from: number; to: number; up: number }
 type Display = { item: ItemId; level: number; x: number; y: number; yaw: number; hang?: boolean }

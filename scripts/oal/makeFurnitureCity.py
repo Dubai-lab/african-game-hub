@@ -461,6 +461,7 @@ plan['displays'] = [
     # First: bedrooms and bathrooms.
     {'item': 'double_bed', 'level': 1, 'x': -7.5, 'y': 12.5, 'yaw': 0},
     {'item': 'double_bed', 'level': 1, 'x': -2.0, 'y': 12.5, 'yaw': 0},
+    {'item': 'modern_bed', 'level': 1, 'x': 2.6, 'y': 10.2, 'yaw': 0},
     {'item': 'bathtub', 'level': 1, 'x': 2.5, 'y': 15.5, 'yaw': math.pi / 2},
     {'item': 'toilet', 'level': 1, 'x': -9.5, 'y': 4.5, 'yaw': math.pi / 2},
     {'item': 'sink', 'level': 1, 'x': -9.5, 'y': 6.5, 'yaw': math.pi / 2},

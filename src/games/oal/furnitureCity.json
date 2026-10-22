@@ -361,6 +361,13 @@
    "yaw": 0
   },
   {
+   "item": "modern_bed",
+   "level": 1,
+   "x": 2.6,
+   "y": 10.2,
+   "yaw": 0
+  },
+  {
    "item": "bathtub",
    "level": 1,
    "x": 2.5,
