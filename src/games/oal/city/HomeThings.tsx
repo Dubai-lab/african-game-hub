@@ -4,7 +4,7 @@
 // them and arranges them (../HomeDesign.tsx); this draws them, and tells the page whether the
 // player is in the house and where they stand (to put a thing in front of them).
 import { useFrame, useLoader } from '@react-three/fiber'
-import { useEffect, useMemo, useRef } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Group, type Object3D } from 'three'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
@@ -66,17 +66,40 @@ export function fits(id: number, item: ItemId, x: number, y: number, rot: number
   return true
 }
 
-export function HomeThings({ toMap, fromMap, yaw, player }: { toMap: (u: number, v: number) => [number, number]; fromMap: (x: number, y: number) => [number, number]; yaw: number; player: { current: { x: number; y: number; f?: number } | null } }) {
-  const items = useLoader(GLTFLoader, ITEMS_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
-  const group = useMemo(() => new Group(), [])
-  const seen = useRef(-1)
+type Props = { toMap: (u: number, v: number) => [number, number]; fromMap: (x: number, y: number) => [number, number]; yaw: number; player: { current: { x: number; y: number; f?: number } | null } }
+
+/** The things at home: where the player is in the house (always: it costs nothing), the things
+ * themselves drawn (their file loaded) only when there are some in the house, or one is being
+ * put, and the player is near it: a phone's memory is kept for what is seen. */
+export function HomeThings(props: Props) {
+  const [draw, setDraw] = useState(false)
+  const last = useRef(0)
+  useFrame(({ clock }) => {
+    if (clock.elapsedTime - last.current < 1) return
+    last.current = clock.elapsedTime
+    const p = props.player.current
+    if (!p) return
+    const [hx, hy] = props.toMap(0, 0)
+    const want = (homeStore.things.some((t) => t.placed) || homeStore.moving !== null) && Math.hypot(p.x - hx, p.y - hy) < 150
+    if (want !== draw) setDraw(want)
+  })
+  return (
+    <>
+      <WhereInHouse {...props} />
+      {draw && (
+        <Suspense fallback={null}>
+          <DrawnThings {...props} />
+        </Suspense>
+      )}
+    </>
+  )
+}
+
+/** Whether the player is in the house, where, which way they face; the house a room for the camera. */
+function WhereInHouse({ toMap, fromMap, yaw, player }: Props) {
   useFrame(() => {
-    // (Set in the house: its own metres, turned as it is.)
     homeStore.toMap = toMap
     homeStore.yaw = yaw
-    const [hx, hy] = toMap(0, 0)
-    group.position.set(hx, 0, -hy)
-    group.rotation.y = yaw
     // Where the player is: in the house (one of its rooms), where, facing which way.
     const p = player.current
     if (p) {
@@ -98,6 +121,27 @@ export function HomeThings({ toMap, fromMap, yaw, player }: { toMap: (u: number,
         } else insideRooms.delete('house')
       }
     }
+  })
+  useEffect(
+    () => () => {
+      insideRooms.delete('house')
+    },
+    [],
+  )
+  return null
+}
+
+/** The things in the house, drawn where they are (and walked against). */
+function DrawnThings({ toMap, yaw }: Props) {
+  const items = useLoader(GLTFLoader, ITEMS_URL, (loader) => loader.setMeshoptDecoder(MeshoptDecoder))
+  const group = useMemo(() => new Group(), [])
+  const seen = useRef(-1)
+  useFrame(() => {
+    homeStore.toMap = toMap
+    homeStore.yaw = yaw
+    const [hx, hy] = toMap(0, 0)
+    group.position.set(hx, 0, -hy)
+    group.rotation.y = yaw
     if (seen.current === homeStore.version) return
     seen.current = homeStore.version
     // The things, where they are (the one being moved where it would go).
@@ -122,7 +166,6 @@ export function HomeThings({ toMap, fromMap, yaw, player }: { toMap: (u: number,
   useEffect(
     () => () => {
       insideSolids.delete('home-things')
-      insideRooms.delete('house')
     },
     [],
   )

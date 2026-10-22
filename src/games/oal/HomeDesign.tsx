@@ -35,6 +35,8 @@ export function HomeDesign() {
   const things = useQuery({
     queryKey: ['oal-things', user?.id],
     enabled: Boolean(user),
+    // (Quiet when it cannot be fetched: the house is simply as it was.)
+    meta: { silent: true },
     queryFn: async () => {
       const [a, b] = await Promise.all([
         supabase.from('oal_things').select('id, item, placed, x, y, rot, paid').order('id'),
