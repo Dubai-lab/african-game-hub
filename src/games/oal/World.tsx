@@ -560,7 +560,7 @@ function Hud({ life, travel, onMap, onPhone, walking }: { life: Life; travel: Tr
       </div>
       {/* Walking: round buttons on the right, above the place's button (driving: on the left, up
           out of the wheel's way); else a bar at the foot. */}
-      <div className={walking ? 'pointer-events-auto fixed bottom-28 right-4 flex flex-col gap-3 group-data-[driving]/street:bottom-auto group-data-[driving]/street:left-4 group-data-[driving]/street:right-auto group-data-[driving]/street:top-56 group-data-[driving]/street:flex-row' : 'pointer-events-auto fixed inset-x-0 bottom-0 flex justify-center gap-3 p-3'}>
+      <div className={walking ? 'pointer-events-auto fixed bottom-28 right-4 flex flex-col gap-3 group-data-[driving]/street:bottom-auto group-data-[driving]/street:left-4 group-data-[driving]/street:right-auto group-data-[driving]/street:top-56 group-data-[driving]/street:flex-row group-data-[sheet]/street:hidden' : 'pointer-events-auto fixed inset-x-0 bottom-0 flex justify-center gap-3 p-3'}>
         <button type="button" onClick={onMap} className={`glass border border-line font-bold ${walking ? 'h-14 w-14 rounded-full text-xs' : 'min-h-12 flex-1 rounded-full text-base sm:max-w-48'}`} data-testid="oal-map">
           {t('oal.world.map')}
         </button>

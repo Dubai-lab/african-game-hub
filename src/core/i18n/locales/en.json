@@ -158,7 +158,9 @@
       "ALREADY_CHARGED": "It is already charging or charged.",
       "PHONE_NOT_READY": "Your phone is not ready: unbox it and charge it at home.",
       "ALREADY_PAID": "You have paid already.",
-      "NOT_PAID": "Pay at the cashier first."
+      "NOT_PAID": "Pay at the cashier first.",
+      "HOME_FULL": "Your house cannot hold more things. Sell some first.",
+      "NOT_YOURS": "That is not yours."
     },
     "samePassword": "That is your current password. Choose a different one.",
     "captchaFailed": "The security check did not pass. Reload the page and try again."
@@ -3118,6 +3120,13 @@
       "market": "Rows of tables piled with goods, the traders at them. Buying here comes with the shops update.",
       "hardware": "Cement, zinc, iron rods, paint and plumbing. Buying materials comes with the homes update.",
       "boutique": "Racks of clothes and lappa, the tailor at the sewing machine. Buying clothes comes soon."
+    },
+    "store": {
+      "look": "Look at it",
+      "buy": "Buy",
+      "close": "Close",
+      "bought": "Bought: {{name}}. It is at your house: arrange it there.",
+      "delivery": "Paid in US dollars. Taken to your family's house, ready for you to put where you want it."
     }
   }
 }

@@ -20,6 +20,8 @@ import { type TravelState, useGameNow } from './Journey'
 import { type BusinessKind, businessOf, INSIDE_OF } from './city/business'
 import { BusinessPanel } from './Business'
 import { DriveControls } from './city/DriveControls'
+import { ItemPanel } from './city/ItemPanel'
+import { ITEMS, type ItemId } from '../../../supabase/functions/_shared/oalItems'
 import { ownCar, type OwnCarPhase, type OwnCarView } from './city/ownCar'
 import { Loading } from './Loading'
 import { newRide, type Destination, type RideKind, type RidePhase, type RideState } from './city/ride'
@@ -210,6 +212,8 @@ export function StreetView({
     const biz = businessOf(p.startsWith('in:') ? p.slice(3) : p)
     if (biz) return `${biz.name} · ${t(`oal.city.cats.${biz.cat}`, { defaultValue: '' })}`
     if (p === 'own-car') return t('oal.city.car.yours')
+    // A thing on display at Furniture City.
+    if (p.startsWith('item:')) return ITEMS[p.split(':')[1] as ItemId]?.name ?? ''
     if (COMPOUND_NAME[p]) return t(COMPOUND_NAME[p]!)
     const [hub, own] = p.includes(':') ? p.split(':') : [town, p]
     return t(`oal.street.towns.${hub}.places.${own}`)
@@ -219,6 +223,8 @@ export function StreetView({
   const [phase, setPhase] = useState<RidePhase>('none')
   // The player's own car: standing (got into at its door) or being got into, driven, got out of.
   const [carPhase, setCarPhase] = useState<OwnCarPhase>(ownCar.phase)
+  // A thing at Furniture City looked at close (its panel open).
+  const [looking, setLooking] = useState<ItemId | null>(null)
   const [carView, setCarView] = useState<OwnCarView>(ownCar.view)
   useEffect(() => {
     ownCar.onPhase = setCarPhase
@@ -276,7 +282,7 @@ export function StreetView({
   const view = useRef<HTMLDivElement>(null)
 
   return (
-    <div ref={view} className={`group/street fixed inset-0 z-40 bg-bg ${hidden ? 'hidden' : ''}`} data-testid="oal-street" data-driving={(city && carPhase === 'driving') || undefined} aria-hidden={hidden || undefined}>
+    <div ref={view} className={`group/street fixed inset-0 z-40 bg-bg ${hidden ? 'hidden' : ''}`} data-testid="oal-street" data-driving={(city && carPhase === 'driving') || undefined} data-sheet={looking ? true : undefined} aria-hidden={hidden || undefined}>
       <div
         className="absolute inset-0"
         onPointerDown={(e) => {
@@ -509,7 +515,16 @@ export function StreetView({
           </Button>
         </div>
       )}
-      {place && (place as string) !== 'own-car' && !businessOf(place) && !(city && WALKED_INTO.includes(place)) && !open && phase === 'none' && (
+      {city && place?.startsWith('item:') && !looking && (
+        // Before a thing on display at Furniture City: look at it close, buy it.
+        <div className="absolute bottom-6 right-6">
+          <Button className="min-h-14 px-6 text-lg" onClick={() => setLooking(place.split(':')[1] as ItemId)} data-testid="oal-item-look">
+            {t('oal.store.look')}
+          </Button>
+        </div>
+      )}
+      {looking && <ItemPanel item={looking} onClose={() => setLooking(null)} />}
+      {place && !place.startsWith('item:') && (place as string) !== 'own-car' && !businessOf(place) && !(city && WALKED_INTO.includes(place)) && !open && phase === 'none' && (
         <div className="absolute bottom-6 right-6">
           <Button className="min-h-14 px-6 text-lg" onClick={() => (!place.startsWith('in:') && onEnter?.(place) ? undefined : setOpen(true))} data-testid="oal-place-open">
             {place.startsWith('in:') ? t('oal.home.at.counter') : businessOf(place) ? t('oal.city.enter.business') : COMPOUNDS.includes(place) ? t(`oal.city.enter.${place}`) : t(`oal.street.open.${place.split(':').pop()}`)}

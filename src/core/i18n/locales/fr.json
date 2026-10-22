@@ -158,7 +158,9 @@
       "ALREADY_CHARGED": "Il est déjà en charge ou chargé.",
       "PHONE_NOT_READY": "Votre téléphone n'est pas prêt : déballez-le et chargez-le chez vous.",
       "ALREADY_PAID": "Vous avez déjà payé.",
-      "NOT_PAID": "Payez d'abord à la caisse."
+      "NOT_PAID": "Payez d'abord à la caisse.",
+      "HOME_FULL": "Votre maison ne peut pas contenir plus d'objets. Vendez-en d'abord.",
+      "NOT_YOURS": "Ce n'est pas à vous."
     },
     "samePassword": "C’est votre mot de passe actuel. Choisissez-en un autre.",
     "captchaFailed": "La vérification de sécurité a échoué. Rechargez la page et réessayez."
@@ -3118,6 +3120,13 @@
       "market": "Des rangées de tables chargées de marchandises, les commerçants. Acheter ici viendra avec la mise à jour des boutiques.",
       "hardware": "Ciment, tôles, fers à béton, peinture et plomberie. Acheter des matériaux viendra avec la mise à jour des maisons.",
       "boutique": "Des portants de vêtements et de pagnes, le tailleur à sa machine. Acheter des vêtements viendra bientôt."
+    },
+    "store": {
+      "look": "Regarder",
+      "buy": "Acheter",
+      "close": "Fermer",
+      "bought": "Acheté : {{name}}. C'est chez vous : placez-le où vous voulez.",
+      "delivery": "Payé en dollars US. Livré à la maison familiale, prêt à être placé où vous voulez."
     }
   }
 }
